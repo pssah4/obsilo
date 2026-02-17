@@ -26,8 +26,14 @@ export interface AgentTaskCallbacks {
     onToolResult: (name: string, content: string, isError: boolean) => void;
     /** Called with cumulative token usage just before onComplete (Feature 6) */
     onUsage?: (inputTokens: number, outputTokens: number) => void;
-    /** Called when the task is complete */
+    /** Called when the task is complete (attempt_completion or natural end) */
     onComplete: () => void;
+    /** Called when attempt_completion signals a result — shows completion card */
+    onAttemptCompletion?: (result: string) => void;
+    /** Called when ask_followup_question is invoked — pauses loop until resolved */
+    onQuestion?: (question: string, options: string[] | undefined, resolve: (answer: string) => void) => void;
+    /** Called when a write tool needs user approval — pauses loop until user decides */
+    onApprovalRequired?: (toolName: string, input: Record<string, any>) => Promise<'auto' | 'approved' | 'rejected'>;
     /** Called when an unrecoverable error occurs */
     onError: (error: Error) => void;
 }
@@ -82,6 +88,21 @@ export class AgentTask {
         // Feature 6: Accumulate token usage across all iterations
         let totalInputTokens = 0;
         let totalOutputTokens = 0;
+        // attempt_completion signal
+        let completionResult: string | null = null;
+
+        // Wire up context extensions for agent-control tools
+        const askQuestion = this.taskCallbacks.onQuestion
+            ? (question: string, options?: string[]): Promise<string> => {
+                return new Promise<string>((resolve) => {
+                    this.taskCallbacks.onQuestion!(question, options, resolve);
+                });
+            }
+            : undefined;
+
+        const signalCompletion = (result: string) => {
+            completionResult = result;
+        };
 
         try {
             for (let iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
@@ -146,7 +167,11 @@ export class AgentTask {
                         input: toolUse.input,
                     };
 
-                    const result = await pipeline.executeTool(toolCall, toolCallbacks);
+                    const result = await pipeline.executeTool(toolCall, toolCallbacks, {
+                        askQuestion,
+                        signalCompletion,
+                        onApprovalRequired: this.taskCallbacks.onApprovalRequired,
+                    });
 
                     // Notify UI of tool result
                     this.taskCallbacks.onToolResult(
@@ -163,10 +188,19 @@ export class AgentTask {
                         content: result.content,
                         is_error: result.is_error,
                     });
+
+                    // If attempt_completion was called, stop processing further tools
+                    if (completionResult !== null) break;
                 }
 
                 // Add tool results as the next user message
                 history.push({ role: 'user', content: toolResultBlocks });
+
+                // Break loop if attempt_completion was signaled
+                if (completionResult !== null) {
+                    this.taskCallbacks.onAttemptCompletion?.(completionResult);
+                    break;
+                }
             }
 
             // Feature 6: Report total token usage before completing

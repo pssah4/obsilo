@@ -11,14 +11,20 @@ import type ObsidianAgentPlugin from '../../main';
 import type { BaseTool } from './BaseTool';
 import type { ToolName, ToolDefinition } from './types';
 
-// Import tools
+// Import tools — vault: read
 import { ReadFileTool } from './vault/ReadFileTool';
-import { WriteFileTool } from './vault/WriteFileTool';
 import { ListFilesTool } from './vault/ListFilesTool';
 import { SearchFilesTool } from './vault/SearchFilesTool';
+// Import tools — vault: write
+import { WriteFileTool } from './vault/WriteFileTool';
+import { EditFileTool } from './vault/EditFileTool';
+import { AppendToFileTool } from './vault/AppendToFileTool';
 import { CreateFolderTool } from './vault/CreateFolderTool';
 import { DeleteFileTool } from './vault/DeleteFileTool';
 import { MoveFileTool } from './vault/MoveFileTool';
+// Import tools — agent control
+import { AskFollowupQuestionTool } from './agent/AskFollowupQuestionTool';
+import { AttemptCompletionTool } from './agent/AttemptCompletionTool';
 
 export class ToolRegistry {
     private tools: Map<ToolName, BaseTool>;
@@ -34,16 +40,20 @@ export class ToolRegistry {
      * Register all internal (built-in) tools
      */
     private registerInternalTools(): void {
-        // Vault: read/write
+        // Vault: read
         this.register(new ReadFileTool(this.plugin));
-        this.register(new WriteFileTool(this.plugin));
-        // Vault: navigation & search
         this.register(new ListFilesTool(this.plugin));
         this.register(new SearchFilesTool(this.plugin));
-        // Vault: file management
+        // Vault: write (Sprint 1.1)
+        this.register(new WriteFileTool(this.plugin));
+        this.register(new EditFileTool(this.plugin));
+        this.register(new AppendToFileTool(this.plugin));
         this.register(new CreateFolderTool(this.plugin));
         this.register(new DeleteFileTool(this.plugin));
         this.register(new MoveFileTool(this.plugin));
+        // Agent control (Sprint 1.2)
+        this.register(new AskFollowupQuestionTool(this.plugin));
+        this.register(new AttemptCompletionTool(this.plugin));
 
         console.log(`ToolRegistry: Registered ${this.getToolCount()} tools`);
     }

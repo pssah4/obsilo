@@ -8,20 +8,43 @@
  * Tool names (will expand as we add more tools)
  */
 export type ToolName =
+    // Vault: read
     | 'read_file'
-    | 'write_file'
     | 'list_files'
     | 'search_files'
+    // Vault: write
+    | 'write_file'
+    | 'edit_file'
+    | 'append_to_file'
     | 'create_folder'
     | 'delete_file'
     | 'move_file'
-    | 'apply_diff'
-    | 'search_replace'
+    // Vault: structured
     | 'create_canvas'
+    | 'create_base'
+    | 'update_base'
+    | 'query_base'
+    | 'get_frontmatter'
+    | 'update_frontmatter'
+    | 'get_linked_notes'
+    | 'get_vault_stats'
+    | 'search_by_tag'
+    | 'get_daily_note'
+    | 'open_note'
+    | 'generate_canvas'
+    // Web
+    | 'web_fetch'
+    | 'web_search'
+    // Semantic
     | 'semantic_search'
+    // Agent control
+    | 'ask_followup_question'
     | 'attempt_completion'
+    | 'switch_mode'
+    | 'new_task'
     | 'update_todo_list'
-    | 'use_mcp_tool'; // For MCP tools (Phase 6)
+    // MCP
+    | 'use_mcp_tool';
 
 /**
  * Tool use request from LLM
@@ -94,6 +117,18 @@ export interface ToolExecutionContext {
      * Callbacks for results
      */
     callbacks: ToolCallbacks;
+
+    /**
+     * Ask the user a followup question and wait for their answer.
+     * Used by ask_followup_question tool.
+     */
+    askQuestion?: (question: string, options?: string[]) => Promise<string>;
+
+    /**
+     * Signal that the task is complete with a result summary.
+     * Used by attempt_completion tool.
+     */
+    signalCompletion?: (result: string) => void;
 }
 
 /**

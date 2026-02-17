@@ -8,132 +8,89 @@
 ## Sprint 1 — Kritische Blocker
 
 ### 1.1 Diff-basiertes Editing
-- [ ] **`edit_file` Tool** (`src/core/tools/vault/EditFileTool.ts`)
+- [x] **`edit_file` Tool** (`src/core/tools/vault/EditFileTool.ts`)
   - Parameter: `path`, `old_str`, `new_str`, `expected_replacements?`
-  - Fuzzy-Matching mit konfigurierbarer Precision (0–100%)
-  - Fehler bei: not found / Ambiguität / truncated
+  - Fuzzy-Matching Fallback bei Whitespace-Unterschieden
+  - Fehler bei: not found / Ambiguität
   - `isWriteOperation: true` → Checkpoint vor Ausführung
-  - In `ToolRegistry` registrieren
-  - In `systemPrompt.ts` beschreiben
-- [ ] **`append_to_file` Tool** (`src/core/tools/vault/AppendToFileTool.ts`)
+  - In `ToolRegistry` registriert, in `systemPrompt.ts` beschrieben
+- [x] **`append_to_file` Tool** (`src/core/tools/vault/AppendToFileTool.ts`)
   - Parameter: `path`, `content`, `separator?` (default: `\n`)
   - `isWriteOperation: true`
-- [ ] **Settings: Diff-Editing Toggle + Match Precision Slider**
-  - `settings.advancedApi.enableDiffEditing: boolean`
-  - `settings.advancedApi.diffMatchPrecision: number` (0–100)
-  - Im Models-Tab, Abschnitt "Advanced"
+- [ ] **Settings: Diff-Editing Toggle + Match Precision Slider** *(UI — Sprint 2)*
 
 ### 1.2 Agent-Control-Tools
-- [ ] **`ask_followup_question` Tool** (`src/core/tools/agent/AskFollowupQuestionTool.ts`)
+- [x] **`ask_followup_question` Tool** (`src/core/tools/agent/AskFollowupQuestionTool.ts`)
   - Parameter: `question`, `options?: string[]`
   - Unterbricht Loop via Promise → wartet auf User-Antwort
-  - UI: Question-Card im Chat mit optionalen Buttons
-  - Callback in `AgentTask`: `onQuestion(q, options) → Promise<string>`
-  - Callback in `AgentSidebarView`: rendert Card, resolved Promise bei Klick
-- [ ] **`attempt_completion` Tool** (`src/core/tools/agent/AttemptCompletionTool.ts`)
+  - Callback-Architektur in `AgentTask` + `ToolExecutionContext` verdrahtet
+- [x] **`attempt_completion` Tool** (`src/core/tools/agent/AttemptCompletionTool.ts`)
   - Parameter: `result`
-  - Beendet AgentTask-Loop sofort (setzt Flag)
-  - UI: Completion-Card (grün, mit result-Text)
+  - Beendet AgentTask-Loop sofort (setzt Flag), `onAttemptCompletion` Callback
+- [ ] **UI: Question-Card + Completion-Card in `AgentSidebarView.ts`** *(UI — Sprint 2)*
 
 ### 1.3 Auto-Approve System
-- [ ] **`AutoApprovalConfig` Typ in `settings.ts`**
-  ```typescript
-  { enabled, showMenuInChat, read, write, web, mcp, mode, subtasks, question, todo }
-  ```
-  Default: `enabled: false`, alle Sub-Toggles `false`
-- [ ] **Approval-Logik in `ToolExecutionPipeline.ts`**
-  - `checkApproval(toolName, params) → Promise<'auto'|'approved'|'rejected'>`
-  - Session-Cache: "Immer erlauben" für Tool-Typ merken
-  - Tool-Typ-Mapping: read/write/web/agent/mcp
-- [ ] **Approval-Callback-Architektur in `AgentTask.ts`**
-  - `onApprovalRequired(tool, params) → Promise<boolean>`
-- [ ] **Approval-Card UI in `AgentSidebarView.ts`**
-  - Zeigt Tool-Name + Parameter-Preview
-  - Buttons: Erlauben / Immer erlauben / Ablehnen
-  - Resolved Pipeline-Promise bei Klick
-- [ ] **Auto-Approve-Leiste im Chat**
-  - Sichtbar wenn `showMenuInChat: true`
-  - Schnell-Toggles: ⚡ Auto · 📖 Lesen · ✏️ Schreiben · 🌐 Web · 🤖 Tasks
-- [ ] **Settings: Behaviour-Tab — Auto-Approve Sektion**
-  - Master-Toggle + Chat-Menu-Toggle
-  - Granulare Toggles je Operationstyp (read, write, web, mcp, mode, subtasks, question, todo)
+- [x] **`AutoApprovalConfig` Typ in `settings.ts`**
+  - `{ enabled, showMenuInChat, read, write, web, mcp, mode, subtasks, question, todo }`
+  - Default: `enabled: false`, reads=true, alle anderen false
+- [x] **Approval-Logik in `ToolExecutionPipeline.ts`**
+  - `checkApproval()` mit Tool-Gruppe-Mapping (read/write/web/agent/mcp)
+  - `onApprovalRequired` Callback in `ContextExtensions` verdrahtet
+- [ ] **Approval-Card UI in `AgentSidebarView.ts`** *(UI — Sprint 2)*
+- [ ] **Auto-Approve-Leiste im Chat** *(UI — Sprint 2)*
+- [ ] **Settings: Behaviour-Tab — Auto-Approve Sektion** *(Settings-UI — Sprint 2)*
 
 ### 1.4 Checkpoints (isomorphic-git)
-> Original-Scope: ADR-003 — Shadow-Repo in `.obsidian-agent/checkpoints/` via isomorphic-git (kein externes Git nötig)
+> Original-Scope: ADR-003 — Shadow-Repo in `.obsidian-agent/checkpoints/` via isomorphic-git
 
-- [ ] **`isomorphic-git` als Dependency** (`package.json`)
-  - `npm install isomorphic-git` — läuft im Browser/Electron ohne nativen Git-Client
-- [ ] **`GitCheckpointService`** (`src/core/checkpoints/GitCheckpointService.ts`)
-  - Shadow-Repo: `.obsidian/plugins/obsidian-agent/checkpoints/` (git init beim ersten Start)
-  - `snapshot(taskId)` — staged commit aller geänderten Dateien vor Task-Start
-  - `restore(taskId)` — git checkout auf Snapshot-Commit
-  - `diff(taskId)` — unified diff zwischen Snapshot und aktuellem Stand
-  - `cleanup(taskId)` — Branch/Tag des Snapshots löschen
-  - Timeout-Support: Operation schlägt nach N Sekunden fehl
-  - Auto-Cleanup nach Task-Ende (wenn konfiguriert)
-- [ ] **Integration in `ToolExecutionPipeline.ts`**
-  - `checkpoint.snapshot(taskId)` VOR erstem schreibenden Tool-Call des Tasks
-- [ ] **Diff-Anzeige in `AgentSidebarView.ts`**
-  - Nach Task-Ende (wenn Writes stattfanden): Diff-Button + Undo-Button
-  - Diff-Modal: unified diff aller Änderungen des Tasks
-  - Klick Undo → `checkpoint.restore(taskId)`
-- [ ] **Settings: Behaviour-Tab — Checkpoints Sektion**
-  - "Automatische Checkpoints" Toggle
-  - "Timeout (Sekunden)" Number-Input (default: 30)
-  - "Auto-Cleanup nach Task" Toggle
+- [x] **`isomorphic-git` als Dependency** (`npm install isomorphic-git`)
+- [x] **`GitCheckpointService`** (`src/core/checkpoints/GitCheckpointService.ts`)
+  - Shadow-Repo: `.obsidian/plugins/obsidian-agent/checkpoints/`
+  - `snapshot(taskId, files[])` — staged commit vor erstem Write
+  - `restore(checkpoint)` — Dateien aus Commit wiederherstellen
+  - `diff(checkpoint)` — Zusammenfassung der Änderungen
+  - Timeout-Support, Auto-Cleanup konfigurierbar
+- [x] **Integration in `ToolExecutionPipeline.ts`**
+  - Snapshot vor erstem schreibenden Tool-Call des Tasks
+- [x] **Integration in `main.ts`** — Service wird beim Plugin-Start initialisiert
+- [ ] **Diff-Anzeige + Undo-Button in `AgentSidebarView.ts`** *(UI — Sprint 2)*
+- [ ] **Settings: Behaviour-Tab — Checkpoints Sektion** *(Settings-UI — Sprint 2)*
 
 ### 1.6 Governance: Ignore & Protected Files
 > Original-Scope: GOV-02, nicht-verhandelbare technische Constraints
 
-- [ ] **`.obsidian-agentignore` Unterstützung** (`src/core/governance/IgnoreService.ts`)
-  - Liest `.obsidian-agentignore` aus Vault-Root (gitignore-Syntax)
+- [x] **`IgnoreService`** (`src/core/governance/IgnoreService.ts`)
+  - Liest `.obsidian-agentignore` (gitignore-Syntax) + `.obsidian-agentprotected`
   - `isIgnored(path): boolean` — prüft vor jedem Tool-Call
-  - Default-Ignoriert: `.obsidian/`, `node_modules/`, `.git/`
-  - Gitignore-Parsing: eigene Implementierung oder `ignore` npm package
-- [ ] **`.obsidian-agentprotected` Unterstützung**
-  - Dateien/Ordner die NIEMALS modifiziert werden dürfen (auch nicht mit Approval)
-  - `isProtected(path): boolean` — harte Sperre in `ToolExecutionPipeline`
-  - Bei Versuch: Fehler-Card im Chat mit Erklärung
-- [ ] **Integration in `ToolExecutionPipeline.ts`**
-  - VOR Approval-Check: `ignoreService.isIgnored(path)` + `ignoreService.isProtected(path)`
-- [ ] **Settings: Behaviour-Tab — Governance Sektion**
-  - "Ignorierte Pfade anzeigen" → zeigt aktive Ignore-Regeln
-  - "Geschützte Dateien anzeigen" → zeigt Protected-Liste
-  - Link: "`.obsidian-agentignore` bearbeiten" → öffnet Datei
+  - `isProtected(path): boolean` — harte Sperre für schreibende Ops
+  - Default-geblockt: `.git/`, `.obsidian/workspace`, Governance-Dateien selbst
+  - Gitignore-Syntax: `*`, `**`, Verzeichnis-Matches, Kommentare
+- [x] **Integration in `ToolExecutionPipeline.ts`**
+  - VOR Approval-Check: Ignore-Check + Protected-Check für Schreiboperationen
+- [x] **Integration in `main.ts`** — Service wird beim Plugin-Start geladen
+- [ ] **Settings: Behaviour-Tab — Governance Sektion** *(Settings-UI — Sprint 2)*
 
 ### 1.7 Operation Logging / Audit Trail
 > Original-Scope: GOV-02 — Jeder Tool-Call wird persistent geloggt
 
-- [ ] **`OperationLogger`** (`src/core/governance/OperationLogger.ts`)
+- [x] **`OperationLogger`** (`src/core/governance/OperationLogger.ts`)
   - Speicherort: `.obsidian/plugins/obsidian-agent/logs/YYYY-MM-DD.jsonl`
-  - Format: `{ timestamp, taskId, mode, tool, params, result, durationMs }`
-  - Rotierung: neue Datei pro Tag, max 30 Tage behalten
-  - Writes: immer loggen (auch auto-approved)
-  - Reads: nur loggen wenn Debug-Mode aktiv
-- [ ] **Integration in `ToolExecutionPipeline.ts`**
-  - Nach jedem `tool.execute()`: `logger.log(toolCall, result)`
-- [ ] **Log-Viewer in Settings (About-Tab)**
-  - Liste der letzten N Log-Einträge
-  - Filter nach Tool-Typ / Datum
-  - "Logs löschen" Button
+  - Format: `{ timestamp, taskId, mode, tool, params, success, durationMs, error? }`
+  - 30-Tage-Rotation (älteste Dateien automatisch gelöscht)
+  - `readLog(date)` + `getLogDates()` + `clearLogs()` APIs
+- [x] **Integration in `ToolExecutionPipeline.ts`**
+  - Nach jedem `tool.execute()`: `operationLogger.log(entry)`
+- [x] **Integration in `main.ts`** — Service wird beim Plugin-Start initialisiert
+- [ ] **Log-Viewer in Settings (About-Tab)** *(Settings-UI — Sprint 2)*
 
 ### 1.5 Advanced API Settings
-- [ ] **`AdvancedApiSettings` Typ in `settings.ts`**
-  ```typescript
-  { useCustomTemperature, temperature, consecutiveMistakeLimit, rateLimitSeconds }
-  ```
-- [ ] **Temperature-Support in `AnthropicProvider` + `OpenAiProvider`**
-  - Wenn `useCustomTemperature: true` → `temperature` an API übergeben
-- [ ] **Error/Repetition Detector in `AgentTask.ts`**
-  - Zählt konsekutive Fehler
-  - Bei Limit → Dialog: "Agent hat Probleme — fortfahren oder abbrechen?"
-  - Limit 0 = deaktiviert
-- [ ] **Rate Limiting in `AgentTask.ts`**
-  - Mindest-Wartezeit zwischen API-Calls (requestAnimationFrame / setTimeout)
-- [ ] **Settings: Behaviour-Tab — Advanced API Sektion**
-  - Custom Temperature Toggle + Slider
-  - Error/Repetition Limit Number-Input
-  - Rate Limit Number-Input
+- [x] **`AdvancedApiSettings` Typ in `settings.ts`**
+  - `{ useCustomTemperature, temperature, consecutiveMistakeLimit, rateLimitMs }`
+  - In `DEFAULT_SETTINGS` mit sinnvollen Defaults
+- [ ] **Temperature-Support in `AnthropicProvider` + `OpenAiProvider`** *(Sprint 1.5b)*
+- [ ] **Error/Repetition Detector in `AgentTask.ts`** *(Sprint 1.5b)*
+- [ ] **Rate Limiting in `AgentTask.ts`** *(Sprint 1.5b)*
+- [ ] **Settings: Behaviour-Tab — Advanced API Sektion** *(Settings-UI — Sprint 2)*
 
 ---
 

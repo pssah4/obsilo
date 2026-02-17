@@ -5,13 +5,12 @@ import { AgentSidebarView, VIEW_TYPE_AGENT_SIDEBAR } from './ui/AgentSidebarView
 import { AgentSettingsTab } from './ui/AgentSettingsTab';
 import { ToolRegistry } from './core/tools/ToolRegistry';
 import { ToolExecutionPipeline } from './core/tool-execution/ToolExecutionPipeline';
+import { IgnoreService } from './core/governance/IgnoreService';
+import { OperationLogger } from './core/governance/OperationLogger';
+import { GitCheckpointService } from './core/checkpoints/GitCheckpointService';
 import { buildApiHandler } from './api/index';
 import type { ApiHandler } from './api/types';
 import type { ToolUse, ToolCallbacks } from './core/tools/types';
-// import { AgentProvider } from './core/AgentProvider';
-// import { McpHub } from './services/mcp/McpHub';
-// import { GlobalCheckpointService } from './services/checkpoints/GlobalCheckpointService';
-// import { SemanticIndexService } from './services/semantic-index/SemanticIndexService';
 
 /**
  * Obsidian Agent Plugin
@@ -33,10 +32,9 @@ export default class ObsidianAgentPlugin extends Plugin {
     settings: ObsidianAgentSettings;
     toolRegistry: ToolRegistry;
     apiHandler: ApiHandler | null = null;
-    // provider: AgentProvider;
-    // mcpHub: McpHub;
-    // checkpointService: GlobalCheckpointService;
-    // semanticIndex: SemanticIndexService;
+    ignoreService: IgnoreService;
+    operationLogger: OperationLogger;
+    checkpointService: GitCheckpointService;
 
     /**
      * Plugin initialization
@@ -81,17 +79,33 @@ export default class ObsidianAgentPlugin extends Plugin {
         await this.loadSettings();
 
         // 2. Initialize core services
-        // Phase 1: Tool registry (ToolExecutionPipeline created per-task)
+        // Governance: ignore/protected path rules
+        this.ignoreService = new IgnoreService(this.app.vault);
+        await this.ignoreService.load();
+
+        // Governance: persistent operation log + checkpoints
+        const pluginDir = `.obsidian/plugins/${this.manifest.id}`;
+        this.operationLogger = new OperationLogger(this.app.vault, pluginDir);
+        await this.operationLogger.initialize();
+
+        // Checkpoints (isomorphic-git shadow repo)
+        this.checkpointService = new GitCheckpointService(
+            this.app.vault,
+            pluginDir,
+            this.settings.checkpointTimeoutSeconds,
+            this.settings.checkpointAutoCleanup,
+        );
+        if (this.settings.enableCheckpoints) {
+            await this.checkpointService.initialize().catch((e) =>
+                console.warn('[Plugin] Checkpoint service init failed (non-fatal):', e)
+            );
+        }
+
+        // Tool registry (ToolExecutionPipeline created per-task)
         this.toolRegistry = new ToolRegistry(this);
 
-        // Phase 4: LLM provider (null if no API key configured)
+        // LLM provider (null if no API key configured)
         this.initApiHandler();
-
-        // TODO: Phase 1 - Uncomment when services are implemented
-        // this.provider = new AgentProvider(this);
-        // this.mcpHub = new McpHub(this.provider);
-        // this.checkpointService = new GlobalCheckpointService(this);
-        // this.semanticIndex = new SemanticIndexService(this);
 
         // 3. Register UI views
         this.registerView(

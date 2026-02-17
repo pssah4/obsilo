@@ -182,14 +182,53 @@ export interface ModeConfig {
 }
 
 // ---------------------------------------------------------------------------
-// Auto-approval rules
+// Auto-approval config (Sprint 1.3)
 // ---------------------------------------------------------------------------
 
+export interface AutoApprovalConfig {
+    /** Master toggle: when false, all write operations require manual approval */
+    enabled: boolean;
+    /** Show the quick-toggle bar inside the chat view */
+    showMenuInChat: boolean;
+    /** Auto-approve read operations (read_file, list_files, search_files, ...) */
+    read: boolean;
+    /** Auto-approve write operations (write_file, edit_file, append_to_file, delete_file, move_file, ...) */
+    write: boolean;
+    /** Auto-approve web operations (web_fetch, web_search) */
+    web: boolean;
+    /** Auto-approve MCP tool calls */
+    mcp: boolean;
+    /** Auto-approve mode switching (switch_mode) */
+    mode: boolean;
+    /** Auto-approve spawning subtasks (new_task) */
+    subtasks: boolean;
+    /** Auto-approve ask_followup_question (skips approval card, shows question card directly) */
+    question: boolean;
+    /** Auto-approve update_todo_list */
+    todo: boolean;
+}
+
+/** Legacy — kept for backwards compat */
 export interface AutoApprovalRules {
     readOperations: boolean;
     writeToTempFiles: boolean;
     maxRequestsPerSession?: number;
     whitelistedPaths?: string[];
+}
+
+// ---------------------------------------------------------------------------
+// Advanced API Settings (Sprint 1.5)
+// ---------------------------------------------------------------------------
+
+export interface AdvancedApiSettings {
+    /** Use a custom temperature instead of the model default */
+    useCustomTemperature: boolean;
+    /** Temperature value (0.0 – 2.0) */
+    temperature: number;
+    /** Stop agent after N consecutive errors (0 = disabled) */
+    consecutiveMistakeLimit: number;
+    /** Minimum milliseconds between API requests (0 = no limit) */
+    rateLimitMs: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -212,8 +251,13 @@ export interface ObsidianAgentSettings {
     currentMode: string;
     customModes: ModeConfig[];
 
-    // Approval
+    // Approval (Sprint 1.3)
+    autoApproval: AutoApprovalConfig;
+    /** @deprecated use autoApproval */
     autoApprovalRules: AutoApprovalRules;
+
+    // Advanced API (Sprint 1.5)
+    advancedApi: AdvancedApiSettings;
 
     // Semantic Index
     enableSemanticIndex: boolean;
@@ -221,9 +265,10 @@ export interface ObsidianAgentSettings {
     embeddingModels: CustomModel[];
     activeEmbeddingModelKey: string;
 
-    // Checkpoints
+    // Checkpoints (Sprint 1.4)
     enableCheckpoints: boolean;
-    maxCheckpointsPerTask: number;
+    checkpointTimeoutSeconds: number;
+    checkpointAutoCleanup: boolean;
 
     // UI
     sidebarPosition: 'left' | 'right';
@@ -244,18 +289,42 @@ export const DEFAULT_SETTINGS: ObsidianAgentSettings = {
     mcpServers: {},
     currentMode: 'ask',
     customModes: [],
+
+    autoApproval: {
+        enabled: false,
+        showMenuInChat: true,
+        read: true,    // reads are always safe
+        write: false,
+        web: false,
+        mcp: false,
+        mode: false,
+        subtasks: false,
+        question: true,
+        todo: true,
+    },
     autoApprovalRules: {
         readOperations: true,
         writeToTempFiles: false,
         maxRequestsPerSession: undefined,
         whitelistedPaths: [],
     },
-    enableSemanticIndex: true,
+
+    advancedApi: {
+        useCustomTemperature: false,
+        temperature: 1.0,
+        consecutiveMistakeLimit: 3,
+        rateLimitMs: 0,
+    },
+
+    enableSemanticIndex: false,
     embeddingModel: 'Xenova/all-MiniLM-L6-v2',
     embeddingModels: [],
     activeEmbeddingModelKey: '',
+
     enableCheckpoints: true,
-    maxCheckpointsPerTask: 50,
+    checkpointTimeoutSeconds: 30,
+    checkpointAutoCleanup: true,
+
     sidebarPosition: 'right',
     showWelcomeMessage: true,
     autoAddActiveFileContext: true,

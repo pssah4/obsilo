@@ -347,51 +347,63 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
         this.currentAbortController = new AbortController();
         this.setRunningState(true);
 
-        // Prepare streaming message elements
-        const { messageEl, contentEl, footerEl } = this.createStreamingMessageEl();
-        let accumulatedText = '';
+        // Prepare streaming message elements (tools above response text)
+        const { messageEl, toolsEl, contentEl, footerEl } = this.createStreamingMessageEl();
+        let accumulatedText = '';   // text accumulated during/after tool phase
+        let hasTools = false;       // have any tools been called in this task?
 
         const taskId = `task-${Date.now()}`;
         const mode = this.plugin.settings.currentMode;
+        let taskWriteCount = 0;
 
         const task = new AgentTask(
             this.plugin.apiHandler,
             this.plugin.toolRegistry,
             {
                 onText: (chunk) => {
-                    accumulatedText += chunk;
-                    // Feature 2: Re-render as Markdown on each chunk
-                    contentEl.empty();
-                    MarkdownRenderer.render(
-                        this.app,
-                        accumulatedText,
-                        contentEl,
-                        '',
-                        this,
-                    );
-                    this.chatContainer?.scrollTo({ top: this.chatContainer.scrollHeight });
+                    if (!hasTools) {
+                        // Q&A mode: stream text directly as it arrives
+                        accumulatedText += chunk;
+                        contentEl.empty();
+                        MarkdownRenderer.render(this.app, accumulatedText, contentEl, '', this);
+                        this.chatContainer?.scrollTo({ top: this.chatContainer.scrollHeight });
+                    } else {
+                        // Agentic mode: buffer text, render after complete
+                        accumulatedText += chunk;
+                    }
                 },
                 onToolStart: (name, input) => {
-                    // Compact, collapsed-by-default tool call indicator
-                    const details = messageEl.createEl('details', { cls: 'tool-call-details' });
-                    // collapsed by default — user can expand to see I/O
+                    if (!hasTools) {
+                        // First tool call: clear any pre-tool "I'll..." boilerplate text
+                        hasTools = true;
+                        accumulatedText = '';
+                        contentEl.empty();
+                    }
+                    // Kilo Code-style compact row: icon + label + brief param + time
+                    const details = toolsEl.createEl('details', { cls: 'tool-call-details' });
                     const summary = details.createEl('summary', { cls: 'tool-call-summary' });
-                    setIcon(summary.createSpan('tool-icon'), 'wrench');
-                    summary.createSpan('tool-name').setText(name);
-                    summary.createSpan('tool-status tool-running').setText('…');
+                    setIcon(summary.createSpan('tool-icon'), this.getToolIcon(name));
+                    summary.createSpan('tool-name').setText(this.formatToolLabel(name));
+                    const brief = this.getToolBriefParam(input);
+                    if (brief) summary.createSpan('tool-brief-param').setText(brief);
+                    summary.createSpan('tool-time').setText(
+                        new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                    );
+                    summary.createSpan('tool-status tool-running');
 
-                    // Input block (hidden until user expands)
                     const inputEl = details.createDiv('tool-call-input');
                     inputEl.createEl('pre').setText(JSON.stringify(input, null, 2));
-
-                    // Placeholder for output (filled in onToolResult)
                     details.createDiv('tool-call-output');
 
                     (details as any)._toolName = name;
+                    // Track write operations for undo bar
+                    const writeOps = ['write_file', 'edit_file', 'append_to_file', 'create_folder', 'delete_file', 'move_file'];
+                    if (writeOps.includes(name)) taskWriteCount++;
+                    this.chatContainer?.scrollTo({ top: this.chatContainer.scrollHeight });
                 },
                 onToolResult: (name, content, isError) => {
-                    // Update status icon; keep collapsed (user can expand to see I/O)
-                    messageEl.querySelectorAll('.tool-call-details').forEach((el) => {
+                    // Update status icon in toolsEl
+                    toolsEl.querySelectorAll('.tool-call-details').forEach((el) => {
                         if ((el as any)._toolName !== name) return;
                         const statusEl = el.querySelector('.tool-status');
                         if (statusEl) {
@@ -415,11 +427,28 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
                     footerEl.setText(`${inputTokens.toLocaleString()} in · ${outputTokens.toLocaleString()} out`);
                     footerEl.style.display = '';
                 },
+                onAttemptCompletion: (result) => {
+                    this.showCompletionCard(result, messageEl);
+                },
+                onQuestion: (question, options, resolve) => {
+                    this.showQuestionCard(question, options, resolve);
+                },
+                onApprovalRequired: async (toolName, input) => {
+                    return this.showApprovalCard(toolName, input, toolsEl);
+                },
                 onComplete: () => {
+                    // If tools were used, render the buffered response text now (ordered after tools)
+                    if (hasTools && accumulatedText) {
+                        contentEl.empty();
+                        MarkdownRenderer.render(this.app, accumulatedText, contentEl, '', this);
+                    }
                     messageEl.removeClass('message-streaming');
                     this.currentAbortController = null;
                     this.setRunningState(false);
                     this.chatContainer?.scrollTo({ top: this.chatContainer.scrollHeight });
+                    if (taskWriteCount > 0 && this.plugin.settings.enableCheckpoints) {
+                        this.showUndoBar(taskId, taskWriteCount);
+                    }
                 },
                 // Feature 5: Styled error display with friendly messages
                 onError: (error) => {
@@ -476,17 +505,21 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
     }
 
     /**
-     * Create the streaming message container with footer for token usage (Feature 6)
+     * Create the streaming message container.
+     * Structure: toolsEl (tool calls, shown during execution) → contentEl (text response, shown after) → footerEl
      */
-    private createStreamingMessageEl(): { messageEl: HTMLElement; contentEl: HTMLElement; footerEl: HTMLElement } {
+    private createStreamingMessageEl(): { messageEl: HTMLElement; toolsEl: HTMLElement; contentEl: HTMLElement; footerEl: HTMLElement } {
         if (!this.chatContainer) throw new Error('Chat container not initialized');
         const messageEl = this.chatContainer.createDiv('message assistant-message message-streaming');
+        // Tool calls area (populated by onToolStart, always visible during execution)
+        const toolsEl = messageEl.createDiv('message-tools');
+        // Text response (populated after tools complete, or streamed directly for Q&A)
         const contentEl = messageEl.createDiv('message-content');
         // Feature 6: Token usage footer (hidden until onUsage fires)
         const footerEl = messageEl.createDiv('message-footer');
         footerEl.style.display = 'none';
         this.chatContainer.scrollTo({ top: this.chatContainer.scrollHeight });
-        return { messageEl, contentEl, footerEl };
+        return { messageEl, toolsEl, contentEl, footerEl };
     }
 
     /**
@@ -539,5 +572,192 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
         this.plugin.settings.currentMode = modeId;
         this.plugin.saveSettings();
         this.updateModeButton();
+    }
+
+    // -------------------------------------------------------------------------
+    // Tool display helpers (Kilo Code style)
+    // -------------------------------------------------------------------------
+
+    private getToolIcon(toolName: string): string {
+        const icons: Record<string, string> = {
+            read_file: 'file-text',
+            write_file: 'file-edit',
+            edit_file: 'pencil',
+            append_to_file: 'file-plus',
+            list_files: 'list',
+            search_files: 'search',
+            create_folder: 'folder-plus',
+            delete_file: 'trash-2',
+            move_file: 'move',
+            web_fetch: 'globe',
+            web_search: 'search',
+            use_mcp_tool: 'plug',
+            ask_followup_question: 'help-circle',
+            attempt_completion: 'check-circle-2',
+            update_todo_list: 'list-checks',
+        };
+        return icons[toolName] ?? 'terminal';
+    }
+
+    private formatToolLabel(toolName: string): string {
+        const labels: Record<string, string> = {
+            read_file: 'Read file',
+            write_file: 'Write file',
+            edit_file: 'Edit file',
+            append_to_file: 'Append',
+            list_files: 'List files',
+            search_files: 'Search',
+            create_folder: 'Create folder',
+            delete_file: 'Delete file',
+            move_file: 'Move file',
+            web_fetch: 'Fetch URL',
+            web_search: 'Web search',
+            use_mcp_tool: 'MCP tool',
+            ask_followup_question: 'Question',
+            attempt_completion: 'Complete',
+            update_todo_list: 'Update todos',
+        };
+        return labels[toolName] ?? toolName;
+    }
+
+    private getToolBriefParam(input: Record<string, any>): string {
+        return input?.path ?? input?.url ?? input?.query ?? input?.question ?? '';
+    }
+
+    // -------------------------------------------------------------------------
+    // Completion, Question, Approval cards
+    // -------------------------------------------------------------------------
+
+    private showCompletionCard(result: string, messageEl: HTMLElement): void {
+        const card = messageEl.createDiv('completion-card');
+        const header = card.createDiv('completion-card-header');
+        setIcon(header.createSpan('completion-icon'), 'check-circle-2');
+        header.createSpan('completion-title').setText('Task complete');
+        if (result) {
+            const body = card.createDiv('completion-body');
+            MarkdownRenderer.render(this.app, result, body, '', this);
+        }
+        this.chatContainer?.scrollTo({ top: this.chatContainer.scrollHeight });
+    }
+
+    private showQuestionCard(
+        question: string,
+        options: string[] | undefined,
+        resolve: (answer: string) => void,
+    ): void {
+        if (!this.chatContainer) { resolve(''); return; }
+
+        const card = this.chatContainer.createDiv('question-card');
+        card.createDiv('question-text').setText(question);
+        const cleanup = () => card.remove();
+
+        if (options && options.length > 0) {
+            const optionsEl = card.createDiv('question-options');
+            options.forEach((opt) => {
+                const btn = optionsEl.createEl('button', { cls: 'question-option-btn', text: opt });
+                btn.addEventListener('click', () => { cleanup(); resolve(opt); });
+            });
+        }
+
+        const inputRow = card.createDiv('question-input-row');
+        const input = inputRow.createEl('input', {
+            cls: 'question-input',
+            attr: { type: 'text', placeholder: 'Type your answer…' },
+        }) as HTMLInputElement;
+        const submitBtn = inputRow.createEl('button', { cls: 'question-submit-btn', text: 'Answer' });
+        const submit = () => {
+            const val = input.value.trim();
+            if (!val) return;
+            cleanup();
+            resolve(val);
+        };
+        submitBtn.addEventListener('click', submit);
+        input.addEventListener('keydown', (e: KeyboardEvent) => { if (e.key === 'Enter') submit(); });
+        this.chatContainer.scrollTo({ top: this.chatContainer.scrollHeight });
+    }
+
+    private async showApprovalCard(
+        toolName: string,
+        input: Record<string, any>,
+        container?: HTMLElement,
+    ): Promise<'auto' | 'approved' | 'rejected'> {
+        return new Promise((resolve) => {
+            const target = container ?? this.chatContainer;
+            if (!target) { resolve('approved'); return; }
+
+            const group = this.getToolGroup(toolName);
+            const groupLabels: Record<string, string> = { write: 'write', web: 'web', mcp: 'MCP', read: 'read' };
+
+            // Compact inline row — appears within the tool call area
+            const row = target.createDiv('tool-approval-row');
+            const iconSpan = row.createSpan('tool-approval-icon');
+            setIcon(iconSpan, 'shield-alert');
+            row.createSpan('tool-approval-text').setText(
+                `${this.formatToolLabel(toolName)} — ${groupLabels[group]} not enabled`
+            );
+
+            const actions = row.createDiv('tool-approval-actions');
+            const allowBtn = actions.createEl('button', { cls: 'tool-approval-btn approval-allow-once', text: 'Allow once' });
+            const enableBtn = actions.createEl('button', { cls: 'tool-approval-btn approval-enable', text: 'Enable in Settings' });
+            const denyBtn = actions.createEl('button', { cls: 'tool-approval-btn approval-deny-small', text: '✕' });
+
+            const cleanup = () => row.remove();
+
+            allowBtn.addEventListener('click', () => { cleanup(); resolve('approved'); });
+            denyBtn.addEventListener('click', () => { cleanup(); resolve('rejected'); });
+            enableBtn.addEventListener('click', async () => {
+                this.plugin.settings.autoApproval.enabled = true;
+                if (group === 'write') this.plugin.settings.autoApproval.write = true;
+                else if (group === 'web') this.plugin.settings.autoApproval.web = true;
+                else if (group === 'mcp') this.plugin.settings.autoApproval.mcp = true;
+                await this.plugin.saveSettings();
+                cleanup();
+                resolve('approved');
+            });
+
+            this.chatContainer?.scrollTo({ top: this.chatContainer!.scrollHeight });
+        });
+    }
+
+    private getToolGroup(toolName: string): 'write' | 'web' | 'mcp' | 'read' {
+        const webTools = ['web_fetch', 'web_search'];
+        const mcpTools = ['use_mcp_tool'];
+        const readTools = ['read_file', 'list_files', 'search_files', 'get_frontmatter', 'get_linked_notes', 'get_vault_stats', 'search_by_tag', 'get_daily_note'];
+        if (webTools.includes(toolName)) return 'web';
+        if (mcpTools.includes(toolName)) return 'mcp';
+        if (readTools.includes(toolName)) return 'read';
+        return 'write';
+    }
+
+    // -------------------------------------------------------------------------
+    // Undo bar
+    // -------------------------------------------------------------------------
+
+    private showUndoBar(taskId: string, writeCount: number): void {
+        if (!this.chatContainer) return;
+        const bar = this.chatContainer.createDiv('undo-bar');
+        bar.createSpan('undo-label').setText(
+            `Agent modified ${writeCount} file${writeCount !== 1 ? 's' : ''}.`
+        );
+        const undoBtn = bar.createEl('button', { cls: 'undo-btn', text: '↩ Undo all changes' });
+        undoBtn.addEventListener('click', async () => {
+            (undoBtn as HTMLButtonElement).disabled = true;
+            undoBtn.setText('Restoring…');
+            try {
+                const result = await this.plugin.checkpointService?.restoreLatestForTask(taskId);
+                bar.empty();
+                if (result && result.restored.length > 0) {
+                    bar.createSpan('undo-success').setText(
+                        `Restored ${result.restored.length} file${result.restored.length !== 1 ? 's' : ''}.`
+                    );
+                } else {
+                    bar.createSpan('undo-error').setText('No checkpoint found to restore.');
+                }
+            } catch {
+                bar.empty();
+                bar.createSpan('undo-error').setText('Restore failed — see console.');
+            }
+        });
+        this.chatContainer.scrollTo({ top: this.chatContainer.scrollHeight });
     }
 }

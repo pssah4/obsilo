@@ -1316,6 +1316,167 @@ export class AgentSettingsTab extends PluginSettingTab {
     // ---------------------------------------------------------------------------
 
     private buildBehaviorTab(container: HTMLElement): void {
+        // ── Auto-Approve ─────────────────────────────────────────────────────
+        container.createEl('h3', { cls: 'agent-settings-section', text: 'Auto-Approve' });
+
+        new Setting(container)
+            .setName('Enable auto-approve')
+            .setDesc('When enabled, write operations are executed without asking for approval (subject to the toggles below).')
+            .addToggle((t) =>
+                t.setValue(this.plugin.settings.autoApproval.enabled).onChange(async (v) => {
+                    this.plugin.settings.autoApproval.enabled = v;
+                    await this.plugin.saveSettings();
+                }),
+            );
+
+        new Setting(container)
+            .setName('Show quick-toggle bar in chat')
+            .setDesc('Display the Auto-Approve toggle bar above the chat input for quick access.')
+            .addToggle((t) =>
+                t.setValue(this.plugin.settings.autoApproval.showMenuInChat).onChange(async (v) => {
+                    this.plugin.settings.autoApproval.showMenuInChat = v;
+                    await this.plugin.saveSettings();
+                }),
+            );
+
+        new Setting(container)
+            .setName('Auto-approve read operations')
+            .setDesc('read_file, list_files, search_files — these are always safe.')
+            .addToggle((t) =>
+                t.setValue(this.plugin.settings.autoApproval.read).onChange(async (v) => {
+                    this.plugin.settings.autoApproval.read = v;
+                    await this.plugin.saveSettings();
+                }),
+            );
+
+        new Setting(container)
+            .setName('Auto-approve write operations')
+            .setDesc('write_file, edit_file, append_to_file, create_folder, delete_file, move_file.')
+            .addToggle((t) =>
+                t.setValue(this.plugin.settings.autoApproval.write).onChange(async (v) => {
+                    this.plugin.settings.autoApproval.write = v;
+                    await this.plugin.saveSettings();
+                }),
+            );
+
+        new Setting(container)
+            .setName('Auto-approve web operations')
+            .setDesc('web_fetch, web_search — fetches external content.')
+            .addToggle((t) =>
+                t.setValue(this.plugin.settings.autoApproval.web).onChange(async (v) => {
+                    this.plugin.settings.autoApproval.web = v;
+                    await this.plugin.saveSettings();
+                }),
+            );
+
+        new Setting(container)
+            .setName('Auto-approve MCP tool calls')
+            .setDesc('use_mcp_tool — external tool server calls.')
+            .addToggle((t) =>
+                t.setValue(this.plugin.settings.autoApproval.mcp).onChange(async (v) => {
+                    this.plugin.settings.autoApproval.mcp = v;
+                    await this.plugin.saveSettings();
+                }),
+            );
+
+        // ── Checkpoints ───────────────────────────────────────────────────────
+        container.createEl('h3', { cls: 'agent-settings-section', text: 'Checkpoints' });
+
+        new Setting(container)
+            .setName('Enable checkpoints')
+            .setDesc('Automatically snapshot files before the agent modifies them. Enables the Undo button after each task.')
+            .addToggle((t) =>
+                t.setValue(this.plugin.settings.enableCheckpoints).onChange(async (v) => {
+                    this.plugin.settings.enableCheckpoints = v;
+                    await this.plugin.saveSettings();
+                }),
+            );
+
+        new Setting(container)
+            .setName('Checkpoint timeout (seconds)')
+            .setDesc('Maximum time to wait for a snapshot operation before giving up. Default: 30.')
+            .addText((t) =>
+                t
+                    .setValue(String(this.plugin.settings.checkpointTimeoutSeconds))
+                    .onChange(async (v) => {
+                        const n = parseInt(v);
+                        if (!isNaN(n) && n > 0) {
+                            this.plugin.settings.checkpointTimeoutSeconds = n;
+                            await this.plugin.saveSettings();
+                        }
+                    }),
+            );
+
+        new Setting(container)
+            .setName('Auto-cleanup checkpoints')
+            .setDesc('Remove checkpoint data after a task completes to keep the shadow repo lean.')
+            .addToggle((t) =>
+                t.setValue(this.plugin.settings.checkpointAutoCleanup).onChange(async (v) => {
+                    this.plugin.settings.checkpointAutoCleanup = v;
+                    await this.plugin.saveSettings();
+                }),
+            );
+
+        // ── Advanced API ─────────────────────────────────────────────────────
+        container.createEl('h3', { cls: 'agent-settings-section', text: 'Advanced API' });
+
+        new Setting(container)
+            .setName('Use custom temperature')
+            .setDesc('Override the model\'s default temperature. Leave off to use the provider default.')
+            .addToggle((t) =>
+                t.setValue(this.plugin.settings.advancedApi.useCustomTemperature).onChange(async (v) => {
+                    this.plugin.settings.advancedApi.useCustomTemperature = v;
+                    await this.plugin.saveSettings();
+                }),
+            );
+
+        new Setting(container)
+            .setName('Temperature')
+            .setDesc('Value between 0.0 (deterministic) and 2.0 (very creative). Only used when "Use custom temperature" is on.')
+            .addSlider((s) =>
+                s
+                    .setLimits(0, 2, 0.05)
+                    .setValue(this.plugin.settings.advancedApi.temperature)
+                    .setDynamicTooltip()
+                    .onChange(async (v) => {
+                        this.plugin.settings.advancedApi.temperature = v;
+                        await this.plugin.saveSettings();
+                    }),
+            );
+
+        new Setting(container)
+            .setName('Consecutive error limit')
+            .setDesc('Stop the agent after N consecutive tool errors and show a warning. Set to 0 to disable.')
+            .addText((t) =>
+                t
+                    .setValue(String(this.plugin.settings.advancedApi.consecutiveMistakeLimit))
+                    .onChange(async (v) => {
+                        const n = parseInt(v);
+                        if (!isNaN(n) && n >= 0) {
+                            this.plugin.settings.advancedApi.consecutiveMistakeLimit = n;
+                            await this.plugin.saveSettings();
+                        }
+                    }),
+            );
+
+        new Setting(container)
+            .setName('Rate limit between requests (ms)')
+            .setDesc('Minimum pause between API calls in milliseconds. Useful for providers with strict rate limits. Set to 0 to disable.')
+            .addText((t) =>
+                t
+                    .setValue(String(this.plugin.settings.advancedApi.rateLimitMs))
+                    .onChange(async (v) => {
+                        const n = parseInt(v);
+                        if (!isNaN(n) && n >= 0) {
+                            this.plugin.settings.advancedApi.rateLimitMs = n;
+                            await this.plugin.saveSettings();
+                        }
+                    }),
+            );
+
+        // ── UI ────────────────────────────────────────────────────────────────
+        container.createEl('h3', { cls: 'agent-settings-section', text: 'UI' });
+
         new Setting(container)
             .setName('Auto-add active note as context')
             .setDesc('Automatically include the currently open note as context. Can be dismissed per-message via the × in the chat toolbar.')
@@ -1328,7 +1489,7 @@ export class AgentSettingsTab extends PluginSettingTab {
 
         new Setting(container)
             .setName('Show Welcome Message')
-            .setDesc('Show the welcome message when the sidebar opens')
+            .setDesc('Show the welcome message when the sidebar opens.')
             .addToggle((t) =>
                 t.setValue(this.plugin.settings.showWelcomeMessage).onChange(async (v) => {
                     this.plugin.settings.showWelcomeMessage = v;
@@ -1338,7 +1499,7 @@ export class AgentSettingsTab extends PluginSettingTab {
 
         new Setting(container)
             .setName('Debug Mode')
-            .setDesc('Log detailed information to the browser console')
+            .setDesc('Log detailed information to the browser console.')
             .addToggle((t) =>
                 t.setValue(this.plugin.settings.debugMode).onChange(async (v) => {
                     this.plugin.settings.debugMode = v;
