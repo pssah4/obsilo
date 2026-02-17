@@ -1,5 +1,6 @@
 import { Plugin, WorkspaceLeaf, Notice } from 'obsidian';
-import { ObsidianAgentSettings, DEFAULT_SETTINGS } from './types/settings';
+import { ObsidianAgentSettings, DEFAULT_SETTINGS, BUILT_IN_MODELS, getModelKey, modelToLLMProvider } from './types/settings';
+import type { CustomModel } from './types/settings';
 import { AgentSidebarView, VIEW_TYPE_AGENT_SIDEBAR } from './ui/AgentSidebarView';
 import { AgentSettingsTab } from './ui/AgentSettingsTab';
 import { ToolRegistry } from './core/tools/ToolRegistry';
@@ -120,7 +121,32 @@ export default class ObsidianAgentPlugin extends Plugin {
      * Load plugin settings from disk
      */
     async loadSettings() {
-        this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+        const saved = (await this.loadData()) ?? {};
+        this.settings = Object.assign({}, DEFAULT_SETTINGS, saved);
+        // Ensure all built-in models are present (merge new built-ins after updates)
+        this.settings.activeModels = this.mergeBuiltInModels(this.settings.activeModels ?? []);
+    }
+
+    /**
+     * Merge strategy: preserve user's saved models (with their API keys / enabled state),
+     * and append any built-in models that don't exist yet in saved data.
+     */
+    private mergeBuiltInModels(saved: CustomModel[]): CustomModel[] {
+        const savedKeys = new Set(saved.map(getModelKey));
+        const result = [...saved];
+        for (const builtIn of BUILT_IN_MODELS) {
+            if (!savedKeys.has(getModelKey(builtIn))) {
+                result.push({ ...builtIn });
+            }
+        }
+        return result;
+    }
+
+    /** Return the currently active CustomModel, or null if none configured */
+    getActiveModel(): CustomModel | null {
+        const key = this.settings.activeModelKey;
+        if (!key) return null;
+        return this.settings.activeModels.find((m) => getModelKey(m) === key) ?? null;
     }
 
     /**
@@ -136,27 +162,28 @@ export default class ObsidianAgentPlugin extends Plugin {
      * Called on load and whenever settings change.
      */
     initApiHandler(): void {
-        const providerKey = this.settings.defaultProvider;
-        const providerConfig = this.settings.providers[providerKey];
+        const model = this.getActiveModel();
 
-        if (!providerConfig) {
-            console.warn('[Plugin] No provider config found for:', providerKey);
+        if (!model) {
+            if (this.settings.debugMode) {
+                console.log('[Plugin] No active model configured');
+            }
             this.apiHandler = null;
             return;
         }
 
         // Require API key for cloud providers
-        if ((providerConfig.type === 'anthropic' || providerConfig.type === 'openai') && !providerConfig.apiKey) {
+        if ((model.provider === 'anthropic' || model.provider === 'openai' || model.provider === 'openrouter') && !model.apiKey) {
             if (this.settings.debugMode) {
-                console.log('[Plugin] API key not configured for', providerKey);
+                console.log('[Plugin] API key not set for active model:', getModelKey(model));
             }
             this.apiHandler = null;
             return;
         }
 
         try {
-            this.apiHandler = buildApiHandler(providerConfig);
-            console.log(`[Plugin] API handler initialized: ${providerKey} / ${providerConfig.model}`);
+            this.apiHandler = buildApiHandler(modelToLLMProvider(model));
+            console.log(`[Plugin] API handler initialized: ${model.displayName ?? model.name} (${model.provider})`);
         } catch (error) {
             console.error('[Plugin] Failed to initialize API handler:', error);
             this.apiHandler = null;

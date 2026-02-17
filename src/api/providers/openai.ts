@@ -89,6 +89,7 @@ interface ToolCallAccumulator {
 const DEFAULT_BASE_URLS: Record<string, string> = {
     openai: 'https://api.openai.com/v1',
     ollama: 'http://localhost:11434/v1',
+    openrouter: 'https://openrouter.ai/api/v1',
     custom: 'https://api.openai.com/v1',
 };
 
@@ -116,7 +117,11 @@ export class OpenAiProvider implements ApiHandler {
         tools: ToolDefinition[],
         abortSignal?: AbortSignal,
     ): ApiStream {
-        const baseUrl = this.config.baseUrl ?? DEFAULT_BASE_URLS[this.config.type] ?? DEFAULT_BASE_URLS.openai;
+        let baseUrl = this.config.baseUrl ?? DEFAULT_BASE_URLS[this.config.type] ?? DEFAULT_BASE_URLS.openai;
+        // Ollama's OpenAI-compatible API lives at /v1 — auto-add if missing
+        if (this.config.type === 'ollama' && !baseUrl.match(/\/v\d/)) {
+            baseUrl = baseUrl.replace(/\/+$/, '') + '/v1';
+        }
         const url = `${baseUrl.replace(/\/$/, '')}/chat/completions`;
 
         const openAiMessages = this.convertMessages(systemPrompt, messages);
@@ -126,9 +131,13 @@ export class OpenAiProvider implements ApiHandler {
             model: this.config.model,
             messages: openAiMessages,
             stream: true,
-            stream_options: { include_usage: true },
             max_tokens: this.config.maxTokens ?? 8192,
         };
+
+        // stream_options supported by OpenAI and OpenRouter
+        if (this.config.type === 'openai' || this.config.type === 'openrouter') {
+            body.stream_options = { include_usage: true };
+        }
 
         if (this.config.temperature !== undefined) {
             body.temperature = this.config.temperature;
@@ -145,6 +154,12 @@ export class OpenAiProvider implements ApiHandler {
 
         if (this.config.apiKey) {
             headers['Authorization'] = `Bearer ${this.config.apiKey}`;
+        }
+
+        // OpenRouter requires these headers for routing and analytics
+        if (this.config.type === 'openrouter') {
+            headers['HTTP-Referer'] = 'https://obsidian.md';
+            headers['X-Title'] = 'Obsidian Agent';
         }
 
         const response = await fetch(url, {

@@ -1,14 +1,526 @@
-import { App, PluginSettingTab, Setting } from 'obsidian';
+import { App, Modal, Notice, PluginSettingTab, Setting, setIcon } from 'obsidian';
 import type ObsidianAgentPlugin from '../main';
+import type { CustomModel, ProviderType } from '../types/settings';
+import { getModelKey, modelToLLMProvider } from '../types/settings';
+import { buildApiHandler } from '../api/index';
 
-/**
- * AgentSettingsTab - Obsidian Settings Tab for Obsidian Agent
- *
- * Adapted from Kilo Code's ApiOptions.tsx concept, using Obsidian's
- * native PluginSettingTab API instead of React components.
- */
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+const PROVIDER_LABELS: Record<string, string> = {
+    anthropic: 'Anthropic',
+    openai: 'OpenAI',
+    ollama: 'Ollama',
+    openrouter: 'OpenRouter',
+    custom: 'Custom',
+};
+
+const PROVIDER_COLORS: Record<string, string> = {
+    anthropic: '#c27c4a',
+    openai: '#10a37f',
+    ollama: '#5c6bc0',
+    openrouter: '#7c3aed',
+    custom: '#78909c',
+};
+
+// ---------------------------------------------------------------------------
+// Test helper
+// ---------------------------------------------------------------------------
+
+interface TestResult {
+    ok: boolean;
+    message: string;
+    detail?: string;
+}
+
+async function testModelConnection(model: CustomModel): Promise<TestResult> {
+    try {
+        const lp = modelToLLMProvider({ ...model, maxTokens: 16, temperature: 0 });
+        const handler = buildApiHandler(lp);
+        const abort = new AbortController();
+        // Ollama needs to swap models into memory — allow up to 30 s
+        const timeoutMs = model.provider === 'ollama' ? 30000 : 8000;
+        const timer = setTimeout(() => abort.abort(), timeoutMs);
+        try {
+            const stream = handler.createMessage(
+                'You are a test.',
+                [{ role: 'user', content: 'Hi' }],
+                [],
+                abort.signal,
+            );
+            for await (const chunk of stream) {
+                if (chunk.type === 'text' || chunk.type === 'usage') break;
+            }
+            return { ok: true, message: 'Connection successful ✓' };
+        } finally {
+            clearTimeout(timer);
+        }
+    } catch (err: any) {
+        const isOllama = model.provider === 'ollama';
+        const msg: string = err?.message ?? '';
+        const s: number | undefined = err?.status;
+        const isNetworkError = !s && (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('ECONNREFUSED') || msg.includes('ERR_CONNECTION_REFUSED'));
+
+        if (err?.name === 'AbortError') {
+            return {
+                ok: false,
+                message: isOllama ? 'Connection timed out (30 s)' : 'Connection timed out (8 s)',
+                detail: isOllama
+                    ? 'Ollama did not respond in time. Two possible causes:\n\n1. Ollama is not running → start it: ollama serve\n2. The model is large and still loading into memory → wait a moment and try again.'
+                    : 'The server did not respond in time. Check your Base URL.',
+            };
+        }
+
+        if (isNetworkError) {
+            return {
+                ok: false,
+                message: 'Cannot connect to server',
+                detail: isOllama
+                    ? 'Ollama is not reachable at the Base URL. Make sure Ollama is running — it should start automatically after installation. You can also start it manually: ollama serve'
+                    : 'Check that the Base URL is correct and the server is running.',
+            };
+        }
+
+        if (s === 401) {
+            return {
+                ok: false,
+                message: 'Invalid API key (401)',
+                detail: model.provider === 'anthropic'
+                    ? 'The key should start with sk-ant-... Get it from console.anthropic.com → API Keys.'
+                    : model.provider === 'openai'
+                    ? 'The key should start with sk-... Get it from platform.openai.com → API Keys.'
+                    : 'Check that you copied the full API key from your provider dashboard.',
+            };
+        }
+
+        if (s === 404) {
+            if (isOllama) {
+                return {
+                    ok: false,
+                    message: `Model "${model.name}" not found in Ollama`,
+                    detail: `The model name must match exactly what Ollama has installed.\n\n1. Open a Terminal and run: ollama list\n2. Copy the exact name shown (e.g. llama3.2:latest)\n3. Paste it into the Model ID field above.\n\nIf the model is not installed yet: ollama pull ${model.name}`,
+                };
+            }
+            return {
+                ok: false,
+                message: 'Model not found (404)',
+                detail: 'The Model ID does not exist for this provider. Check the exact model name in your provider\'s documentation.',
+            };
+        }
+
+        if (s === 429) {
+            return { ok: false, message: 'Rate limit reached (429)', detail: 'You\'ve sent too many requests. Wait a moment and try again.' };
+        }
+
+        if (s === 403) {
+            return { ok: false, message: 'Access denied (403)', detail: 'Your API key may not have permission to use this model, or billing is required.' };
+        }
+
+        return { ok: false, message: 'Connection failed', detail: msg || 'Unknown error' };
+    }
+}
+
+/** Fetch model names installed in a local Ollama instance */
+async function fetchOllamaModels(baseUrl: string): Promise<string[]> {
+    // Native Ollama API is at root — strip /v1 suffix if present
+    const root = (baseUrl || 'http://localhost:11434').replace(/\/v\d[^/]*\/?$/, '').replace(/\/+$/, '');
+    const url = `${root}/api/tags`;
+    const res = await fetch(url, { signal: AbortSignal.timeout(4000) });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    return ((data.models ?? []) as any[]).map((m) => m.name as string).sort();
+}
+
+// ---------------------------------------------------------------------------
+// Add / Configure Model Modal
+// ---------------------------------------------------------------------------
+
+export class ModelConfigModal extends Modal {
+    private model: CustomModel;
+    private isNew: boolean;
+    private onSave: (model: CustomModel) => void;
+
+    private formName: string;
+    private formDisplayName: string;
+    private formProvider: ProviderType;
+    private formApiKey: string;
+    private formBaseUrl: string;
+    private formMaxTokens: number;
+
+    private apiKeyRow: HTMLElement | null = null;
+    private baseUrlRow: HTMLElement | null = null;
+    private ollamaBrowserRow: HTMLElement | null = null;
+    private providerGuideEl: HTMLElement | null = null;
+    private apiKeyDescEl: HTMLElement | null = null;
+    private baseUrlDescEl: HTMLElement | null = null;
+    private testResultEl: HTMLElement | null = null;
+    private testBtn: HTMLButtonElement | null = null;
+    private nameInputEl: HTMLInputElement | null = null;
+
+    constructor(app: App, model: CustomModel | null, onSave: (m: CustomModel) => void) {
+        super(app);
+        this.isNew = model === null;
+        this.model = model ?? {
+            name: '',
+            provider: 'openai',
+            displayName: '',
+            apiKey: '',
+            baseUrl: '',
+            enabled: true,
+            isBuiltIn: false,
+            maxTokens: 8192,
+        };
+        this.onSave = onSave;
+        this.formName = this.model.name;
+        this.formDisplayName = this.model.displayName ?? '';
+        this.formProvider = this.model.provider;
+        this.formApiKey = this.model.apiKey ?? '';
+        this.formBaseUrl = this.model.baseUrl ?? '';
+        this.formMaxTokens = this.model.maxTokens ?? 8192;
+    }
+
+    onOpen(): void {
+        const { contentEl } = this;
+        contentEl.empty();
+        contentEl.addClass('model-config-modal');
+        contentEl.createEl('h3', {
+            text: this.isNew ? 'Add Model' : `Configure — ${this.model.displayName ?? this.model.name}`,
+            cls: 'modal-title',
+        });
+        this.buildForm(contentEl);
+        this.buildActions(contentEl);
+    }
+
+    onClose(): void {
+        this.contentEl.empty();
+    }
+
+    private buildForm(el: HTMLElement): void {
+        const form = el.createDiv('mcm-form');
+
+        const row = (label: string, desc?: string): HTMLElement => {
+            const r = form.createDiv('mcm-row');
+            const labelEl = r.createDiv('mcm-label');
+            labelEl.createSpan({ text: label });
+            if (desc) labelEl.createSpan({ text: desc, cls: 'mcm-desc' });
+            return r;
+        };
+
+        // ── Provider setup guide (dynamic, shown at top) ─────────────────
+        this.providerGuideEl = form.createDiv('mcm-guide');
+
+        // ── Provider ─────────────────────────────────────────────────────
+        const provRow = row('Provider');
+        const provSel = provRow.createEl('select', { cls: 'mcm-select' });
+        (['anthropic', 'openai', 'ollama', 'openrouter', 'custom'] as ProviderType[]).forEach((p) => {
+            const opt = provSel.createEl('option', { value: p, text: PROVIDER_LABELS[p] });
+            if (p === this.formProvider) opt.selected = true;
+        });
+        if (!this.isNew && this.model.isBuiltIn) provSel.disabled = true;
+        provSel.addEventListener('change', () => {
+            this.formProvider = provSel.value as ProviderType;
+            this.updateFieldVisibility();
+        });
+
+        // ── Model ID ─────────────────────────────────────────────────────
+        const nameRow = row('Model ID', 'Exact ID used in API calls');
+        this.nameInputEl = nameRow.createEl('input', {
+            cls: 'mcm-input',
+            attr: { type: 'text', placeholder: 'gpt-4o' },
+        });
+        this.nameInputEl.value = this.formName;
+        this.nameInputEl.addEventListener('input', () => (this.formName = this.nameInputEl!.value.trim()));
+        if (!this.isNew && this.model.isBuiltIn) this.nameInputEl.disabled = true;
+
+        // ── Ollama model browser (shown only for Ollama) ──────────────────
+        this.ollamaBrowserRow = form.createDiv('mcm-ollama-browser');
+        this.buildOllamaBrowser(this.ollamaBrowserRow);
+
+        // ── Display Name ──────────────────────────────────────────────────
+        const dnRow = row('Display Name', 'Label in chat toolbar');
+        const dnInput = dnRow.createEl('input', {
+            cls: 'mcm-input',
+            attr: { type: 'text', placeholder: this.formName || 'e.g. My GPT-4o' },
+        });
+        dnInput.value = this.formDisplayName;
+        dnInput.addEventListener('input', () => (this.formDisplayName = dnInput.value));
+
+        // ── API Key ───────────────────────────────────────────────────────
+        this.apiKeyRow = form.createDiv('mcm-row');
+        const akLabel = this.apiKeyRow.createDiv('mcm-label');
+        akLabel.createSpan({ text: 'API Key' });
+        this.apiKeyDescEl = akLabel.createSpan({ cls: 'mcm-desc' });
+        const akInput = this.apiKeyRow.createEl('input', {
+            cls: 'mcm-input',
+            attr: { type: 'password', placeholder: 'sk-...' },
+        });
+        akInput.value = this.formApiKey;
+        akInput.addEventListener('input', () => (this.formApiKey = akInput.value.trim()));
+
+        // ── Base URL ──────────────────────────────────────────────────────
+        this.baseUrlRow = form.createDiv('mcm-row');
+        const buLabel = this.baseUrlRow.createDiv('mcm-label');
+        buLabel.createSpan({ text: 'Base URL' });
+        this.baseUrlDescEl = buLabel.createSpan({ cls: 'mcm-desc' });
+        const buInput = this.baseUrlRow.createEl('input', {
+            cls: 'mcm-input',
+            attr: { type: 'text', placeholder: 'http://localhost:11434' },
+        });
+        buInput.value = this.formBaseUrl;
+        buInput.addEventListener('input', () => (this.formBaseUrl = buInput.value.trim()));
+
+        // ── Max Tokens ────────────────────────────────────────────────────
+        const mtRow = row('Max Tokens', 'Max length of the response');
+        const mtInput = mtRow.createEl('input', {
+            cls: 'mcm-input mcm-input-sm',
+            attr: { type: 'number', placeholder: '8192' },
+        });
+        mtInput.value = String(this.formMaxTokens);
+        mtInput.addEventListener('input', () => {
+            const n = parseInt(mtInput.value);
+            if (!isNaN(n) && n > 0) this.formMaxTokens = n;
+        });
+
+        // Test result (inline)
+        this.testResultEl = form.createDiv('mcm-test-result');
+        this.testResultEl.style.display = 'none';
+
+        this.updateFieldVisibility();
+    }
+
+    private buildActions(el: HTMLElement): void {
+        const bar = el.createDiv('mcm-actions');
+
+        this.testBtn = bar.createEl('button', { cls: 'mcm-btn-test', text: 'Test Connection' });
+        this.testBtn.addEventListener('click', () => this.runTest());
+
+        const saveBtn = bar.createEl('button', { cls: 'mod-cta', text: this.isNew ? 'Add' : 'Save' });
+        saveBtn.addEventListener('click', () => this.save());
+
+        const cancelBtn = bar.createEl('button', { text: 'Cancel' });
+        cancelBtn.addEventListener('click', () => this.close());
+    }
+
+    private updateFieldVisibility(): void {
+        if (!this.apiKeyRow || !this.baseUrlRow || !this.providerGuideEl) return;
+        const p = this.formProvider;
+
+        // Show/hide fields per provider
+        this.apiKeyRow.style.display = p === 'ollama' ? 'none' : '';
+        this.baseUrlRow.style.display = (p === 'anthropic' || p === 'openai' || p === 'openrouter') ? 'none' : '';
+        if (this.ollamaBrowserRow) this.ollamaBrowserRow.style.display = p === 'ollama' ? '' : 'none';
+
+        // Update inline field hints
+        if (this.apiKeyDescEl) {
+            const hints: Record<string, string> = {
+                anthropic: 'Starts with sk-ant-...',
+                openai: 'Starts with sk-...',
+                openrouter: 'Starts with sk-or-...',
+                custom: 'Leave empty for local services',
+            };
+            this.apiKeyDescEl.setText(hints[p] ?? '');
+        }
+        if (this.baseUrlDescEl) {
+            const hints: Record<string, string> = {
+                ollama: 'Default: http://localhost:11434',
+                custom: 'Include /v1 suffix, e.g. http://localhost:1234/v1',
+            };
+            this.baseUrlDescEl.setText(hints[p] ?? '');
+        }
+
+        // Render provider setup guide
+        this.providerGuideEl.empty();
+        this.renderProviderGuide(this.providerGuideEl, p);
+    }
+
+    private renderProviderGuide(container: HTMLElement, provider: ProviderType): void {
+        const guide = container.createDiv('mcm-guide-inner');
+
+        const link = (text: string, url: string): HTMLElement => {
+            const a = createEl('a', { text, href: url });
+            a.setAttribute('target', '_blank');
+            a.setAttribute('rel', 'noopener noreferrer');
+            return a;
+        };
+
+        if (provider === 'anthropic') {
+            guide.createEl('strong', { text: 'How to get your Anthropic API key:' });
+            const steps = guide.createEl('ol', { cls: 'mcm-guide-steps' });
+            const s1 = steps.createEl('li');
+            s1.appendText('Go to ');
+            s1.appendChild(link('console.anthropic.com', 'https://console.anthropic.com'));
+            s1.appendText(' and sign in (or create an account).');
+            steps.createEl('li', { text: 'Click "API Keys" in the left sidebar.' });
+            steps.createEl('li', { text: 'Click "Create Key", give it a name, and copy it.' });
+            steps.createEl('li', { text: 'Paste the key (starts with sk-ant-...) into the API Key field above.' });
+            guide.createDiv({ cls: 'mcm-guide-tip', text: '💡 Recommended model: claude-sonnet-4-5-20250929 (good balance of speed and quality).' });
+
+        } else if (provider === 'openai') {
+            guide.createEl('strong', { text: 'How to get your OpenAI API key:' });
+            const steps = guide.createEl('ol', { cls: 'mcm-guide-steps' });
+            const s1 = steps.createEl('li');
+            s1.appendText('Go to ');
+            s1.appendChild(link('platform.openai.com', 'https://platform.openai.com'));
+            s1.appendText(' and sign in.');
+            steps.createEl('li', { text: 'Click your name (top right) → "API keys".' });
+            steps.createEl('li', { text: 'Click "Create new secret key" and copy it immediately (you can\'t see it again).' });
+            steps.createEl('li', { text: 'Paste the key (starts with sk-...) into the API Key field above.' });
+            guide.createDiv({ cls: 'mcm-guide-tip', text: '💡 Recommended model: gpt-4o. Budget alternative: gpt-4o-mini.' });
+
+        } else if (provider === 'ollama') {
+            guide.createEl('strong', { text: 'How to use Ollama (runs locally, no cost):' });
+            const steps = guide.createEl('ol', { cls: 'mcm-guide-steps' });
+            const s1 = steps.createEl('li');
+            s1.appendText('Install Ollama from ');
+            s1.appendChild(link('ollama.ai', 'https://ollama.ai'));
+            s1.appendText('.');
+            const s2 = steps.createEl('li');
+            s2.appendText('Open a Terminal and pull a model, e.g.: ');
+            s2.createEl('code', { text: 'ollama pull llama3.2' });
+            const s3 = steps.createEl('li');
+            s3.appendText('Ollama starts automatically. The Base URL is ');
+            s3.createEl('code', { text: 'http://localhost:11434' });
+            s3.appendText(' by default.');
+            steps.createEl('li', { text: 'Enter the model name exactly as pulled (e.g. llama3.2) into Model ID above.' });
+            guide.createDiv({ cls: 'mcm-guide-tip', text: '💡 Not all models support tool use. Recommended: qwen2.5:7b, llama3.2, mistral.' });
+
+        } else if (provider === 'openrouter') {
+            guide.createEl('strong', { text: 'How to use OpenRouter (access 100+ models with one key):' });
+            const steps = guide.createEl('ol', { cls: 'mcm-guide-steps' });
+            const s1 = steps.createEl('li');
+            s1.appendText('Go to ');
+            s1.appendChild(link('openrouter.ai', 'https://openrouter.ai'));
+            s1.appendText(' and create a free account.');
+            steps.createEl('li', { text: 'Click your avatar (top right) → Keys → Create Key.' });
+            steps.createEl('li', { text: 'Copy the key (starts with sk-or-...) and paste it into the API Key field above.' });
+            steps.createEl('li', { text: 'Enter the Model ID — use the exact OpenRouter model name, e.g. anthropic/claude-3.5-sonnet or openai/gpt-4o.' });
+            const s5 = steps.createEl('li');
+            s5.appendText('Browse all available models at ');
+            s5.appendChild(link('openrouter.ai/models', 'https://openrouter.ai/models'));
+            s5.appendText('.');
+            guide.createDiv({ cls: 'mcm-guide-tip', text: '💡 The Base URL is pre-configured. Many models have a free tier — look for ":free" in the model name.' });
+
+        } else if (provider === 'custom') {
+            guide.createEl('strong', { text: 'OpenAI-compatible API (LM Studio, Mistral, Groq, etc.):' });
+            const table = guide.createEl('table', { cls: 'mcm-guide-table' });
+            const rows: [string, string, string][] = [
+                ['LM Studio', 'Start "Local Server" in LM Studio → copy the URL shown', 'http://localhost:1234/v1'],
+                ['Mistral', 'Get key at console.mistral.ai → API Keys', 'https://api.mistral.ai/v1'],
+                ['Groq', 'Get key at console.groq.com → API Keys', 'https://api.groq.com/openai/v1'],
+                ['OpenRouter', 'Get key at openrouter.ai → Keys', 'https://openrouter.ai/api/v1'],
+            ];
+            rows.forEach(([service, hint, url]) => {
+                const tr = table.createEl('tr');
+                tr.createEl('td', { text: service, cls: 'mcm-guide-service' });
+                const td = tr.createEl('td');
+                td.createSpan({ text: hint });
+                tr.createEl('td', { cls: 'mcm-guide-url' }).createEl('code', { text: url });
+            });
+            guide.createDiv({ cls: 'mcm-guide-tip', text: '💡 LM Studio: leave API Key empty. For cloud services, enter the key from their dashboard.' });
+        }
+    }
+
+    private buildOllamaBrowser(container: HTMLElement): void {
+        const browseBtn = container.createEl('button', { cls: 'mcm-browse-btn' });
+        setIcon(browseBtn.createSpan('mcm-browse-icon'), 'list');
+        const browseLabelEl = browseBtn.createSpan({ text: 'Browse installed models' });
+
+        const listEl = container.createDiv('mcm-model-list');
+        listEl.style.display = 'none';
+
+        browseBtn.addEventListener('click', async () => {
+            browseBtn.disabled = true;
+            browseLabelEl.setText('Loading…');
+            listEl.empty();
+            try {
+                const baseUrl = this.formBaseUrl || 'http://localhost:11434';
+                const models = await fetchOllamaModels(baseUrl);
+                listEl.style.display = '';
+                if (models.length === 0) {
+                    listEl.createDiv({ cls: 'mcm-model-empty', text: 'No models found. Pull one first, e.g.: ollama pull llama3.2' });
+                } else {
+                    models.forEach((name) => {
+                        const item = listEl.createEl('button', { cls: 'mcm-model-item', text: name });
+                        item.addEventListener('click', () => {
+                            this.formName = name;
+                            if (this.nameInputEl) this.nameInputEl.value = name;
+                            item.addClass('mcm-model-item-selected');
+                            listEl.querySelectorAll('.mcm-model-item').forEach((el) => {
+                                if (el !== item) el.removeClass('mcm-model-item-selected');
+                            });
+                        });
+                    });
+                }
+            } catch {
+                listEl.style.display = '';
+                listEl.createDiv({
+                    cls: 'mcm-model-empty',
+                    text: 'Cannot reach Ollama. Make sure it is running, then try again.',
+                });
+            }
+            browseBtn.disabled = false;
+            browseLabelEl.setText('Browse installed models');
+        });
+    }
+
+    private async runTest(): Promise<void> {
+        if (!this.testBtn || !this.testResultEl) return;
+        const m: CustomModel = {
+            name: this.formName || this.model.name,
+            provider: this.formProvider,
+            apiKey: this.formApiKey || undefined,
+            baseUrl: this.formBaseUrl || undefined,
+            enabled: true,
+        };
+        if (!m.name) { this.showTestResult(false, 'Enter a Model ID first', undefined); return; }
+        this.testBtn.disabled = true;
+        this.testBtn.setText('Testing…');
+        this.testResultEl.style.display = 'none';
+        const res = await testModelConnection(m);
+        this.testBtn.disabled = false;
+        this.testBtn.setText('Test Connection');
+        this.showTestResult(res.ok, res.message, res.detail);
+    }
+
+    private showTestResult(ok: boolean, msg: string, detail: string | undefined): void {
+        if (!this.testResultEl) return;
+        this.testResultEl.empty();
+        this.testResultEl.style.display = '';
+        this.testResultEl.className = `mcm-test-result ${ok ? 'mcm-ok' : 'mcm-err'}`;
+        const header = this.testResultEl.createDiv('mcm-result-header');
+        setIcon(header.createSpan('mcm-result-icon'), ok ? 'check-circle' : 'x-circle');
+        header.createSpan({ text: msg });
+        if (detail) {
+            this.testResultEl.createDiv({ cls: 'mcm-result-detail', text: detail });
+        }
+    }
+
+    private save(): void {
+        const name = this.formName || this.model.name;
+        if (!name) { new Notice('Model ID is required'); return; }
+        this.onSave({
+            ...this.model,
+            name,
+            provider: this.formProvider,
+            displayName: this.formDisplayName || undefined,
+            apiKey: this.formApiKey || undefined,
+            baseUrl: this.formBaseUrl || undefined,
+            maxTokens: this.formMaxTokens,
+        });
+        this.close();
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Settings Tab
+// ---------------------------------------------------------------------------
+
+type TabId = 'models' | 'behavior';
+
 export class AgentSettingsTab extends PluginSettingTab {
     plugin: ObsidianAgentPlugin;
+    private activeTab: TabId = 'models';
 
     constructor(app: App, plugin: ObsidianAgentPlugin) {
         super(app, plugin);
@@ -18,240 +530,177 @@ export class AgentSettingsTab extends PluginSettingTab {
     display(): void {
         const { containerEl } = this;
         containerEl.empty();
+        containerEl.addClass('agent-settings');
 
-        containerEl.createEl('h2', { text: 'Obsidian Agent Settings' });
-
-        this.buildProviderSection(containerEl);
-        this.buildProviderDetails(containerEl);
-        this.buildBehaviorSection(containerEl);
+        this.buildTabNav(containerEl);
+        this.buildTabContent(containerEl);
     }
 
-    /**
-     * Provider selection and active provider config
-     */
-    private buildProviderSection(containerEl: HTMLElement): void {
-        containerEl.createEl('h3', { text: 'LLM Provider' });
+    // ---------------------------------------------------------------------------
+    // Tab nav
+    // ---------------------------------------------------------------------------
 
-        // Active provider dropdown
-        new Setting(containerEl)
-            .setName('Active Provider')
-            .setDesc('Which LLM provider to use for the agent')
-            .addDropdown((drop) => {
-                drop.addOption('anthropic', 'Anthropic (Claude)');
-                drop.addOption('openai', 'OpenAI');
-                drop.addOption('ollama', 'Ollama (local)');
-                drop.addOption('custom', 'Custom (OpenAI-compatible)');
+    private buildTabNav(container: HTMLElement): void {
+        const nav = container.createDiv('agent-settings-nav');
+        const tabs: { id: TabId; label: string }[] = [
+            { id: 'models', label: 'Models' },
+            { id: 'behavior', label: 'Behavior' },
+        ];
+        tabs.forEach(({ id, label }) => {
+            const btn = nav.createEl('button', {
+                cls: `agent-settings-tab${this.activeTab === id ? ' active' : ''}`,
+                text: label,
+            });
+            btn.addEventListener('click', () => {
+                this.activeTab = id;
+                this.display();
+            });
+        });
+    }
 
-                drop.setValue(this.plugin.settings.defaultProvider);
+    // ---------------------------------------------------------------------------
+    // Tab content router
+    // ---------------------------------------------------------------------------
 
-                drop.onChange(async (value) => {
-                    this.plugin.settings.defaultProvider = value;
+    private buildTabContent(container: HTMLElement): void {
+        const content = container.createDiv('agent-settings-content');
+        if (this.activeTab === 'models') this.buildModelsTab(content);
+        if (this.activeTab === 'behavior') this.buildBehaviorTab(content);
+    }
+
+    // ---------------------------------------------------------------------------
+    // Models tab
+    // ---------------------------------------------------------------------------
+
+    private buildModelsTab(container: HTMLElement): void {
+        // Table header
+        const table = container.createDiv('model-table');
+        const header = table.createDiv('model-row model-row-header');
+        header.createDiv({ cls: 'mc-name', text: 'Model' });
+        header.createDiv({ cls: 'mc-provider', text: 'Provider' });
+        header.createDiv({ cls: 'mc-key', text: 'Key' });
+        header.createDiv({ cls: 'mc-enable', text: 'Enable' });
+        header.createDiv({ cls: 'mc-actions' });
+
+        // Rows
+        const models = this.plugin.settings.activeModels;
+        models.forEach((model) => this.renderModelRow(table, model));
+
+        // Add model button
+        const footer = container.createDiv('model-table-footer');
+        const addBtn = footer.createEl('button', { cls: 'mod-cta model-add-btn', text: '+ Add Model' });
+        addBtn.addEventListener('click', () => {
+            new ModelConfigModal(this.app, null, async (newModel) => {
+                const key = getModelKey(newModel);
+                if (this.plugin.settings.activeModels.some((m) => getModelKey(m) === key)) {
+                    new Notice(`"${newModel.name}" already exists`);
+                    return;
+                }
+                this.plugin.settings.activeModels.push(newModel);
+                await this.plugin.saveSettings();
+                this.display();
+            }).open();
+        });
+    }
+
+    private renderModelRow(table: HTMLElement, model: CustomModel): void {
+        const key = getModelKey(model);
+        const hasKey = !!model.apiKey || model.provider === 'ollama';
+        const isActive = this.plugin.settings.activeModelKey === key;
+
+        const row = table.createDiv(`model-row${isActive ? ' model-row-active' : ''}`);
+
+        // Name
+        const nameEl = row.createDiv('mc-name');
+        nameEl.createSpan({ text: model.displayName ?? model.name, cls: 'mc-name-text' });
+
+        // Provider badge
+        const provEl = row.createDiv('mc-provider');
+        const badge = provEl.createSpan({ cls: 'provider-badge', text: PROVIDER_LABELS[model.provider] ?? model.provider });
+        badge.style.background = PROVIDER_COLORS[model.provider] ?? '#607d8b';
+
+        // Key indicator
+        const keyEl = row.createDiv('mc-key');
+        const keyIcon = keyEl.createSpan('mc-key-icon');
+        setIcon(keyIcon, hasKey ? 'check' : 'minus');
+        keyEl.addClass(hasKey ? 'mc-key-ok' : 'mc-key-missing');
+
+        // Enable toggle
+        const enableEl = row.createDiv('mc-enable');
+        const toggle = enableEl.createEl('input', { attr: { type: 'checkbox' } });
+        toggle.checked = model.enabled;
+        toggle.addEventListener('change', async () => {
+            const idx = this.plugin.settings.activeModels.findIndex((m) => getModelKey(m) === key);
+            if (idx !== -1) this.plugin.settings.activeModels[idx].enabled = toggle.checked;
+            await this.plugin.saveSettings();
+            // Re-render just the row state without full redraw
+            row.toggleClass('model-row-disabled', !toggle.checked);
+        });
+
+        // Actions
+        const actionsEl = row.createDiv('mc-actions');
+        const configBtn = actionsEl.createEl('button', { cls: 'mc-action-btn', attr: { title: 'Configure' } });
+        setIcon(configBtn, 'settings');
+        configBtn.addEventListener('click', () => {
+            new ModelConfigModal(this.app, { ...model }, async (updated) => {
+                const idx = this.plugin.settings.activeModels.findIndex((m) => getModelKey(m) === key);
+                if (idx !== -1) this.plugin.settings.activeModels[idx] = updated;
+                // If the active model was renamed, keep it active under the new key
+                if (this.plugin.settings.activeModelKey === key) {
+                    this.plugin.settings.activeModelKey = getModelKey(updated);
+                }
+                await this.plugin.saveSettings();
+                this.display();
+            }).open();
+        });
+
+        if (!model.isBuiltIn) {
+            const delBtn = actionsEl.createEl('button', { cls: 'mc-action-btn mc-action-del', attr: { title: 'Delete' } });
+            setIcon(delBtn, 'trash');
+            delBtn.addEventListener('click', async () => {
+                this.plugin.settings.activeModels = this.plugin.settings.activeModels.filter(
+                    (m) => getModelKey(m) !== key,
+                );
+                if (this.plugin.settings.activeModelKey === key) this.plugin.settings.activeModelKey = '';
+                await this.plugin.saveSettings();
+                this.display();
+            });
+        }
+    }
+
+    // ---------------------------------------------------------------------------
+    // Behavior tab
+    // ---------------------------------------------------------------------------
+
+    private buildBehaviorTab(container: HTMLElement): void {
+        new Setting(container)
+            .setName('Auto-add active note as context')
+            .setDesc('Automatically include the currently open note as context. Can be dismissed per-message via the × in the chat toolbar.')
+            .addToggle((t) =>
+                t.setValue(this.plugin.settings.autoAddActiveFileContext).onChange(async (v) => {
+                    this.plugin.settings.autoAddActiveFileContext = v;
                     await this.plugin.saveSettings();
-                    // Rebuild provider details for the new selection
-                    this.display();
-                });
-            });
-    }
+                }),
+            );
 
-    /**
-     * Provider-specific settings (changes based on active provider)
-     * Mirrors Kilo Code's conditional rendering in ApiOptions.tsx
-     */
-    private buildProviderDetails(containerEl: HTMLElement): void {
-        const provider = this.plugin.settings.defaultProvider;
-
-        // Initialize provider entry if it doesn't exist yet
-        if (!this.plugin.settings.providers[provider]) {
-            this.plugin.settings.providers[provider] = {
-                type: provider as any,
-                model: '',
-            };
-        }
-
-        const config = this.plugin.settings.providers[provider];
-
-        containerEl.createEl('h3', { text: 'Provider Settings' });
-
-        // --- Anthropic ---
-        if (provider === 'anthropic') {
-            new Setting(containerEl)
-                .setName('API Key')
-                .setDesc('Your Anthropic API key (from console.anthropic.com)')
-                .addText((text) => {
-                    text.inputEl.type = 'password';
-                    text.setPlaceholder('sk-ant-...')
-                        .setValue(config.apiKey ?? '')
-                        .onChange(async (value) => {
-                            this.plugin.settings.providers[provider].apiKey = value;
-                            await this.plugin.saveSettings();
-                        });
-                });
-
-            new Setting(containerEl)
-                .setName('Model')
-                .setDesc('Claude model to use')
-                .addDropdown((drop) => {
-                    drop.addOption('claude-sonnet-4-5-20250929', 'Claude Sonnet 4.5 (recommended)');
-                    drop.addOption('claude-opus-4-6', 'Claude Opus 4.6');
-                    drop.addOption('claude-haiku-4-5-20251001', 'Claude Haiku 4.5 (fast)');
-                    drop.addOption('claude-3-5-sonnet-20241022', 'Claude 3.5 Sonnet');
-                    drop.addOption('claude-3-opus-20240229', 'Claude 3 Opus');
-
-                    drop.setValue(config.model || 'claude-sonnet-4-5-20250929');
-
-                    drop.onChange(async (value) => {
-                        this.plugin.settings.providers[provider].model = value;
-                        await this.plugin.saveSettings();
-                    });
-                });
-        }
-
-        // --- OpenAI ---
-        if (provider === 'openai') {
-            new Setting(containerEl)
-                .setName('API Key')
-                .setDesc('Your OpenAI API key (from platform.openai.com)')
-                .addText((text) => {
-                    text.inputEl.type = 'password';
-                    text.setPlaceholder('sk-...')
-                        .setValue(config.apiKey ?? '')
-                        .onChange(async (value) => {
-                            this.plugin.settings.providers[provider].apiKey = value;
-                            await this.plugin.saveSettings();
-                        });
-                });
-
-            new Setting(containerEl)
-                .setName('Model')
-                .setDesc('OpenAI model to use')
-                .addDropdown((drop) => {
-                    drop.addOption('gpt-4o', 'GPT-4o (recommended)');
-                    drop.addOption('gpt-4o-mini', 'GPT-4o mini (fast)');
-                    drop.addOption('gpt-4-turbo', 'GPT-4 Turbo');
-                    drop.addOption('o1', 'o1');
-                    drop.addOption('o3-mini', 'o3-mini');
-
-                    drop.setValue(config.model || 'gpt-4o');
-
-                    drop.onChange(async (value) => {
-                        this.plugin.settings.providers[provider].model = value;
-                        await this.plugin.saveSettings();
-                    });
-                });
-        }
-
-        // --- Ollama ---
-        if (provider === 'ollama') {
-            new Setting(containerEl)
-                .setName('Base URL')
-                .setDesc('Ollama server URL (default: http://localhost:11434)')
-                .addText((text) => {
-                    text.setPlaceholder('http://localhost:11434')
-                        .setValue(config.baseUrl ?? 'http://localhost:11434')
-                        .onChange(async (value) => {
-                            this.plugin.settings.providers[provider].baseUrl = value;
-                            await this.plugin.saveSettings();
-                        });
-                });
-
-            new Setting(containerEl)
-                .setName('Model')
-                .setDesc('Ollama model name (must be pulled locally)')
-                .addText((text) => {
-                    text.setPlaceholder('llama3.2, mistral, codellama...')
-                        .setValue(config.model || '')
-                        .onChange(async (value) => {
-                            this.plugin.settings.providers[provider].model = value;
-                            await this.plugin.saveSettings();
-                        });
-                });
-        }
-
-        // --- Custom (OpenAI-compatible) ---
-        if (provider === 'custom') {
-            new Setting(containerEl)
-                .setName('Base URL')
-                .setDesc('OpenAI-compatible API endpoint (e.g. Mistral, LM Studio, custom)')
-                .addText((text) => {
-                    text.setPlaceholder('https://api.mistral.ai/v1')
-                        .setValue(config.baseUrl ?? '')
-                        .onChange(async (value) => {
-                            this.plugin.settings.providers[provider].baseUrl = value;
-                            await this.plugin.saveSettings();
-                        });
-                });
-
-            new Setting(containerEl)
-                .setName('API Key')
-                .setDesc('API key for the custom provider (leave empty if not required)')
-                .addText((text) => {
-                    text.inputEl.type = 'password';
-                    text.setPlaceholder('API key...')
-                        .setValue(config.apiKey ?? '')
-                        .onChange(async (value) => {
-                            this.plugin.settings.providers[provider].apiKey = value;
-                            await this.plugin.saveSettings();
-                        });
-                });
-
-            new Setting(containerEl)
-                .setName('Model')
-                .setDesc('Model identifier for this provider')
-                .addText((text) => {
-                    text.setPlaceholder('mistral-medium, local-model...')
-                        .setValue(config.model || '')
-                        .onChange(async (value) => {
-                            this.plugin.settings.providers[provider].model = value;
-                            await this.plugin.saveSettings();
-                        });
-                });
-        }
-
-        // Max tokens (shared across all providers)
-        new Setting(containerEl)
-            .setName('Max Tokens')
-            .setDesc('Maximum tokens in the response')
-            .addText((text) => {
-                text.setPlaceholder('8192')
-                    .setValue(String(config.maxTokens ?? 8192))
-                    .onChange(async (value) => {
-                        const parsed = parseInt(value);
-                        if (!isNaN(parsed) && parsed > 0) {
-                            this.plugin.settings.providers[provider].maxTokens = parsed;
-                            await this.plugin.saveSettings();
-                        }
-                    });
-            });
-    }
-
-    /**
-     * General behavior settings
-     */
-    private buildBehaviorSection(containerEl: HTMLElement): void {
-        containerEl.createEl('h3', { text: 'Behavior' });
-
-        new Setting(containerEl)
-            .setName('Debug Mode')
-            .setDesc('Log detailed information to the console')
-            .addToggle((toggle) => {
-                toggle
-                    .setValue(this.plugin.settings.debugMode)
-                    .onChange(async (value) => {
-                        this.plugin.settings.debugMode = value;
-                        await this.plugin.saveSettings();
-                    });
-            });
-
-        new Setting(containerEl)
+        new Setting(container)
             .setName('Show Welcome Message')
-            .setDesc('Show the welcome message when the sidebar is opened')
-            .addToggle((toggle) => {
-                toggle
-                    .setValue(this.plugin.settings.showWelcomeMessage)
-                    .onChange(async (value) => {
-                        this.plugin.settings.showWelcomeMessage = value;
-                        await this.plugin.saveSettings();
-                    });
-            });
+            .setDesc('Show the welcome message when the sidebar opens')
+            .addToggle((t) =>
+                t.setValue(this.plugin.settings.showWelcomeMessage).onChange(async (v) => {
+                    this.plugin.settings.showWelcomeMessage = v;
+                    await this.plugin.saveSettings();
+                }),
+            );
+
+        new Setting(container)
+            .setName('Debug Mode')
+            .setDesc('Log detailed information to the browser console')
+            .addToggle((t) =>
+                t.setValue(this.plugin.settings.debugMode).onChange(async (v) => {
+                    this.plugin.settings.debugMode = v;
+                    await this.plugin.saveSettings();
+                }),
+            );
     }
 }

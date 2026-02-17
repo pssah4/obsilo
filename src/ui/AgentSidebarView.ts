@@ -2,6 +2,7 @@ import { ItemView, WorkspaceLeaf, setIcon, Menu, MarkdownRenderer } from 'obsidi
 import type ObsidianAgentPlugin from '../main';
 import { AgentTask } from '../core/AgentTask';
 import type { MessageParam } from '../api/types';
+import { getModelKey } from '../types/settings';
 
 export const VIEW_TYPE_AGENT_SIDEBAR = 'obsidian-agent-sidebar';
 
@@ -21,6 +22,7 @@ export class AgentSidebarView extends ItemView {
     private inputArea: HTMLElement | null = null;
     private textarea: HTMLTextAreaElement | null = null;
     private modeButton: HTMLElement | null = null;
+    private modelButton: HTMLElement | null = null;
     private sendButton: HTMLElement | null = null;
     private stopButton: HTMLElement | null = null;
     private contextBadgeContainer: HTMLElement | null = null;
@@ -30,6 +32,9 @@ export class AgentSidebarView extends ItemView {
 
     // Feature 3: AbortController for cancelling in-flight requests
     private currentAbortController: AbortController | null = null;
+
+    // Context: tracks whether user dismissed the auto-injected file for this turn
+    private userDismissedContext = false;
 
     constructor(leaf: WorkspaceLeaf, plugin: ObsidianAgentPlugin) {
         super(leaf);
@@ -56,14 +61,19 @@ export class AgentSidebarView extends ItemView {
         this.buildHeader(container);
         this.buildChatContainer(container);
         this.buildChatInput(container);
-        this.buildContextBar(container);
 
-        // Feature 4: Update context badge when user switches files
+        // Feature 4: Update context badge when user switches files; reset dismiss on new file
         this.registerEvent(
-            this.app.workspace.on('active-leaf-change', () => this.updateContextBadge())
+            this.app.workspace.on('active-leaf-change', () => {
+                this.userDismissedContext = false;
+                this.updateContextBadge();
+            })
         );
         this.registerEvent(
-            this.app.workspace.on('file-open', () => this.updateContextBadge())
+            this.app.workspace.on('file-open', () => {
+                this.userDismissedContext = false;
+                this.updateContextBadge();
+            })
         );
 
         if (this.plugin.settings.showWelcomeMessage) {
@@ -111,6 +121,10 @@ export class AgentSidebarView extends ItemView {
         this.inputArea = container.createDiv('chat-input-container');
         const inputWrapper = this.inputArea.createDiv('chat-input-wrapper');
 
+        // Context chips at the top of the input wrapper (like Kilo Code)
+        this.contextBadgeContainer = inputWrapper.createDiv('chat-context-chips');
+        this.updateContextBadge();
+
         this.textarea = inputWrapper.createEl('textarea', {
             cls: 'chat-textarea',
             attr: { placeholder: 'Type your message here...', rows: '3' },
@@ -126,15 +140,24 @@ export class AgentSidebarView extends ItemView {
         });
 
         const toolbar = inputWrapper.createDiv('chat-toolbar');
+        const toolbarLeft = toolbar.createDiv('chat-toolbar-left');
         const toolbarRight = toolbar.createDiv('chat-toolbar-right');
 
-        // Mode button
-        this.modeButton = toolbarRight.createEl('button', {
+        // Mode button (left)
+        this.modeButton = toolbarLeft.createEl('button', {
             cls: 'toolbar-button mode-button',
             attr: { 'aria-label': 'Select mode' },
         });
         this.updateModeButton();
         this.modeButton.addEventListener('click', (e) => this.showModeMenu(e));
+
+        // Model button (left, after mode)
+        this.modelButton = toolbarLeft.createEl('button', {
+            cls: 'toolbar-button model-button',
+            attr: { 'aria-label': 'Select model' },
+        });
+        this.updateModelButton();
+        this.modelButton.addEventListener('click', (e) => this.showModelMenu(e));
 
         // Feature 3: Stop button (hidden by default, shown when task is running)
         this.stopButton = toolbarRight.createEl('button', {
@@ -154,21 +177,69 @@ export class AgentSidebarView extends ItemView {
         this.sendButton.addEventListener('click', () => this.handleSendMessage());
     }
 
-    private buildContextBar(container: HTMLElement): void {
-        // Feature 4: Thin context strip below chat messages (Kilo Code: status-bar style)
-        this.contextBadgeContainer = container.createDiv('context-bar');
-        this.updateContextBadge();
-    }
-
     private updateContextBadge(): void {
         if (!this.contextBadgeContainer) return;
         this.contextBadgeContainer.empty();
-        const activeFile = this.app.workspace.getActiveFile();
+
+        if (!this.plugin.settings.autoAddActiveFileContext) return;
+
+        const activeFile = this.userDismissedContext ? null : this.app.workspace.getActiveFile();
         if (activeFile) {
-            const inner = this.contextBadgeContainer.createDiv('context-bar-file');
-            setIcon(inner.createSpan('context-icon'), 'file-text');
-            inner.createSpan('context-label').setText(activeFile.path);
+            const chip = this.contextBadgeContainer.createDiv('chat-context-chip');
+            chip.title = activeFile.path;
+            setIcon(chip.createSpan('context-chip-icon'), 'file-text');
+            chip.createSpan('context-chip-label').setText(activeFile.basename);
+            const removeBtn = chip.createSpan('context-chip-remove');
+            setIcon(removeBtn, 'x');
+            removeBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.userDismissedContext = true;
+                this.updateContextBadge();
+            });
         }
+    }
+
+    private updateModelButton(): void {
+        if (!this.modelButton) return;
+        this.modelButton.empty();
+        const activeKey = this.plugin.settings.activeModelKey;
+        const activeModel = this.plugin.settings.activeModels.find((m) => getModelKey(m) === activeKey);
+        const label = activeModel ? (activeModel.displayName ?? activeModel.name) : 'No model';
+        setIcon(this.modelButton.createSpan('toolbar-icon'), 'cpu');
+        this.modelButton.createSpan('model-label').setText(label);
+        setIcon(this.modelButton.createSpan('mode-chevron'), 'chevron-down');
+        // Full name as tooltip for when label is truncated
+        (this.modelButton as HTMLButtonElement).title = label;
+    }
+
+    private showModelMenu(event: MouseEvent): void {
+        const enabled = this.plugin.settings.activeModels.filter((m) => m.enabled);
+        const menu = new Menu();
+
+        if (enabled.length === 0) {
+            menu.addItem((item) =>
+                item.setTitle('No models enabled — open Settings').setIcon('settings').onClick(() => {
+                    (this.app as any).setting?.open();
+                    (this.app as any).setting?.openTabById('obsidian-agent');
+                }),
+            );
+        } else {
+            enabled.forEach((model) => {
+                const key = getModelKey(model);
+                menu.addItem((item) =>
+                    item
+                        .setTitle(model.displayName ?? model.name)
+                        .setChecked(this.plugin.settings.activeModelKey === key)
+                        .onClick(async () => {
+                            this.plugin.settings.activeModelKey = key;
+                            await this.plugin.saveSettings();
+                            this.updateModelButton();
+                        }),
+                );
+            });
+        }
+
+        menu.showAtMouseEvent(event);
     }
 
     private updateModeButton(): void {
@@ -245,16 +316,30 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
         this.autoResizeTextarea();
 
         // Feature 4: Inject active file context into the message sent to LLM
-        // User sees original text; LLM gets text + active file path as context
-        const activeFile = this.app.workspace.getActiveFile();
+        // Only if setting is on and user hasn't dismissed the context for this turn
+        const activeFile = (this.plugin.settings.autoAddActiveFileContext && !this.userDismissedContext)
+            ? this.app.workspace.getActiveFile()
+            : null;
         const messageToSend = activeFile
             ? `${text}\n\n<context>\nActive file in editor: ${activeFile.path}\n</context>`
             : text;
 
         if (!this.plugin.apiHandler) {
-            this.addAssistantMessage(
-                'No LLM provider configured. Please add an API key in **Settings → Obsidian Agent**.'
-            );
+            const activeKey = this.plugin.settings.activeModelKey;
+            const activeModel = this.plugin.settings.activeModels.find((m) => getModelKey(m) === activeKey);
+            if (!activeKey || !activeModel) {
+                this.addAssistantMessage(
+                    'No model selected. Click the **model button** in the toolbar below, or go to **Settings → Obsidian Agent** to enable a model.',
+                );
+            } else if (activeModel.provider === 'ollama') {
+                this.addAssistantMessage(
+                    `**${activeModel.displayName ?? activeModel.name}** could not start. Make sure Ollama is running (\`ollama serve\`) and the model name is correct. Open **Settings → Obsidian Agent → Configure** to verify.`,
+                );
+            } else {
+                this.addAssistantMessage(
+                    `**${activeModel.displayName ?? activeModel.name}** has no API key. Add one in **Settings → Obsidian Agent → Configure**.`,
+                );
+            }
             return;
         }
 
@@ -287,15 +372,15 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
                     this.chatContainer?.scrollTo({ top: this.chatContainer.scrollHeight });
                 },
                 onToolStart: (name, input) => {
-                    // Feature 7: Expandable tool call block (open while running)
+                    // Compact, collapsed-by-default tool call indicator
                     const details = messageEl.createEl('details', { cls: 'tool-call-details' });
-                    details.open = true;
+                    // collapsed by default — user can expand to see I/O
                     const summary = details.createEl('summary', { cls: 'tool-call-summary' });
                     setIcon(summary.createSpan('tool-icon'), 'wrench');
                     summary.createSpan('tool-name').setText(name);
-                    summary.createSpan('tool-status tool-running').setText('running…');
+                    summary.createSpan('tool-status tool-running').setText('…');
 
-                    // Input block
+                    // Input block (hidden until user expands)
                     const inputEl = details.createDiv('tool-call-input');
                     inputEl.createEl('pre').setText(JSON.stringify(input, null, 2));
 
@@ -305,14 +390,14 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
                     (details as any)._toolName = name;
                 },
                 onToolResult: (name, content, isError) => {
-                    // Feature 7: Fill in output and update status
+                    // Update status icon; keep collapsed (user can expand to see I/O)
                     messageEl.querySelectorAll('.tool-call-details').forEach((el) => {
                         if ((el as any)._toolName !== name) return;
                         const statusEl = el.querySelector('.tool-status');
                         if (statusEl) {
                             statusEl.removeClass('tool-running');
                             statusEl.addClass(isError ? 'tool-error' : 'tool-done');
-                            statusEl.setText(isError ? 'error' : 'done');
+                            statusEl.setText(isError ? '✗' : '✓');
                         }
                         const outputEl = el.querySelector('.tool-call-output');
                         if (outputEl && content) {
@@ -321,8 +406,8 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
                                 : content;
                             outputEl.createEl('pre').setText(truncated);
                         }
-                        // Collapse when done (user can re-expand)
-                        (el as HTMLDetailsElement).open = isError;
+                        // Only auto-open on error so the user sees what went wrong
+                        if (isError) (el as HTMLDetailsElement).open = true;
                     });
                 },
                 // Feature 6: Show token usage in message footer
@@ -372,6 +457,7 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
         if (this.sendButton) this.sendButton.style.display = running ? 'none' : '';
         if (this.stopButton) this.stopButton.style.display = running ? '' : 'none';
         if (this.textarea) this.textarea.disabled = running;
+        if (this.modelButton) (this.modelButton as HTMLButtonElement).disabled = running;
     }
 
     /**
@@ -379,12 +465,14 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
      */
     private clearConversation(): void {
         this.conversationHistory = [];
+        this.userDismissedContext = false;
         if (this.chatContainer) {
             this.chatContainer.empty();
         }
         if (this.plugin.settings.showWelcomeMessage) {
             this.showWelcomeMessage();
         }
+        this.updateContextBadge();
     }
 
     /**
@@ -410,6 +498,9 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
         if (status === 401 || msg.includes('api key') || msg.includes('authentication')) {
             return 'Invalid API key — check Settings → Obsidian Agent';
         }
+        if (status === 404 || msg.includes('not found')) {
+            return 'Model not found — verify the Model ID in Settings → Obsidian Agent';
+        }
         if (status === 429 || msg.includes('rate limit')) {
             return 'Rate limit reached — please wait a moment';
         }
@@ -417,7 +508,7 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
             return 'API overloaded — try again shortly';
         }
         if (msg.includes('network') || msg.includes('fetch') || msg.includes('econnrefused')) {
-            return 'Network error — check your internet connection';
+            return 'Network error — check your connection and that Ollama is running';
         }
         return 'Error';
     }
