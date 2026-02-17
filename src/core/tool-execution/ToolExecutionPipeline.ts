@@ -68,6 +68,8 @@ export interface ContextExtensions {
      *          'rejected' = user denied or timed out
      */
     onApprovalRequired?: (toolName: string, input: Record<string, any>) => Promise<'auto' | 'approved' | 'rejected'>;
+    /** Publish the current todo list to the UI */
+    updateTodos?: (items: import('../tools/agent/UpdateTodoListTool').TodoItem[]) => void;
 }
 
 export class ToolExecutionPipeline {
@@ -155,6 +157,7 @@ export class ToolExecutionPipeline {
                 callbacks: wrappedCallbacks,
                 askQuestion: extensions?.askQuestion,
                 signalCompletion: extensions?.signalCompletion,
+                updateTodos: extensions?.updateTodos,
             };
 
             await tool.execute(toolCall.input, context);

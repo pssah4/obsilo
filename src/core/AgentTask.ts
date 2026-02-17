@@ -38,6 +38,8 @@ export interface AgentTaskCallbacks {
     onQuestion?: (question: string, options: string[] | undefined, resolve: (answer: string) => void) => void;
     /** Called when a write tool needs user approval — pauses loop until user decides */
     onApprovalRequired?: (toolName: string, input: Record<string, any>) => Promise<'auto' | 'approved' | 'rejected'>;
+    /** Called when update_todo_list publishes a new todo plan */
+    onTodoUpdate?: (items: import('./tools/agent/UpdateTodoListTool').TodoItem[]) => void;
     /** Called when an unrecoverable error occurs */
     onError: (error: Error) => void;
 }
@@ -178,6 +180,7 @@ export class AgentTask {
                         askQuestion,
                         signalCompletion,
                         onApprovalRequired: this.taskCallbacks.onApprovalRequired,
+                        updateTodos: this.taskCallbacks.onTodoUpdate,
                     });
 
                     // Notify UI of tool result

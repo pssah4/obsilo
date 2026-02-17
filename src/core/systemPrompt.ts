@@ -54,6 +54,7 @@ You have access to these tools. Use them proactively — do not guess at file co
 - web_search(query, numResults?): Search the web and return titles, URLs, and snippets. Follow up with web_fetch to read a full page. Only available when Web Tools are enabled in settings.
 
 **Agent Control:**
+- update_todo_list(todos): Publish your task plan as a checklist visible to the user. Use at the start of any multi-step task, then update as steps complete. Format: one item per line with - [ ] (pending), - [~] (in progress), - [x] (done).
 - ask_followup_question(question, options?): Ask the user a clarifying question when the request is ambiguous. Provide optional answer choices. Use sparingly — only when genuinely needed.
 - attempt_completion(result): Signal that the task loop should end. Call this ONLY AFTER you have already written your complete answer or response as streaming text. The result field is a short internal log entry (e.g. "Answered X" or "Created file Y") — it is NOT shown as the response. Never put your answer inside this field.
 

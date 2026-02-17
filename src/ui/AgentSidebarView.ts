@@ -579,6 +579,9 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
                     footerEl.setText(`${time}  ·  ${inputTokens.toLocaleString()} in · ${outputTokens.toLocaleString()} out`);
                     footerEl.style.display = '';
                 },
+                onTodoUpdate: (items) => {
+                    this.renderTodoBox(toolsEl, items);
+                },
                 onQuestion: (question, options, resolve) => {
                     this.showQuestionCard(question, options, resolve);
                 },
@@ -1014,6 +1017,42 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
     // -------------------------------------------------------------------------
     // Completion, Question, Approval cards
     // -------------------------------------------------------------------------
+
+    /**
+     * Render (or update) the Todo-Box inside the tool-status area of a streaming message.
+     * Called each time the agent calls update_todo_list — replaces the previous box.
+     */
+    private renderTodoBox(
+        toolsEl: HTMLElement,
+        items: import('../core/tools/agent/UpdateTodoListTool').TodoItem[],
+    ): void {
+        // Remove existing todo box (update in place)
+        toolsEl.querySelector('.agent-todo-box')?.remove();
+
+        const box = toolsEl.createDiv('agent-todo-box');
+        const header = box.createDiv('todo-box-header');
+        header.createSpan('todo-box-icon').setText('☑');
+        header.createSpan('todo-box-title').setText('Plan');
+
+        const list = box.createDiv('todo-box-list');
+        for (const item of items) {
+            const row = list.createDiv('todo-item');
+            const icon = row.createSpan('todo-item-icon');
+            if (item.status === 'done') {
+                icon.setText('✓');
+                row.addClass('todo-done');
+            } else if (item.status === 'in_progress') {
+                icon.setText('●');
+                row.addClass('todo-in-progress');
+            } else {
+                icon.setText('○');
+                row.addClass('todo-pending');
+            }
+            row.createSpan('todo-item-text').setText(item.text);
+        }
+
+        this.chatContainer?.scrollTo({ top: this.chatContainer.scrollHeight });
+    }
 
     private showQuestionCard(
         question: string,

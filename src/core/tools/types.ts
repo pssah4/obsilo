@@ -129,6 +129,12 @@ export interface ToolExecutionContext {
      * Used by attempt_completion tool.
      */
     signalCompletion?: (result: string) => void;
+
+    /**
+     * Publish the current todo list to the UI.
+     * Used by update_todo_list tool.
+     */
+    updateTodos?: (items: import('../tools/agent/UpdateTodoListTool').TodoItem[]) => void;
 }
 
 /**
