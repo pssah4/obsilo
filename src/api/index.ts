@@ -28,6 +28,7 @@ export function buildApiHandler(config: LLMProvider) {
         case 'openai':
         case 'ollama':
         case 'openrouter':
+        case 'azure':
         case 'custom':
             return new OpenAiProvider(config);
         default:

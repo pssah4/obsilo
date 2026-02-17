@@ -7,7 +7,7 @@
 // Adapted from Obsidian Copilot's CustomModel pattern
 // ---------------------------------------------------------------------------
 
-export type ProviderType = 'anthropic' | 'openai' | 'ollama' | 'openrouter' | 'custom';
+export type ProviderType = 'anthropic' | 'openai' | 'ollama' | 'openrouter' | 'azure' | 'custom';
 
 export interface CustomModel {
     /** Model identifier used in API calls (e.g. "claude-sonnet-4-5-20250929") */
@@ -18,7 +18,7 @@ export interface CustomModel {
     displayName?: string;
     /** API key for this model (stored per-model, not per-provider) */
     apiKey?: string;
-    /** Custom base URL (required for ollama/custom, optional for others) */
+    /** Custom base URL (required for ollama/custom/azure, optional for others) */
     baseUrl?: string;
     /** Whether the model appears in the chat model selector */
     enabled: boolean;
@@ -26,6 +26,8 @@ export interface CustomModel {
     isBuiltIn?: boolean;
     maxTokens?: number;
     temperature?: number;
+    /** API version string (required for Azure OpenAI and some enterprise gateways, e.g. "2024-10-21") */
+    apiVersion?: string;
 }
 
 /** Unique key for a model across all providers */
@@ -132,6 +134,8 @@ export interface LLMProvider {
     model: string;
     maxTokens?: number;
     temperature?: number;
+    /** API version for Azure OpenAI and compatible enterprise gateways */
+    apiVersion?: string;
 }
 
 /** Convert a CustomModel to LLMProvider for the API handler layer */
@@ -143,6 +147,7 @@ export function modelToLLMProvider(model: CustomModel): LLMProvider {
         baseUrl: model.baseUrl,
         maxTokens: model.maxTokens,
         temperature: model.temperature,
+        apiVersion: model.apiVersion,
     };
 }
 
@@ -228,7 +233,7 @@ export interface ObsidianAgentSettings {
 }
 
 export const DEFAULT_SETTINGS: ObsidianAgentSettings = {
-    activeModels: BUILT_IN_MODELS.map((m) => ({ ...m })),
+    activeModels: [],
     activeModelKey: '',
 
     defaultProvider: 'anthropic',

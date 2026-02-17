@@ -173,7 +173,7 @@ export default class ObsidianAgentPlugin extends Plugin {
         }
 
         // Require API key for cloud providers
-        if ((model.provider === 'anthropic' || model.provider === 'openai' || model.provider === 'openrouter') && !model.apiKey) {
+        if ((model.provider === 'anthropic' || model.provider === 'openai' || model.provider === 'openrouter' || model.provider === 'azure') && !model.apiKey) {
             if (this.settings.debugMode) {
                 console.log('[Plugin] API key not set for active model:', getModelKey(model));
             }
