@@ -73,6 +73,8 @@ export class AnthropicProvider implements ApiHandler {
             number,
             { id: string; name: string; inputJson: string }
         >();
+        // Track thinking blocks by index — yield streaming text then flush on stop
+        const thinkingAccumulator = new Map<number, { text: string }>();
 
         let inputTokens = 0;
         let outputTokens = 0;
@@ -88,31 +90,40 @@ export class AnthropicProvider implements ApiHandler {
 
             if (event.type === 'content_block_start') {
                 if (event.content_block.type === 'tool_use') {
-                    // Start accumulating a new tool call
                     toolAccumulator.set(event.index, {
                         id: event.content_block.id,
                         name: event.content_block.name,
                         inputJson: '',
                     });
+                } else if ((event.content_block as any).type === 'thinking') {
+                    thinkingAccumulator.set(event.index, { text: '' });
                 }
             }
 
             if (event.type === 'content_block_delta') {
                 if (event.delta.type === 'text_delta') {
-                    // Yield text chunks immediately (real-time streaming)
                     yield { type: 'text', text: event.delta.text } satisfies ApiStreamChunk;
                 }
 
                 if (event.delta.type === 'input_json_delta') {
-                    // Accumulate tool input JSON - don't yield yet
                     const tool = toolAccumulator.get(event.index);
-                    if (tool) {
-                        tool.inputJson += event.delta.partial_json;
+                    if (tool) tool.inputJson += event.delta.partial_json;
+                }
+
+                // Anthropic extended thinking delta
+                if ((event.delta as any).type === 'thinking_delta') {
+                    const thinking = thinkingAccumulator.get(event.index);
+                    if (thinking) {
+                        const chunk = (event.delta as any).thinking as string;
+                        thinking.text += chunk;
+                        yield { type: 'thinking', text: chunk } satisfies ApiStreamChunk;
                     }
                 }
             }
 
             if (event.type === 'content_block_stop') {
+                thinkingAccumulator.delete(event.index);
+
                 // If this was a tool_use block, yield the complete tool call
                 const tool = toolAccumulator.get(event.index);
                 if (tool) {
@@ -167,6 +178,17 @@ export class AnthropicProvider implements ApiHandler {
                         id: block.id,
                         name: block.name,
                         input: block.input,
+                    };
+                }
+
+                if (block.type === 'image') {
+                    return {
+                        type: 'image' as const,
+                        source: {
+                            type: 'base64' as const,
+                            media_type: block.source.media_type,
+                            data: block.source.data,
+                        },
                     };
                 }
 

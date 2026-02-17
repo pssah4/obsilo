@@ -13,6 +13,7 @@ import type { ToolDefinition } from '../core/tools/types';
 
 export type ApiStreamChunk =
     | { type: 'text'; text: string }
+    | { type: 'thinking'; text: string }
     | { type: 'tool_use'; id: string; name: string; input: Record<string, any> }
     | { type: 'usage'; inputTokens: number; outputTokens: number };
 
@@ -28,8 +29,11 @@ export interface ModelInfo {
 
 // --- Message Format (Anthropic-internal, like Kilo Code) ---
 
+export type ImageMediaType = 'image/png' | 'image/jpeg' | 'image/gif' | 'image/webp';
+
 export type ContentBlock =
     | { type: 'text'; text: string }
+    | { type: 'image'; source: { type: 'base64'; media_type: ImageMediaType; data: string } }
     | { type: 'tool_use'; id: string; name: string; input: Record<string, any> }
     | { type: 'tool_result'; tool_use_id: string; content: string; is_error?: boolean };
 

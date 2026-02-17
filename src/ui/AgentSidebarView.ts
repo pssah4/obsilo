@@ -1,10 +1,19 @@
-import { ItemView, WorkspaceLeaf, setIcon, Menu, MarkdownRenderer } from 'obsidian';
+import { ItemView, WorkspaceLeaf, setIcon, Menu, MarkdownRenderer, MarkdownView, Notice } from 'obsidian';
 import type ObsidianAgentPlugin from '../main';
 import { AgentTask } from '../core/AgentTask';
-import type { MessageParam } from '../api/types';
+import type { MessageParam, ContentBlock, ImageMediaType } from '../api/types';
 import { getModelKey } from '../types/settings';
 
 export const VIEW_TYPE_AGENT_SIDEBAR = 'obsidian-agent-sidebar';
+
+/** A file (image or text) attached to the current compose turn. */
+interface AttachmentItem {
+    name: string;
+    /** Object URL for thumbnail display (images only); revoked when removed before send. */
+    objectUrl?: string;
+    /** The ContentBlock that will be included in the API message. */
+    block: ContentBlock;
+}
 
 /**
  * Agent Sidebar View
@@ -35,6 +44,13 @@ export class AgentSidebarView extends ItemView {
 
     // Context: tracks whether user dismissed the auto-injected file for this turn
     private userDismissedContext = false;
+    // Last user message text — used by "Regenerate" action
+    private lastUserMessage = '';
+    // Last known active MarkdownView — tracked because clicking sidebar loses getActiveViewOfType
+    private lastMarkdownView: MarkdownView | null = null;
+    // Attachments pending for the next sent message
+    private pendingAttachments: AttachmentItem[] = [];
+    private attachmentChipBar: HTMLElement | null = null;
 
     constructor(leaf: WorkspaceLeaf, plugin: ObsidianAgentPlugin) {
         super(leaf);
@@ -63,10 +79,14 @@ export class AgentSidebarView extends ItemView {
         this.buildChatInput(container);
 
         // Feature 4: Update context badge when user switches files; reset dismiss on new file
+        // Also track last active MarkdownView so "Insert at cursor" works from sidebar
         this.registerEvent(
-            this.app.workspace.on('active-leaf-change', () => {
+            this.app.workspace.on('active-leaf-change', (leaf) => {
                 this.userDismissedContext = false;
                 this.updateContextBadge();
+                if (leaf?.view instanceof MarkdownView) {
+                    this.lastMarkdownView = leaf.view;
+                }
             })
         );
         this.registerEvent(
@@ -83,6 +103,7 @@ export class AgentSidebarView extends ItemView {
 
     async onClose(): Promise<void> {
         this.currentAbortController?.abort();
+        this.clearAttachments();
     }
 
     private buildHeader(container: HTMLElement): void {
@@ -125,6 +146,9 @@ export class AgentSidebarView extends ItemView {
         this.contextBadgeContainer = inputWrapper.createDiv('chat-context-chips');
         this.updateContextBadge();
 
+        // Attachment chip bar (below context chips, above textarea)
+        this.attachmentChipBar = inputWrapper.createDiv('chat-attachment-chips');
+
         this.textarea = inputWrapper.createEl('textarea', {
             cls: 'chat-textarea',
             attr: { placeholder: 'Type your message here...', rows: '3' },
@@ -136,6 +160,34 @@ export class AgentSidebarView extends ItemView {
             if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
                 e.preventDefault();
                 this.handleSendMessage();
+            }
+        });
+
+        // Paste handler — capture images pasted from clipboard (e.g. screenshots)
+        this.textarea.addEventListener('paste', (e: ClipboardEvent) => {
+            const items = e.clipboardData?.items;
+            if (!items) return;
+            for (const item of Array.from(items)) {
+                if (item.kind === 'file') {
+                    e.preventDefault();
+                    const file = item.getAsFile();
+                    if (file) this.processAttachmentFile(file);
+                }
+            }
+        });
+
+        // Drag-and-drop handler on the input wrapper
+        inputWrapper.addEventListener('dragover', (e: DragEvent) => {
+            e.preventDefault();
+            inputWrapper.addClass('drag-over');
+        });
+        inputWrapper.addEventListener('dragleave', () => inputWrapper.removeClass('drag-over'));
+        inputWrapper.addEventListener('drop', (e: DragEvent) => {
+            e.preventDefault();
+            inputWrapper.removeClass('drag-over');
+            const files = e.dataTransfer?.files;
+            if (files) {
+                for (const file of Array.from(files)) this.processAttachmentFile(file);
             }
         });
 
@@ -158,6 +210,14 @@ export class AgentSidebarView extends ItemView {
         });
         this.updateModelButton();
         this.modelButton.addEventListener('click', (e) => this.showModelMenu(e));
+
+        // Attach file button (opens file picker)
+        const attachBtn = toolbarLeft.createEl('button', {
+            cls: 'toolbar-button attach-button',
+            attr: { 'aria-label': 'Attach file' },
+        });
+        setIcon(attachBtn.createSpan('toolbar-icon'), 'paperclip');
+        attachBtn.addEventListener('click', () => this.openFilePicker());
 
         // Feature 3: Stop button (hidden by default, shown when task is running)
         this.stopButton = toolbarRight.createEl('button', {
@@ -308,10 +368,15 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
         if (!this.textarea) return;
 
         const text = this.textarea.value.trim();
-        if (!text) return;
+        if (!text && this.pendingAttachments.length === 0) return;
         if (this.currentAbortController) return; // Already running
 
-        this.addUserMessage(text);
+        this.lastUserMessage = text;
+
+        // Snapshot attachments, clear the chip bar, render user bubble with previews
+        const attachments = [...this.pendingAttachments];
+        this.clearAttachments();
+        this.addUserMessage(text, attachments);
         this.textarea.value = '';
         this.autoResizeTextarea();
 
@@ -320,9 +385,28 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
         const activeFile = (this.plugin.settings.autoAddActiveFileContext && !this.userDismissedContext)
             ? this.app.workspace.getActiveFile()
             : null;
-        const messageToSend = activeFile
-            ? `${text}\n\n<context>\nActive file in editor: ${activeFile.path}\n</context>`
-            : text;
+        const textWithContext = text + (activeFile
+            ? `\n\n<context>\nActive file in editor: ${activeFile.path}\n</context>`
+            : '');
+
+        // Build ContentBlock[] when there are attachments, plain string otherwise
+        let messageToSend: string | ContentBlock[];
+        if (attachments.length > 0) {
+            const blocks: ContentBlock[] = [];
+            // Images first (Anthropic convention)
+            for (const att of attachments) {
+                if (att.block.type === 'image') blocks.push(att.block);
+            }
+            // User text
+            blocks.push({ type: 'text', text: textWithContext });
+            // Text file blocks after
+            for (const att of attachments) {
+                if (att.block.type === 'text') blocks.push(att.block);
+            }
+            messageToSend = blocks;
+        } else {
+            messageToSend = textWithContext;
+        }
 
         if (!this.plugin.apiHandler) {
             const activeKey = this.plugin.settings.activeModelKey;
@@ -347,10 +431,22 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
         this.currentAbortController = new AbortController();
         this.setRunningState(true);
 
-        // Prepare streaming message elements (tools above response text)
-        const { messageEl, toolsEl, contentEl, footerEl } = this.createStreamingMessageEl();
-        let accumulatedText = '';   // text accumulated during/after tool phase
-        let hasTools = false;       // have any tools been called in this task?
+        // Prepare streaming message elements (thinking → tools → response text → footer)
+        const { messageEl, thinkingEl, toolsEl, contentEl, footerEl } = this.createStreamingMessageEl();
+        let accumulatedText = '';       // text accumulated during/after tool phase
+        let accumulatedThinking = '';   // full thinking text for collapse/expand
+        let hasTools = false;           // have any tools been called in this task?
+        let isThinking = false;         // thinking is currently active
+        // Remove the "Working…" loading indicator and any "Analyzing…" row on first real content
+        let loadingRemoved = false;
+        const removeLoading = () => {
+            if (!loadingRemoved) {
+                loadingRemoved = true;
+                contentEl.querySelector('.message-loading')?.remove();
+            }
+            // Also remove any "analyzing" row between iterations
+            toolsEl.querySelector('.tool-computing-row')?.remove();
+        };
 
         const taskId = `task-${Date.now()}`;
         const mode = this.plugin.settings.currentMode;
@@ -360,7 +456,53 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
             this.plugin.apiHandler,
             this.plugin.toolRegistry,
             {
+                onIterationStart: (iteration) => {
+                    if (iteration > 0) {
+                        // Between tool-execution and the next LLM call — show a brief "Analyzing…" pulse
+                        toolsEl.querySelector('.tool-computing-row')?.remove();
+                        const row = toolsEl.createDiv('tool-computing-row');
+                        setIcon(row.createSpan('tool-computing-icon'), 'loader');
+                        row.createSpan('tool-computing-text').setText('Analyzing results…');
+                        this.chatContainer?.scrollTo({ top: this.chatContainer.scrollHeight });
+                    }
+                },
+                onThinking: (chunk) => {
+                    removeLoading();
+                    accumulatedThinking += chunk;
+                    if (!isThinking) {
+                        // First thinking chunk — build the collapsible section
+                        isThinking = true;
+                        thinkingEl.style.display = '';
+                        thinkingEl.empty();
+                        const header = thinkingEl.createDiv('thinking-header');
+                        setIcon(header.createSpan('thinking-spinner'), 'loader');
+                        header.createSpan('thinking-label').setText('Reasoning…');
+                        thinkingEl.createDiv('thinking-content');
+                        header.addEventListener('click', () => {
+                            const body = thinkingEl.querySelector('.thinking-content') as HTMLElement;
+                            if (body) body.style.display = body.style.display === 'none' ? '' : 'none';
+                        });
+                    }
+                    const body = thinkingEl.querySelector('.thinking-content') as HTMLElement;
+                    if (body) body.setText(accumulatedThinking);
+                    this.chatContainer?.scrollTo({ top: this.chatContainer.scrollHeight });
+                },
                 onText: (chunk) => {
+                    removeLoading();
+                    // When text starts after thinking, collapse the thinking section
+                    if (isThinking) {
+                        isThinking = false;
+                        const header = thinkingEl.querySelector('.thinking-header');
+                        const spinner = thinkingEl.querySelector('.thinking-spinner');
+                        const label = thinkingEl.querySelector('.thinking-label');
+                        if (spinner) setIcon(spinner as HTMLElement, 'chevron-right');
+                        if (label) (label as HTMLElement).setText('Reasoning');
+                        const body = thinkingEl.querySelector('.thinking-content') as HTMLElement;
+                        if (body) body.style.display = 'none';
+                        if (header) (header as HTMLElement).addEventListener('click', () => {
+                            if (body) body.style.display = body.style.display === 'none' ? '' : 'none';
+                        }, { once: true });
+                    }
                     if (!hasTools) {
                         // Q&A mode: stream text directly as it arrives
                         accumulatedText += chunk;
@@ -373,11 +515,15 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
                     }
                 },
                 onToolStart: (name, input) => {
+                    removeLoading();
                     if (!hasTools) {
-                        // First tool call: clear any pre-tool "I'll..." boilerplate text
                         hasTools = true;
-                        accumulatedText = '';
-                        contentEl.empty();
+                        // attempt_completion is a signal, not a real tool — the streamed text
+                        // before it IS the answer, so don't discard it
+                        if (name !== 'attempt_completion') {
+                            accumulatedText = '';
+                            contentEl.empty();
+                        }
                     }
                     // Kilo Code-style compact row: icon + label + brief param + time
                     const details = toolsEl.createEl('details', { cls: 'tool-call-details' });
@@ -391,9 +537,12 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
                     );
                     summary.createSpan('tool-status tool-running');
 
-                    const inputEl = details.createDiv('tool-call-input');
-                    inputEl.createEl('pre').setText(JSON.stringify(input, null, 2));
-                    details.createDiv('tool-call-output');
+                    // Don't show raw JSON/XML for agent-signal tools — they have no useful content
+                    if (name !== 'attempt_completion') {
+                        const inputEl = details.createDiv('tool-call-input');
+                        inputEl.createEl('pre').setText(JSON.stringify(input, null, 2));
+                        details.createDiv('tool-call-output');
+                    }
 
                     (details as any)._toolName = name;
                     // Track write operations for undo bar
@@ -422,13 +571,10 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
                         if (isError) (el as HTMLDetailsElement).open = true;
                     });
                 },
-                // Feature 6: Show token usage in message footer
                 onUsage: (inputTokens, outputTokens) => {
-                    footerEl.setText(`${inputTokens.toLocaleString()} in · ${outputTokens.toLocaleString()} out`);
+                    const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    footerEl.setText(`${time}  ·  ${inputTokens.toLocaleString()} in · ${outputTokens.toLocaleString()} out`);
                     footerEl.style.display = '';
-                },
-                onAttemptCompletion: (result) => {
-                    this.showCompletionCard(result, messageEl);
                 },
                 onQuestion: (question, options, resolve) => {
                     this.showQuestionCard(question, options, resolve);
@@ -442,6 +588,16 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
                         contentEl.empty();
                         MarkdownRenderer.render(this.app, accumulatedText, contentEl, '', this);
                     }
+                    // Show timestamp in footer even without token usage
+                    if (footerEl.style.display === 'none') {
+                        const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                        footerEl.setText(time);
+                        footerEl.style.display = '';
+                    }
+                    // Make internal links in the response clickable
+                    this.wireInternalLinks(contentEl);
+                    // Add response action bar
+                    this.addResponseActions(messageEl, accumulatedText);
                     messageEl.removeClass('message-streaming');
                     this.currentAbortController = null;
                     this.setRunningState(false);
@@ -495,6 +651,7 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
     private clearConversation(): void {
         this.conversationHistory = [];
         this.userDismissedContext = false;
+        this.clearAttachments();
         if (this.chatContainer) {
             this.chatContainer.empty();
         }
@@ -506,20 +663,33 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
 
     /**
      * Create the streaming message container.
-     * Structure: toolsEl (tool calls, shown during execution) → contentEl (text response, shown after) → footerEl
+     * Structure: thinkingEl → toolsEl → contentEl → footerEl
      */
-    private createStreamingMessageEl(): { messageEl: HTMLElement; toolsEl: HTMLElement; contentEl: HTMLElement; footerEl: HTMLElement } {
+    private createStreamingMessageEl(): {
+        messageEl: HTMLElement;
+        thinkingEl: HTMLElement;
+        toolsEl: HTMLElement;
+        contentEl: HTMLElement;
+        footerEl: HTMLElement;
+    } {
         if (!this.chatContainer) throw new Error('Chat container not initialized');
         const messageEl = this.chatContainer.createDiv('message assistant-message message-streaming');
-        // Tool calls area (populated by onToolStart, always visible during execution)
+        // Reasoning/thinking section (hidden until thinking chunks arrive)
+        const thinkingEl = messageEl.createDiv('thinking-block');
+        thinkingEl.style.display = 'none';
+        // Tool calls area (populated by onToolStart)
         const toolsEl = messageEl.createDiv('message-tools');
-        // Text response (populated after tools complete, or streamed directly for Q&A)
+        // Text response (streamed directly for Q&A, rendered on complete for agentic)
         const contentEl = messageEl.createDiv('message-content');
-        // Feature 6: Token usage footer (hidden until onUsage fires)
+        // Show a loading indicator immediately so the user sees something right away
+        const loadingEl = contentEl.createDiv('message-loading');
+        setIcon(loadingEl.createSpan('message-loading-icon'), 'loader');
+        loadingEl.createSpan('message-loading-text').setText('Working…');
+        // Token usage + timestamp footer
         const footerEl = messageEl.createDiv('message-footer');
         footerEl.style.display = 'none';
         this.chatContainer.scrollTo({ top: this.chatContainer.scrollHeight });
-        return { messageEl, toolsEl, contentEl, footerEl };
+        return { messageEl, thinkingEl, toolsEl, contentEl, footerEl };
     }
 
     /**
@@ -557,10 +727,27 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
         this.chatContainer.scrollTop = this.chatContainer.scrollHeight;
     }
 
-    private addUserMessage(text: string): void {
+    private addUserMessage(text: string, attachments: AttachmentItem[] = []): void {
         if (!this.chatContainer) return;
         const msgEl = this.chatContainer.createDiv('message user-message');
-        msgEl.createDiv('message-content').setText(text);
+        // Render attachment previews above the text bubble
+        if (attachments.length > 0) {
+            const previewRow = msgEl.createDiv('message-attachment-previews');
+            for (const att of attachments) {
+                const chip = previewRow.createDiv('message-attachment-chip');
+                if (att.objectUrl) {
+                    const img = chip.createEl('img', { cls: 'attachment-chip-thumb' });
+                    img.src = att.objectUrl;
+                    img.alt = att.name;
+                } else {
+                    setIcon(chip.createSpan('attachment-chip-icon'), 'file-text');
+                    chip.createSpan('attachment-chip-name').setText(att.name);
+                }
+            }
+        }
+        if (text) {
+            msgEl.createDiv('message-content').setText(text);
+        }
         this.chatContainer.scrollTop = this.chatContainer.scrollHeight;
     }
 
@@ -572,6 +759,98 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
         this.plugin.settings.currentMode = modeId;
         this.plugin.saveSettings();
         this.updateModeButton();
+    }
+
+    // -------------------------------------------------------------------------
+    // Attachment handling
+    // -------------------------------------------------------------------------
+
+    private openFilePicker(): void {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.multiple = true;
+        input.accept = 'image/png,image/jpeg,image/gif,image/webp,.txt,.md,.json,.py,.ts,.js,.jsx,.tsx,.css,.html,.xml,.yaml,.yml,.csv,.sh';
+        input.addEventListener('change', () => {
+            if (input.files) {
+                for (const file of Array.from(input.files)) this.processAttachmentFile(file);
+            }
+        });
+        input.click();
+    }
+
+    private async processAttachmentFile(file: File): Promise<void> {
+        const MAX_BYTES = 10 * 1024 * 1024; // 10 MB
+        if (file.size > MAX_BYTES) {
+            new Notice(`"${file.name}" exceeds the 10 MB limit.`);
+            return;
+        }
+
+        const IMAGE_TYPES: Record<string, ImageMediaType> = {
+            'image/png': 'image/png',
+            'image/jpeg': 'image/jpeg',
+            'image/gif': 'image/gif',
+            'image/webp': 'image/webp',
+        };
+        const TEXT_EXTENSIONS = ['.txt', '.md', '.json', '.py', '.ts', '.js', '.jsx', '.tsx', '.css', '.html', '.xml', '.yaml', '.yml', '.csv', '.sh'];
+
+        const mediaType = IMAGE_TYPES[file.type];
+        if (mediaType) {
+            // Convert image to base64
+            const arrayBuffer = await file.arrayBuffer();
+            const bytes = new Uint8Array(arrayBuffer);
+            let binary = '';
+            for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+            const base64 = btoa(binary);
+            const objectUrl = URL.createObjectURL(file);
+            this.pendingAttachments.push({
+                name: file.name || 'image.png',
+                objectUrl,
+                block: { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } },
+            });
+        } else if (TEXT_EXTENSIONS.some(ext => file.name.toLowerCase().endsWith(ext)) || file.type.startsWith('text/')) {
+            const text = await file.text();
+            this.pendingAttachments.push({
+                name: file.name,
+                block: { type: 'text', text: `<attached_file name="${file.name}">\n${text}\n</attached_file>` },
+            });
+        } else {
+            new Notice(`"${file.name}" is not supported. Use images (PNG/JPG/GIF/WebP) or text files.`);
+            return;
+        }
+        this.renderAttachmentChips();
+    }
+
+    private renderAttachmentChips(): void {
+        if (!this.attachmentChipBar) return;
+        this.attachmentChipBar.empty();
+        this.pendingAttachments.forEach((item, i) => {
+            const chip = this.attachmentChipBar!.createDiv('chat-attachment-chip');
+            if (item.objectUrl) {
+                const img = chip.createEl('img', { cls: 'attachment-chip-thumb' });
+                img.src = item.objectUrl;
+                img.alt = item.name;
+            } else {
+                setIcon(chip.createSpan('attachment-chip-icon'), 'file-text');
+                chip.createSpan('attachment-chip-name').setText(item.name);
+            }
+            const removeBtn = chip.createSpan('attachment-chip-remove');
+            setIcon(removeBtn, 'x');
+            removeBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (item.objectUrl) URL.revokeObjectURL(item.objectUrl);
+                this.pendingAttachments.splice(i, 1);
+                this.renderAttachmentChips();
+            });
+        });
+    }
+
+    private clearAttachments(): void {
+        // Revoke object URLs for any unsent attachments
+        for (const att of this.pendingAttachments) {
+            if (att.objectUrl) URL.revokeObjectURL(att.objectUrl);
+        }
+        this.pendingAttachments = [];
+        if (this.attachmentChipBar) this.attachmentChipBar.empty();
     }
 
     // -------------------------------------------------------------------------
@@ -625,20 +904,105 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
     }
 
     // -------------------------------------------------------------------------
-    // Completion, Question, Approval cards
+    // Response action bar + link wiring
     // -------------------------------------------------------------------------
 
-    private showCompletionCard(result: string, messageEl: HTMLElement): void {
-        const card = messageEl.createDiv('completion-card');
-        const header = card.createDiv('completion-card-header');
-        setIcon(header.createSpan('completion-icon'), 'check-circle-2');
-        header.createSpan('completion-title').setText('Task complete');
-        if (result) {
-            const body = card.createDiv('completion-body');
-            MarkdownRenderer.render(this.app, result, body, '', this);
-        }
-        this.chatContainer?.scrollTo({ top: this.chatContainer.scrollHeight });
+    /**
+     * Make internal [[wikilinks]] and note links in the rendered markdown clickable.
+     * MarkdownRenderer handles most links, but we intercept to ensure sidebar context.
+     */
+    private wireInternalLinks(contentEl: HTMLElement): void {
+        contentEl.querySelectorAll('a').forEach((anchor) => {
+            const href = anchor.getAttribute('href') ?? '';
+            // Internal links: [[Note]] renders as data-href or href without http
+            if (!href.startsWith('http') && !href.startsWith('mailto')) {
+                anchor.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const linkText = anchor.getAttribute('data-href') ?? href;
+                    this.app.workspace.openLinkText(linkText, '', false);
+                });
+            }
+        });
     }
+
+    /**
+     * Add the response action icon bar below a completed assistant message.
+     */
+    private addResponseActions(messageEl: HTMLElement, responseText: string): void {
+        const bar = messageEl.createDiv('message-actions');
+
+        const makeBtn = (icon: string, tooltip: string, onClick: () => void) => {
+            const btn = bar.createEl('button', { cls: 'message-action-btn', attr: { 'aria-label': tooltip } });
+            setIcon(btn, icon);
+            btn.title = tooltip;
+            btn.addEventListener('click', onClick);
+        };
+
+        // Insert at cursor in active note
+        // iterateAllLeaves with instanceof is the most reliable way to find a markdown editor
+        // because getActiveViewOfType returns null when the sidebar has focus
+        makeBtn('text-cursor-input', 'Insert at cursor', () => {
+            let view: MarkdownView | null =
+                this.app.workspace.getActiveViewOfType(MarkdownView) ?? this.lastMarkdownView;
+            if (!view) {
+                this.app.workspace.iterateAllLeaves((leaf) => {
+                    if (!view && leaf.view instanceof MarkdownView) {
+                        view = leaf.view;
+                    }
+                });
+            }
+            if (view?.editor) {
+                view.editor.replaceSelection(responseText);
+                new Notice('Inserted at cursor.');
+            } else {
+                new Notice('No open note found — open a note in the editor first.');
+            }
+        });
+
+        // Create new note from response — open in a new leaf (not in sidebar)
+        makeBtn('file-plus', 'Create note from response', async () => {
+            const now = new Date();
+            // Colons are forbidden in filenames on macOS/Windows — use dashes for HH-MM
+            const ts = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}`;
+            const fileName = `Agent response ${ts}.md`;
+            try {
+                const file = await this.app.vault.create(fileName, responseText);
+                // getLeaf(true) always creates a new leaf in the main content area
+                const leaf = this.app.workspace.getLeaf(true);
+                await leaf.openFile(file);
+            } catch (e) {
+                new Notice(`Could not create note: ${(e as Error).message}`);
+            }
+        });
+
+        // Copy to clipboard
+        makeBtn('copy', 'Copy response', () => {
+            navigator.clipboard.writeText(responseText).then(() => {
+                new Notice('Copied to clipboard');
+            });
+        });
+
+        // Regenerate
+        makeBtn('refresh-cw', 'Regenerate response', () => {
+            // Remove this message and re-run
+            messageEl.remove();
+            // Remove last two history entries (assistant + tool_results if any)
+            // and re-send the last user message
+            if (this.lastUserMessage) {
+                if (this.textarea) this.textarea.value = this.lastUserMessage;
+                this.handleSendMessage();
+            }
+        });
+
+        // Delete message
+        makeBtn('trash-2', 'Delete response', () => {
+            messageEl.remove();
+        });
+    }
+
+    // -------------------------------------------------------------------------
+    // Completion, Question, Approval cards
+    // -------------------------------------------------------------------------
 
     private showQuestionCard(
         question: string,

@@ -18,8 +18,12 @@ import { ToolExecutionPipeline } from './tool-execution/ToolExecutionPipeline';
 import { buildSystemPrompt } from './systemPrompt';
 
 export interface AgentTaskCallbacks {
+    /** Called at the start of each agentic loop iteration (0 = first/user message, 1+ = after tools) */
+    onIterationStart?: (iteration: number) => void;
     /** Called for each streamed text chunk */
     onText: (text: string) => void;
+    /** Called for each streaming reasoning/thinking chunk (extended thinking models) */
+    onThinking?: (text: string) => void;
     /** Called when a tool is about to be executed */
     onToolStart: (name: string, input: Record<string, any>) => void;
     /** Called when a tool has finished executing */
@@ -64,7 +68,7 @@ export class AgentTask {
      * @param abortSignal - Optional signal to cancel the request
      */
     async run(
-        userMessage: string,
+        userMessage: string | ContentBlock[],
         taskId: string,
         mode: string,
         history: MessageParam[],
@@ -106,12 +110,15 @@ export class AgentTask {
 
         try {
             for (let iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
+                this.taskCallbacks.onIterationStart?.(iteration);
                 const toolUses: ContentBlock[] = [];
                 const textParts: string[] = [];
 
                 // Stream the LLM response (pass abort signal for cancellation)
                 for await (const chunk of this.api.createMessage(systemPrompt, history, tools, abortSignal)) {
-                    if (chunk.type === 'text') {
+                    if (chunk.type === 'thinking') {
+                        this.taskCallbacks.onThinking?.(chunk.text);
+                    } else if (chunk.type === 'text') {
                         textParts.push(chunk.text);
                         this.taskCallbacks.onText(chunk.text);
                     } else if (chunk.type === 'tool_use') {

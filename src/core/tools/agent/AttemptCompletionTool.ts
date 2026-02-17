@@ -27,18 +27,18 @@ export class AttemptCompletionTool extends BaseTool<'attempt_completion'> {
         return {
             name: 'attempt_completion',
             description:
-                'Signal that you have completed the task. ' +
-                'Call this ONLY when all work is done and the user\'s request has been fully addressed. ' +
-                'Provide a concise summary of what was accomplished in the result field. ' +
-                'Do NOT call this if the task is not complete — continue working instead.',
+                'Signal that the task loop should end. ' +
+                'Call this ONLY after you have already written your complete answer as streamed text. ' +
+                'The result field is a brief internal log entry — it is NOT shown to the user as the answer. ' +
+                'Never put your response inside result. Always stream the answer first, then call this.',
             input_schema: {
                 type: 'object',
                 properties: {
                     result: {
                         type: 'string',
                         description:
-                            'A concise summary of what was accomplished. ' +
-                            'Be specific: mention files created/edited, changes made, questions answered.',
+                            'A brief internal log entry only (e.g. "Answered X" or "Created file Y"). ' +
+                            'Do NOT put the actual answer here — stream the answer as text before calling this tool.',
                     },
                 },
                 required: ['result'],

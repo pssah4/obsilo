@@ -431,15 +431,12 @@
     height: 16px;
 }
 
-/* Tool call — compact, subtle, collapsed by default */
+/* Tool call — borderless, subtle rows (Kilo Code style) */
 .tool-call-details {
-    margin: 2px 0;
-    border-radius: 3px;
-    border: 1px solid var(--background-modifier-border);
-    background: transparent;
+    margin: 1px 0;
     font-size: 11px;
     overflow: hidden;
-    opacity: 0.7;
+    opacity: 0.65;
 }
 
 .tool-call-details:hover {
@@ -448,7 +445,6 @@
 
 .tool-call-details[open] {
     opacity: 1;
-    background: var(--background-secondary-alt);
 }
 
 .tool-call-summary {
@@ -1089,6 +1085,8 @@
     padding: 7px 10px;
     font-size: 13px;
     line-height: 1.45;
+    user-select: text;
+    cursor: text;
 }
 
 /* User message: right-aligned pill, compact */
@@ -1112,6 +1110,16 @@
     padding: 2px 0 4px;
     font-size: 13px;
     color: var(--text-normal);
+    /* Override Obsidian's sidebar user-select: none */
+    user-select: text !important;
+    -webkit-user-select: text !important;
+    cursor: text;
+}
+
+/* All child elements of assistant messages must also allow selection */
+.assistant-message .message-content * {
+    user-select: text !important;
+    -webkit-user-select: text !important;
 }
 
 /* Keep code blocks readable inside assistant messages */
@@ -1376,4 +1384,256 @@
 /* Suppress blinking cursor once tools have appeared (response will render on complete) */
 .message-streaming .message-tools:not(:empty) ~ .message-content::after {
     display: none;
+}
+
+/* Tool rows are fully opaque while the task is running — subtle only on hover after done */
+.message-streaming .tool-call-details {
+    opacity: 1;
+}
+
+/* ── Thinking / Reasoning block ──────────────────────────────────────── */
+.thinking-block {
+    margin-bottom: 5px;
+    border-left: 2px solid var(--background-modifier-border);
+    padding-left: 8px;
+}
+
+.thinking-header {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+    color: var(--text-faint);
+    font-size: 11px;
+    user-select: none;
+    padding: 1px 0;
+}
+
+.thinking-header:hover { color: var(--text-muted); }
+
+.thinking-spinner { display: flex; align-items: center; }
+.thinking-spinner svg {
+    width: 11px;
+    height: 11px;
+    animation: thinking-spin 1.4s linear infinite;
+}
+
+@keyframes thinking-spin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+}
+
+.thinking-label { font-size: 11px; }
+
+.thinking-content {
+    color: var(--text-muted);
+    font-size: 11px;
+    line-height: 1.4;
+    padding: 3px 0 2px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+/* ── Response action bar ─────────────────────────────────────────────── */
+.message-actions {
+    display: flex;
+    gap: 1px;
+    opacity: 0;
+    transition: opacity 0.15s;
+    margin-top: 2px;
+    padding: 0 2px;
+}
+
+.assistant-message:hover .message-actions {
+    opacity: 1;
+}
+
+.message-action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: 4px;
+    color: var(--text-faint);
+    cursor: pointer;
+    transition: color 0.1s, background 0.1s;
+}
+
+.message-action-btn:hover {
+    color: var(--text-muted);
+    background: var(--background-modifier-hover);
+}
+
+.message-action-btn svg {
+    width: 13px;
+    height: 13px;
+}
+
+/* ── Working / loading indicator ─────────────────────────────────────── */
+.message-loading {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 0;
+    color: var(--text-faint);
+    font-size: 12px;
+}
+
+.message-loading-icon {
+    display: flex;
+    align-items: center;
+}
+
+.message-loading-icon svg {
+    width: 13px;
+    height: 13px;
+    animation: thinking-spin 1.4s linear infinite;
+}
+
+.message-loading-text {
+    color: var(--text-faint);
+}
+
+/* Hide the blinking cursor when the loading indicator is present */
+.message-streaming .message-content:has(.message-loading)::after {
+    display: none;
+}
+
+/* ── Between-iteration "Analyzing results…" indicator ──────────────── */
+.tool-computing-row {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 2px 6px;
+    font-size: 11px;
+    color: var(--text-faint);
+}
+
+.tool-computing-icon {
+    display: flex;
+    align-items: center;
+}
+
+.tool-computing-icon svg {
+    width: 10px;
+    height: 10px;
+    animation: thinking-spin 1.4s linear infinite;
+}
+
+.tool-computing-text {
+    font-size: 11px;
+    color: var(--text-faint);
+}
+
+/* ── Attachment chip bar (input area) ────────────────────────────────── */
+.chat-attachment-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 6px 10px 0;
+}
+
+.chat-attachment-chips:empty {
+    display: none;
+}
+
+.chat-attachment-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 6px 2px 4px;
+    background: var(--background-modifier-border);
+    border-radius: 6px;
+    font-size: 11px;
+    color: var(--text-muted);
+    max-width: 180px;
+    overflow: hidden;
+    cursor: default;
+}
+
+.attachment-chip-thumb {
+    width: 32px;
+    height: 32px;
+    object-fit: cover;
+    border-radius: 3px;
+    flex-shrink: 0;
+}
+
+.attachment-chip-icon {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    color: var(--text-faint);
+}
+
+.attachment-chip-icon svg { width: 11px; height: 11px; }
+
+.attachment-chip-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 120px;
+}
+
+.attachment-chip-remove {
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+    margin-left: 1px;
+    color: var(--text-faint);
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.1s;
+}
+
+.chat-attachment-chip:hover .attachment-chip-remove { opacity: 1; }
+.attachment-chip-remove svg { width: 9px; height: 9px; }
+
+/* Drag-over highlight on input wrapper */
+.chat-input-wrapper.drag-over {
+    border-color: var(--interactive-accent);
+    background: color-mix(in srgb, var(--interactive-accent) 5%, var(--input-background));
+}
+
+/* ── Attachment previews above user message bubble ───────────────────── */
+.message-attachment-previews {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    justify-content: flex-end;
+    margin-bottom: 4px;
+    max-width: 85%;
+    align-self: flex-end;
+}
+
+.message-attachment-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 6px 2px 4px;
+    background: color-mix(in srgb, var(--interactive-accent) 20%, transparent);
+    border-radius: 6px;
+    font-size: 11px;
+    color: var(--text-normal);
+    max-width: 200px;
+    overflow: hidden;
+}
+
+.message-attachment-chip .attachment-chip-thumb {
+    width: 60px;
+    height: 60px;
+    object-fit: cover;
+    border-radius: 4px;
+}
+
+.message-attachment-chip .attachment-chip-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
