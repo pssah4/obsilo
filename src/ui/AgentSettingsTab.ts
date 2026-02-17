@@ -77,6 +77,36 @@ const MODEL_SUGGESTIONS: Record<string, { group: string; id: string; label: stri
     ],
 };
 
+// Providers that support embedding APIs (Anthropic has none)
+const EMBEDDING_PROVIDERS: ProviderType[] = ['openai', 'openrouter', 'azure', 'ollama', 'lmstudio', 'custom'];
+
+// Embedding model suggestions per provider (exact API IDs)
+const EMBEDDING_SUGGESTIONS: Record<string, { group: string; id: string; label: string }[]> = {
+    openai: [
+        { group: 'OpenAI',  id: 'text-embedding-3-small', label: 'text-embedding-3-small  (1 536 dims, recommended)' },
+        { group: 'OpenAI',  id: 'text-embedding-3-large', label: 'text-embedding-3-large  (3 072 dims, highest quality)' },
+        { group: 'Legacy',  id: 'text-embedding-ada-002', label: 'text-embedding-ada-002  (1 536 dims, legacy)' },
+    ],
+    azure: [
+        // Azure uses deployment names — these are the common model IDs deployed on Azure
+        { group: 'Azure',   id: 'text-embedding-3-small', label: 'text-embedding-3-small  (deployment name)' },
+        { group: 'Azure',   id: 'text-embedding-3-large', label: 'text-embedding-3-large  (deployment name)' },
+        { group: 'Legacy',  id: 'text-embedding-ada-002', label: 'text-embedding-ada-002  (deployment name)' },
+    ],
+    ollama: [
+        { group: 'Ollama',  id: 'nomic-embed-text',         label: 'nomic-embed-text  (768 dims, popular)' },
+        { group: 'Ollama',  id: 'mxbai-embed-large',        label: 'mxbai-embed-large  (1 024 dims)' },
+        { group: 'Ollama',  id: 'all-minilm',               label: 'all-minilm  (384 dims, fast)' },
+        { group: 'Ollama',  id: 'bge-large-en-v1.5',        label: 'bge-large-en-v1.5  (1 024 dims)' },
+        { group: 'Ollama',  id: 'snowflake-arctic-embed2',  label: 'snowflake-arctic-embed2  (1 024 dims)' },
+    ],
+    openrouter: [
+        { group: 'OpenAI',  id: 'openai/text-embedding-3-small', label: 'text-embedding-3-small  (1 536 dims)' },
+        { group: 'OpenAI',  id: 'openai/text-embedding-3-large', label: 'text-embedding-3-large  (3 072 dims)' },
+        { group: 'OpenAI',  id: 'openai/text-embedding-ada-002', label: 'text-embedding-ada-002  (1 536 dims, legacy)' },
+    ],
+};
+
 // ---------------------------------------------------------------------------
 // Test helper
 // ---------------------------------------------------------------------------
@@ -175,6 +205,73 @@ async function testModelConnection(model: CustomModel): Promise<TestResult> {
 }
 
 /**
+ * Test an embedding model connection by calling the /embeddings endpoint.
+ * Azure uses: {base}/deployments/{model}/embeddings?api-version={version}
+ * OpenAI uses: https://api.openai.com/v1/embeddings
+ */
+async function testEmbeddingConnection(model: CustomModel): Promise<TestResult> {
+    try {
+        let url: string;
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+        const body: Record<string, any> = { input: 'test' };
+
+        if (model.provider === 'azure') {
+            const base = (model.baseUrl ?? '').replace(/\/+$/, '');
+            const apiVersion = model.apiVersion ?? '2024-10-21';
+            url = `${base}/deployments/${model.name}/embeddings?api-version=${apiVersion}`;
+            if (model.apiKey) headers['api-key'] = model.apiKey;
+        } else if (model.provider === 'openai') {
+            url = 'https://api.openai.com/v1/embeddings';
+            body.model = model.name;
+            if (model.apiKey) headers['Authorization'] = `Bearer ${model.apiKey}`;
+        } else if (model.provider === 'openrouter') {
+            url = 'https://openrouter.ai/api/v1/embeddings';
+            body.model = model.name;
+            if (model.apiKey) headers['Authorization'] = `Bearer ${model.apiKey}`;
+        } else if (model.provider === 'ollama' || model.provider === 'lmstudio') {
+            const base = (model.baseUrl || (model.provider === 'lmstudio' ? 'http://localhost:1234' : 'http://localhost:11434'))
+                .replace(/\/v1\/?$/, '').replace(/\/+$/, '');
+            url = `${base}/v1/embeddings`;
+            body.model = model.name;
+            if (model.apiKey) headers['Authorization'] = `Bearer ${model.apiKey}`;
+        } else {
+            // custom
+            const base = (model.baseUrl ?? '').replace(/\/+$/, '');
+            url = `${base}/embeddings`;
+            body.model = model.name;
+            if (model.apiKey) headers['Authorization'] = `Bearer ${model.apiKey}`;
+        }
+
+        const res = await requestUrl({
+            url,
+            method: 'POST',
+            headers,
+            body: JSON.stringify(body),
+            throw: false,
+        });
+
+        if (res.status === 200) {
+            const data = res.json;
+            const dims = data?.data?.[0]?.embedding?.length;
+            return {
+                ok: true,
+                message: 'Embedding successful ✓' + (dims ? ` (${dims} dimensions)` : ''),
+            };
+        }
+        if (res.status === 401) return { ok: false, message: 'Invalid API key (401)' };
+        if (res.status === 404) return { ok: false, message: 'Deployment / model not found (404)', detail: 'Check that the Model ID matches the exact deployment name.' };
+        if (res.status === 400) {
+            const errText = (() => { try { return JSON.stringify(res.json); } catch { return res.text; } })();
+            return { ok: false, message: `Bad request (400)`, detail: errText };
+        }
+        return { ok: false, message: `HTTP ${res.status}`, detail: (() => { try { return JSON.stringify(res.json); } catch { return res.text; } })() };
+    } catch (err: any) {
+        const msg: string = err?.message ?? String(err);
+        return { ok: false, message: 'Connection failed', detail: msg };
+    }
+}
+
+/**
  * Fetch the current model list from a provider's API.
  * Returns { id, label } pairs for display in the Quick Pick dropdown.
  */
@@ -268,6 +365,78 @@ async function fetchOllamaModels(baseUrl: string): Promise<string[]> {
     return ((data.models ?? []) as any[]).map((m) => m.name as string).sort();
 }
 
+/**
+ * Fetch embedding models from a provider's API.
+ * Filters to only embedding-capable models (no chat/TTS/image models).
+ */
+async function fetchEmbeddingModels(
+    provider: ProviderType,
+    apiKey: string,
+    baseUrl?: string,
+    apiVersion?: string,
+): Promise<{ id: string; label: string }[]> {
+    const req = (url: string, headers: Record<string, string> = {}) =>
+        requestUrl({ url, method: 'GET', headers, throw: false });
+
+    if (provider === 'openai') {
+        // OpenAI's /v1/models requires auth — return the known stable embedding model list instead
+        return [
+            { id: 'text-embedding-3-small', label: 'text-embedding-3-small  (1 536 dims, recommended)' },
+            { id: 'text-embedding-3-large', label: 'text-embedding-3-large  (3 072 dims, highest quality)' },
+            { id: 'text-embedding-ada-002', label: 'text-embedding-ada-002  (1 536 dims, legacy)' },
+        ];
+    }
+
+    if (provider === 'azure') {
+        // Azure doesn't have a REST endpoint to list available deployments generically.
+        // Suggest the known embedding model IDs (user fills in deployment name).
+        throw new Error('Azure does not provide a model list API — use the Quick Pick suggestions or enter the deployment name manually.');
+    }
+
+    if (provider === 'ollama') {
+        // Ollama API: filter model names that look like embedding models
+        const root = (baseUrl || 'http://localhost:11434').replace(/\/v\d[^/]*\/?$/, '').replace(/\/+$/, '');
+        const res = await req(`${root}/api/tags`);
+        if (res.status !== 200) throw new Error(`HTTP ${res.status} — Is Ollama running?`);
+        const EMBED_NAMES = /embed|bge|minilm|arctic-embed|e5-|gte-/i;
+        const all: string[] = ((res.json.models ?? []) as any[]).map((m: any) => m.name as string);
+        const embeds = all.filter((n) => EMBED_NAMES.test(n));
+        // If no matches, return all (user might have custom names)
+        const list = embeds.length > 0 ? embeds : all;
+        return list.sort().map((id) => ({ id, label: id }));
+    }
+
+    if (provider === 'lmstudio') {
+        const root = (baseUrl || 'http://localhost:1234').replace(/\/v1\/?$/, '').replace(/\/+$/, '');
+        const res = await req(`${root}/v1/models`);
+        if (res.status !== 200) throw new Error(`HTTP ${res.status} — Is LM Studio running?`);
+        return (res.json.data ?? [])
+            .map((m: any) => ({ id: m.id as string, label: m.id as string }))
+            .sort((a: any, b: any) => a.id.localeCompare(b.id));
+    }
+
+    if (provider === 'openrouter') {
+        // OpenRouter proxies OpenAI embeddings — their /v1/models only lists chat models.
+        // Return the known embedding models available via OpenRouter.
+        return [
+            { id: 'openai/text-embedding-3-small', label: 'text-embedding-3-small  (1 536 dims, recommended)' },
+            { id: 'openai/text-embedding-3-large', label: 'text-embedding-3-large  (3 072 dims, highest quality)' },
+            { id: 'openai/text-embedding-ada-002', label: 'text-embedding-ada-002  (1 536 dims, legacy)' },
+        ];
+    }
+
+    // custom — OpenAI-compatible endpoint
+    const base = (baseUrl || '').replace(/\/+$/, '');
+    const headers: Record<string, string> = {};
+    if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
+    const res = await req(`${base}/v1/models`, headers);
+    if (res.status !== 200) throw new Error(`HTTP ${res.status}`);
+    const EMBED_RE = /embed/i;
+    const all = (res.json.data ?? []).map((m: any) => ({ id: m.id as string, label: m.id as string }));
+    const filtered = all.filter((m: any) => EMBED_RE.test(m.id));
+    return (filtered.length > 0 ? filtered : all).sort((a: any, b: any) => a.id.localeCompare(b.id));
+}
+
 // ---------------------------------------------------------------------------
 // Add / Configure Model Modal
 // ---------------------------------------------------------------------------
@@ -276,6 +445,7 @@ export class ModelConfigModal extends Modal {
     private model: CustomModel;
     private isNew: boolean;
     private onSave: (model: CustomModel) => void;
+    private forEmbedding: boolean;
 
     private formName: string;
     private formDisplayName: string;
@@ -300,8 +470,9 @@ export class ModelConfigModal extends Modal {
     private nameInputEl: HTMLInputElement | null = null;
     private dnInputEl: HTMLInputElement | null = null;
 
-    constructor(app: App, model: CustomModel | null, onSave: (m: CustomModel) => void) {
+    constructor(app: App, model: CustomModel | null, onSave: (m: CustomModel) => void, forEmbedding = false) {
         super(app);
+        this.forEmbedding = forEmbedding;
         this.isNew = model === null;
         this.model = model ?? {
             name: '',
@@ -328,7 +499,9 @@ export class ModelConfigModal extends Modal {
         contentEl.empty();
         contentEl.addClass('model-config-modal');
         contentEl.createEl('h3', {
-            text: this.isNew ? 'Add Model' : `Configure — ${this.model.displayName ?? this.model.name}`,
+            text: this.isNew
+                ? (this.forEmbedding ? 'Add Embedding Model' : 'Add Model')
+                : `Configure — ${this.model.displayName ?? this.model.name}`,
             cls: 'modal-title',
         });
         this.buildForm(contentEl);
@@ -356,7 +529,7 @@ export class ModelConfigModal extends Modal {
         // ── Provider ─────────────────────────────────────────────────────
         const provRow = row('Provider');
         const provSel = provRow.createEl('select', { cls: 'mcm-select' });
-        (['anthropic', 'openai', 'ollama', 'lmstudio', 'openrouter', 'azure', 'custom'] as ProviderType[]).forEach((p) => {
+        (this.forEmbedding ? EMBEDDING_PROVIDERS : ['anthropic', 'openai', 'ollama', 'lmstudio', 'openrouter', 'azure', 'custom'] as ProviderType[]).forEach((p) => {
             const opt = provSel.createEl('option', { value: p, text: PROVIDER_LABELS[p] });
             if (p === this.formProvider) opt.selected = true;
         });
@@ -399,11 +572,13 @@ export class ModelConfigModal extends Modal {
             fetchBtn.disabled = true;
             setIcon(fetchBtn, 'loader');
             try {
-                const models = await fetchProviderModels(this.formProvider, this.formApiKey, this.formBaseUrl || undefined);
+                const models = this.forEmbedding
+                    ? await fetchEmbeddingModels(this.formProvider, this.formApiKey, this.formBaseUrl || undefined, this.formApiVersion || undefined)
+                    : await fetchProviderModels(this.formProvider, this.formApiKey, this.formBaseUrl || undefined);
                 this.suggestSelEl.options.length = 0;
                 this.suggestSelEl.createEl('option', { value: '', text: `— ${models.length} models fetched —`, attr: { disabled: '', selected: '' } });
-                // For OpenRouter, group by vendor prefix
-                if (this.formProvider === 'openrouter') {
+                // For OpenRouter chat models, group by vendor prefix
+                if (!this.forEmbedding && this.formProvider === 'openrouter') {
                     const groups = new Map<string, typeof models>();
                     models.forEach((m) => {
                         const grp = m.id.split('/')[0];
@@ -542,10 +717,15 @@ export class ModelConfigModal extends Modal {
         if (this.ollamaBrowserRow) this.ollamaBrowserRow.style.display = p === 'ollama' ? '' : 'none';
         if (this.customBrowserRow) this.customBrowserRow.style.display = (p === 'custom' || p === 'lmstudio') ? '' : 'none';
 
-        // Quick Pick: show for cloud providers that have static suggestions; hide for local/azure
-        const suggestions = MODEL_SUGGESTIONS[p] ?? [];
+        // Quick Pick: use embedding suggestions or chat suggestions depending on mode
+        const suggestions = this.forEmbedding
+            ? (EMBEDDING_SUGGESTIONS[p] ?? [])
+            : (MODEL_SUGGESTIONS[p] ?? []);
         const hasStaticSuggestions = suggestions.length > 0;
-        const hasFetchFetch = p === 'anthropic' || p === 'openai' || p === 'openrouter' || p === 'lmstudio';
+        // Fetch is available for embedding providers with live APIs (not azure — no list endpoint)
+        const hasFetchFetch = this.forEmbedding
+            ? (p === 'openai' || p === 'openrouter' || p === 'ollama' || p === 'lmstudio' || p === 'custom')
+            : (p === 'anthropic' || p === 'openai' || p === 'openrouter' || p === 'lmstudio');
         if (this.suggestRow) {
             this.suggestRow.style.display = (hasStaticSuggestions || hasFetchFetch) ? '' : 'none';
             if (this.suggestSelEl) {
@@ -828,7 +1008,9 @@ export class ModelConfigModal extends Modal {
         this.testBtn.disabled = true;
         this.testBtn.setText('Testing…');
         this.testResultEl.style.display = 'none';
-        const res = await testModelConnection(m);
+        const res = this.forEmbedding
+            ? await testEmbeddingConnection(m)
+            : await testModelConnection(m);
         this.testBtn.disabled = false;
         this.testBtn.setText('Test Connection');
         this.showTestResult(res.ok, res.message, res.detail);
@@ -1059,13 +1241,12 @@ export class AgentSettingsTab extends PluginSettingTab {
                 }
                 if (!this.plugin.settings.embeddingModels) this.plugin.settings.embeddingModels = [];
                 this.plugin.settings.embeddingModels.push(newModel);
-                // Auto-select first model
                 if (!this.plugin.settings.activeEmbeddingModelKey) {
                     this.plugin.settings.activeEmbeddingModelKey = key;
                 }
                 await this.plugin.saveSettings();
                 this.display();
-            }).open();
+            }, true /* forEmbedding */).open();
         });
     }
 
@@ -1111,7 +1292,7 @@ export class AgentSettingsTab extends PluginSettingTab {
                 }
                 await this.plugin.saveSettings();
                 this.display();
-            }).open();
+            }, true /* forEmbedding */).open();
         });
 
         const delBtn = actionsEl.createEl('button', { cls: 'mc-action-btn mc-action-del', attr: { title: 'Remove' } });

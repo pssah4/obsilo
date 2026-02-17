@@ -50,7 +50,7 @@ export class AgentSidebarView extends ItemView {
     }
 
     getIcon(): string {
-        return 'bot';
+        return 'obsidian-agent';
     }
 
     async onOpen(): Promise<void> {

@@ -1,4 +1,4 @@
-import { Plugin, WorkspaceLeaf, Notice } from 'obsidian';
+import { Plugin, WorkspaceLeaf, Notice, addIcon } from 'obsidian';
 import { ObsidianAgentSettings, DEFAULT_SETTINGS, getModelKey, modelToLLMProvider } from './types/settings';
 import type { CustomModel } from './types/settings';
 import { AgentSidebarView, VIEW_TYPE_AGENT_SIDEBAR } from './ui/AgentSidebarView';
@@ -51,6 +51,31 @@ export default class ObsidianAgentPlugin extends Plugin {
      */
     async onload() {
         console.log('Loading Obsidian Agent plugin');
+
+        // Register custom plugin icon (hooded agent logo).
+        // Uses fill-rule="evenodd" so inner subpaths punch transparent holes —
+        // the hood rim is the outer minus the inner silhouette,
+        // and the face has the eyes stamped out as transparent circles.
+        addIcon('obsidian-agent', `
+          <g fill="currentColor">
+            <!-- Hood rim: outer cloak shape minus inner opening = just the border -->
+            <path fill-rule="evenodd" d="
+              M50 4 L8 30 L6 72 Q6 88 22 90 L78 90 Q94 88 94 72 L92 30 Z
+              M50 16 L20 37 L18 72 Q18 84 30 85 L70 85 Q82 84 82 72 L80 37 Z
+            "/>
+            <!-- Face with eye holes stamped out -->
+            <path fill-rule="evenodd" d="
+              M50 22 L26 40 L24 67 Q24 79 38 80 L62 80 Q76 79 76 67 L74 40 Z
+              M30 48 a7,7 0 1 0 14,0 a7,7 0 1 0 -14,0
+              M56 48 a7,7 0 1 0 14,0 a7,7 0 1 0 -14,0
+            "/>
+            <!-- Smile: thin stroke rendered in the same currentColor,
+                 slightly lighter via opacity so it reads as a mouth highlight -->
+            <path fill="none" stroke="currentColor" stroke-opacity="0.35"
+                  stroke-width="3" stroke-linecap="round"
+                  d="M39 65 Q50 73 61 65"/>
+          </g>
+        `);
 
         // 1. Load settings
         await this.loadSettings();
