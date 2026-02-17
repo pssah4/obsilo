@@ -1355,12 +1355,21 @@
     color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    margin: 14px 0 2px;
+    text-align: left;
+    margin: 20px 0 2px;
     padding-bottom: 4px;
     border-bottom: 1px solid var(--background-modifier-border);
 }
 
 .agent-settings-section:first-child { margin-top: 2px; }
+
+/* Tab intro paragraph */
+.agent-settings-desc {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin: 0 0 12px;
+    line-height: 1.5;
+}
 
 /* Compact Obsidian Setting items within the behavior tab */
 .agent-settings-content .setting-item {
@@ -1548,7 +1557,8 @@
     align-items: center;
     gap: 4px;
     padding: 2px 6px 2px 4px;
-    background: var(--background-modifier-border);
+    background: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
     border-radius: 6px;
     font-size: 11px;
     color: var(--text-muted);
@@ -1617,10 +1627,11 @@
     align-items: center;
     gap: 3px;
     padding: 2px 6px 2px 4px;
-    background: color-mix(in srgb, var(--interactive-accent) 20%, transparent);
+    background: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
     border-radius: 6px;
     font-size: 11px;
-    color: var(--text-normal);
+    color: var(--text-muted);
     max-width: 200px;
     overflow: hidden;
 }
@@ -1636,4 +1647,19 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+/* ── "Current" badge on active file chip ─────────────────────────────── */
+.attachment-current-badge {
+    display: inline-block;
+    padding: 0px 4px;
+    margin-left: 2px;
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+    border-radius: 3px;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    line-height: 1.6;
+    flex-shrink: 0;
 }

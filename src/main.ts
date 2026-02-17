@@ -163,6 +163,7 @@ export default class ObsidianAgentPlugin extends Plugin {
         const saved = (await this.loadData()) ?? {};
         this.settings = Object.assign({}, DEFAULT_SETTINGS, saved);
         this.settings.activeModels = this.settings.activeModels ?? [];
+        this.settings.webTools = this.settings.webTools ?? DEFAULT_SETTINGS.webTools;
     }
 
     /** Return the currently active CustomModel, or null if none configured */

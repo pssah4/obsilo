@@ -1050,11 +1050,12 @@ export class ModelConfigModal extends Modal {
 // Settings Tab
 // ---------------------------------------------------------------------------
 
-type TabId = 'models' | 'embeddings' | 'behavior';
+type TabId = 'models' | 'embeddings' | 'behaviour' | 'web' | 'checkpoints' | 'advanced';
 
 export class AgentSettingsTab extends PluginSettingTab {
     plugin: ObsidianAgentPlugin;
     private activeTab: TabId = 'models';
+
 
     constructor(app: App, plugin: ObsidianAgentPlugin) {
         super(app, plugin);
@@ -1077,9 +1078,12 @@ export class AgentSettingsTab extends PluginSettingTab {
     private buildTabNav(container: HTMLElement): void {
         const nav = container.createDiv('agent-settings-nav');
         const tabs: { id: TabId; label: string }[] = [
-            { id: 'models', label: 'Models' },
-            { id: 'embeddings', label: 'Embeddings' },
-            { id: 'behavior', label: 'Behavior' },
+            { id: 'models',      label: 'Models' },
+            { id: 'embeddings',  label: 'Embeddings' },
+            { id: 'behaviour',   label: 'Behaviour' },
+            { id: 'web',         label: 'Web' },
+            { id: 'checkpoints', label: 'Checkpoints' },
+            { id: 'advanced',    label: 'Advanced' },
         ];
         tabs.forEach(({ id, label }) => {
             const btn = nav.createEl('button', {
@@ -1099,9 +1103,12 @@ export class AgentSettingsTab extends PluginSettingTab {
 
     private buildTabContent(container: HTMLElement): void {
         const content = container.createDiv('agent-settings-content');
-        if (this.activeTab === 'models') this.buildModelsTab(content);
-        if (this.activeTab === 'embeddings') this.buildEmbeddingsTab(content);
-        if (this.activeTab === 'behavior') this.buildBehaviorTab(content);
+        if (this.activeTab === 'models')      this.buildModelsTab(content);
+        if (this.activeTab === 'embeddings')  this.buildEmbeddingsTab(content);
+        if (this.activeTab === 'behaviour')   this.buildBehaviourTab(content);
+        if (this.activeTab === 'web')         this.buildWebTab(content);
+        if (this.activeTab === 'checkpoints') this.buildCheckpointsTab(content);
+        if (this.activeTab === 'advanced')    this.buildAdvancedTab(content);
     }
 
     // ---------------------------------------------------------------------------
@@ -1312,16 +1319,18 @@ export class AgentSettingsTab extends PluginSettingTab {
     }
 
     // ---------------------------------------------------------------------------
-    // Behavior tab
+    // Behaviour tab — Auto-Approve
     // ---------------------------------------------------------------------------
 
-    private buildBehaviorTab(container: HTMLElement): void {
-        // ── Auto-Approve ─────────────────────────────────────────────────────
-        container.createEl('h3', { cls: 'agent-settings-section', text: 'Auto-Approve' });
+    private buildBehaviourTab(container: HTMLElement): void {
+        container.createEl('p', {
+            cls: 'agent-settings-desc',
+            text: 'Control which tool categories the agent can run without asking for your approval first.',
+        });
 
         new Setting(container)
             .setName('Enable auto-approve')
-            .setDesc('When enabled, write operations are executed without asking for approval (subject to the toggles below).')
+            .setDesc('Master switch. When on, approved categories run without a confirmation prompt.')
             .addToggle((t) =>
                 t.setValue(this.plugin.settings.autoApproval.enabled).onChange(async (v) => {
                     this.plugin.settings.autoApproval.enabled = v;
@@ -1339,9 +1348,11 @@ export class AgentSettingsTab extends PluginSettingTab {
                 }),
             );
 
+        container.createEl('h3', { cls: 'agent-settings-section', text: 'Per-category toggles' });
+
         new Setting(container)
-            .setName('Auto-approve read operations')
-            .setDesc('read_file, list_files, search_files — these are always safe.')
+            .setName('Read operations')
+            .setDesc('read_file, list_files, search_files — always safe to auto-approve.')
             .addToggle((t) =>
                 t.setValue(this.plugin.settings.autoApproval.read).onChange(async (v) => {
                     this.plugin.settings.autoApproval.read = v;
@@ -1350,7 +1361,7 @@ export class AgentSettingsTab extends PluginSettingTab {
             );
 
         new Setting(container)
-            .setName('Auto-approve write operations')
+            .setName('Write operations')
             .setDesc('write_file, edit_file, append_to_file, create_folder, delete_file, move_file.')
             .addToggle((t) =>
                 t.setValue(this.plugin.settings.autoApproval.write).onChange(async (v) => {
@@ -1360,7 +1371,7 @@ export class AgentSettingsTab extends PluginSettingTab {
             );
 
         new Setting(container)
-            .setName('Auto-approve web operations')
+            .setName('Web operations')
             .setDesc('web_fetch, web_search — fetches external content.')
             .addToggle((t) =>
                 t.setValue(this.plugin.settings.autoApproval.web).onChange(async (v) => {
@@ -1370,34 +1381,122 @@ export class AgentSettingsTab extends PluginSettingTab {
             );
 
         new Setting(container)
-            .setName('Auto-approve MCP tool calls')
-            .setDesc('use_mcp_tool — external tool server calls.')
+            .setName('MCP tool calls')
+            .setDesc('use_mcp_tool — calls to external tool servers.')
             .addToggle((t) =>
                 t.setValue(this.plugin.settings.autoApproval.mcp).onChange(async (v) => {
                     this.plugin.settings.autoApproval.mcp = v;
                     await this.plugin.saveSettings();
                 }),
             );
+    }
 
-        // ── Checkpoints ───────────────────────────────────────────────────────
-        container.createEl('h3', { cls: 'agent-settings-section', text: 'Checkpoints' });
+    // ---------------------------------------------------------------------------
+    // Web tab
+    // ---------------------------------------------------------------------------
+
+    private buildWebTab(container: HTMLElement): void {
+        container.createEl('p', {
+            cls: 'agent-settings-desc',
+            text: 'Configure web_fetch (read any URL) and web_search (Brave / Tavily). web_fetch works without an API key; web_search requires one.',
+        });
+
+        new Setting(container)
+            .setName('Enable web tools')
+            .setDesc('When off, the agent cannot access the internet at all.')
+            .addToggle((t) =>
+                t.setValue(this.plugin.settings.webTools?.enabled ?? false).onChange(async (v) => {
+                    if (!this.plugin.settings.webTools) this.plugin.settings.webTools = { enabled: false, provider: 'none', braveApiKey: '', tavilyApiKey: '' };
+                    this.plugin.settings.webTools.enabled = v;
+                    await this.plugin.saveSettings();
+                    this.display();
+                }),
+            );
+
+        container.createEl('h3', { cls: 'agent-settings-section', text: 'Search provider' });
+
+        new Setting(container)
+            .setName('Provider')
+            .setDesc('Used for web_search. Select "None" if you only need web_fetch.')
+            .addDropdown((d) =>
+                d
+                    .addOption('none', 'None (web_fetch only)')
+                    .addOption('brave', 'Brave Search')
+                    .addOption('tavily', 'Tavily')
+                    .setValue(this.plugin.settings.webTools?.provider ?? 'none')
+                    .onChange(async (v) => {
+                        if (!this.plugin.settings.webTools) this.plugin.settings.webTools = { enabled: true, provider: 'none', braveApiKey: '', tavilyApiKey: '' };
+                        this.plugin.settings.webTools.provider = v as 'brave' | 'tavily' | 'none';
+                        await this.plugin.saveSettings();
+                        this.display();
+                    }),
+            );
+
+        const provider = this.plugin.settings.webTools?.provider ?? 'none';
+
+        if (provider === 'brave' || provider === 'none') {
+            const braveKey = new Setting(container)
+                .setName('Brave Search API key')
+                .setDesc('Get a free key at brave.com/search/api — 2 000 queries/month on the free tier.')
+                .addText((t) => {
+                    t.inputEl.type = 'password';
+                    t
+                        .setPlaceholder('BSA...')
+                        .setValue(this.plugin.settings.webTools?.braveApiKey ?? '')
+                        .onChange(async (v) => {
+                            if (!this.plugin.settings.webTools) this.plugin.settings.webTools = { enabled: true, provider: 'brave', braveApiKey: '', tavilyApiKey: '' };
+                            this.plugin.settings.webTools.braveApiKey = v.trim();
+                            await this.plugin.saveSettings();
+                        });
+                });
+            if (provider === 'none') braveKey.setDisabled(true);
+        }
+
+        if (provider === 'tavily' || provider === 'none') {
+            const tavilyKey = new Setting(container)
+                .setName('Tavily API key')
+                .setDesc('Get a key at tavily.com — 1 000 free searches/month.')
+                .addText((t) => {
+                    t.inputEl.type = 'password';
+                    t
+                        .setPlaceholder('tvly-...')
+                        .setValue(this.plugin.settings.webTools?.tavilyApiKey ?? '')
+                        .onChange(async (v) => {
+                            if (!this.plugin.settings.webTools) this.plugin.settings.webTools = { enabled: true, provider: 'tavily', braveApiKey: '', tavilyApiKey: '' };
+                            this.plugin.settings.webTools.tavilyApiKey = v.trim();
+                            await this.plugin.saveSettings();
+                        });
+                });
+            if (provider === 'none') tavilyKey.setDisabled(true);
+        }
+    }
+
+    // ---------------------------------------------------------------------------
+    // Checkpoints tab
+    // ---------------------------------------------------------------------------
+
+    private buildCheckpointsTab(container: HTMLElement): void {
+        container.createEl('p', {
+            cls: 'agent-settings-desc',
+            text: 'Checkpoints snapshot each file before the agent first modifies it. After a task you can undo all changes with one click.',
+        });
 
         new Setting(container)
             .setName('Enable checkpoints')
-            .setDesc('Automatically snapshot files before the agent modifies them. Enables the Undo button after each task.')
+            .setDesc('Snapshot files before the agent modifies them. Enables the Undo button after each task.')
             .addToggle((t) =>
-                t.setValue(this.plugin.settings.enableCheckpoints).onChange(async (v) => {
+                t.setValue(this.plugin.settings.enableCheckpoints ?? true).onChange(async (v) => {
                     this.plugin.settings.enableCheckpoints = v;
                     await this.plugin.saveSettings();
                 }),
             );
 
         new Setting(container)
-            .setName('Checkpoint timeout (seconds)')
-            .setDesc('Maximum time to wait for a snapshot operation before giving up. Default: 30.')
+            .setName('Snapshot timeout (seconds)')
+            .setDesc('Maximum time to wait for a single snapshot operation before giving up. Default: 30.')
             .addText((t) =>
                 t
-                    .setValue(String(this.plugin.settings.checkpointTimeoutSeconds))
+                    .setValue(String(this.plugin.settings.checkpointTimeoutSeconds ?? 30))
                     .onChange(async (v) => {
                         const n = parseInt(v);
                         if (!isNaN(n) && n > 0) {
@@ -1408,17 +1507,23 @@ export class AgentSettingsTab extends PluginSettingTab {
             );
 
         new Setting(container)
-            .setName('Auto-cleanup checkpoints')
-            .setDesc('Remove checkpoint data after a task completes to keep the shadow repo lean.')
+            .setName('Auto-cleanup after task')
+            .setDesc('Remove snapshot data once the task completes. Keeps the shadow repo small. Disable if you want to inspect snapshots manually.')
             .addToggle((t) =>
-                t.setValue(this.plugin.settings.checkpointAutoCleanup).onChange(async (v) => {
+                t.setValue(this.plugin.settings.checkpointAutoCleanup ?? true).onChange(async (v) => {
                     this.plugin.settings.checkpointAutoCleanup = v;
                     await this.plugin.saveSettings();
                 }),
             );
+    }
 
-        // ── Advanced API ─────────────────────────────────────────────────────
-        container.createEl('h3', { cls: 'agent-settings-section', text: 'Advanced API' });
+    // ---------------------------------------------------------------------------
+    // Advanced tab — API tuning + UI preferences
+    // ---------------------------------------------------------------------------
+
+    private buildAdvancedTab(container: HTMLElement): void {
+        // ── API Tuning ────────────────────────────────────────────────────────
+        container.createEl('h3', { cls: 'agent-settings-section', text: 'API Tuning' });
 
         new Setting(container)
             .setName('Use custom temperature')
@@ -1432,7 +1537,7 @@ export class AgentSettingsTab extends PluginSettingTab {
 
         new Setting(container)
             .setName('Temperature')
-            .setDesc('Value between 0.0 (deterministic) and 2.0 (very creative). Only used when "Use custom temperature" is on.')
+            .setDesc('0.0 = deterministic · 1.0 = default · 2.0 = very creative. Only applied when "Use custom temperature" is on.')
             .addSlider((s) =>
                 s
                     .setLimits(0, 2, 0.05)
@@ -1461,7 +1566,7 @@ export class AgentSettingsTab extends PluginSettingTab {
 
         new Setting(container)
             .setName('Rate limit between requests (ms)')
-            .setDesc('Minimum pause between API calls in milliseconds. Useful for providers with strict rate limits. Set to 0 to disable.')
+            .setDesc('Minimum pause between API calls. Useful for providers with strict rate limits. Set to 0 to disable.')
             .addText((t) =>
                 t
                     .setValue(String(this.plugin.settings.advancedApi.rateLimitMs))
@@ -1475,11 +1580,11 @@ export class AgentSettingsTab extends PluginSettingTab {
             );
 
         // ── UI ────────────────────────────────────────────────────────────────
-        container.createEl('h3', { cls: 'agent-settings-section', text: 'UI' });
+        container.createEl('h3', { cls: 'agent-settings-section', text: 'Interface' });
 
         new Setting(container)
             .setName('Auto-add active note as context')
-            .setDesc('Automatically include the currently open note as context. Can be dismissed per-message via the × in the chat toolbar.')
+            .setDesc('Automatically include the currently open note as context when sending a message.')
             .addToggle((t) =>
                 t.setValue(this.plugin.settings.autoAddActiveFileContext).onChange(async (v) => {
                     this.plugin.settings.autoAddActiveFileContext = v;
@@ -1488,8 +1593,8 @@ export class AgentSettingsTab extends PluginSettingTab {
             );
 
         new Setting(container)
-            .setName('Show Welcome Message')
-            .setDesc('Show the welcome message when the sidebar opens.')
+            .setName('Show welcome message')
+            .setDesc('Show the welcome message when the sidebar opens for the first time.')
             .addToggle((t) =>
                 t.setValue(this.plugin.settings.showWelcomeMessage).onChange(async (v) => {
                     this.plugin.settings.showWelcomeMessage = v;
@@ -1497,9 +1602,12 @@ export class AgentSettingsTab extends PluginSettingTab {
                 }),
             );
 
+        // ── Debug ─────────────────────────────────────────────────────────────
+        container.createEl('h3', { cls: 'agent-settings-section', text: 'Debug' });
+
         new Setting(container)
-            .setName('Debug Mode')
-            .setDesc('Log detailed information to the browser console.')
+            .setName('Debug mode')
+            .setDesc('Log detailed tool execution information to the developer console (Cmd+Option+I).')
             .addToggle((t) =>
                 t.setValue(this.plugin.settings.debugMode).onChange(async (v) => {
                     this.plugin.settings.debugMode = v;

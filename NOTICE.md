@@ -20,10 +20,4 @@ The following components are derived from or inspired by Kilo Code:
 
 A copy of the Apache License 2.0 is included in this repository as `LICENSE`.
 
----
 
-## Design Inspiration
-
-The model management UI (model table, per-model API key configuration) is
-inspired by the UX of **Obsidian Copilot** (https://github.com/logancyang/obsidian-copilot).
-No source code from Obsidian Copilot was copied or incorporated.

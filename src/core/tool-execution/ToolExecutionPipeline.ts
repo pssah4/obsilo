@@ -75,8 +75,8 @@ export class ToolExecutionPipeline {
     private toolRegistry: ToolRegistry;
     private taskId: string;
     private mode: string;
-    /** Track if we've already snapshotted for this task (checkpoint before first write) */
-    private checkpointCreated = false;
+    /** Paths already snapshotted for this task — each file is captured once before its first write */
+    private snapshotedPaths = new Set<string>();
 
     constructor(
         plugin: ObsidianAgentPlugin,
@@ -122,11 +122,13 @@ export class ToolExecutionPipeline {
                 }
             }
 
-            // 4. Checkpoint before first write operation of this task (Sprint 1.4)
-            if (tool.isWriteOperation && !this.checkpointCreated && this.plugin.settings.enableCheckpoints) {
-                this.checkpointCreated = true;
+            // 4. Checkpoint before each write — snapshot the file BEFORE it is modified.
+            //    Each vault path is snapshotted at most once per task so we always
+            //    capture the true pre-task state even when the agent touches many files.
+            if (tool.isWriteOperation && (this.plugin.settings.enableCheckpoints ?? true)) {
                 const path: string | undefined = toolCall.input?.path;
-                if (path) {
+                if (path && !this.snapshotedPaths.has(path)) {
+                    this.snapshotedPaths.add(path); // mark before async call to avoid races
                     this.plugin.checkpointService?.snapshot(this.taskId, [path]).catch((e) =>
                         console.warn('[Pipeline] Checkpoint snapshot failed (non-fatal):', e)
                     );

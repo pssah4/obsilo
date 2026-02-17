@@ -22,6 +22,17 @@ import { AppendToFileTool } from './vault/AppendToFileTool';
 import { CreateFolderTool } from './vault/CreateFolderTool';
 import { DeleteFileTool } from './vault/DeleteFileTool';
 import { MoveFileTool } from './vault/MoveFileTool';
+// Import tools — vault: intelligence (Phase 1.2)
+import { GetFrontmatterTool } from './vault/GetFrontmatterTool';
+import { UpdateFrontmatterTool } from './vault/UpdateFrontmatterTool';
+import { SearchByTagTool } from './vault/SearchByTagTool';
+import { GetVaultStatsTool } from './vault/GetVaultStatsTool';
+import { GetLinkedNotesTool } from './vault/GetLinkedNotesTool';
+import { OpenNoteTool } from './vault/OpenNoteTool';
+import { GetDailyNoteTool } from './vault/GetDailyNoteTool';
+// Import tools — web
+import { WebFetchTool } from './web/WebFetchTool';
+import { WebSearchTool } from './web/WebSearchTool';
 // Import tools — agent control
 import { AskFollowupQuestionTool } from './agent/AskFollowupQuestionTool';
 import { AttemptCompletionTool } from './agent/AttemptCompletionTool';
@@ -51,6 +62,17 @@ export class ToolRegistry {
         this.register(new CreateFolderTool(this.plugin));
         this.register(new DeleteFileTool(this.plugin));
         this.register(new MoveFileTool(this.plugin));
+        // Vault: intelligence (Phase 1.2)
+        this.register(new GetFrontmatterTool(this.plugin));
+        this.register(new UpdateFrontmatterTool(this.plugin));
+        this.register(new SearchByTagTool(this.plugin));
+        this.register(new GetVaultStatsTool(this.plugin));
+        this.register(new GetLinkedNotesTool(this.plugin));
+        this.register(new OpenNoteTool(this.plugin));
+        this.register(new GetDailyNoteTool(this.plugin));
+        // Web (Phase 1.1)
+        this.register(new WebFetchTool(this.plugin));
+        this.register(new WebSearchTool(this.plugin));
         // Agent control (Sprint 1.2)
         this.register(new AskFollowupQuestionTool(this.plugin));
         this.register(new AttemptCompletionTool(this.plugin));

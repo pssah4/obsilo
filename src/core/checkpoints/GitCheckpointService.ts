@@ -226,29 +226,64 @@ export class GitCheckpointService {
     }
 
     /**
-     * Find the most recent checkpoint for a task by scanning git log,
-     * then restore its files back into the vault.
-     * Used by the Undo bar in the sidebar.
+     * Restore all files snapshotted for a given task.
+     *
+     * Because the pipeline creates one commit per file (to snapshot each file
+     * before its first write), a single task may have N commits in the log.
+     * We collect ALL of them, then restore each file from its EARLIEST snapshot
+     * so we always recover the true pre-task state.
      */
     async restoreLatestForTask(taskId: string): Promise<RestoreResult> {
         await this.ensureInit();
         const fs = this.getFs();
         try {
-            const commits = await git.log({ fs, dir: this.repoPath, depth: 100 });
+            const commits = await git.log({ fs, dir: this.repoPath, depth: 200 });
             const prefix = `checkpoint:${taskId}`;
-            const match = commits.find((c) => c.commit.message.startsWith(prefix));
-            if (!match) {
+            const matches = commits.filter((c) => c.commit.message.startsWith(prefix));
+            if (matches.length === 0) {
                 return { restored: [], errors: [`No checkpoint found for task ${taskId}`] };
             }
-            // Parse file list from commit message ("Files: a.md, b.md")
-            const msgParts = match.commit.message.split('\n\nFiles: ');
-            const files = msgParts[1] ? msgParts[1].split(', ').map((f) => f.trim()) : [];
-            return this.restore({
-                taskId,
-                commitOid: match.oid,
-                timestamp: new Date(match.commit.author.timestamp * 1000).toISOString(),
-                filesChanged: files,
-            });
+
+            // Collect each file → OID of its earliest snapshot (commits are newest-first,
+            // so we iterate in reverse to find the earliest per file).
+            const fileToOid = new Map<string, string>();
+            for (const match of [...matches].reverse()) {
+                const msgParts = match.commit.message.split('\n\nFiles: ');
+                const files = msgParts[1] ? msgParts[1].split(', ').map((f) => f.trim()) : [];
+                for (const f of files) {
+                    fileToOid.set(f, match.oid); // later reverse-iterations win = earliest
+                }
+            }
+
+            const restored: string[] = [];
+            const errors: string[] = [];
+
+            for (const [vaultRelPath, oid] of fileToOid.entries()) {
+                try {
+                    const { blob } = await git.readBlob({
+                        fs,
+                        dir: this.repoPath,
+                        oid,
+                        filepath: vaultRelPath,
+                    });
+                    const content = new TextDecoder().decode(blob);
+                    const existingFile = this.vault.getAbstractFileByPath(vaultRelPath);
+                    if (existingFile) {
+                        const { TFile } = await import('obsidian');
+                        if (existingFile instanceof TFile) {
+                            await this.vault.modify(existingFile, content);
+                        }
+                    } else {
+                        await this.vault.adapter.write(vaultRelPath, content);
+                    }
+                    restored.push(vaultRelPath);
+                } catch (e) {
+                    errors.push(`${vaultRelPath}: ${e instanceof Error ? e.message : String(e)}`);
+                }
+            }
+
+            console.log(`[Checkpoints] Restored ${restored.length} files for task ${taskId}`);
+            return { restored, errors };
         } catch (e) {
             const msg = e instanceof Error ? e.message : String(e);
             return { restored: [], errors: [msg] };
