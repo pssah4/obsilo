@@ -89,6 +89,7 @@ interface ToolCallAccumulator {
 const DEFAULT_BASE_URLS: Record<string, string> = {
     openai: 'https://api.openai.com/v1',
     ollama: 'http://localhost:11434/v1',
+    lmstudio: 'http://localhost:1234/v1',
     openrouter: 'https://openrouter.ai/api/v1',
     custom: 'https://api.openai.com/v1',
 };

@@ -764,6 +764,37 @@
 
 .mcm-input-sm { max-width: 100px; }
 
+/* suggest row: select + fetch button */
+.mcm-suggest-controls {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+.mcm-suggest-sel {
+    flex: 1;
+    min-width: 0;
+}
+.mcm-fetch-btn {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    padding: 4px 6px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    background: var(--background-modifier-form-field);
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+}
+.mcm-fetch-btn:hover {
+    color: var(--text-normal);
+    border-color: var(--text-muted);
+}
+.mcm-fetch-btn svg {
+    width: 13px;
+    height: 13px;
+}
+
 .mcm-actions {
     display: flex;
     gap: 6px;

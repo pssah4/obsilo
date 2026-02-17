@@ -7,7 +7,7 @@
 // Adapted from Obsidian Copilot's CustomModel pattern
 // ---------------------------------------------------------------------------
 
-export type ProviderType = 'anthropic' | 'openai' | 'ollama' | 'openrouter' | 'azure' | 'custom';
+export type ProviderType = 'anthropic' | 'openai' | 'ollama' | 'lmstudio' | 'openrouter' | 'azure' | 'custom';
 
 export interface CustomModel {
     /** Model identifier used in API calls (e.g. "claude-sonnet-4-5-20250929") */
@@ -217,7 +217,9 @@ export interface ObsidianAgentSettings {
 
     // Semantic Index
     enableSemanticIndex: boolean;
-    embeddingModel: string;
+    embeddingModel: string; // legacy — kept for backwards compat
+    embeddingModels: CustomModel[];
+    activeEmbeddingModelKey: string;
 
     // Checkpoints
     enableCheckpoints: boolean;
@@ -250,6 +252,8 @@ export const DEFAULT_SETTINGS: ObsidianAgentSettings = {
     },
     enableSemanticIndex: true,
     embeddingModel: 'Xenova/all-MiniLM-L6-v2',
+    embeddingModels: [],
+    activeEmbeddingModelKey: '',
     enableCheckpoints: true,
     maxCheckpointsPerTask: 50,
     sidebarPosition: 'right',

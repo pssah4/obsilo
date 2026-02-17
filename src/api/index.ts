@@ -27,6 +27,7 @@ export function buildApiHandler(config: LLMProvider) {
             return new AnthropicProvider(config);
         case 'openai':
         case 'ollama':
+        case 'lmstudio':
         case 'openrouter':
         case 'azure':
         case 'custom':

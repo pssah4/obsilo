@@ -1,4 +1,4 @@
-import { App, Modal, Notice, PluginSettingTab, Setting, setIcon } from 'obsidian';
+import { App, Modal, Notice, PluginSettingTab, Setting, requestUrl, setIcon } from 'obsidian';
 import type ObsidianAgentPlugin from '../main';
 import type { CustomModel, ProviderType } from '../types/settings';
 import { getModelKey, modelToLLMProvider } from '../types/settings';
@@ -12,6 +12,7 @@ const PROVIDER_LABELS: Record<string, string> = {
     anthropic: 'Anthropic',
     openai: 'OpenAI',
     ollama: 'Ollama',
+    lmstudio: 'LM Studio',
     openrouter: 'OpenRouter',
     azure: 'Azure OpenAI',
     custom: 'Custom',
@@ -21,6 +22,7 @@ const PROVIDER_COLORS: Record<string, string> = {
     anthropic: '#c27c4a',
     openai: '#10a37f',
     ollama: '#5c6bc0',
+    lmstudio: '#e05c2c',
     openrouter: '#7c3aed',
     azure: '#0078d4',
     custom: '#78909c',
@@ -30,31 +32,48 @@ const PROVIDER_COLORS: Record<string, string> = {
 // Grouped by provider → vendor → models (display label + exact API ID)
 const MODEL_SUGGESTIONS: Record<string, { group: string; id: string; label: string }[]> = {
     anthropic: [
-        { group: 'Anthropic', id: 'claude-opus-4-6',            label: 'Claude Opus 4.6' },
-        { group: 'Anthropic', id: 'claude-sonnet-4-5-20250929', label: 'Claude Sonnet 4.5' },
-        { group: 'Anthropic', id: 'claude-haiku-4-5-20251001',  label: 'Claude Haiku 4.5' },
+        // Claude 4 family
+        { group: 'Claude 4',   id: 'claude-opus-4-6',            label: 'Claude Opus 4.6' },
+        { group: 'Claude 4',   id: 'claude-sonnet-4-5',          label: 'Claude Sonnet 4.5' },
+        { group: 'Claude 4',   id: 'claude-haiku-4-5-20251001',  label: 'Claude Haiku 4.5' },
+        // Claude 3.7 / 3.5
+        { group: 'Claude 3.x', id: 'claude-3-7-sonnet-20250219', label: 'Claude 3.7 Sonnet' },
+        { group: 'Claude 3.x', id: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet' },
+        { group: 'Claude 3.x', id: 'claude-3-5-haiku-20241022',  label: 'Claude 3.5 Haiku' },
     ],
     openai: [
-        { group: 'GPT-4 family', id: 'gpt-4o',      label: 'GPT-4o' },
-        { group: 'GPT-4 family', id: 'gpt-4o-mini',  label: 'GPT-4o mini' },
-        { group: 'GPT-4 family', id: 'gpt-4.1',      label: 'GPT-4.1' },
-        { group: 'GPT-4 family', id: 'gpt-4.1-mini', label: 'GPT-4.1 mini' },
-        { group: 'Reasoning',    id: 'o3',            label: 'o3' },
-        { group: 'Reasoning',    id: 'o4-mini',       label: 'o4-mini' },
+        // GPT-5 family (2025–2026)
+        { group: 'GPT-5',      id: 'gpt-5',          label: 'GPT-5' },
+        { group: 'GPT-5',      id: 'gpt-5-mini',     label: 'GPT-5 mini' },
+        // GPT-4.1 family
+        { group: 'GPT-4.1',    id: 'gpt-4.1',        label: 'GPT-4.1' },
+        { group: 'GPT-4.1',    id: 'gpt-4.1-mini',   label: 'GPT-4.1 mini' },
+        { group: 'GPT-4.1',    id: 'gpt-4.1-nano',   label: 'GPT-4.1 nano' },
+        // GPT-4o (still widely used)
+        { group: 'GPT-4o',     id: 'gpt-4o',         label: 'GPT-4o' },
+        { group: 'GPT-4o',     id: 'gpt-4o-mini',    label: 'GPT-4o mini' },
+        // Reasoning (o-series)
+        { group: 'Reasoning',  id: 'o3',              label: 'o3' },
+        { group: 'Reasoning',  id: 'o4-mini',         label: 'o4-mini' },
+        { group: 'Reasoning',  id: 'o1',              label: 'o1' },
+        // Codex
+        { group: 'Codex',      id: 'codex-mini-latest', label: 'Codex Mini' },
     ],
     openrouter: [
-        { group: 'Anthropic',  id: 'anthropic/claude-opus-4',         label: 'Claude Opus 4' },
-        { group: 'Anthropic',  id: 'anthropic/claude-sonnet-4-5',     label: 'Claude Sonnet 4.5' },
-        { group: 'Anthropic',  id: 'anthropic/claude-3.5-sonnet',     label: 'Claude 3.5 Sonnet' },
-        { group: 'OpenAI',     id: 'openai/gpt-4o',                   label: 'GPT-4o' },
-        { group: 'OpenAI',     id: 'openai/gpt-4.1',                  label: 'GPT-4.1' },
-        { group: 'OpenAI',     id: 'openai/o4-mini',                  label: 'o4-mini' },
-        { group: 'Mistral',    id: 'mistralai/mistral-large-latest',  label: 'Mistral Large' },
-        { group: 'Mistral',    id: 'mistralai/mistral-medium-3',      label: 'Mistral Medium 3' },
-        { group: 'DeepSeek',   id: 'deepseek/deepseek-chat-v3-0324', label: 'DeepSeek V3' },
-        { group: 'DeepSeek',   id: 'deepseek/deepseek-r1',           label: 'DeepSeek R1' },
-        { group: 'Kimi',       id: 'moonshotai/kimi-k2',             label: 'Kimi K2' },
-        { group: 'Kimi',       id: 'moonshotai/kimi-vl-a3b-thinking-preview:free', label: 'Kimi VL (free)' },
+        { group: 'Anthropic',  id: 'anthropic/claude-opus-4-6',           label: 'Claude Opus 4.6' },
+        { group: 'Anthropic',  id: 'anthropic/claude-sonnet-4-5',         label: 'Claude Sonnet 4.5' },
+        { group: 'Anthropic',  id: 'anthropic/claude-3-7-sonnet-20250219',label: 'Claude 3.7 Sonnet' },
+        { group: 'Anthropic',  id: 'anthropic/claude-3.5-sonnet',         label: 'Claude 3.5 Sonnet' },
+        { group: 'OpenAI',     id: 'openai/gpt-5',                        label: 'GPT-5' },
+        { group: 'OpenAI',     id: 'openai/gpt-4.1',                      label: 'GPT-4.1' },
+        { group: 'OpenAI',     id: 'openai/gpt-4o',                       label: 'GPT-4o' },
+        { group: 'OpenAI',     id: 'openai/o3',                           label: 'o3' },
+        { group: 'OpenAI',     id: 'openai/o4-mini',                      label: 'o4-mini' },
+        { group: 'Mistral',    id: 'mistralai/mistral-large-latest',       label: 'Mistral Large' },
+        { group: 'Mistral',    id: 'mistralai/mistral-medium-3',           label: 'Mistral Medium 3' },
+        { group: 'DeepSeek',   id: 'deepseek/deepseek-chat-v3-0324',      label: 'DeepSeek V3' },
+        { group: 'DeepSeek',   id: 'deepseek/deepseek-r1',                label: 'DeepSeek R1' },
+        { group: 'Kimi',       id: 'moonshotai/kimi-k2',                  label: 'Kimi K2' },
     ],
 };
 
@@ -155,14 +174,97 @@ async function testModelConnection(model: CustomModel): Promise<TestResult> {
     }
 }
 
+/**
+ * Fetch the current model list from a provider's API.
+ * Returns { id, label } pairs for display in the Quick Pick dropdown.
+ */
+async function fetchProviderModels(
+    provider: ProviderType,
+    apiKey: string,
+    baseUrl?: string,
+): Promise<{ id: string; label: string }[]> {
+    // Helper: Obsidian's requestUrl throws on 4xx/5xx — use throw:false to always get response
+    const req = (url: string, headers: Record<string, string> = {}) =>
+        requestUrl({ url, method: 'GET', headers, throw: false });
+
+    if (provider === 'anthropic') {
+        if (!apiKey) throw new Error('API key required for Anthropic');
+        const res = await req('https://api.anthropic.com/v1/models',
+            { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' });
+        if (res.status === 401) throw new Error('Invalid API key (401 Unauthorized)');
+        if (res.status !== 200) throw new Error(`HTTP ${res.status}`);
+        const data = res.json;
+        const CHAT_RE = /^claude-/;
+        return (data.data ?? [])
+            .filter((m: any) => CHAT_RE.test(m.id))
+            .map((m: any) => ({ id: m.id as string, label: (m.display_name ?? m.id) as string }))
+            .sort((a: any, b: any) => b.id.localeCompare(a.id));
+    }
+
+    if (provider === 'openai') {
+        if (!apiKey) throw new Error('API key required for OpenAI');
+        const res = await req('https://api.openai.com/v1/models',
+            { 'Authorization': `Bearer ${apiKey}` });
+        if (res.status === 401) throw new Error('Invalid API key (401 Unauthorized)');
+        if (res.status !== 200) throw new Error(`HTTP ${res.status}`);
+        const data = res.json;
+        // Keep only chat-capable models; exclude fine-tunes, TTS, embeddings, DALL-E
+        const CHAT_RE = /^(gpt-|o[1-9]|chatgpt-|codex-)/;
+        const EXCLUDE_RE = /-(instruct|vision-preview|0314|0301|0613|0914|32k)$|:ft-/;
+        return (data.data ?? [])
+            .filter((m: any) => CHAT_RE.test(m.id) && !EXCLUDE_RE.test(m.id))
+            .map((m: any) => ({ id: m.id as string, label: m.id as string }))
+            .sort((a: any, b: any) => (b.created ?? 0) - (a.created ?? 0));
+    }
+
+    if (provider === 'openrouter') {
+        const headers: Record<string, string> = apiKey ? { 'Authorization': `Bearer ${apiKey}` } : {};
+        const res = await req('https://openrouter.ai/api/v1/models', headers);
+        if (res.status !== 200) throw new Error(`HTTP ${res.status}`);
+        const data = res.json;
+        // Only include models that support tool calling (function calling)
+        return (data.data ?? [])
+            .filter((m: any) => {
+                const caps: string[] = m.supported_parameters ?? [];
+                // If the API doesn't expose capabilities, include all (older API format)
+                if (caps.length === 0) return true;
+                return caps.includes('tools') || caps.includes('tool_choice');
+            })
+            .map((m: any) => ({ id: m.id as string, label: (m.name ?? m.id) as string }))
+            .sort((a: any, b: any) => a.id.localeCompare(b.id));
+    }
+
+    // lmstudio — OpenAI-compatible local server, default port 1234
+    if (provider === 'lmstudio') {
+        const root = (baseUrl || 'http://localhost:1234').replace(/\/v1\/?$/, '').replace(/\/+$/, '');
+        const res = await req(`${root}/v1/models`);
+        if (res.status !== 200) throw new Error(`HTTP ${res.status} — Is LM Studio running with "Local Server" enabled?`);
+        const data = res.json;
+        return (data.data ?? [])
+            .map((m: any) => ({ id: m.id as string, label: m.id as string }))
+            .sort((a: any, b: any) => a.id.localeCompare(b.id));
+    }
+
+    // custom — any OpenAI-compatible /v1/models endpoint
+    const root = (baseUrl || 'http://localhost:1234').replace(/\/v1\/?$/, '').replace(/\/+$/, '');
+    const headers: Record<string, string> = {};
+    if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
+    const res = await requestUrl({ url: `${root}/v1/models`, method: 'GET', headers, throw: false });
+    if (res.status !== 200) throw new Error(`HTTP ${res.status}`);
+    const data = res.json;
+    return (data.data ?? [])
+        .map((m: any) => ({ id: m.id as string, label: m.id as string }))
+        .sort((a: any, b: any) => a.id.localeCompare(b.id));
+}
+
 /** Fetch model names installed in a local Ollama instance */
 async function fetchOllamaModels(baseUrl: string): Promise<string[]> {
     // Native Ollama API is at root — strip /v1 suffix if present
     const root = (baseUrl || 'http://localhost:11434').replace(/\/v\d[^/]*\/?$/, '').replace(/\/+$/, '');
     const url = `${root}/api/tags`;
-    const res = await fetch(url, { signal: AbortSignal.timeout(4000) });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
+    const res = await requestUrl({ url, method: 'GET', throw: false });
+    if (res.status !== 200) throw new Error(`HTTP ${res.status} — Is Ollama running?`);
+    const data = res.json;
     return ((data.models ?? []) as any[]).map((m) => m.name as string).sort();
 }
 
@@ -187,7 +289,9 @@ export class ModelConfigModal extends Modal {
     private baseUrlRow: HTMLElement | null = null;
     private apiVersionRow: HTMLElement | null = null;
     private suggestRow: HTMLElement | null = null;
+    private suggestSelEl: HTMLSelectElement | null = null;
     private ollamaBrowserRow: HTMLElement | null = null;
+    private customBrowserRow: HTMLElement | null = null;
     private providerGuideEl: HTMLElement | null = null;
     private apiKeyDescEl: HTMLElement | null = null;
     private baseUrlDescEl: HTMLElement | null = null;
@@ -252,7 +356,7 @@ export class ModelConfigModal extends Modal {
         // ── Provider ─────────────────────────────────────────────────────
         const provRow = row('Provider');
         const provSel = provRow.createEl('select', { cls: 'mcm-select' });
-        (['anthropic', 'openai', 'ollama', 'openrouter', 'azure', 'custom'] as ProviderType[]).forEach((p) => {
+        (['anthropic', 'openai', 'ollama', 'lmstudio', 'openrouter', 'azure', 'custom'] as ProviderType[]).forEach((p) => {
             const opt = provSel.createEl('option', { value: p, text: PROVIDER_LABELS[p] });
             if (p === this.formProvider) opt.selected = true;
         });
@@ -267,22 +371,69 @@ export class ModelConfigModal extends Modal {
         const suggestLabel = this.suggestRow.createDiv('mcm-label');
         suggestLabel.createSpan({ text: 'Quick Pick' });
         suggestLabel.createSpan({ text: 'Select to pre-fill Model ID', cls: 'mcm-desc' });
-        const suggestSel = this.suggestRow.createEl('select', { cls: 'mcm-select' });
-        suggestSel.createEl('option', { value: '', text: '— pick a model —', attr: { disabled: '', selected: '' } });
-        suggestSel.addEventListener('change', () => {
-            const val = suggestSel.value;
-            const suggestions = MODEL_SUGGESTIONS[this.formProvider] ?? [];
-            const found = suggestions.find((s) => s.id === val);
-            if (found && this.nameInputEl) {
-                this.formName = found.id;
-                this.nameInputEl.value = found.id;
-                if (this.dnInputEl && !this.dnInputEl.value) {
-                    this.formDisplayName = found.label;
-                    this.dnInputEl.value = found.label;
+        const suggestControls = this.suggestRow.createDiv('mcm-suggest-controls');
+        this.suggestSelEl = suggestControls.createEl('select', { cls: 'mcm-select mcm-suggest-sel' });
+        this.suggestSelEl.createEl('option', { value: '', text: '— pick a model —', attr: { disabled: '', selected: '' } });
+        this.suggestSelEl.addEventListener('change', () => {
+            const val = this.suggestSelEl!.value;
+            if (!val) return;
+            if (this.nameInputEl) {
+                this.formName = val;
+                this.nameInputEl.value = val;
+            }
+            const opt = this.suggestSelEl!.options[this.suggestSelEl!.selectedIndex];
+            if (this.dnInputEl && !this.dnInputEl.value && opt) {
+                const label = opt.text.split('  (')[0].trim();
+                if (label && label !== val) {
+                    this.formDisplayName = label;
+                    this.dnInputEl.value = label;
                 }
             }
-            // Reset to placeholder
-            suggestSel.selectedIndex = 0;
+            this.suggestSelEl!.selectedIndex = 0;
+        });
+        // ↻ Fetch button — fetches current model list from the provider's API
+        const fetchBtn = suggestControls.createEl('button', { cls: 'mcm-fetch-btn', attr: { title: 'Fetch current models from provider API' } });
+        setIcon(fetchBtn, 'refresh-cw');
+        fetchBtn.addEventListener('click', async () => {
+            if (!this.suggestSelEl) return;
+            fetchBtn.disabled = true;
+            setIcon(fetchBtn, 'loader');
+            try {
+                const models = await fetchProviderModels(this.formProvider, this.formApiKey, this.formBaseUrl || undefined);
+                this.suggestSelEl.options.length = 0;
+                this.suggestSelEl.createEl('option', { value: '', text: `— ${models.length} models fetched —`, attr: { disabled: '', selected: '' } });
+                // For OpenRouter, group by vendor prefix
+                if (this.formProvider === 'openrouter') {
+                    const groups = new Map<string, typeof models>();
+                    models.forEach((m) => {
+                        const grp = m.id.split('/')[0];
+                        if (!groups.has(grp)) groups.set(grp, []);
+                        groups.get(grp)!.push(m);
+                    });
+                    groups.forEach((items, grp) => {
+                        const og = document.createElement('optgroup');
+                        og.label = grp;
+                        items.forEach((m) => {
+                            const opt = document.createElement('option');
+                            opt.value = m.id;
+                            opt.text = `${m.label}  (${m.id})`;
+                            og.appendChild(opt);
+                        });
+                        this.suggestSelEl!.appendChild(og);
+                    });
+                } else {
+                    models.forEach((m) => {
+                        this.suggestSelEl!.createEl('option', { value: m.id, text: m.label !== m.id ? `${m.label}  (${m.id})` : m.id });
+                    });
+                }
+            } catch (e: any) {
+                // requestUrl can throw a Response-like object (no .message) — handle both
+                const errMsg = e?.message ?? (e?.status ? `HTTP ${e.status}` : String(e));
+                new Notice(`Failed to fetch models: ${errMsg}`);
+            } finally {
+                fetchBtn.disabled = false;
+                setIcon(fetchBtn, 'refresh-cw');
+            }
         });
 
         // ── Model ID ─────────────────────────────────────────────────────
@@ -298,6 +449,10 @@ export class ModelConfigModal extends Modal {
         // ── Ollama model browser (shown only for Ollama) ──────────────────
         this.ollamaBrowserRow = form.createDiv('mcm-ollama-browser');
         this.buildOllamaBrowser(this.ollamaBrowserRow);
+
+        // ── Custom / LM Studio / Mistral model browser ────────────────────
+        this.customBrowserRow = form.createDiv('mcm-ollama-browser');
+        this.buildCustomBrowser(this.customBrowserRow);
 
         // ── Display Name ──────────────────────────────────────────────────
         const dnRow = row('Display Name', 'Label in chat toolbar');
@@ -381,20 +536,23 @@ export class ModelConfigModal extends Modal {
         const p = this.formProvider;
 
         // Show/hide fields per provider
-        this.apiKeyRow.style.display = p === 'ollama' ? 'none' : '';
+        this.apiKeyRow.style.display = (p === 'ollama' || p === 'lmstudio') ? 'none' : '';
         this.baseUrlRow.style.display = (p === 'anthropic' || p === 'openai' || p === 'openrouter') ? 'none' : '';
         if (this.apiVersionRow) this.apiVersionRow.style.display = p === 'azure' ? '' : 'none';
         if (this.ollamaBrowserRow) this.ollamaBrowserRow.style.display = p === 'ollama' ? '' : 'none';
+        if (this.customBrowserRow) this.customBrowserRow.style.display = (p === 'custom' || p === 'lmstudio') ? '' : 'none';
 
-        // Quick Pick: show for providers that have suggestions, rebuild options
+        // Quick Pick: show for cloud providers that have static suggestions; hide for local/azure
         const suggestions = MODEL_SUGGESTIONS[p] ?? [];
+        const hasStaticSuggestions = suggestions.length > 0;
+        const hasFetchFetch = p === 'anthropic' || p === 'openai' || p === 'openrouter' || p === 'lmstudio';
         if (this.suggestRow) {
-            this.suggestRow.style.display = suggestions.length > 0 ? '' : 'none';
-            const sel = this.suggestRow.querySelector('select');
-            if (sel) {
-                // Clear all but first placeholder option
-                while (sel.options.length > 1) sel.remove(1);
-                // Group options
+            this.suggestRow.style.display = (hasStaticSuggestions || hasFetchFetch) ? '' : 'none';
+            if (this.suggestSelEl) {
+                // Rebuild static options (reset to defaults when provider changes)
+                while (this.suggestSelEl.options.length > 1) this.suggestSelEl.remove(1);
+                // Remove optgroups
+                this.suggestSelEl.querySelectorAll('optgroup').forEach((og) => og.remove());
                 const groups = [...new Set(suggestions.map((s) => s.group))];
                 groups.forEach((grp) => {
                     const og = document.createElement('optgroup');
@@ -405,9 +563,12 @@ export class ModelConfigModal extends Modal {
                         opt.text = `${s.label}  (${s.id})`;
                         og.appendChild(opt);
                     });
-                    sel.appendChild(og);
+                    this.suggestSelEl!.appendChild(og);
                 });
-                sel.selectedIndex = 0;
+                this.suggestSelEl.selectedIndex = 0;
+                // Show/hide the fetch button
+                const fetchBtn = this.suggestRow.querySelector('.mcm-fetch-btn') as HTMLButtonElement | null;
+                if (fetchBtn) fetchBtn.style.display = hasFetchFetch ? '' : 'none';
             }
         }
 
@@ -425,6 +586,7 @@ export class ModelConfigModal extends Modal {
         if (this.baseUrlDescEl) {
             const hints: Record<string, string> = {
                 ollama: 'Default: http://localhost:11434',
+                lmstudio: 'Default: http://localhost:1234 (no /v1 needed)',
                 azure: 'Your endpoint up to /openai, e.g. https://your-resource.openai.azure.com/openai',
                 custom: 'Include /v1 suffix, e.g. http://localhost:1234/v1',
             };
@@ -532,11 +694,25 @@ export class ModelConfigModal extends Modal {
             steps.createEl('li', { text: 'Set the API Version to match what your deployment supports (default: 2024-10-21).' });
             guide.createDiv({ cls: 'mcm-guide-tip', text: '💡 For enterprise API gateways that route to Azure OpenAI: use the gateway base URL (up to /openai), deployment name as Model ID, and your gateway API key.' });
 
+        } else if (provider === 'lmstudio') {
+            guide.createEl('strong', { text: 'How to use LM Studio (local models, no cost, no API key):' });
+            const steps = guide.createEl('ol', { cls: 'mcm-guide-steps' });
+            const s1 = steps.createEl('li');
+            s1.appendText('Download LM Studio from ');
+            s1.appendChild(link('lmstudio.ai', 'https://lmstudio.ai'));
+            s1.appendText(' and install a model of your choice.');
+            const s2 = steps.createEl('li');
+            s2.appendText('In LM Studio, go to the ');
+            s2.createEl('strong', { text: 'Developer' });
+            s2.appendText(' tab (left sidebar) and start the Local Server.');
+            steps.createEl('li', { text: 'The default Base URL is http://localhost:1234 — no API key needed.' });
+            steps.createEl('li', { text: 'Click "Browse available models" below to pick a loaded model.' });
+            guide.createDiv({ cls: 'mcm-guide-tip', text: '💡 Make sure to load a model in LM Studio before starting the server, otherwise no models will appear.' });
+
         } else if (provider === 'custom') {
-            guide.createEl('strong', { text: 'OpenAI-compatible API (LM Studio, Mistral, Groq, etc.):' });
+            guide.createEl('strong', { text: 'OpenAI-compatible API (Mistral, Groq, etc.):' });
             const table = guide.createEl('table', { cls: 'mcm-guide-table' });
             const rows: [string, string, string][] = [
-                ['LM Studio', 'Start "Local Server" in LM Studio → copy the URL shown', 'http://localhost:1234/v1'],
                 ['Mistral', 'Get key at console.mistral.ai → API Keys', 'https://api.mistral.ai/v1'],
                 ['Groq', 'Get key at console.groq.com → API Keys', 'https://api.groq.com/openai/v1'],
                 ['OpenRouter', 'Get key at openrouter.ai → Keys', 'https://openrouter.ai/api/v1'],
@@ -548,7 +724,7 @@ export class ModelConfigModal extends Modal {
                 td.createSpan({ text: hint });
                 tr.createEl('td', { cls: 'mcm-guide-url' }).createEl('code', { text: url });
             });
-            guide.createDiv({ cls: 'mcm-guide-tip', text: '💡 LM Studio: leave API Key empty. For cloud services, enter the key from their dashboard.' });
+            guide.createDiv({ cls: 'mcm-guide-tip', text: '💡 Any OpenAI-compatible endpoint. Enter the base URL with /v1 suffix and your API key.' });
         }
     }
 
@@ -592,6 +768,49 @@ export class ModelConfigModal extends Modal {
             }
             browseBtn.disabled = false;
             browseLabelEl.setText('Browse installed models');
+        });
+    }
+
+    /** Browse models from an OpenAI-compatible local or remote server (LM Studio, Mistral, Groq…) */
+    private buildCustomBrowser(container: HTMLElement): void {
+        const browseBtn = container.createEl('button', { cls: 'mcm-browse-btn' });
+        setIcon(browseBtn.createSpan('mcm-browse-icon'), 'list');
+        const browseLabelEl = browseBtn.createSpan({ text: 'Browse available models' });
+
+        const listEl = container.createDiv('mcm-model-list');
+        listEl.style.display = 'none';
+
+        browseBtn.addEventListener('click', async () => {
+            browseBtn.disabled = true;
+            browseLabelEl.setText('Loading…');
+            listEl.empty();
+            try {
+                const models = await fetchProviderModels('custom', this.formApiKey, this.formBaseUrl || undefined);
+                listEl.style.display = '';
+                if (models.length === 0) {
+                    listEl.createDiv({ cls: 'mcm-model-empty', text: 'No models found at this Base URL.' });
+                } else {
+                    models.forEach(({ id }) => {
+                        const item = listEl.createEl('button', { cls: 'mcm-model-item', text: id });
+                        item.addEventListener('click', () => {
+                            this.formName = id;
+                            if (this.nameInputEl) this.nameInputEl.value = id;
+                            item.addClass('mcm-model-item-selected');
+                            listEl.querySelectorAll('.mcm-model-item').forEach((el) => {
+                                if (el !== item) el.removeClass('mcm-model-item-selected');
+                            });
+                        });
+                    });
+                }
+            } catch (e: any) {
+                listEl.style.display = '';
+                listEl.createDiv({
+                    cls: 'mcm-model-empty',
+                    text: `Cannot reach server: ${e?.message ?? 'Unknown error'}. Check Base URL and try again.`,
+                });
+            }
+            browseBtn.disabled = false;
+            browseLabelEl.setText('Browse available models');
         });
     }
 
@@ -649,7 +868,7 @@ export class ModelConfigModal extends Modal {
 // Settings Tab
 // ---------------------------------------------------------------------------
 
-type TabId = 'models' | 'behavior';
+type TabId = 'models' | 'embeddings' | 'behavior';
 
 export class AgentSettingsTab extends PluginSettingTab {
     plugin: ObsidianAgentPlugin;
@@ -677,6 +896,7 @@ export class AgentSettingsTab extends PluginSettingTab {
         const nav = container.createDiv('agent-settings-nav');
         const tabs: { id: TabId; label: string }[] = [
             { id: 'models', label: 'Models' },
+            { id: 'embeddings', label: 'Embeddings' },
             { id: 'behavior', label: 'Behavior' },
         ];
         tabs.forEach(({ id, label }) => {
@@ -698,6 +918,7 @@ export class AgentSettingsTab extends PluginSettingTab {
     private buildTabContent(container: HTMLElement): void {
         const content = container.createDiv('agent-settings-content');
         if (this.activeTab === 'models') this.buildModelsTab(content);
+        if (this.activeTab === 'embeddings') this.buildEmbeddingsTab(content);
         if (this.activeTab === 'behavior') this.buildBehaviorTab(content);
     }
 
@@ -742,7 +963,7 @@ export class AgentSettingsTab extends PluginSettingTab {
 
     private renderModelRow(table: HTMLElement, model: CustomModel): void {
         const key = getModelKey(model);
-        const hasKey = !!model.apiKey || model.provider === 'ollama';
+        const hasKey = !!model.apiKey || model.provider === 'ollama' || model.provider === 'lmstudio';
         const isActive = this.plugin.settings.activeModelKey === key;
 
         const row = table.createDiv(`model-row${isActive ? ' model-row-active' : ''}`);
@@ -798,6 +1019,112 @@ export class AgentSettingsTab extends PluginSettingTab {
                 (m) => getModelKey(m) !== key,
             );
             if (this.plugin.settings.activeModelKey === key) this.plugin.settings.activeModelKey = '';
+            await this.plugin.saveSettings();
+            this.display();
+        });
+    }
+
+    // ---------------------------------------------------------------------------
+    // Embeddings tab
+    // ---------------------------------------------------------------------------
+
+    private buildEmbeddingsTab(container: HTMLElement): void {
+        const desc = container.createDiv('model-table-desc');
+        desc.createSpan({ text: 'Embedding models are used for semantic search. Select one model as active — it will be used to index your vault.' });
+
+        // Table header
+        const table = container.createDiv('model-table');
+        const header = table.createDiv('model-row model-row-header');
+        header.createDiv({ cls: 'mc-name', text: 'Model' });
+        header.createDiv({ cls: 'mc-provider', text: 'Provider' });
+        header.createDiv({ cls: 'mc-key', text: 'Key' });
+        header.createDiv({ cls: 'mc-enable', text: 'Active' });
+        header.createDiv({ cls: 'mc-actions' });
+
+        const models = this.plugin.settings.embeddingModels ?? [];
+        if (models.length === 0) {
+            table.createDiv({ cls: 'model-table-empty', text: 'No embedding models added yet. Click "+ Add Embedding Model" to get started.' });
+        } else {
+            models.forEach((model) => this.renderEmbeddingRow(table, model));
+        }
+
+        const footer = container.createDiv('model-table-footer');
+        const addBtn = footer.createEl('button', { cls: 'mod-cta model-add-btn', text: '+ Add Embedding Model' });
+        addBtn.addEventListener('click', () => {
+            new ModelConfigModal(this.app, null, async (newModel) => {
+                const key = getModelKey(newModel);
+                if ((this.plugin.settings.embeddingModels ?? []).some((m) => getModelKey(m) === key)) {
+                    new Notice(`"${newModel.name}" already exists`);
+                    return;
+                }
+                if (!this.plugin.settings.embeddingModels) this.plugin.settings.embeddingModels = [];
+                this.plugin.settings.embeddingModels.push(newModel);
+                // Auto-select first model
+                if (!this.plugin.settings.activeEmbeddingModelKey) {
+                    this.plugin.settings.activeEmbeddingModelKey = key;
+                }
+                await this.plugin.saveSettings();
+                this.display();
+            }).open();
+        });
+    }
+
+    private renderEmbeddingRow(table: HTMLElement, model: CustomModel): void {
+        const key = getModelKey(model);
+        const hasKey = !!model.apiKey || model.provider === 'ollama' || model.provider === 'lmstudio';
+        const isActive = this.plugin.settings.activeEmbeddingModelKey === key;
+
+        const row = table.createDiv(`model-row${isActive ? ' model-row-active' : ''}`);
+
+        row.createDiv('mc-name').createSpan({ text: model.displayName ?? model.name, cls: 'mc-name-text' });
+
+        const provEl = row.createDiv('mc-provider');
+        const badge = provEl.createSpan({ cls: 'provider-badge', text: PROVIDER_LABELS[model.provider] ?? model.provider });
+        badge.style.background = PROVIDER_COLORS[model.provider] ?? '#607d8b';
+
+        const keyEl = row.createDiv('mc-key');
+        const keyIcon = keyEl.createSpan('mc-key-icon');
+        setIcon(keyIcon, hasKey ? 'check' : 'minus');
+        keyEl.addClass(hasKey ? 'mc-key-ok' : 'mc-key-missing');
+
+        // Active radio-style toggle
+        const enableEl = row.createDiv('mc-enable');
+        const toggle = enableEl.createEl('input', { attr: { type: 'radio', name: 'active-embedding' } });
+        toggle.checked = isActive;
+        toggle.addEventListener('change', async () => {
+            if (toggle.checked) {
+                this.plugin.settings.activeEmbeddingModelKey = key;
+                await this.plugin.saveSettings();
+                this.display();
+            }
+        });
+
+        const actionsEl = row.createDiv('mc-actions');
+        const configBtn = actionsEl.createEl('button', { cls: 'mc-action-btn', attr: { title: 'Configure' } });
+        setIcon(configBtn, 'settings');
+        configBtn.addEventListener('click', () => {
+            new ModelConfigModal(this.app, { ...model }, async (updated) => {
+                const idx = (this.plugin.settings.embeddingModels ?? []).findIndex((m) => getModelKey(m) === key);
+                if (idx !== -1) this.plugin.settings.embeddingModels[idx] = updated;
+                if (this.plugin.settings.activeEmbeddingModelKey === key) {
+                    this.plugin.settings.activeEmbeddingModelKey = getModelKey(updated);
+                }
+                await this.plugin.saveSettings();
+                this.display();
+            }).open();
+        });
+
+        const delBtn = actionsEl.createEl('button', { cls: 'mc-action-btn mc-action-del', attr: { title: 'Remove' } });
+        setIcon(delBtn, 'trash');
+        delBtn.addEventListener('click', async () => {
+            this.plugin.settings.embeddingModels = (this.plugin.settings.embeddingModels ?? []).filter(
+                (m) => getModelKey(m) !== key,
+            );
+            if (this.plugin.settings.activeEmbeddingModelKey === key) {
+                this.plugin.settings.activeEmbeddingModelKey = this.plugin.settings.embeddingModels[0]
+                    ? getModelKey(this.plugin.settings.embeddingModels[0])
+                    : '';
+            }
             await this.plugin.saveSettings();
             this.display();
         });

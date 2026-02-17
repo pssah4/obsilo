@@ -1,5 +1,5 @@
 import { Plugin, WorkspaceLeaf, Notice } from 'obsidian';
-import { ObsidianAgentSettings, DEFAULT_SETTINGS, BUILT_IN_MODELS, getModelKey, modelToLLMProvider } from './types/settings';
+import { ObsidianAgentSettings, DEFAULT_SETTINGS, getModelKey, modelToLLMProvider } from './types/settings';
 import type { CustomModel } from './types/settings';
 import { AgentSidebarView, VIEW_TYPE_AGENT_SIDEBAR } from './ui/AgentSidebarView';
 import { AgentSettingsTab } from './ui/AgentSettingsTab';
@@ -123,23 +123,7 @@ export default class ObsidianAgentPlugin extends Plugin {
     async loadSettings() {
         const saved = (await this.loadData()) ?? {};
         this.settings = Object.assign({}, DEFAULT_SETTINGS, saved);
-        // Ensure all built-in models are present (merge new built-ins after updates)
-        this.settings.activeModels = this.mergeBuiltInModels(this.settings.activeModels ?? []);
-    }
-
-    /**
-     * Merge strategy: preserve user's saved models (with their API keys / enabled state),
-     * and append any built-in models that don't exist yet in saved data.
-     */
-    private mergeBuiltInModels(saved: CustomModel[]): CustomModel[] {
-        const savedKeys = new Set(saved.map(getModelKey));
-        const result = [...saved];
-        for (const builtIn of BUILT_IN_MODELS) {
-            if (!savedKeys.has(getModelKey(builtIn))) {
-                result.push({ ...builtIn });
-            }
-        }
-        return result;
+        this.settings.activeModels = this.settings.activeModels ?? [];
     }
 
     /** Return the currently active CustomModel, or null if none configured */
