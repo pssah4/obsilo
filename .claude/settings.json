@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//Users/sebastianhanke/Obsidian/NexusOS/.obsidian/plugins/obsidian-agent/**)"
+    ]
+  }
+}

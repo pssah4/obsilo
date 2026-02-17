@@ -1,0 +1,10 @@
+{
+  "id": "obsidian-agent",
+  "name": "Obsidian Agent",
+  "version": "0.1.0",
+  "minAppVersion": "1.4.0",
+  "description": "Agentic operating layer for Obsidian with approval-based vault operations, MCP support, and local checkpoints",
+  "author": "Sebastian Hanke",
+  "authorUrl": "https://github.com/yourusername/obsidian-agent",
+  "isDesktopOnly": true
+}

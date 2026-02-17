@@ -1,0 +1,53 @@
+{
+  "name": "obsidian-agent",
+  "version": "0.1.0",
+  "description": "Agentic operating layer for Obsidian - Kilo Code for knowledge work",
+  "main": "main.js",
+  "scripts": {
+    "dev": "node esbuild.config.mjs",
+    "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+    "deploy": "npm run build && ./deploy-local.sh",
+    "version": "node version-bump.mjs && git add manifest.json versions.json",
+    "lint": "eslint src --ext .ts",
+    "format": "prettier --write 'src/**/*.ts'"
+  },
+  "keywords": [
+    "obsidian",
+    "plugin",
+    "agent",
+    "ai",
+    "llm",
+    "mcp",
+    "knowledge-management"
+  ],
+  "author": "Sebastian Hanke",
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/uuid": "^9.0.7",
+    "@typescript-eslint/eslint-plugin": "^6.19.0",
+    "@typescript-eslint/parser": "^6.19.0",
+    "builtin-modules": "3.3.0",
+    "esbuild": "0.19.12",
+    "eslint": "^8.56.0",
+    "obsidian": "latest",
+    "prettier": "^3.2.4",
+    "tslib": "2.6.2",
+    "typescript": "5.3.3"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.30.0",
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "@orama/orama": "^2.0.0",
+    "@xenova/transformers": "^2.10.0",
+    "delay": "^5.0.0",
+    "diff": "^5.1.0",
+    "fast-diff": "^1.3.0",
+    "isomorphic-git": "^1.25.0",
+    "lodash.debounce": "^4.0.8",
+    "openai": "^4.0.0",
+    "p-wait-for": "^5.0.0",
+    "serialize-error": "^11.0.0",
+    "uuid": "^9.0.1"
+  }
+}
