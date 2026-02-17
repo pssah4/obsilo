@@ -1,4 +1,4 @@
-import { ItemView, WorkspaceLeaf, setIcon, Menu, MarkdownRenderer, MarkdownView, Notice } from 'obsidian';
+import { ItemView, WorkspaceLeaf, setIcon, Menu, MarkdownRenderer, MarkdownView, Notice, TFile } from 'obsidian';
 import type ObsidianAgentPlugin from '../main';
 import { AgentTask } from '../core/AgentTask';
 import type { MessageParam, ContentBlock, ImageMediaType } from '../api/types';
@@ -109,8 +109,8 @@ export class AgentSidebarView extends ItemView {
     private buildHeader(container: HTMLElement): void {
         const header = container.createDiv('agent-header');
 
-        const title = header.createDiv('agent-title');
-        title.setText('Obsidian Agent');
+        const titleRow = header.createDiv('agent-title');
+        titleRow.createSpan('agent-title-text').setText('Obsidian Agent');
 
         const headerRight = header.createDiv('agent-header-right');
 
@@ -376,7 +376,10 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
         // Snapshot attachments, clear the chip bar, render user bubble with previews
         const attachments = [...this.pendingAttachments];
         this.clearAttachments();
-        this.addUserMessage(text, attachments);
+        const activeFileForBubble = (this.plugin.settings.autoAddActiveFileContext && !this.userDismissedContext)
+            ? this.app.workspace.getActiveFile()
+            : null;
+        this.addUserMessage(text, attachments, activeFileForBubble);
         this.textarea.value = '';
         this.autoResizeTextarea();
 
@@ -602,7 +605,7 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
                     this.currentAbortController = null;
                     this.setRunningState(false);
                     this.chatContainer?.scrollTo({ top: this.chatContainer.scrollHeight });
-                    if (taskWriteCount > 0 && this.plugin.settings.enableCheckpoints) {
+                    if (taskWriteCount > 0 && (this.plugin.settings.enableCheckpoints ?? true)) {
                         this.showUndoBar(taskId, taskWriteCount);
                     }
                 },
@@ -727,12 +730,20 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
         this.chatContainer.scrollTop = this.chatContainer.scrollHeight;
     }
 
-    private addUserMessage(text: string, attachments: AttachmentItem[] = []): void {
+    private addUserMessage(text: string, attachments: AttachmentItem[] = [], activeFile?: TFile | null): void {
         if (!this.chatContainer) return;
         const msgEl = this.chatContainer.createDiv('message user-message');
         // Render attachment previews above the text bubble
-        if (attachments.length > 0) {
+        const hasAttachments = attachments.length > 0 || !!activeFile;
+        if (hasAttachments) {
             const previewRow = msgEl.createDiv('message-attachment-previews');
+            // "Current" chip for the auto-injected active file
+            if (activeFile) {
+                const chip = previewRow.createDiv('message-attachment-chip');
+                setIcon(chip.createSpan('attachment-chip-icon'), 'file-text');
+                chip.createSpan('attachment-chip-name').setText(activeFile.basename);
+                chip.createSpan('attachment-current-badge').setText('Current');
+            }
             for (const att of attachments) {
                 const chip = previewRow.createDiv('message-attachment-chip');
                 if (att.objectUrl) {

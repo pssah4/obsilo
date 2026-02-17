@@ -1,0 +1,229 @@
+/**
+ * WebFetchTool - Fetch a URL and return readable content
+ *
+ * Uses Obsidian's requestUrl() — no browser/Chromium required.
+ * Converts HTML to Markdown for clean LLM consumption.
+ * Adapted from Kilo Code's UrlContentFetcher pattern.
+ */
+
+import { requestUrl } from 'obsidian';
+import { BaseTool } from '../BaseTool';
+import type { ToolDefinition, ToolExecutionContext } from '../types';
+import type ObsidianAgentPlugin from '../../../main';
+
+interface WebFetchInput {
+    url: string;
+    maxLength?: number;
+    startIndex?: number;
+}
+
+export class WebFetchTool extends BaseTool<'web_fetch'> {
+    readonly name = 'web_fetch' as const;
+    readonly isWriteOperation = false;
+
+    constructor(plugin: ObsidianAgentPlugin) {
+        super(plugin);
+    }
+
+    getDefinition(): ToolDefinition {
+        return {
+            name: 'web_fetch',
+            description:
+                'Fetch a URL and return its content as readable text. Use for reading documentation, articles, APIs, or any public webpage. HTML is automatically converted to Markdown.',
+            input_schema: {
+                type: 'object',
+                properties: {
+                    url: {
+                        type: 'string',
+                        description: 'The URL to fetch (must start with http:// or https://).',
+                    },
+                    maxLength: {
+                        type: 'number',
+                        description:
+                            'Maximum characters to return (default: 20000). Large pages are truncated.',
+                    },
+                    startIndex: {
+                        type: 'number',
+                        description:
+                            'Start reading from this character offset (default: 0). Use with maxLength to paginate large pages.',
+                    },
+                },
+                required: ['url'],
+            },
+        };
+    }
+
+    async execute(input: Record<string, any>, context: ToolExecutionContext): Promise<void> {
+        const { url, maxLength = 20000, startIndex = 0 } = input as WebFetchInput;
+        const { callbacks } = context;
+
+        if (!url) {
+            callbacks.pushToolResult(this.formatError(new Error('url parameter is required')));
+            return;
+        }
+
+        if (!url.startsWith('http://') && !url.startsWith('https://')) {
+            callbacks.pushToolResult(
+                this.formatError(new Error('URL must start with http:// or https://'))
+            );
+            return;
+        }
+
+        try {
+            callbacks.log(`Fetching: ${url}`);
+
+            const response = await requestUrl({
+                url,
+                method: 'GET',
+                headers: {
+                    'User-Agent':
+                        'Mozilla/5.0 (compatible; ObsidianAgent/1.0; +https://obsidian.md)',
+                    Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                },
+                throw: false,
+            });
+
+            const statusCode = response.status;
+
+            if (statusCode >= 400) {
+                callbacks.pushToolResult(
+                    this.formatError(
+                        new Error(`HTTP ${statusCode} error fetching ${url}`)
+                    )
+                );
+                return;
+            }
+
+            const contentType = (response.headers['content-type'] ?? '').toLowerCase();
+            let content: string;
+
+            if (contentType.includes('text/html') || contentType === '') {
+                content = this.htmlToMarkdown(response.text ?? '');
+            } else {
+                // Plain text, JSON, etc.
+                content = response.text ?? '';
+            }
+
+            // Apply pagination
+            const totalLength = content.length;
+            const slice = content.slice(startIndex, startIndex + maxLength);
+            const truncated = startIndex + maxLength < totalLength;
+
+            let result = `<web_fetch url="${url}" status="${statusCode}" chars="${totalLength}">\n`;
+            result += slice;
+            if (truncated) {
+                result += `\n\n[Content truncated. Use startIndex=${startIndex + maxLength} to read more.]`;
+            }
+            result += '\n</web_fetch>';
+
+            callbacks.pushToolResult(result);
+            callbacks.log(
+                `Fetched ${url} — ${statusCode}, ${slice.length} chars returned${truncated ? ' (truncated)' : ''}`
+            );
+        } catch (error) {
+            callbacks.pushToolResult(this.formatError(error));
+        }
+    }
+
+    // ---------------------------------------------------------------------------
+    // HTML → Markdown converter (no external dependencies)
+    // ---------------------------------------------------------------------------
+
+    private htmlToMarkdown(html: string): string {
+        let md = html;
+
+        // Remove DOCTYPE, comments
+        md = md.replace(/<!DOCTYPE[^>]*>/gi, '');
+        md = md.replace(/<!--[\s\S]*?-->/g, '');
+
+        // Remove <head> entirely (scripts, styles, meta)
+        md = md.replace(/<head[\s\S]*?<\/head>/gi, '');
+
+        // Remove script and style blocks
+        md = md.replace(/<script[\s\S]*?<\/script>/gi, '');
+        md = md.replace(/<style[\s\S]*?<\/style>/gi, '');
+        md = md.replace(/<noscript[\s\S]*?<\/noscript>/gi, '');
+
+        // Remove nav, footer, aside, header — usually not main content
+        md = md.replace(/<nav[\s\S]*?<\/nav>/gi, '');
+        md = md.replace(/<footer[\s\S]*?<\/footer>/gi, '');
+        md = md.replace(/<aside[\s\S]*?<\/aside>/gi, '');
+
+        // Block-level: headings
+        md = md.replace(/<h1[^>]*>([\s\S]*?)<\/h1>/gi, '\n# $1\n');
+        md = md.replace(/<h2[^>]*>([\s\S]*?)<\/h2>/gi, '\n## $1\n');
+        md = md.replace(/<h3[^>]*>([\s\S]*?)<\/h3>/gi, '\n### $1\n');
+        md = md.replace(/<h4[^>]*>([\s\S]*?)<\/h4>/gi, '\n#### $1\n');
+        md = md.replace(/<h5[^>]*>([\s\S]*?)<\/h5>/gi, '\n##### $1\n');
+        md = md.replace(/<h6[^>]*>([\s\S]*?)<\/h6>/gi, '\n###### $1\n');
+
+        // Block-level: paragraphs, divs, sections
+        md = md.replace(/<\/p>/gi, '\n\n');
+        md = md.replace(/<p[^>]*>/gi, '\n');
+        md = md.replace(/<\/div>/gi, '\n');
+        md = md.replace(/<div[^>]*>/gi, '\n');
+        md = md.replace(/<\/section>/gi, '\n');
+        md = md.replace(/<section[^>]*>/gi, '\n');
+        md = md.replace(/<article[^>]*>/gi, '\n');
+        md = md.replace(/<\/article>/gi, '\n');
+        md = md.replace(/<main[^>]*>/gi, '\n');
+        md = md.replace(/<\/main>/gi, '\n');
+
+        // Lists
+        md = md.replace(/<li[^>]*>([\s\S]*?)<\/li>/gi, '\n- $1');
+        md = md.replace(/<\/?[uo]l[^>]*>/gi, '\n');
+
+        // Inline: links
+        md = md.replace(/<a[^>]+href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi, '[$2]($1)');
+        md = md.replace(/<a[^>]+href='([^']*)'[^>]*>([\s\S]*?)<\/a>/gi, '[$2]($1)');
+        // Links without href
+        md = md.replace(/<a[^>]*>([\s\S]*?)<\/a>/gi, '$1');
+
+        // Inline: emphasis
+        md = md.replace(/<(strong|b)[^>]*>([\s\S]*?)<\/(strong|b)>/gi, '**$2**');
+        md = md.replace(/<(em|i)[^>]*>([\s\S]*?)<\/(em|i)>/gi, '*$2*');
+
+        // Inline: code
+        md = md.replace(/<code[^>]*>([\s\S]*?)<\/code>/gi, '`$1`');
+        md = md.replace(/<pre[^>]*>([\s\S]*?)<\/pre>/gi, '\n```\n$1\n```\n');
+
+        // Line breaks
+        md = md.replace(/<br\s*\/?>/gi, '\n');
+        md = md.replace(/<hr\s*\/?>/gi, '\n---\n');
+
+        // Tables (simplified)
+        md = md.replace(/<th[^>]*>([\s\S]*?)<\/th>/gi, '| $1 ');
+        md = md.replace(/<td[^>]*>([\s\S]*?)<\/td>/gi, '| $1 ');
+        md = md.replace(/<\/tr>/gi, '|\n');
+        md = md.replace(/<[^>]*(tr|table|thead|tbody|tfoot)[^>]*>/gi, '\n');
+
+        // Strip remaining HTML tags
+        md = md.replace(/<[^>]+>/g, '');
+
+        // Decode common HTML entities
+        md = md.replace(/&amp;/g, '&');
+        md = md.replace(/&lt;/g, '<');
+        md = md.replace(/&gt;/g, '>');
+        md = md.replace(/&quot;/g, '"');
+        md = md.replace(/&#39;/g, "'");
+        md = md.replace(/&nbsp;/g, ' ');
+        md = md.replace(/&mdash;/g, '—');
+        md = md.replace(/&ndash;/g, '–');
+        md = md.replace(/&hellip;/g, '...');
+        md = md.replace(/&#(\d+);/g, (_, code) => String.fromCharCode(parseInt(code, 10)));
+        md = md.replace(/&#x([0-9a-f]+);/gi, (_, code) =>
+            String.fromCharCode(parseInt(code, 16))
+        );
+
+        // Collapse excessive blank lines (max 2 in a row)
+        md = md.replace(/\n{3,}/g, '\n\n');
+
+        // Trim leading/trailing whitespace on each line
+        md = md
+            .split('\n')
+            .map((line) => line.trimEnd())
+            .join('\n');
+
+        return md.trim();
+    }
+}

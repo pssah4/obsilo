@@ -217,6 +217,23 @@ export interface AutoApprovalRules {
 }
 
 // ---------------------------------------------------------------------------
+// Web Tools Settings (Phase 1.1)
+// ---------------------------------------------------------------------------
+
+export type WebSearchProvider = 'brave' | 'tavily' | 'none';
+
+export interface WebToolsSettings {
+    /** Master toggle — when false, web_fetch and web_search are disabled */
+    enabled: boolean;
+    /** Search provider (required for web_search) */
+    provider: WebSearchProvider;
+    /** Brave Search API key */
+    braveApiKey: string;
+    /** Tavily Search API key */
+    tavilyApiKey: string;
+}
+
+// ---------------------------------------------------------------------------
 // Advanced API Settings (Sprint 1.5)
 // ---------------------------------------------------------------------------
 
@@ -269,6 +286,9 @@ export interface ObsidianAgentSettings {
     enableCheckpoints: boolean;
     checkpointTimeoutSeconds: number;
     checkpointAutoCleanup: boolean;
+
+    // Web Tools (Phase 1.1)
+    webTools: WebToolsSettings;
 
     // UI
     sidebarPosition: 'left' | 'right';
@@ -324,6 +344,13 @@ export const DEFAULT_SETTINGS: ObsidianAgentSettings = {
     enableCheckpoints: true,
     checkpointTimeoutSeconds: 30,
     checkpointAutoCleanup: true,
+
+    webTools: {
+        enabled: false,
+        provider: 'none',
+        braveApiKey: '',
+        tavilyApiKey: '',
+    },
 
     sidebarPosition: 'right',
     showWelcomeMessage: true,
