@@ -118,28 +118,49 @@ export class OpenAiProvider implements ApiHandler {
         abortSignal?: AbortSignal,
     ): ApiStream {
         let baseUrl = this.config.baseUrl ?? DEFAULT_BASE_URLS[this.config.type] ?? DEFAULT_BASE_URLS.openai;
-        // Ollama's OpenAI-compatible API lives at /v1 — auto-add if missing
-        if (this.config.type === 'ollama' && !baseUrl.match(/\/v\d/)) {
-            baseUrl = baseUrl.replace(/\/+$/, '') + '/v1';
+        let url: string;
+
+        if (this.config.type === 'azure') {
+            // Azure OpenAI: {endpoint}/deployments/{model}/chat/completions?api-version={version}
+            const apiVersion = this.config.apiVersion ?? '2024-10-21';
+            url = `${baseUrl.replace(/\/$/, '')}/deployments/${this.config.model}/chat/completions?api-version=${apiVersion}`;
+        } else {
+            // Ollama's OpenAI-compatible API lives at /v1 — auto-add if missing
+            if (this.config.type === 'ollama' && !baseUrl.match(/\/v\d/)) {
+                baseUrl = baseUrl.replace(/\/+$/, '') + '/v1';
+            }
+            url = `${baseUrl.replace(/\/$/, '')}/chat/completions`;
         }
-        const url = `${baseUrl.replace(/\/$/, '')}/chat/completions`;
 
         const openAiMessages = this.convertMessages(systemPrompt, messages);
         const openAiTools = tools.length > 0 ? this.convertTools(tools) : undefined;
 
         const body: Record<string, any> = {
-            model: this.config.model,
             messages: openAiMessages,
             stream: true,
-            max_tokens: this.config.maxTokens ?? 8192,
         };
 
-        // stream_options supported by OpenAI and OpenRouter
+        // Azure deployment-based routing: model is already encoded in the URL path,
+        // so we omit it from the body (some enterprise gateways reject it as redundant)
+        if (this.config.type !== 'azure') {
+            body.model = this.config.model;
+        }
+
+        // Newer models (GPT-5, o-series) require max_completion_tokens; older models use max_tokens
+        if (this.config.type === 'azure') {
+            body.max_completion_tokens = this.config.maxTokens ?? 8192;
+        } else {
+            body.max_tokens = this.config.maxTokens ?? 8192;
+        }
+
+        // stream_options supported by OpenAI and OpenRouter — enterprise/Azure gateways often reject this extension
         if (this.config.type === 'openai' || this.config.type === 'openrouter') {
             body.stream_options = { include_usage: true };
         }
 
-        if (this.config.temperature !== undefined) {
+        // o-series models (GPT-5, o1, o4-mini) only accept temperature=1 (the default).
+        // Skip temperature=0 to avoid 400 "unsupported value" errors on these models.
+        if (this.config.temperature !== undefined && this.config.temperature !== 0) {
             body.temperature = this.config.temperature;
         }
 
@@ -152,7 +173,10 @@ export class OpenAiProvider implements ApiHandler {
             'Content-Type': 'application/json',
         };
 
-        if (this.config.apiKey) {
+        if (this.config.type === 'azure') {
+            // Azure OpenAI uses api-key header instead of Authorization: Bearer
+            if (this.config.apiKey) headers['api-key'] = this.config.apiKey;
+        } else if (this.config.apiKey) {
             headers['Authorization'] = `Bearer ${this.config.apiKey}`;
         }
 
@@ -171,7 +195,8 @@ export class OpenAiProvider implements ApiHandler {
 
         if (!response.ok) {
             const errorText = await response.text().catch(() => 'Unknown error');
-            throw Object.assign(new Error(`OpenAI API error: ${errorText}`), { status: response.status });
+            console.error(`[OpenAiProvider] ${response.status} from ${url}\n${errorText}`);
+            throw Object.assign(new Error(`OpenAI API error (${response.status}): ${errorText}`), { status: response.status });
         }
 
         if (!response.body) {

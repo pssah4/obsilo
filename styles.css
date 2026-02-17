@@ -734,6 +734,13 @@
 
 .model-table-footer { margin-top: 4px; }
 .model-add-btn { font-size: 12px; padding: 4px 10px; }
+.model-table-empty {
+    padding: 20px 12px;
+    color: var(--text-muted);
+    font-size: 12px;
+    text-align: center;
+    font-style: italic;
+}
 
 /* ── Model Config Modal ─────────────────────────────────────────────────── */
 .model-config-modal .modal-title { margin: 0 0 12px; font-size: 14px; }

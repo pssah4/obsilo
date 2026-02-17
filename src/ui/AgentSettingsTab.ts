@@ -13,6 +13,7 @@ const PROVIDER_LABELS: Record<string, string> = {
     openai: 'OpenAI',
     ollama: 'Ollama',
     openrouter: 'OpenRouter',
+    azure: 'Azure OpenAI',
     custom: 'Custom',
 };
 
@@ -21,7 +22,40 @@ const PROVIDER_COLORS: Record<string, string> = {
     openai: '#10a37f',
     ollama: '#5c6bc0',
     openrouter: '#7c3aed',
+    azure: '#0078d4',
     custom: '#78909c',
+};
+
+// Model suggestions shown in the Quick Pick dropdown per provider
+// Grouped by provider → vendor → models (display label + exact API ID)
+const MODEL_SUGGESTIONS: Record<string, { group: string; id: string; label: string }[]> = {
+    anthropic: [
+        { group: 'Anthropic', id: 'claude-opus-4-6',            label: 'Claude Opus 4.6' },
+        { group: 'Anthropic', id: 'claude-sonnet-4-5-20250929', label: 'Claude Sonnet 4.5' },
+        { group: 'Anthropic', id: 'claude-haiku-4-5-20251001',  label: 'Claude Haiku 4.5' },
+    ],
+    openai: [
+        { group: 'GPT-4 family', id: 'gpt-4o',      label: 'GPT-4o' },
+        { group: 'GPT-4 family', id: 'gpt-4o-mini',  label: 'GPT-4o mini' },
+        { group: 'GPT-4 family', id: 'gpt-4.1',      label: 'GPT-4.1' },
+        { group: 'GPT-4 family', id: 'gpt-4.1-mini', label: 'GPT-4.1 mini' },
+        { group: 'Reasoning',    id: 'o3',            label: 'o3' },
+        { group: 'Reasoning',    id: 'o4-mini',       label: 'o4-mini' },
+    ],
+    openrouter: [
+        { group: 'Anthropic',  id: 'anthropic/claude-opus-4',         label: 'Claude Opus 4' },
+        { group: 'Anthropic',  id: 'anthropic/claude-sonnet-4-5',     label: 'Claude Sonnet 4.5' },
+        { group: 'Anthropic',  id: 'anthropic/claude-3.5-sonnet',     label: 'Claude 3.5 Sonnet' },
+        { group: 'OpenAI',     id: 'openai/gpt-4o',                   label: 'GPT-4o' },
+        { group: 'OpenAI',     id: 'openai/gpt-4.1',                  label: 'GPT-4.1' },
+        { group: 'OpenAI',     id: 'openai/o4-mini',                  label: 'o4-mini' },
+        { group: 'Mistral',    id: 'mistralai/mistral-large-latest',  label: 'Mistral Large' },
+        { group: 'Mistral',    id: 'mistralai/mistral-medium-3',      label: 'Mistral Medium 3' },
+        { group: 'DeepSeek',   id: 'deepseek/deepseek-chat-v3-0324', label: 'DeepSeek V3' },
+        { group: 'DeepSeek',   id: 'deepseek/deepseek-r1',           label: 'DeepSeek R1' },
+        { group: 'Kimi',       id: 'moonshotai/kimi-k2',             label: 'Kimi K2' },
+        { group: 'Kimi',       id: 'moonshotai/kimi-vl-a3b-thinking-preview:free', label: 'Kimi VL (free)' },
+    ],
 };
 
 // ---------------------------------------------------------------------------
@@ -36,7 +70,7 @@ interface TestResult {
 
 async function testModelConnection(model: CustomModel): Promise<TestResult> {
     try {
-        const lp = modelToLLMProvider({ ...model, maxTokens: 16, temperature: 0 });
+        const lp = modelToLLMProvider({ ...model, maxTokens: 16 });
         const handler = buildApiHandler(lp);
         const abort = new AbortController();
         // Ollama needs to swap models into memory — allow up to 30 s
@@ -146,10 +180,13 @@ export class ModelConfigModal extends Modal {
     private formProvider: ProviderType;
     private formApiKey: string;
     private formBaseUrl: string;
+    private formApiVersion: string;
     private formMaxTokens: number;
 
     private apiKeyRow: HTMLElement | null = null;
     private baseUrlRow: HTMLElement | null = null;
+    private apiVersionRow: HTMLElement | null = null;
+    private suggestRow: HTMLElement | null = null;
     private ollamaBrowserRow: HTMLElement | null = null;
     private providerGuideEl: HTMLElement | null = null;
     private apiKeyDescEl: HTMLElement | null = null;
@@ -157,6 +194,7 @@ export class ModelConfigModal extends Modal {
     private testResultEl: HTMLElement | null = null;
     private testBtn: HTMLButtonElement | null = null;
     private nameInputEl: HTMLInputElement | null = null;
+    private dnInputEl: HTMLInputElement | null = null;
 
     constructor(app: App, model: CustomModel | null, onSave: (m: CustomModel) => void) {
         super(app);
@@ -177,6 +215,7 @@ export class ModelConfigModal extends Modal {
         this.formProvider = this.model.provider;
         this.formApiKey = this.model.apiKey ?? '';
         this.formBaseUrl = this.model.baseUrl ?? '';
+        this.formApiVersion = this.model.apiVersion ?? '2024-10-21';
         this.formMaxTokens = this.model.maxTokens ?? 8192;
     }
 
@@ -213,7 +252,7 @@ export class ModelConfigModal extends Modal {
         // ── Provider ─────────────────────────────────────────────────────
         const provRow = row('Provider');
         const provSel = provRow.createEl('select', { cls: 'mcm-select' });
-        (['anthropic', 'openai', 'ollama', 'openrouter', 'custom'] as ProviderType[]).forEach((p) => {
+        (['anthropic', 'openai', 'ollama', 'openrouter', 'azure', 'custom'] as ProviderType[]).forEach((p) => {
             const opt = provSel.createEl('option', { value: p, text: PROVIDER_LABELS[p] });
             if (p === this.formProvider) opt.selected = true;
         });
@@ -221,6 +260,29 @@ export class ModelConfigModal extends Modal {
         provSel.addEventListener('change', () => {
             this.formProvider = provSel.value as ProviderType;
             this.updateFieldVisibility();
+        });
+
+        // ── Quick Pick (suggestions per provider) ─────────────────────────
+        this.suggestRow = form.createDiv('mcm-row mcm-suggest-row');
+        const suggestLabel = this.suggestRow.createDiv('mcm-label');
+        suggestLabel.createSpan({ text: 'Quick Pick' });
+        suggestLabel.createSpan({ text: 'Select to pre-fill Model ID', cls: 'mcm-desc' });
+        const suggestSel = this.suggestRow.createEl('select', { cls: 'mcm-select' });
+        suggestSel.createEl('option', { value: '', text: '— pick a model —', attr: { disabled: '', selected: '' } });
+        suggestSel.addEventListener('change', () => {
+            const val = suggestSel.value;
+            const suggestions = MODEL_SUGGESTIONS[this.formProvider] ?? [];
+            const found = suggestions.find((s) => s.id === val);
+            if (found && this.nameInputEl) {
+                this.formName = found.id;
+                this.nameInputEl.value = found.id;
+                if (this.dnInputEl && !this.dnInputEl.value) {
+                    this.formDisplayName = found.label;
+                    this.dnInputEl.value = found.label;
+                }
+            }
+            // Reset to placeholder
+            suggestSel.selectedIndex = 0;
         });
 
         // ── Model ID ─────────────────────────────────────────────────────
@@ -239,12 +301,12 @@ export class ModelConfigModal extends Modal {
 
         // ── Display Name ──────────────────────────────────────────────────
         const dnRow = row('Display Name', 'Label in chat toolbar');
-        const dnInput = dnRow.createEl('input', {
+        this.dnInputEl = dnRow.createEl('input', {
             cls: 'mcm-input',
             attr: { type: 'text', placeholder: this.formName || 'e.g. My GPT-4o' },
         });
-        dnInput.value = this.formDisplayName;
-        dnInput.addEventListener('input', () => (this.formDisplayName = dnInput.value));
+        this.dnInputEl.value = this.formDisplayName;
+        this.dnInputEl.addEventListener('input', () => (this.formDisplayName = this.dnInputEl!.value));
 
         // ── API Key ───────────────────────────────────────────────────────
         this.apiKeyRow = form.createDiv('mcm-row');
@@ -269,6 +331,18 @@ export class ModelConfigModal extends Modal {
         });
         buInput.value = this.formBaseUrl;
         buInput.addEventListener('input', () => (this.formBaseUrl = buInput.value.trim()));
+
+        // ── API Version (Azure + some enterprise gateways) ───────────────
+        this.apiVersionRow = form.createDiv('mcm-row');
+        const avLabel = this.apiVersionRow.createDiv('mcm-label');
+        avLabel.createSpan({ text: 'API Version' });
+        avLabel.createSpan({ text: 'Required by Azure OpenAI (e.g. 2024-10-21)', cls: 'mcm-desc' });
+        const avInput = this.apiVersionRow.createEl('input', {
+            cls: 'mcm-input mcm-input-sm',
+            attr: { type: 'text', placeholder: '2024-10-21' },
+        });
+        avInput.value = this.formApiVersion;
+        avInput.addEventListener('input', () => (this.formApiVersion = avInput.value.trim()));
 
         // ── Max Tokens ────────────────────────────────────────────────────
         const mtRow = row('Max Tokens', 'Max length of the response');
@@ -309,7 +383,33 @@ export class ModelConfigModal extends Modal {
         // Show/hide fields per provider
         this.apiKeyRow.style.display = p === 'ollama' ? 'none' : '';
         this.baseUrlRow.style.display = (p === 'anthropic' || p === 'openai' || p === 'openrouter') ? 'none' : '';
+        if (this.apiVersionRow) this.apiVersionRow.style.display = p === 'azure' ? '' : 'none';
         if (this.ollamaBrowserRow) this.ollamaBrowserRow.style.display = p === 'ollama' ? '' : 'none';
+
+        // Quick Pick: show for providers that have suggestions, rebuild options
+        const suggestions = MODEL_SUGGESTIONS[p] ?? [];
+        if (this.suggestRow) {
+            this.suggestRow.style.display = suggestions.length > 0 ? '' : 'none';
+            const sel = this.suggestRow.querySelector('select');
+            if (sel) {
+                // Clear all but first placeholder option
+                while (sel.options.length > 1) sel.remove(1);
+                // Group options
+                const groups = [...new Set(suggestions.map((s) => s.group))];
+                groups.forEach((grp) => {
+                    const og = document.createElement('optgroup');
+                    og.label = grp;
+                    suggestions.filter((s) => s.group === grp).forEach((s) => {
+                        const opt = document.createElement('option');
+                        opt.value = s.id;
+                        opt.text = `${s.label}  (${s.id})`;
+                        og.appendChild(opt);
+                    });
+                    sel.appendChild(og);
+                });
+                sel.selectedIndex = 0;
+            }
+        }
 
         // Update inline field hints
         if (this.apiKeyDescEl) {
@@ -317,6 +417,7 @@ export class ModelConfigModal extends Modal {
                 anthropic: 'Starts with sk-ant-...',
                 openai: 'Starts with sk-...',
                 openrouter: 'Starts with sk-or-...',
+                azure: 'Your Azure OpenAI API key',
                 custom: 'Leave empty for local services',
             };
             this.apiKeyDescEl.setText(hints[p] ?? '');
@@ -324,6 +425,7 @@ export class ModelConfigModal extends Modal {
         if (this.baseUrlDescEl) {
             const hints: Record<string, string> = {
                 ollama: 'Default: http://localhost:11434',
+                azure: 'Your endpoint up to /openai, e.g. https://your-resource.openai.azure.com/openai',
                 custom: 'Include /v1 suffix, e.g. http://localhost:1234/v1',
             };
             this.baseUrlDescEl.setText(hints[p] ?? '');
@@ -401,6 +503,35 @@ export class ModelConfigModal extends Modal {
             s5.appendText('.');
             guide.createDiv({ cls: 'mcm-guide-tip', text: '💡 The Base URL is pre-configured. Many models have a free tier — look for ":free" in the model name.' });
 
+        } else if (provider === 'azure') {
+            guide.createEl('strong', { text: 'How to use Azure OpenAI (enterprise deployments):' });
+            const steps = guide.createEl('ol', { cls: 'mcm-guide-steps' });
+            steps.createEl('li', { text: 'In the Azure Portal, open your Azure OpenAI resource.' });
+            const s2 = steps.createEl('li');
+            s2.appendText('Under "Resource Management" → "Keys and Endpoint", copy the ');
+            s2.createEl('strong', { text: 'Key' });
+            s2.appendText(' and the ');
+            s2.createEl('strong', { text: 'Endpoint' });
+            s2.appendText(' URL.');
+            const s3 = steps.createEl('li');
+            s3.appendText('In ');
+            s3.createEl('strong', { text: 'Base URL' });
+            s3.appendText(', enter: ');
+            s3.createEl('code', { text: '{endpoint}/openai' });
+            s3.appendText(' (e.g. ');
+            s3.createEl('code', { text: 'https://my-resource.openai.azure.com/openai' });
+            s3.appendText(').');
+            const s4 = steps.createEl('li');
+            s4.appendText('In ');
+            s4.createEl('strong', { text: 'Model ID' });
+            s4.appendText(', enter the exact ');
+            s4.createEl('strong', { text: 'deployment name' });
+            s4.appendText(' from Azure AI Studio (e.g. ');
+            s4.createEl('code', { text: 'gpt-4o' });
+            s4.appendText(').');
+            steps.createEl('li', { text: 'Set the API Version to match what your deployment supports (default: 2024-10-21).' });
+            guide.createDiv({ cls: 'mcm-guide-tip', text: '💡 For enterprise API gateways that route to Azure OpenAI: use the gateway base URL (up to /openai), deployment name as Model ID, and your gateway API key.' });
+
         } else if (provider === 'custom') {
             guide.createEl('strong', { text: 'OpenAI-compatible API (LM Studio, Mistral, Groq, etc.):' });
             const table = guide.createEl('table', { cls: 'mcm-guide-table' });
@@ -471,6 +602,7 @@ export class ModelConfigModal extends Modal {
             provider: this.formProvider,
             apiKey: this.formApiKey || undefined,
             baseUrl: this.formBaseUrl || undefined,
+            apiVersion: this.formApiVersion || undefined,
             enabled: true,
         };
         if (!m.name) { this.showTestResult(false, 'Enter a Model ID first', undefined); return; }
@@ -506,6 +638,7 @@ export class ModelConfigModal extends Modal {
             displayName: this.formDisplayName || undefined,
             apiKey: this.formApiKey || undefined,
             baseUrl: this.formBaseUrl || undefined,
+            apiVersion: this.formApiVersion || undefined,
             maxTokens: this.formMaxTokens,
         });
         this.close();
@@ -584,7 +717,11 @@ export class AgentSettingsTab extends PluginSettingTab {
 
         // Rows
         const models = this.plugin.settings.activeModels;
-        models.forEach((model) => this.renderModelRow(table, model));
+        if (models.length === 0) {
+            table.createDiv({ cls: 'model-table-empty', text: 'No models added yet. Click "+ Add Model" to get started.' });
+        } else {
+            models.forEach((model) => this.renderModelRow(table, model));
+        }
 
         // Add model button
         const footer = container.createDiv('model-table-footer');
@@ -654,18 +791,16 @@ export class AgentSettingsTab extends PluginSettingTab {
             }).open();
         });
 
-        if (!model.isBuiltIn) {
-            const delBtn = actionsEl.createEl('button', { cls: 'mc-action-btn mc-action-del', attr: { title: 'Delete' } });
-            setIcon(delBtn, 'trash');
-            delBtn.addEventListener('click', async () => {
-                this.plugin.settings.activeModels = this.plugin.settings.activeModels.filter(
-                    (m) => getModelKey(m) !== key,
-                );
-                if (this.plugin.settings.activeModelKey === key) this.plugin.settings.activeModelKey = '';
-                await this.plugin.saveSettings();
-                this.display();
-            });
-        }
+        const delBtn = actionsEl.createEl('button', { cls: 'mc-action-btn mc-action-del', attr: { title: 'Remove model' } });
+        setIcon(delBtn, 'trash');
+        delBtn.addEventListener('click', async () => {
+            this.plugin.settings.activeModels = this.plugin.settings.activeModels.filter(
+                (m) => getModelKey(m) !== key,
+            );
+            if (this.plugin.settings.activeModelKey === key) this.plugin.settings.activeModelKey = '';
+            await this.plugin.saveSettings();
+            this.display();
+        });
     }
 
     // ---------------------------------------------------------------------------
