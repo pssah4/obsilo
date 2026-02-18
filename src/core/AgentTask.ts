@@ -53,17 +53,25 @@ export class AgentTask {
     private toolRegistry: ToolRegistry;
     private taskCallbacks: AgentTaskCallbacks;
     private modeService?: ModeService;
+    /** Stop after this many consecutive tool errors (0 = disabled). */
+    private consecutiveMistakeLimit: number;
+    /** Minimum ms to wait between iterations (0 = disabled). */
+    private rateLimitMs: number;
 
     constructor(
         api: ApiHandler,
         toolRegistry: ToolRegistry,
         taskCallbacks: AgentTaskCallbacks,
         modeService?: ModeService,
+        consecutiveMistakeLimit = 0,
+        rateLimitMs = 0,
     ) {
         this.api = api;
         this.toolRegistry = toolRegistry;
         this.taskCallbacks = taskCallbacks;
         this.modeService = modeService;
+        this.consecutiveMistakeLimit = consecutiveMistakeLimit;
+        this.rateLimitMs = rateLimitMs;
     }
 
     /**
@@ -107,6 +115,8 @@ export class AgentTask {
         let completionResult: string | null = null;
         // switch_mode signal (checked at end of each iteration)
         let pendingModeSwitch: string | null = null;
+        // Phase B: consecutive error tracking
+        let consecutiveMistakes = 0;
 
         // Wire up context extensions for agent-control tools
         const askQuestion = this.taskCallbacks.onQuestion
@@ -157,6 +167,11 @@ export class AgentTask {
                 }
 
                 this.taskCallbacks.onIterationStart?.(iteration);
+
+                // Phase B: rate limiting — pause between iterations (skip on first)
+                if (iteration > 0 && this.rateLimitMs > 0) {
+                    await new Promise<void>((r) => setTimeout(r, this.rateLimitMs));
+                }
 
                 // Rebuild system prompt + tool list only when mode has changed
                 if (activeMode.slug !== cachedPromptMode) {
@@ -242,6 +257,19 @@ export class AgentTask {
                         result.content,
                         result.is_error ?? false,
                     );
+
+                    // Phase B: track consecutive errors; reset on any success
+                    if (result.is_error) {
+                        consecutiveMistakes++;
+                    } else {
+                        consecutiveMistakes = 0;
+                    }
+                    if (this.consecutiveMistakeLimit > 0 && consecutiveMistakes >= this.consecutiveMistakeLimit) {
+                        throw new Error(
+                            `Agent stopped after ${consecutiveMistakes} consecutive errors. ` +
+                            `Check the tool results above or raise the limit in Settings → Advanced.`,
+                        );
+                    }
 
                     // Add tool result for next LLM message
                     // (Anthropic protocol: tool_result blocks in a user message)

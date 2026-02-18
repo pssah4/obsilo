@@ -121,21 +121,26 @@ export function buildSystemPromptForMode(
     globalCustomInstructions?: string,
     includeTime?: boolean,
 ): string {
-    let vaultContext = VAULT_CONTEXT;
+    // Date/time header — placed at the very top so the model always uses the correct date.
+    // Uses the Mac system clock via new Date(). Locale is fixed to en-US so the LLM
+    // reads it unambiguously regardless of the user's system language setting.
+    let dateHeader = '';
     if (includeTime) {
         const now = new Date();
-        const timeStr = now.toLocaleString(undefined, {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-            timeZoneName: 'short',
-        });
-        vaultContext += `\n- Current date and time: ${timeStr}`;
+        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone; // e.g. "Europe/Berlin"
+        const isoDate = now.toISOString().slice(0, 10); // "2026-02-18"
+        const humanDate = new Intl.DateTimeFormat('en-US', {
+            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: tz,
+        }).format(now);
+        const humanTime = new Intl.DateTimeFormat('en-US', {
+            hour: '2-digit', minute: '2-digit', timeZoneName: 'short', hour12: false, timeZone: tz,
+        }).format(now);
+        dateHeader =
+            `TODAY IS: ${humanDate} (${isoDate}), local time ${humanTime} [${tz}]\n` +
+            `IMPORTANT: Always use the date above (${isoDate}) for any notes, frontmatter dates, or timestamps you create. ` +
+            `Do not infer or guess a different date.\n\n====\n\n`;
     }
-    const sections: string[] = [vaultContext, '====', '', 'TOOLS', '', 'You have access to these tools. Use them proactively — do not guess at file contents or vault structure.', ''];
+    const sections: string[] = [`${dateHeader}${VAULT_CONTEXT}`, '====', '', 'TOOLS', '', 'You have access to these tools. Use them proactively — do not guess at file contents or vault structure.', ''];
 
     // Add tool sections for this mode's groups
     const groupOrder: ToolGroup[] = ['read', 'vault', 'edit', 'web', 'agent', 'mcp'];

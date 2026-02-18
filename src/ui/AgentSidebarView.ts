@@ -531,6 +531,7 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
 
         const taskId = `task-${Date.now()}`;
         let taskWriteCount = 0;
+        let lastTodoItems: import('../core/tools/agent/UpdateTodoListTool').TodoItem[] = [];
 
         const task = new AgentTask(
             resolvedApiHandler,
@@ -625,6 +626,8 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
                         const inputEl = details.createDiv('tool-call-input');
                         inputEl.createEl('pre').setText(JSON.stringify(input, null, 2));
                         details.createDiv('tool-call-output');
+                        // Auto-expand while running so the user sees live what's happening
+                        details.open = true;
                     }
 
                     // Register in Map for O(1) lookup in onToolResult
@@ -649,12 +652,13 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
                     }
                     const outputEl = el.querySelector('.tool-call-output');
                     if (outputEl && content) {
-                        const truncated = content.length > 500
-                            ? content.slice(0, 500) + '\n…(truncated)'
+                        const truncated = content.length > 2000
+                            ? content.slice(0, 2000) + '\n…(truncated)'
                             : content;
                         outputEl.createEl('pre').setText(truncated);
                     }
-                    if (isError) el.open = true;
+                    // Collapse successful tools to keep the chat tidy; errors stay expanded
+                    el.open = isError;
                 },
                 onUsage: (inputTokens, outputTokens) => {
                     const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -662,6 +666,7 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
                     footerEl.style.display = '';
                 },
                 onTodoUpdate: (items) => {
+                    lastTodoItems = items;
                     this.renderTodoBox(toolsEl, items);
                 },
                 onModeSwitch: (newModeSlug) => {
@@ -673,6 +678,16 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
                 },
                 onApprovalRequired: async (toolName, input) => {
                     return this.showApprovalCard(toolName, input, toolsEl);
+                },
+                onAttemptCompletion: (result) => {
+                    // Auto-complete any unfinished todo items — agent often skips
+                    // a final update_todo_list call before attempt_completion
+                    if (lastTodoItems.length > 0) {
+                        const allDone = lastTodoItems.map((i) => ({ ...i, status: 'done' as const }));
+                        this.renderTodoBox(toolsEl, allDone);
+                    }
+                    this.showCompletionBanner(toolsEl, result);
+                    scheduleScroll();
                 },
                 onComplete: () => {
                     // Replace the raw streaming text with the properly formatted Markdown.
@@ -714,6 +729,8 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
                 },
             },
             this.modeService,
+            this.plugin.settings.advancedApi.consecutiveMistakeLimit,
+            this.plugin.settings.advancedApi.rateLimitMs,
         );
 
         // Feature 1: Pass the shared history — it accumulates across messages
@@ -1251,6 +1268,18 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
         if (group === 'web') return 'web';
         if (group === 'mcp') return 'mcp';
         return null;
+    }
+
+    // -------------------------------------------------------------------------
+    // Completion banner (attempt_completion result)
+    // -------------------------------------------------------------------------
+
+    private showCompletionBanner(toolsEl: HTMLElement, result: string): void {
+        const banner = toolsEl.createDiv('completion-banner');
+        const header = banner.createDiv('completion-banner-header');
+        setIcon(header.createSpan('completion-banner-icon'), 'check-circle');
+        header.createSpan('completion-banner-title').setText('Task Complete');
+        banner.createDiv('completion-banner-result').setText(result);
     }
 
     // -------------------------------------------------------------------------

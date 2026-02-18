@@ -1546,6 +1546,43 @@
 .undo-success { color: var(--color-green); }
 .undo-error { color: var(--color-red); }
 
+/* ── Completion banner (attempt_completion result) ───────────────────── */
+.completion-banner {
+    margin: 8px 0 4px;
+    padding: 10px 12px;
+    background: color-mix(in srgb, var(--color-green) 10%, var(--background-secondary));
+    border: 1px solid color-mix(in srgb, var(--color-green) 30%, transparent);
+    border-radius: 6px;
+}
+
+.completion-banner-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 6px;
+}
+
+.completion-banner-icon {
+    display: flex;
+    align-items: center;
+    color: var(--color-green);
+}
+
+.completion-banner-icon svg { width: 14px; height: 14px; }
+
+.completion-banner-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-green);
+}
+
+.completion-banner-result {
+    font-size: 12px;
+    color: var(--text-normal);
+    line-height: 1.5;
+    white-space: pre-wrap;
+}
+
 /* ── Settings section headings ───────────────────────────────────────── */
 .agent-settings-section {
     font-size: 11px;
