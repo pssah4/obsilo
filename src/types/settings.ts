@@ -256,10 +256,6 @@ export interface WebToolsSettings {
 // ---------------------------------------------------------------------------
 
 export interface AdvancedApiSettings {
-    /** Use a custom temperature instead of the model default */
-    useCustomTemperature: boolean;
-    /** Temperature value (0.0 – 2.0) */
-    temperature: number;
     /** Stop agent after N consecutive errors (0 = disabled) */
     consecutiveMistakeLimit: number;
     /** Minimum milliseconds between API requests (0 = no limit) */
@@ -354,8 +350,6 @@ export const DEFAULT_SETTINGS: ObsidianAgentSettings = {
     },
 
     advancedApi: {
-        useCustomTemperature: false,
-        temperature: 1.0,
         consecutiveMistakeLimit: 3,
         rateLimitMs: 0,
     },

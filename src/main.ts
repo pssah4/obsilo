@@ -177,6 +177,10 @@ export default class ObsidianAgentPlugin extends Plugin {
                 mode.source = 'vault';
             }
         }
+        // Migrate: global temperature override removed — temperature is now per-model on CustomModel
+        const advApi = this.settings.advancedApi as Record<string, unknown>;
+        if ('useCustomTemperature' in advApi) delete advApi['useCustomTemperature'];
+        if ('temperature' in advApi) delete advApi['temperature'];
     }
 
     /** Return the currently active CustomModel, or null if none configured */

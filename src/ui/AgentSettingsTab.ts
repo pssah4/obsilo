@@ -1064,11 +1064,13 @@ export class ModelConfigModal extends Modal {
 // Settings Tab
 // ---------------------------------------------------------------------------
 
-type TabId = 'models' | 'embeddings' | 'modes' | 'behaviour' | 'web' | 'checkpoints' | 'advanced';
+type TabId = 'providers' | 'agent-behaviour' | 'behaviour' | 'web' | 'checkpoints' | 'advanced';
 
 export class AgentSettingsTab extends PluginSettingTab {
     plugin: ObsidianAgentPlugin;
-    private activeTab: TabId = 'models';
+    private activeTab: TabId = 'providers';
+    private activeProvidersSubTab: string = 'models';
+    private activeAgentSubTab: string = 'modes';
 
 
     constructor(app: App, plugin: ObsidianAgentPlugin) {
@@ -1091,20 +1093,21 @@ export class AgentSettingsTab extends PluginSettingTab {
 
     private buildTabNav(container: HTMLElement): void {
         const nav = container.createDiv('agent-settings-nav');
-        const tabs: { id: TabId; label: string }[] = [
-            { id: 'models',      label: 'Models' },
-            { id: 'embeddings',  label: 'Embeddings' },
-            { id: 'modes',       label: 'Modes' },
-            { id: 'behaviour',   label: 'Behaviour' },
-            { id: 'web',         label: 'Web' },
-            { id: 'checkpoints', label: 'Checkpoints' },
-            { id: 'advanced',    label: 'Advanced' },
+        const tabs: { id: TabId; label: string; icon: string }[] = [
+            { id: 'providers',       label: 'Providers',       icon: 'cpu'         },
+            { id: 'agent-behaviour', label: 'Agent Behaviour', icon: 'sliders'     },
+            { id: 'behaviour',       label: 'Behaviour',       icon: 'toggle-left' },
+            { id: 'web',             label: 'Web',             icon: 'globe'       },
+            { id: 'checkpoints',     label: 'Checkpoints',     icon: 'git-commit'  },
+            { id: 'advanced',        label: 'Advanced',        icon: 'wrench'      },
         ];
-        tabs.forEach(({ id, label }) => {
+        tabs.forEach(({ id, label, icon }) => {
             const btn = nav.createEl('button', {
                 cls: `agent-settings-tab${this.activeTab === id ? ' active' : ''}`,
-                text: label,
             });
+            const iconEl = btn.createSpan({ cls: 'agent-settings-tab-icon' });
+            setIcon(iconEl, icon);
+            btn.createSpan({ cls: 'agent-settings-tab-label', text: label });
             btn.addEventListener('click', () => {
                 this.activeTab = id;
                 this.display();
@@ -1118,13 +1121,107 @@ export class AgentSettingsTab extends PluginSettingTab {
 
     private buildTabContent(container: HTMLElement): void {
         const content = container.createDiv('agent-settings-content');
-        if (this.activeTab === 'models')      this.buildModelsTab(content);
-        if (this.activeTab === 'embeddings')  this.buildEmbeddingsTab(content);
-        if (this.activeTab === 'modes')       this.buildModesTab(content);
-        if (this.activeTab === 'behaviour')   this.buildBehaviourTab(content);
-        if (this.activeTab === 'web')         this.buildWebTab(content);
-        if (this.activeTab === 'checkpoints') this.buildCheckpointsTab(content);
-        if (this.activeTab === 'advanced')    this.buildAdvancedTab(content);
+        if (this.activeTab === 'providers')       this.buildProvidersTab(content);
+        if (this.activeTab === 'agent-behaviour') this.buildAgentBehaviourTab(content);
+        if (this.activeTab === 'behaviour')       this.buildBehaviourTab(content);
+        if (this.activeTab === 'web')             this.buildWebTab(content);
+        if (this.activeTab === 'checkpoints')     this.buildCheckpointsTab(content);
+        if (this.activeTab === 'advanced')        this.buildAdvancedTab(content);
+    }
+
+    // ---------------------------------------------------------------------------
+    // Sub-tab infrastructure
+    // ---------------------------------------------------------------------------
+
+    private buildSubTabNav(
+        container: HTMLElement,
+        tabs: { id: string; label: string }[],
+        activeId: string,
+        onSelect: (id: string) => void,
+    ): void {
+        const nav = container.createDiv({ cls: 'agent-settings-subnav' });
+        for (const tab of tabs) {
+            const btn = nav.createEl('button', {
+                cls: `agent-settings-subtab${tab.id === activeId ? ' active' : ''}`,
+                text: tab.label,
+            });
+            btn.addEventListener('click', () => onSelect(tab.id));
+        }
+    }
+
+    private renderComingSoon(
+        container: HTMLElement,
+        icon: string,
+        title: string,
+        description: string,
+    ): void {
+        const wrap = container.createDiv({ cls: 'agent-settings-coming-soon' });
+        const iconEl = wrap.createDiv({ cls: 'agent-settings-coming-soon-icon' });
+        setIcon(iconEl, icon);
+        wrap.createDiv({ cls: 'agent-settings-coming-soon-title', text: title });
+        wrap.createDiv({ cls: 'agent-settings-coming-soon-desc', text: description });
+    }
+
+    // ---------------------------------------------------------------------------
+    // Providers tab (Models + Embeddings)
+    // ---------------------------------------------------------------------------
+
+    private buildProvidersTab(container: HTMLElement): void {
+        this.buildSubTabNav(
+            container,
+            [{ id: 'models', label: 'Models' }, { id: 'embeddings', label: 'Embeddings' }],
+            this.activeProvidersSubTab,
+            (id) => { this.activeProvidersSubTab = id; this.display(); },
+        );
+        const content = container.createDiv({ cls: 'agent-settings-subcontent' });
+        if (this.activeProvidersSubTab === 'models') this.buildModelsTab(content);
+        else this.buildEmbeddingsTab(content);
+    }
+
+    // ---------------------------------------------------------------------------
+    // Agent Behaviour tab (Modes + MCP + Rules + Workflows + Skills)
+    // ---------------------------------------------------------------------------
+
+    private buildAgentBehaviourTab(container: HTMLElement): void {
+        const subTabs = [
+            { id: 'modes',       label: 'Modes'       },
+            { id: 'mcp-servers', label: 'MCP Servers' },
+            { id: 'rules',       label: 'Rules'        },
+            { id: 'workflows',   label: 'Workflows'    },
+            { id: 'skills',      label: 'Skills'       },
+        ];
+        this.buildSubTabNav(container, subTabs, this.activeAgentSubTab,
+            (id) => { this.activeAgentSubTab = id; this.display(); });
+        const content = container.createDiv({ cls: 'agent-settings-subcontent' });
+        if (this.activeAgentSubTab === 'modes')       this.buildModesTab(content);
+        if (this.activeAgentSubTab === 'mcp-servers') this.buildMcpServersTab(content);
+        if (this.activeAgentSubTab === 'rules')       this.buildRulesTab(content);
+        if (this.activeAgentSubTab === 'workflows')   this.buildWorkflowsTab(content);
+        if (this.activeAgentSubTab === 'skills')      this.buildSkillsTab(content);
+    }
+
+    private buildMcpServersTab(container: HTMLElement): void {
+        this.renderComingSoon(container, 'plug',
+            'MCP Servers',
+            'Connect external tools and data sources via the Model Context Protocol. Configuration coming in a future update.');
+    }
+
+    private buildRulesTab(container: HTMLElement): void {
+        this.renderComingSoon(container, 'shield-check',
+            'Rules',
+            'Define persistent rules that are injected into every agent session. Coming soon.');
+    }
+
+    private buildWorkflowsTab(container: HTMLElement): void {
+        this.renderComingSoon(container, 'play-circle',
+            'Workflows',
+            'Create slash-command workflows to automate recurring tasks in your vault. Coming soon.');
+    }
+
+    private buildSkillsTab(container: HTMLElement): void {
+        this.renderComingSoon(container, 'zap',
+            'Skills',
+            'Skills are automatically injected into the system prompt when relevant to your request. Coming soon.');
     }
 
     // ---------------------------------------------------------------------------

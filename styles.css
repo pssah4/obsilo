@@ -686,6 +686,9 @@
 }
 
 .agent-settings-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     padding: 5px 12px;
     background: transparent;
     border: none;
@@ -698,12 +701,81 @@
     transition: color 0.1s;
 }
 
+.agent-settings-tab-icon {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.agent-settings-tab-icon svg { width: 14px; height: 14px; }
+
 .agent-settings-tab:hover { color: var(--text-normal); }
 
 .agent-settings-tab.active {
     color: var(--text-normal);
     border-bottom-color: var(--interactive-accent);
     font-weight: 500;
+}
+
+/* ── Sub-tab navigation ──────────────────────────────────────────────── */
+.agent-settings-subnav {
+    display: flex;
+    gap: 2px;
+    padding: 10px 0 0;
+    border-bottom: 1px solid var(--background-modifier-border);
+    margin-bottom: 16px;
+}
+
+.agent-settings-subtab {
+    padding: 4px 12px;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    color: var(--text-muted);
+    font-size: 12px;
+    cursor: pointer;
+    transition: color 0.1s;
+    border-radius: 4px 4px 0 0;
+}
+
+.agent-settings-subtab:hover { color: var(--text-normal); }
+
+.agent-settings-subtab.active {
+    color: var(--text-normal);
+    border-bottom-color: var(--interactive-accent);
+    font-weight: 500;
+}
+
+/* ── "Coming soon" empty state ───────────────────────────────────────── */
+.agent-settings-coming-soon {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 48px 24px;
+    color: var(--text-muted);
+    text-align: center;
+}
+
+.agent-settings-coming-soon-icon {
+    display: flex;
+    align-items: center;
+    opacity: 0.35;
+}
+
+.agent-settings-coming-soon-icon svg { width: 32px; height: 32px; }
+
+.agent-settings-coming-soon-title {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-normal);
+}
+
+.agent-settings-coming-soon-desc {
+    font-size: 12px;
+    line-height: 1.5;
+    max-width: 280px;
 }
 
 .agent-settings-content {
@@ -736,10 +808,15 @@
     color: var(--text-muted);
     font-size: 11px;
     font-weight: 500;
-    padding: 4px 8px;
+    padding: 5px 8px;          /* was 4px — aligned with body rows */
 }
 
 .model-row-active .mc-name-text { color: var(--interactive-accent); }
+
+.model-row-active .mc-name {
+    border-left: 2px solid var(--interactive-accent);
+    padding-left: 6px;
+}
 
 .model-row:not(.model-row-header):hover { background: var(--background-modifier-hover); }
 
@@ -755,7 +832,9 @@
 .mc-enable { display: flex; justify-content: center; align-items: center; }
 .mc-enable input[type='checkbox'] { cursor: pointer; }
 
-.mc-actions { display: flex; gap: 2px; justify-content: flex-end; align-items: center; }
+.mc-actions { display: flex; gap: 4px; justify-content: flex-end; align-items: center; }
+
+.mc-actions button { padding: 3px 5px; border-radius: 4px; }
 
 .mc-action-btn {
     display: flex;
@@ -1420,7 +1499,7 @@
     text-transform: uppercase;
     letter-spacing: 0.06em;
     text-align: left;
-    margin: 20px 0 2px;
+    margin: 24px 0 8px;        /* was 20px 0 2px — more breathing room */
     padding-bottom: 4px;
     border-bottom: 1px solid var(--background-modifier-border);
 }
