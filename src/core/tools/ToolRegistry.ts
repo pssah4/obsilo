@@ -37,6 +37,7 @@ import { WebSearchTool } from './web/WebSearchTool';
 import { AskFollowupQuestionTool } from './agent/AskFollowupQuestionTool';
 import { AttemptCompletionTool } from './agent/AttemptCompletionTool';
 import { UpdateTodoListTool } from './agent/UpdateTodoListTool';
+import { SwitchModeTool } from './agent/SwitchModeTool';
 
 export class ToolRegistry {
     private tools: Map<ToolName, BaseTool>;
@@ -74,10 +75,11 @@ export class ToolRegistry {
         // Web (Phase 1.1)
         this.register(new WebFetchTool(this.plugin));
         this.register(new WebSearchTool(this.plugin));
-        // Agent control (Sprint 1.2 / Phase 1.3)
+        // Agent control (Sprint 1.2 / Phase 1.3 / Phase 3.1)
         this.register(new AskFollowupQuestionTool(this.plugin));
         this.register(new AttemptCompletionTool(this.plugin));
         this.register(new UpdateTodoListTool(this.plugin));
+        this.register(new SwitchModeTool(this.plugin));
 
         console.log(`ToolRegistry: Registered ${this.getToolCount()} tools`);
     }

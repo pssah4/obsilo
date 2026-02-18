@@ -70,6 +70,8 @@ export interface ContextExtensions {
     onApprovalRequired?: (toolName: string, input: Record<string, any>) => Promise<'auto' | 'approved' | 'rejected'>;
     /** Publish the current todo list to the UI */
     updateTodos?: (items: import('../tools/agent/UpdateTodoListTool').TodoItem[]) => void;
+    /** Switch the active mode (called by switch_mode tool) */
+    switchMode?: (slug: string) => void;
 }
 
 export class ToolExecutionPipeline {
@@ -158,6 +160,7 @@ export class ToolExecutionPipeline {
                 askQuestion: extensions?.askQuestion,
                 signalCompletion: extensions?.signalCompletion,
                 updateTodos: extensions?.updateTodos,
+                switchMode: extensions?.switchMode,
             };
 
             await tool.execute(toolCall.input, context);

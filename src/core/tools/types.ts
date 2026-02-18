@@ -135,6 +135,12 @@ export interface ToolExecutionContext {
      * Used by update_todo_list tool.
      */
     updateTodos?: (items: import('../tools/agent/UpdateTodoListTool').TodoItem[]) => void;
+
+    /**
+     * Switch the active mode. Used by switch_mode tool.
+     * The new mode takes effect from the next AgentTask iteration.
+     */
+    switchMode?: (slug: string) => void;
 }
 
 /**

@@ -1,8 +1,9 @@
 import { App, Modal, Notice, PluginSettingTab, Setting, requestUrl, setIcon } from 'obsidian';
 import type ObsidianAgentPlugin from '../main';
-import type { CustomModel, ProviderType } from '../types/settings';
+import type { CustomModel, ModeConfig, ProviderType } from '../types/settings';
 import { getModelKey, modelToLLMProvider } from '../types/settings';
 import { buildApiHandler } from '../api/index';
+import { BUILT_IN_MODES, TOOL_GROUP_MAP } from '../core/modes/builtinModes';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -1050,7 +1051,7 @@ export class ModelConfigModal extends Modal {
 // Settings Tab
 // ---------------------------------------------------------------------------
 
-type TabId = 'models' | 'embeddings' | 'behaviour' | 'web' | 'checkpoints' | 'advanced';
+type TabId = 'models' | 'embeddings' | 'modes' | 'behaviour' | 'web' | 'checkpoints' | 'advanced';
 
 export class AgentSettingsTab extends PluginSettingTab {
     plugin: ObsidianAgentPlugin;
@@ -1080,6 +1081,7 @@ export class AgentSettingsTab extends PluginSettingTab {
         const tabs: { id: TabId; label: string }[] = [
             { id: 'models',      label: 'Models' },
             { id: 'embeddings',  label: 'Embeddings' },
+            { id: 'modes',       label: 'Modes' },
             { id: 'behaviour',   label: 'Behaviour' },
             { id: 'web',         label: 'Web' },
             { id: 'checkpoints', label: 'Checkpoints' },
@@ -1105,10 +1107,171 @@ export class AgentSettingsTab extends PluginSettingTab {
         const content = container.createDiv('agent-settings-content');
         if (this.activeTab === 'models')      this.buildModelsTab(content);
         if (this.activeTab === 'embeddings')  this.buildEmbeddingsTab(content);
+        if (this.activeTab === 'modes')       this.buildModesTab(content);
         if (this.activeTab === 'behaviour')   this.buildBehaviourTab(content);
         if (this.activeTab === 'web')         this.buildWebTab(content);
         if (this.activeTab === 'checkpoints') this.buildCheckpointsTab(content);
         if (this.activeTab === 'advanced')    this.buildAdvancedTab(content);
+    }
+
+    // ---------------------------------------------------------------------------
+    // Modes tab
+    // ---------------------------------------------------------------------------
+
+    private buildModesTab(container: HTMLElement): void {
+        container.createEl('p', {
+            cls: 'agent-settings-desc',
+            text: 'Choose and configure agent modes. Built-in modes ship with the plugin; you can add custom instructions to each. Custom modes can be created and exported.',
+        });
+
+        // Built-in modes
+        const builtinSection = container.createDiv('agent-settings-section');
+        builtinSection.createEl('h3', { text: 'Built-in Modes' });
+
+        for (const mode of BUILT_IN_MODES) {
+            const modeCard = builtinSection.createDiv('mode-card');
+            const modeHeader = modeCard.createDiv('mode-card-header');
+
+            // Icon + name + description
+            const modeInfo = modeHeader.createDiv('mode-card-info');
+            const modeTitle = modeInfo.createDiv('mode-card-title');
+            setIcon(modeTitle.createSpan('mode-card-icon'), mode.icon);
+            modeTitle.createSpan('mode-card-name').setText(mode.name);
+
+            // Active badge
+            if (this.plugin.settings.currentMode === mode.slug) {
+                modeTitle.createSpan('mode-card-badge').setText('active');
+            }
+
+            modeInfo.createDiv('mode-card-description').setText(mode.description);
+
+            // Tool groups
+            const groupsEl = modeCard.createDiv('mode-card-groups');
+            for (const group of mode.toolGroups) {
+                groupsEl.createSpan({ cls: 'mode-group-chip', text: group });
+            }
+
+            // "Set Active" button
+            const actions = modeCard.createDiv('mode-card-actions');
+            if (this.plugin.settings.currentMode !== mode.slug) {
+                const setActiveBtn = actions.createEl('button', { text: 'Set Active', cls: 'mod-cta mode-set-active-btn' });
+                setActiveBtn.addEventListener('click', async () => {
+                    this.plugin.settings.currentMode = mode.slug;
+                    await this.plugin.saveSettings();
+                    this.display();
+                });
+            }
+
+            // Custom instructions expander
+            const customHeader = modeCard.createDiv('mode-custom-header');
+            const customToggle = customHeader.createEl('button', {
+                cls: 'mode-custom-toggle',
+                text: 'Custom instructions',
+            });
+            setIcon(customHeader.createSpan('mode-custom-chevron'), 'chevron-down');
+            const customBody = modeCard.createDiv('mode-custom-body');
+            customBody.style.display = 'none';
+
+            customToggle.addEventListener('click', () => {
+                const isOpen = customBody.style.display !== 'none';
+                customBody.style.display = isOpen ? 'none' : '';
+            });
+
+            // Find or create a custom-mode entry for this slug to store custom instructions
+            const existingCustom = this.plugin.settings.customModes.find(
+                (m) => m.slug === `${mode.slug}__custom`
+            );
+            const textarea = customBody.createEl('textarea', {
+                cls: 'mode-custom-textarea',
+                attr: { placeholder: 'Add extra instructions for this mode...' },
+            });
+            textarea.value = existingCustom?.customInstructions ?? '';
+            textarea.rows = 4;
+            textarea.addEventListener('input', async () => {
+                const value = textarea.value.trim();
+                const idx = this.plugin.settings.customModes.findIndex(
+                    (m) => m.slug === `${mode.slug}__custom`
+                );
+                if (value) {
+                    const customEntry: ModeConfig = {
+                        slug: `${mode.slug}__custom`,
+                        name: mode.name,
+                        icon: mode.icon,
+                        description: mode.description,
+                        roleDefinition: mode.roleDefinition,
+                        toolGroups: mode.toolGroups,
+                        source: 'built-in',
+                        customInstructions: value,
+                    };
+                    if (idx >= 0) {
+                        this.plugin.settings.customModes[idx] = customEntry;
+                    } else {
+                        this.plugin.settings.customModes.push(customEntry);
+                    }
+                } else {
+                    if (idx >= 0) this.plugin.settings.customModes.splice(idx, 1);
+                }
+                await this.plugin.saveSettings();
+            });
+        }
+
+        // Custom modes section
+        const customSection = container.createDiv('agent-settings-section');
+        customSection.createEl('h3', { text: 'Custom Modes' });
+
+        const customModes = this.plugin.settings.customModes.filter((m) => m.source === 'custom');
+
+        if (customModes.length === 0) {
+            customSection.createEl('p', {
+                cls: 'agent-settings-desc',
+                text: 'No custom modes yet. Click "New Mode" to create one.',
+            });
+        } else {
+            for (const mode of customModes) {
+                const card = customSection.createDiv('mode-card');
+                const header = card.createDiv('mode-card-header');
+                const info = header.createDiv('mode-card-info');
+                const title = info.createDiv('mode-card-title');
+                setIcon(title.createSpan('mode-card-icon'), mode.icon || 'sparkles');
+                title.createSpan('mode-card-name').setText(mode.name);
+                if (this.plugin.settings.currentMode === mode.slug) {
+                    title.createSpan('mode-card-badge').setText('active');
+                }
+                info.createDiv('mode-card-description').setText(mode.description);
+
+                const groupsEl = card.createDiv('mode-card-groups');
+                for (const group of mode.toolGroups) {
+                    groupsEl.createSpan({ cls: 'mode-group-chip', text: group });
+                }
+
+                const actions = card.createDiv('mode-card-actions');
+                if (this.plugin.settings.currentMode !== mode.slug) {
+                    const setActiveBtn = actions.createEl('button', { text: 'Set Active', cls: 'mod-cta mode-set-active-btn' });
+                    setActiveBtn.addEventListener('click', async () => {
+                        this.plugin.settings.currentMode = mode.slug;
+                        await this.plugin.saveSettings();
+                        this.display();
+                    });
+                }
+                const deleteBtn = actions.createEl('button', { text: 'Delete', cls: 'mod-warning' });
+                deleteBtn.addEventListener('click', async () => {
+                    this.plugin.settings.customModes = this.plugin.settings.customModes.filter(
+                        (m) => m.slug !== mode.slug
+                    );
+                    if (this.plugin.settings.currentMode === mode.slug) {
+                        this.plugin.settings.currentMode = 'librarian';
+                    }
+                    await this.plugin.saveSettings();
+                    this.display();
+                });
+            }
+        }
+
+        // New Mode button
+        const addBtn = customSection.createEl('button', { text: '+ New Mode', cls: 'mod-cta' });
+        addBtn.addEventListener('click', () => {
+            new NewModeModal(this.app, this.plugin, () => this.display()).open();
+        });
     }
 
     // ---------------------------------------------------------------------------
@@ -1614,5 +1777,121 @@ export class AgentSettingsTab extends PluginSettingTab {
                     await this.plugin.saveSettings();
                 }),
             );
+    }
+}
+
+// ---------------------------------------------------------------------------
+// New Mode Modal
+// ---------------------------------------------------------------------------
+
+class NewModeModal extends Modal {
+    private plugin: ObsidianAgentPlugin;
+    private onSave: () => void;
+
+    constructor(app: App, plugin: ObsidianAgentPlugin, onSave: () => void) {
+        super(app);
+        this.plugin = plugin;
+        this.onSave = onSave;
+    }
+
+    onOpen(): void {
+        const { contentEl } = this;
+        contentEl.addClass('new-mode-modal');
+        contentEl.createEl('h2', { text: 'New Mode' });
+
+        let slug = '';
+        let name = '';
+        let icon = 'sparkles';
+        let description = '';
+        let roleDefinition = '';
+        let selectedGroups: Set<string> = new Set(['read', 'vault', 'agent']);
+
+        new Setting(contentEl)
+            .setName('Name')
+            .setDesc('Display name (e.g. "Daily Planner")')
+            .addText((t) => t.onChange((v) => {
+                name = v;
+                slug = v.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+            }));
+
+        new Setting(contentEl)
+            .setName('Icon')
+            .setDesc('Lucide icon name (e.g. "calendar", "sparkles", "brain")')
+            .addText((t) => {
+                t.setValue(icon).onChange((v) => { icon = v; });
+            });
+
+        new Setting(contentEl)
+            .setName('Description')
+            .setDesc('Short description shown in the mode selector')
+            .addText((t) => t.onChange((v) => { description = v; }));
+
+        // Tool groups checkboxes
+        const groupSetting = contentEl.createDiv('new-mode-groups');
+        groupSetting.createEl('label', { cls: 'new-mode-groups-label', text: 'Tool Groups' });
+        const groupGrid = groupSetting.createDiv('new-mode-groups-grid');
+
+        for (const group of Object.keys(TOOL_GROUP_MAP)) {
+            const row = groupGrid.createDiv('new-mode-group-row');
+            const cb = row.createEl('input', { type: 'checkbox' });
+            cb.checked = selectedGroups.has(group);
+            cb.addEventListener('change', () => {
+                if (cb.checked) selectedGroups.add(group);
+                else selectedGroups.delete(group);
+            });
+            row.createEl('label', { text: group });
+        }
+
+        contentEl.createEl('label', { cls: 'new-mode-field-label', text: 'Role Definition' });
+        const roleTextarea = contentEl.createEl('textarea', {
+            cls: 'new-mode-textarea',
+            attr: { placeholder: 'Describe the agent\'s identity, behavior, and focus area...' },
+        });
+        roleTextarea.rows = 6;
+        roleTextarea.addEventListener('input', () => { roleDefinition = roleTextarea.value; });
+
+        const actions = contentEl.createDiv('new-mode-actions');
+        const saveBtn = actions.createEl('button', { text: 'Create Mode', cls: 'mod-cta' });
+        saveBtn.addEventListener('click', async () => {
+            if (!name.trim()) {
+                new Notice('Name is required');
+                return;
+            }
+            if (!roleDefinition.trim()) {
+                new Notice('Role definition is required');
+                return;
+            }
+            // Ensure slug uniqueness
+            const allSlugs = [
+                ...BUILT_IN_MODES.map((m) => m.slug),
+                ...this.plugin.settings.customModes.map((m) => m.slug),
+            ];
+            let finalSlug = slug || name.toLowerCase().replace(/\s+/g, '-');
+            if (allSlugs.includes(finalSlug)) {
+                finalSlug = `${finalSlug}-${Date.now()}`;
+            }
+
+            const newMode: ModeConfig = {
+                slug: finalSlug,
+                name: name.trim(),
+                icon: icon.trim() || 'sparkles',
+                description: description.trim(),
+                roleDefinition: roleDefinition.trim(),
+                toolGroups: Array.from(selectedGroups) as any,
+                source: 'custom',
+            };
+
+            this.plugin.settings.customModes.push(newMode);
+            await this.plugin.saveSettings();
+            this.onSave();
+            this.close();
+        });
+
+        const cancelBtn = actions.createEl('button', { text: 'Cancel' });
+        cancelBtn.addEventListener('click', () => this.close());
+    }
+
+    onClose(): void {
+        this.contentEl.empty();
     }
 }

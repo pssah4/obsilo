@@ -171,14 +171,28 @@ export interface McpServerConfig {
 // Agent Mode configuration
 // ---------------------------------------------------------------------------
 
+/** Logical tool groups — controls which tools are available in a mode */
+export type ToolGroup = 'read' | 'vault' | 'edit' | 'web' | 'agent' | 'mcp';
+
 export interface ModeConfig {
-    id: string;
+    /** URL-safe identifier (e.g. "researcher", "daily-writer") */
+    slug: string;
+    /** Display name shown in UI */
     name: string;
+    /** Lucide icon name */
+    icon: string;
+    /** Short description shown in mode selector */
     description: string;
-    systemPrompt: string;
-    allowedTools: string[];
-    mcpServers: string[];
+    /** Core role definition injected into system prompt */
+    roleDefinition: string;
+    /** Hint for the Orchestrator when deciding which mode to delegate to */
+    whenToUse?: string;
+    /** User-editable extra instructions appended after roleDefinition */
     customInstructions?: string;
+    /** Which tool groups are available in this mode */
+    toolGroups: ToolGroup[];
+    /** 'built-in' modes ship with the plugin; 'custom' modes are user-created */
+    source: 'built-in' | 'custom';
 }
 
 // ---------------------------------------------------------------------------
@@ -307,7 +321,7 @@ export const DEFAULT_SETTINGS: ObsidianAgentSettings = {
     providers: {},
 
     mcpServers: {},
-    currentMode: 'ask',
+    currentMode: 'librarian',
     customModes: [],
 
     autoApproval: {

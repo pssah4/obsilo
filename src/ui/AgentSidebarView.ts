@@ -1,6 +1,7 @@
 import { ItemView, WorkspaceLeaf, setIcon, Menu, MarkdownRenderer, MarkdownView, Notice, TFile } from 'obsidian';
 import type ObsidianAgentPlugin from '../main';
 import { AgentTask } from '../core/AgentTask';
+import { ModeService } from '../core/modes/ModeService';
 import type { MessageParam, ContentBlock, ImageMediaType } from '../api/types';
 import { getModelKey } from '../types/settings';
 
@@ -27,6 +28,7 @@ interface AttachmentItem {
  */
 export class AgentSidebarView extends ItemView {
     plugin: ObsidianAgentPlugin;
+    private modeService!: ModeService;
     private chatContainer: HTMLElement | null = null;
     private inputArea: HTMLElement | null = null;
     private textarea: HTMLTextAreaElement | null = null;
@@ -55,6 +57,7 @@ export class AgentSidebarView extends ItemView {
     constructor(leaf: WorkspaceLeaf, plugin: ObsidianAgentPlugin) {
         super(leaf);
         this.plugin = plugin;
+        this.modeService = new ModeService(plugin, plugin.toolRegistry);
     }
 
     getViewType(): string {
@@ -313,29 +316,25 @@ export class AgentSidebarView extends ItemView {
 
     private showModeMenu(event: MouseEvent): void {
         const menu = new Menu();
-        const modes = [
-            { id: 'ask', name: 'Ask', icon: 'help-circle' },
-            { id: 'writer', name: 'Writer', icon: 'pencil' },
-            { id: 'architect', name: 'Architect', icon: 'layout' },
-        ];
+        const modes = this.modeService.getAllModes();
         modes.forEach((mode) => {
             menu.addItem((item) =>
                 item
                     .setTitle(mode.name)
                     .setIcon(mode.icon)
-                    .setChecked(this.plugin.settings.currentMode === mode.id)
-                    .onClick(() => this.switchMode(mode.id))
+                    .setChecked(this.plugin.settings.currentMode === mode.slug)
+                    .onClick(() => this.switchMode(mode.slug))
             );
         });
         menu.showAtMouseEvent(event);
     }
 
-    private getModeIcon(modeId: string): string {
-        return { ask: 'help-circle', writer: 'pencil', architect: 'layout' }[modeId] ?? 'help-circle';
+    private getModeIcon(modeSlug: string): string {
+        return this.modeService.getMode(modeSlug)?.icon ?? 'cpu';
     }
 
-    private getModeDisplayName(modeId: string): string {
-        return { ask: 'Ask', writer: 'Writer', architect: 'Architect' }[modeId] ?? 'Ask';
+    private getModeDisplayName(modeSlug: string): string {
+        return this.modeService.getMode(modeSlug)?.name ?? modeSlug;
     }
 
     private autoResizeTextarea(): void {
@@ -452,7 +451,6 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
         };
 
         const taskId = `task-${Date.now()}`;
-        const mode = this.plugin.settings.currentMode;
         let taskWriteCount = 0;
 
         const task = new AgentTask(
@@ -582,6 +580,10 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
                 onTodoUpdate: (items) => {
                     this.renderTodoBox(toolsEl, items);
                 },
+                onModeSwitch: (newModeSlug) => {
+                    this.updateModeButton();
+                    new Notice(`Switched to ${this.getModeDisplayName(newModeSlug)} mode`);
+                },
                 onQuestion: (question, options, resolve) => {
                     this.showQuestionCard(question, options, resolve);
                 },
@@ -624,12 +626,13 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
                     this.currentAbortController = null;
                     this.setRunningState(false);
                 },
-            }
+            },
+            this.modeService,
         );
 
         // Feature 1: Pass the shared history — it accumulates across messages
         // Feature 4: Pass messageToSend (with active file context) instead of raw text
-        await task.run(messageToSend, taskId, mode, this.conversationHistory, this.currentAbortController.signal);
+        await task.run(messageToSend, taskId, this.modeService.getActiveMode(), this.conversationHistory, this.currentAbortController.signal);
     }
 
     /**
@@ -769,9 +772,8 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
         this.renderMarkdownMessage(markdown, 'assistant');
     }
 
-    private switchMode(modeId: string): void {
-        this.plugin.settings.currentMode = modeId;
-        this.plugin.saveSettings();
+    private switchMode(modeSlug: string): void {
+        this.modeService.switchMode(modeSlug); // saves settings
         this.updateModeButton();
     }
 

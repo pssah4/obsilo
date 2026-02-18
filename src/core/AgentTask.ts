@@ -15,7 +15,9 @@ import type { ApiHandler, MessageParam, ContentBlock } from '../api/types';
 import type { ToolRegistry } from './tools/ToolRegistry';
 import type { ToolCallbacks, ToolUse } from './tools/types';
 import { ToolExecutionPipeline } from './tool-execution/ToolExecutionPipeline';
-import { buildSystemPrompt } from './systemPrompt';
+import { buildSystemPromptForMode } from './systemPrompt';
+import type { ModeService } from './modes/ModeService';
+import type { ModeConfig } from '../types/settings';
 
 export interface AgentTaskCallbacks {
     /** Called at the start of each agentic loop iteration (0 = first/user message, 1+ = after tools) */
@@ -40,6 +42,8 @@ export interface AgentTaskCallbacks {
     onApprovalRequired?: (toolName: string, input: Record<string, any>) => Promise<'auto' | 'approved' | 'rejected'>;
     /** Called when update_todo_list publishes a new todo plan */
     onTodoUpdate?: (items: import('./tools/agent/UpdateTodoListTool').TodoItem[]) => void;
+    /** Called when switch_mode changes the active mode */
+    onModeSwitch?: (newModeSlug: string) => void;
     /** Called when an unrecoverable error occurs */
     onError: (error: Error) => void;
 }
@@ -48,15 +52,18 @@ export class AgentTask {
     private api: ApiHandler;
     private toolRegistry: ToolRegistry;
     private taskCallbacks: AgentTaskCallbacks;
+    private modeService?: ModeService;
 
     constructor(
         api: ApiHandler,
         toolRegistry: ToolRegistry,
         taskCallbacks: AgentTaskCallbacks,
+        modeService?: ModeService,
     ) {
         this.api = api;
         this.toolRegistry = toolRegistry;
         this.taskCallbacks = taskCallbacks;
+        this.modeService = modeService;
     }
 
     /**
@@ -65,26 +72,26 @@ export class AgentTask {
      *
      * @param userMessage - The new user message
      * @param taskId - Unique task ID
-     * @param mode - Current agent mode
+     * @param initialMode - Starting mode slug or ModeConfig
      * @param history - Existing conversation history (mutated in-place to persist across calls)
      * @param abortSignal - Optional signal to cancel the request
      */
     async run(
         userMessage: string | ContentBlock[],
         taskId: string,
-        mode: string,
+        initialMode: string | ModeConfig,
         history: MessageParam[],
         abortSignal?: AbortSignal,
     ): Promise<void> {
-        const systemPrompt = buildSystemPrompt(mode);
-        const tools = this.toolRegistry.getToolDefinitions();
+        // Resolve mode to ModeConfig
+        let activeMode: ModeConfig = this.resolveMode(initialMode);
 
         // Create per-task pipeline instance (like Kilo Code creates per-task context)
         const pipeline = new ToolExecutionPipeline(
             (this.toolRegistry as any).plugin,
             this.toolRegistry,
             taskId,
-            mode,
+            activeMode.slug,
         );
 
         // Add user message to the shared history
@@ -96,6 +103,8 @@ export class AgentTask {
         let totalOutputTokens = 0;
         // attempt_completion signal
         let completionResult: string | null = null;
+        // switch_mode signal (checked at end of each iteration)
+        let pendingModeSwitch: string | null = null;
 
         // Wire up context extensions for agent-control tools
         const askQuestion = this.taskCallbacks.onQuestion
@@ -110,9 +119,33 @@ export class AgentTask {
             completionResult = result;
         };
 
+        const switchMode = (slug: string) => {
+            pendingModeSwitch = slug;
+        };
+
         try {
             for (let iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
+                // Apply any pending mode switch at the start of each iteration
+                if (pendingModeSwitch !== null) {
+                    const newMode = this.resolveMode(pendingModeSwitch);
+                    if (newMode) {
+                        activeMode = newMode;
+                        if (this.modeService) {
+                            this.modeService.switchMode(pendingModeSwitch);
+                        }
+                        this.taskCallbacks.onModeSwitch?.(pendingModeSwitch);
+                    }
+                    pendingModeSwitch = null;
+                }
+
                 this.taskCallbacks.onIterationStart?.(iteration);
+
+                // Build system prompt and tools for current mode
+                const systemPrompt = buildSystemPromptForMode(activeMode);
+                const tools = this.modeService
+                    ? this.modeService.getToolDefinitions(activeMode)
+                    : this.toolRegistry.getToolDefinitions();
+
                 const toolUses: ContentBlock[] = [];
                 const textParts: string[] = [];
 
@@ -179,6 +212,7 @@ export class AgentTask {
                     const result = await pipeline.executeTool(toolCall, toolCallbacks, {
                         askQuestion,
                         signalCompletion,
+                        switchMode,
                         onApprovalRequired: this.taskCallbacks.onApprovalRequired,
                         updateTodos: this.taskCallbacks.onTodoUpdate,
                     });
@@ -229,5 +263,20 @@ export class AgentTask {
             console.error('[AgentTask] Task failed:', err);
             this.taskCallbacks.onError(err);
         }
+    }
+
+    /** Resolve a mode slug or ModeConfig to a ModeConfig */
+    private resolveMode(mode: string | ModeConfig): ModeConfig {
+        if (typeof mode !== 'string') return mode;
+
+        if (this.modeService) {
+            return this.modeService.getMode(mode) ?? this.modeService.getActiveMode();
+        }
+
+        // Fallback: use builtinModes directly
+        const { BUILT_IN_MODES } = require('./modes/builtinModes');
+        return BUILT_IN_MODES.find((m: ModeConfig) => m.slug === mode)
+            ?? BUILT_IN_MODES.find((m: ModeConfig) => m.slug === 'librarian')
+            ?? BUILT_IN_MODES[0];
     }
 }
