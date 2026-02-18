@@ -164,6 +164,11 @@ export default class ObsidianAgentPlugin extends Plugin {
         this.settings = Object.assign({}, DEFAULT_SETTINGS, saved);
         this.settings.activeModels = this.settings.activeModels ?? [];
         this.settings.webTools = this.settings.webTools ?? DEFAULT_SETTINGS.webTools;
+        // Migrate old mode slugs to new built-in mode slugs (Phase 3.1)
+        const OLD_MODE_MAP: Record<string, string> = { ask: 'librarian', code: 'writer' };
+        if (OLD_MODE_MAP[this.settings.currentMode]) {
+            this.settings.currentMode = OLD_MODE_MAP[this.settings.currentMode];
+        }
     }
 
     /** Return the currently active CustomModel, or null if none configured */

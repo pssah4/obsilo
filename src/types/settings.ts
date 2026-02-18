@@ -281,6 +281,8 @@ export interface ObsidianAgentSettings {
     // Modes
     currentMode: string;
     customModes: ModeConfig[];
+    /** Instructions appended to the system prompt for ALL modes */
+    globalCustomInstructions: string;
 
     // Approval (Sprint 1.3)
     autoApproval: AutoApprovalConfig;
@@ -323,6 +325,7 @@ export const DEFAULT_SETTINGS: ObsidianAgentSettings = {
     mcpServers: {},
     currentMode: 'librarian',
     customModes: [],
+    globalCustomInstructions: '',
 
     autoApproval: {
         enabled: false,

@@ -632,7 +632,14 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
 
         // Feature 1: Pass the shared history — it accumulates across messages
         // Feature 4: Pass messageToSend (with active file context) instead of raw text
-        await task.run(messageToSend, taskId, this.modeService.getActiveMode(), this.conversationHistory, this.currentAbortController.signal);
+        await task.run(
+            messageToSend,
+            taskId,
+            this.modeService.getActiveMode(),
+            this.conversationHistory,
+            this.currentAbortController.signal,
+            this.plugin.settings.globalCustomInstructions || undefined,
+        );
     }
 
     /**

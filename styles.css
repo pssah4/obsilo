@@ -1730,124 +1730,133 @@
 
 /* ── Modes Settings Tab ────────────────────────────────────────────────── */
 
-.mode-card {
+/* ── Modes Tab — Kilo Code style ────────────────────────────────────────── */
+
+.modes-top-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.modes-select {
+    flex: 1;
+    min-width: 0;
+    padding: 6px 10px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
+    background: var(--background-primary);
+    color: var(--text-normal);
+    font-size: 0.92em;
+    cursor: pointer;
+}
+
+.modes-select optgroup {
+    font-weight: 700;
+    font-size: 0.88em;
+    color: var(--text-muted);
+}
+
+.modes-btn-group {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.modes-top-btn {
+    white-space: nowrap;
+}
+
+/* Form area */
+
+.modes-form-area {
     border: 1px solid var(--background-modifier-border);
     border-radius: 8px;
-    padding: 12px 14px;
-    margin-bottom: 10px;
+    padding: 16px;
     background: var(--background-secondary);
 }
 
-.mode-card-header {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
+.modes-field {
+    margin-bottom: 14px;
 }
 
-.mode-card-info {
-    flex: 1;
-    min-width: 0;
-}
-
-.mode-card-title {
-    display: flex;
-    align-items: center;
-    gap: 6px;
+.modes-field-label {
+    display: block;
     font-weight: 600;
-    margin-bottom: 2px;
+    font-size: 0.88em;
+    margin-bottom: 4px;
+    color: var(--text-normal);
 }
 
-.mode-card-icon {
-    color: var(--interactive-accent);
-}
-
-.mode-card-name {
-    font-size: 0.95em;
-}
-
-.mode-card-badge {
-    display: inline-block;
-    padding: 1px 6px;
-    background: var(--interactive-accent);
-    color: var(--text-on-accent);
-    border-radius: 10px;
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-}
-
-.mode-card-description {
+.modes-field-desc {
+    font-size: 0.8em;
     color: var(--text-muted);
-    font-size: 0.85em;
+    margin-bottom: 6px;
     line-height: 1.4;
 }
 
-.mode-card-groups {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-    margin-top: 8px;
-}
-
-.mode-group-chip {
-    display: inline-block;
-    padding: 2px 7px;
-    background: var(--background-modifier-hover);
-    border: 1px solid var(--background-modifier-border);
-    border-radius: 10px;
-    font-size: 10px;
-    font-weight: 500;
-    color: var(--text-muted);
-    letter-spacing: 0.03em;
-}
-
-.mode-card-actions {
-    display: flex;
-    gap: 6px;
-    margin-top: 8px;
-    align-items: center;
-}
-
-.mode-set-active-btn {
-    font-size: 0.8em;
-    padding: 2px 8px;
-}
-
-.mode-custom-header {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    margin-top: 8px;
-    cursor: pointer;
-    color: var(--text-muted);
-    font-size: 0.82em;
-}
-
-.mode-custom-toggle {
-    background: none;
-    border: none;
-    color: var(--text-muted);
-    cursor: pointer;
-    padding: 0;
-    font-size: 0.82em;
-}
-
-.mode-custom-body {
-    margin-top: 6px;
-}
-
-.mode-custom-textarea {
+.modes-textarea {
     width: 100%;
     font-family: var(--font-monospace);
     font-size: 0.82em;
-    padding: 6px 8px;
+    padding: 8px;
     border: 1px solid var(--background-modifier-border);
     border-radius: 4px;
     background: var(--background-primary);
     color: var(--text-normal);
     resize: vertical;
     box-sizing: border-box;
+}
+
+.modes-textarea:disabled {
+    opacity: 0.55;
+    cursor: default;
+}
+
+.modes-groups-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px 12px;
+    padding: 8px 0;
+}
+
+.modes-group-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.85em;
+    color: var(--text-muted);
+}
+
+.modes-group-row input[type="checkbox"]:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+/* Bottom action bar */
+
+.modes-bottom-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid var(--background-modifier-border);
+}
+
+.modes-active-badge {
+    font-size: 0.82em;
+    font-weight: 600;
+    color: var(--color-green);
+    margin-right: auto;
+}
+
+.modes-export-btn {
+    margin-left: auto;
+}
+
+.modes-delete-btn {
+    margin-left: 4px;
 }
 
 /* ── New Mode Modal ─────────────────────────────────────────────────────── */

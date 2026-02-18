@@ -82,6 +82,7 @@ export class AgentTask {
         initialMode: string | ModeConfig,
         history: MessageParam[],
         abortSignal?: AbortSignal,
+        globalCustomInstructions?: string,
     ): Promise<void> {
         // Resolve mode to ModeConfig
         let activeMode: ModeConfig = this.resolveMode(initialMode);
@@ -141,7 +142,8 @@ export class AgentTask {
                 this.taskCallbacks.onIterationStart?.(iteration);
 
                 // Build system prompt and tools for current mode
-                const systemPrompt = buildSystemPromptForMode(activeMode);
+                const allModes = this.modeService?.getAllModes();
+                const systemPrompt = buildSystemPromptForMode(activeMode, allModes, globalCustomInstructions);
                 const tools = this.modeService
                     ? this.modeService.getToolDefinitions(activeMode)
                     : this.toolRegistry.getToolDefinitions();

@@ -30,7 +30,8 @@ export const BUILT_IN_MODES: ModeConfig[] = [
         slug: 'orchestrator',
         name: 'Orchestrator',
         icon: 'cpu',
-        description: 'Plans and coordinates complex tasks by delegating to other agents.',
+        description: 'Plans complex tasks and delegates to specialized agents. Never executes directly.',
+        whenToUse: 'Use for complex, multi-step projects that require coordination across different specialties. Ideal when you need to break a large task into subtasks and delegate each to a specialist.',
         toolGroups: ['read', 'agent'],
         source: 'built-in',
         roleDefinition: `You are the Orchestrator — a strategic coordinator for complex, multi-step tasks in the user's Obsidian vault.
@@ -57,7 +58,8 @@ You are NOT a writer, researcher, or editor. You are the project manager.`,
         slug: 'researcher',
         name: 'Researcher',
         icon: 'search',
-        description: 'Gathers knowledge from the web and vault, saves findings as notes.',
+        description: 'Searches the web and vault for new knowledge, then saves findings as structured notes.',
+        whenToUse: 'Use when you need to find new information on a topic, gather sources from the web, synthesize knowledge, or create research notes with citations. Best for learning something new rather than working with existing vault content.',
         toolGroups: ['read', 'vault', 'web', 'edit', 'agent'],
         source: 'built-in',
         roleDefinition: `You are the Researcher — an expert at gathering, synthesizing, and documenting knowledge.
@@ -86,7 +88,8 @@ Writing research notes:
         slug: 'librarian',
         name: 'Librarian',
         icon: 'book-open',
-        description: 'Navigates the vault, finds connections, and answers questions (read-only).',
+        description: 'Navigates and retrieves from your vault. Read-only — no web access, never writes.',
+        whenToUse: 'Use when you want to explore, search, or retrieve information from your existing vault without making changes. Ideal for answering questions from your notes, finding connections between notes, or getting an overview of what you know.',
         toolGroups: ['read', 'vault', 'agent'],
         source: 'built-in',
         roleDefinition: `You are the Librarian — the vault's expert navigator and knowledge retriever.
@@ -115,7 +118,8 @@ You are a read-only assistant. If the user asks to create or modify notes, sugge
         slug: 'curator',
         name: 'Curator',
         icon: 'tag',
-        description: 'Maintains metadata, tags, and frontmatter. Keeps the vault organized.',
+        description: 'Audits and fixes metadata, tags, and frontmatter across the vault.',
+        whenToUse: 'Use when you need to clean up, standardize, or fix metadata: tags, frontmatter fields, dates, status values, or file locations. Best for batch operations across multiple notes.',
         toolGroups: ['read', 'vault', 'edit', 'agent'],
         source: 'built-in',
         roleDefinition: `You are the Curator — the keeper of vault quality, metadata, and organization.
@@ -145,6 +149,7 @@ You can also edit note content lightly (edit_file) to fix formatting, but your p
         name: 'Writer',
         icon: 'pencil',
         description: 'Creates and edits note content — drafts, summaries, and rewrites.',
+        whenToUse: 'Use when you want to create new notes, edit existing content, write summaries, expand bullet points, or rewrite sections. Best for any task that involves producing or improving note content.',
         toolGroups: ['read', 'vault', 'edit', 'agent'],
         source: 'built-in',
         roleDefinition: `You are the Writer — a content creator and editor specialized for Obsidian notes.
@@ -176,7 +181,8 @@ Content quality:
         slug: 'architect',
         name: 'Architect',
         icon: 'layout-template',
-        description: 'Reorganizes vault structure, folders, and information architecture.',
+        description: 'Redesigns folder structures, moves files, and builds vault organization systems.',
+        whenToUse: 'Use when you want to redesign your vault\'s folder structure, move or rename files, create index notes or MOCs, or implement a PKM system (Zettelkasten, PARA, etc.). Best for structural changes rather than content creation.',
         toolGroups: ['read', 'vault', 'edit', 'agent'],
         source: 'built-in',
         roleDefinition: `You are the Architect — the specialist for vault structure, organization, and information architecture.

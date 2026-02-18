@@ -13,7 +13,7 @@
  */
 
 import type { ModeConfig, ToolGroup } from '../types/settings';
-import { BUILT_IN_MODES } from './modes/builtinModes';
+import { BUILT_IN_MODES, expandToolGroups } from './modes/builtinModes';
 
 // ---------------------------------------------------------------------------
 // Vault context (always included)
@@ -109,9 +109,16 @@ RESPONSE FORMAT
 
 /**
  * Build the system prompt for a given mode.
- * Accepts a full ModeConfig to generate a mode-specific, tool-filtered prompt.
+ *
+ * @param mode - The active ModeConfig
+ * @param allModes - All available modes (built-in + custom). Used to generate the MODES section.
+ * @param globalCustomInstructions - User's global instructions applied to every mode.
  */
-export function buildSystemPromptForMode(mode: ModeConfig): string {
+export function buildSystemPromptForMode(
+    mode: ModeConfig,
+    allModes?: ModeConfig[],
+    globalCustomInstructions?: string,
+): string {
     const sections: string[] = [VAULT_CONTEXT, '====', '', 'TOOLS', '', 'You have access to these tools. Use them proactively — do not guess at file contents or vault structure.', ''];
 
     // Add tool sections for this mode's groups
@@ -127,6 +134,26 @@ export function buildSystemPromptForMode(mode: ModeConfig): string {
     sections.push('');
     sections.push(RESPONSE_FORMAT);
 
+    // MODES section — lists all available modes so the agent can use switch_mode intelligently
+    const modesListSource = allModes ?? BUILT_IN_MODES;
+    if (modesListSource.length > 0) {
+        sections.push('');
+        sections.push('====');
+        sections.push('');
+        sections.push('MODES');
+        sections.push('');
+        sections.push('You can switch to a different mode at any time using the switch_mode tool. Choose the mode whose capabilities best fit the task at hand. Available modes:');
+        sections.push('');
+        for (const m of modesListSource) {
+            // Skip __custom instruction entries
+            if (m.slug.endsWith('__custom')) continue;
+            const toolNames = expandToolGroups(m.toolGroups).join(', ');
+            const desc = m.whenToUse?.trim() || m.description || m.roleDefinition.split('.')[0];
+            sections.push(`- **${m.name}** (\`${m.slug}\`) — ${desc}`);
+            sections.push(`  Tools: ${toolNames}`);
+        }
+    }
+
     // Mode role definition
     sections.push('');
     sections.push('====');
@@ -135,14 +162,24 @@ export function buildSystemPromptForMode(mode: ModeConfig): string {
     sections.push('');
     sections.push(mode.roleDefinition);
 
-    // Custom instructions (user-editable)
-    if (mode.customInstructions?.trim()) {
+    // Custom instructions section
+    const hasGlobal = globalCustomInstructions?.trim();
+    const hasMode = mode.customInstructions?.trim();
+    if (hasGlobal || hasMode) {
         sections.push('');
         sections.push('====');
         sections.push('');
-        sections.push('CUSTOM INSTRUCTIONS');
-        sections.push('');
-        sections.push(mode.customInstructions.trim());
+        sections.push('USER\'S CUSTOM INSTRUCTIONS');
+        if (hasGlobal) {
+            sections.push('');
+            sections.push('Global Instructions:');
+            sections.push(globalCustomInstructions!.trim());
+        }
+        if (hasMode) {
+            sections.push('');
+            sections.push('Mode-specific Instructions:');
+            sections.push(mode.customInstructions!.trim());
+        }
     }
 
     return sections.join('\n');
@@ -156,5 +193,5 @@ export function buildSystemPrompt(mode: string): string {
     const modeConfig = BUILT_IN_MODES.find((m) => m.slug === mode)
         ?? BUILT_IN_MODES.find((m) => m.slug === 'librarian')
         ?? BUILT_IN_MODES[0];
-    return buildSystemPromptForMode(modeConfig);
+    return buildSystemPromptForMode(modeConfig, BUILT_IN_MODES);
 }
