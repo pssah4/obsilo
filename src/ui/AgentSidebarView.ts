@@ -459,6 +459,28 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
         let accumulatedThinking = '';   // full thinking text for collapse/expand
         let hasTools = false;           // have any tools been called in this task?
         let isThinking = false;         // thinking is currently active
+
+        // Throttle: re-render Markdown at most every 80 ms (not on every streamed token).
+        // Without this, MarkdownRenderer.render() fires O(n) times and re-parses the
+        // entire accumulated text on every chunk — effectively O(n²) total work.
+        let renderPending = false;
+        const flushRender = () => {
+            renderPending = false;
+            contentEl.empty();
+            MarkdownRenderer.render(this.app, accumulatedText, contentEl, '', this);
+        };
+
+        // rAF-throttled scroll: collapses many per-chunk scrollTo() calls into one
+        // paint-cycle scroll, eliminating repeated forced reflows.
+        let scrollPending = false;
+        const scheduleScroll = () => {
+            if (scrollPending) return;
+            scrollPending = true;
+            requestAnimationFrame(() => { scrollPending = false; this.chatContainer?.scrollTo({ top: this.chatContainer.scrollHeight }); });
+        };
+
+        // Map for O(1) tool-element lookup in onToolResult (replaces querySelectorAll scan).
+        const toolElsByName = new Map<string, HTMLDetailsElement[]>();
         // Remove the "Working…" loading indicator and any "Analyzing…" row on first real content
         let loadingRemoved = false;
         const removeLoading = () => {
@@ -484,7 +506,7 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
                         const row = toolsEl.createDiv('tool-computing-row');
                         setIcon(row.createSpan('tool-computing-icon'), 'loader');
                         row.createSpan('tool-computing-text').setText('Analyzing results…');
-                        this.chatContainer?.scrollTo({ top: this.chatContainer.scrollHeight });
+                        scheduleScroll();
                     }
                 },
                 onThinking: (chunk) => {
@@ -506,7 +528,7 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
                     }
                     const body = thinkingEl.querySelector('.thinking-content') as HTMLElement;
                     if (body) body.setText(accumulatedThinking);
-                    this.chatContainer?.scrollTo({ top: this.chatContainer.scrollHeight });
+                    scheduleScroll();
                 },
                 onText: (chunk) => {
                     removeLoading();
@@ -524,16 +546,18 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
                             if (body) body.style.display = body.style.display === 'none' ? '' : 'none';
                         }, { once: true });
                     }
+                    accumulatedText += chunk;
                     if (!hasTools) {
-                        // Q&A mode: stream text directly as it arrives
-                        accumulatedText += chunk;
-                        contentEl.empty();
-                        MarkdownRenderer.render(this.app, accumulatedText, contentEl, '', this);
-                        this.chatContainer?.scrollTo({ top: this.chatContainer.scrollHeight });
-                    } else {
-                        // Agentic mode: buffer text, render after complete
-                        accumulatedText += chunk;
+                        // Q&A mode: throttle Markdown re-render to ≤ once per 80 ms.
+                        // Without this every token triggers a full re-parse of all
+                        // accumulated text — O(n²) total work for an n-token response.
+                        if (!renderPending) {
+                            renderPending = true;
+                            setTimeout(flushRender, 80);
+                        }
+                        scheduleScroll();
                     }
+                    // Agentic mode: text is buffered and rendered once in onComplete.
                 },
                 onToolStart: (name, input) => {
                     removeLoading();
@@ -565,32 +589,34 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
                         details.createDiv('tool-call-output');
                     }
 
-                    (details as any)._toolName = name;
+                    // Register in Map for O(1) lookup in onToolResult
+                    const pendingEls = toolElsByName.get(name) ?? [];
+                    pendingEls.push(details);
+                    toolElsByName.set(name, pendingEls);
                     // Track write operations for undo bar
                     const writeOps = ['write_file', 'edit_file', 'append_to_file', 'create_folder', 'delete_file', 'move_file'];
                     if (writeOps.includes(name)) taskWriteCount++;
-                    this.chatContainer?.scrollTo({ top: this.chatContainer.scrollHeight });
+                    scheduleScroll();
                 },
                 onToolResult: (name, content, isError) => {
-                    // Update status icon in toolsEl
-                    toolsEl.querySelectorAll('.tool-call-details').forEach((el) => {
-                        if ((el as any)._toolName !== name) return;
-                        const statusEl = el.querySelector('.tool-status');
-                        if (statusEl) {
-                            statusEl.removeClass('tool-running');
-                            statusEl.addClass(isError ? 'tool-error' : 'tool-done');
-                            statusEl.setText(isError ? '✗' : '✓');
-                        }
-                        const outputEl = el.querySelector('.tool-call-output');
-                        if (outputEl && content) {
-                            const truncated = content.length > 500
-                                ? content.slice(0, 500) + '\n…(truncated)'
-                                : content;
-                            outputEl.createEl('pre').setText(truncated);
-                        }
-                        // Only auto-open on error so the user sees what went wrong
-                        if (isError) (el as HTMLDetailsElement).open = true;
-                    });
+                    // O(1) lookup via Map — avoids querySelectorAll scan over all tool rows
+                    const queue = toolElsByName.get(name);
+                    const el = queue?.shift() ?? null;
+                    if (!el) return;
+                    const statusEl = el.querySelector('.tool-status');
+                    if (statusEl) {
+                        statusEl.removeClass('tool-running');
+                        statusEl.addClass(isError ? 'tool-error' : 'tool-done');
+                        statusEl.setText(isError ? '✗' : '✓');
+                    }
+                    const outputEl = el.querySelector('.tool-call-output');
+                    if (outputEl && content) {
+                        const truncated = content.length > 500
+                            ? content.slice(0, 500) + '\n…(truncated)'
+                            : content;
+                        outputEl.createEl('pre').setText(truncated);
+                    }
+                    if (isError) el.open = true;
                 },
                 onUsage: (inputTokens, outputTokens) => {
                     const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -611,10 +637,12 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
                     return this.showApprovalCard(toolName, input, toolsEl);
                 },
                 onComplete: () => {
-                    // If tools were used, render the buffered response text now (ordered after tools)
-                    if (hasTools && accumulatedText) {
-                        contentEl.empty();
-                        MarkdownRenderer.render(this.app, accumulatedText, contentEl, '', this);
+                    // Cancel any in-flight throttled render and do a definitive final render.
+                    // This ensures the last streamed tokens are always visible even if the
+                    // 80 ms throttle timer hasn't fired yet.
+                    if (accumulatedText) {
+                        renderPending = false;
+                        flushRender();
                     }
                     // Show timestamp in footer even without token usage
                     if (footerEl.style.display === 'none') {
@@ -629,7 +657,7 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
                     messageEl.removeClass('message-streaming');
                     this.currentAbortController = null;
                     this.setRunningState(false);
-                    this.chatContainer?.scrollTo({ top: this.chatContainer.scrollHeight });
+                    scheduleScroll();
                     if (taskWriteCount > 0 && (this.plugin.settings.enableCheckpoints ?? true)) {
                         this.showUndoBar(taskId, taskWriteCount);
                     }

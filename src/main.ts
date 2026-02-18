@@ -50,28 +50,24 @@ export default class ObsidianAgentPlugin extends Plugin {
     async onload() {
         console.log('Loading Obsidian Agent plugin');
 
-        // Register custom plugin icon (hooded agent logo).
-        // Uses fill-rule="evenodd" so inner subpaths punch transparent holes —
-        // the hood rim is the outer minus the inner silhouette,
-        // and the face has the eyes stamped out as transparent circles.
+        // Register custom plugin icon — pixel-art hooded agent.
+        // Structure (fill-rule="evenodd" punches transparent holes):
+        //   1. Outer diamond cloak silhouette minus the face opening = cloak border visible
+        //   2. Dark face diamond re-fills the opening; eye circles + mouth rect stamp through
         addIcon('obsidian-agent', `
           <g fill="currentColor">
-            <!-- Hood rim: outer cloak shape minus inner opening = just the border -->
+            <!-- Cloak: pointed-diamond silhouette with face area punched out -->
             <path fill-rule="evenodd" d="
-              M50 4 L8 30 L6 72 Q6 88 22 90 L78 90 Q94 88 94 72 L92 30 Z
-              M50 16 L20 37 L18 72 Q18 84 30 85 L70 85 Q82 84 82 72 L80 37 Z
+              M50 3 L84 26 L93 60 Q88 86 65 92 L50 97 L35 92 Q12 86 7 60 L16 26 Z
+              M50 18 L76 44 L50 70 L24 44 Z
             "/>
-            <!-- Face with eye holes stamped out -->
+            <!-- Dark face: fills the hole above, then stamps out eyes + mouth -->
             <path fill-rule="evenodd" d="
-              M50 22 L26 40 L24 67 Q24 79 38 80 L62 80 Q76 79 76 67 L74 40 Z
-              M30 48 a7,7 0 1 0 14,0 a7,7 0 1 0 -14,0
-              M56 48 a7,7 0 1 0 14,0 a7,7 0 1 0 -14,0
+              M50 18 L76 44 L50 70 L24 44 Z
+              M31 41 a9,9 0 1,0 18,0 a9,9 0 1,0 -18,0
+              M51 41 a9,9 0 1,0 18,0 a9,9 0 1,0 -18,0
+              M43 57 L57 57 L57 62 L43 62 Z
             "/>
-            <!-- Smile: thin stroke rendered in the same currentColor,
-                 slightly lighter via opacity so it reads as a mouth highlight -->
-            <path fill="none" stroke="currentColor" stroke-opacity="0.35"
-                  stroke-width="3" stroke-linecap="round"
-                  d="M39 65 Q50 73 61 65"/>
           </g>
         `);
 
@@ -178,7 +174,7 @@ export default class ObsidianAgentPlugin extends Plugin {
             }
         }
         // Migrate: global temperature override removed — temperature is now per-model on CustomModel
-        const advApi = this.settings.advancedApi as Record<string, unknown>;
+        const advApi = this.settings.advancedApi as unknown as Record<string, unknown>;
         if ('useCustomTemperature' in advApi) delete advApi['useCustomTemperature'];
         if ('temperature' in advApi) delete advApi['temperature'];
     }

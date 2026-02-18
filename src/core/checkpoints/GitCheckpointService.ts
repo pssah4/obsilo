@@ -340,12 +340,14 @@ export class GitCheckpointService {
 
     /** Very simple line-by-line diff for display purposes */
     private simpleDiff(original: string, current: string): string[] {
+        // Use Set for O(n+m) membership tests instead of the previous Array.includes()
+        // which was O(n²) for files with many lines.
         const origLines = original.split('\n');
         const currLines = current.split('\n');
-        const result: string[] = [];
-        const added = currLines.filter((l) => !origLines.includes(l)).length;
-        const removed = origLines.filter((l) => !currLines.includes(l)).length;
-        result.push(`  +${added} lines added, -${removed} lines removed`);
-        return result;
+        const origSet = new Set(origLines);
+        const currSet = new Set(currLines);
+        const added = currLines.filter((l) => !origSet.has(l)).length;
+        const removed = origLines.filter((l) => !currSet.has(l)).length;
+        return [`  +${added} lines added, -${removed} lines removed`];
     }
 }

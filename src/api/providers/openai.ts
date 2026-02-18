@@ -159,9 +159,11 @@ export class OpenAiProvider implements ApiHandler {
             body.stream_options = { include_usage: true };
         }
 
-        // o-series models (GPT-5, o1, o4-mini) only accept temperature=1 (the default).
-        // Skip temperature=0 to avoid 400 "unsupported value" errors on these models.
-        if (this.config.temperature !== undefined && this.config.temperature !== 0) {
+        // o-series models (o1, o2, o3, o4, o1-mini, o3-mini, o4-mini, etc.) enforce temperature=1
+        // API-side and reject any other value. For all other models, pass temperature if explicitly
+        // configured — including 0 for deterministic mode.
+        const isOSeries = /^o[1-9]/.test(this.config.model);
+        if (!isOSeries && this.config.temperature !== undefined) {
             body.temperature = this.config.temperature;
         }
 

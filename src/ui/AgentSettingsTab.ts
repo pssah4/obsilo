@@ -455,6 +455,19 @@ async function fetchEmbeddingModels(
 // Add / Configure Model Modal
 // ---------------------------------------------------------------------------
 
+/** Returns true for o-series models that enforce temperature=1.0 API-side */
+function isTemperatureFixed(provider: ProviderType, modelName: string): boolean {
+    if (provider === 'openai' || provider === 'azure') {
+        return /^o[1-9]/.test(modelName);
+    }
+    return false;
+}
+
+/** Maximum temperature value accepted by provider */
+function maxTemperature(provider: ProviderType): number {
+    return provider === 'anthropic' ? 1.0 : 2.0;
+}
+
 export class ModelConfigModal extends Modal {
     private model: CustomModel;
     private isNew: boolean;
@@ -468,6 +481,8 @@ export class ModelConfigModal extends Modal {
     private formBaseUrl: string;
     private formApiVersion: string;
     private formMaxTokens: number;
+    private formTemperatureEnabled: boolean;
+    private formTemperatureValue: number;
 
     private apiKeyRow: HTMLElement | null = null;
     private baseUrlRow: HTMLElement | null = null;
@@ -483,6 +498,10 @@ export class ModelConfigModal extends Modal {
     private testBtn: HTMLButtonElement | null = null;
     private nameInputEl: HTMLInputElement | null = null;
     private dnInputEl: HTMLInputElement | null = null;
+    private temperatureRow: HTMLElement | null = null;
+    private temperatureSliderEl: HTMLInputElement | null = null;
+    private temperatureValueEl: HTMLElement | null = null;
+    private temperatureNoteEl: HTMLElement | null = null;
 
     constructor(app: App, model: CustomModel | null, onSave: (m: CustomModel) => void, forEmbedding = false) {
         super(app);
@@ -506,6 +525,8 @@ export class ModelConfigModal extends Modal {
         this.formBaseUrl = this.model.baseUrl ?? '';
         this.formApiVersion = this.model.apiVersion ?? '2024-10-21';
         this.formMaxTokens = this.model.maxTokens ?? 8192;
+        this.formTemperatureEnabled = this.model.temperature !== undefined;
+        this.formTemperatureValue = this.model.temperature ?? 0.7;
     }
 
     onOpen(): void {
@@ -577,6 +598,7 @@ export class ModelConfigModal extends Modal {
                 }
             }
             this.suggestSelEl!.selectedIndex = 0;
+            this.updateTemperatureUI();
         });
         // ↻ Fetch button — fetches current model list from the provider's API
         const fetchBtn = suggestControls.createEl('button', { cls: 'mcm-fetch-btn', attr: { title: 'Fetch current models from provider API' } });
@@ -700,6 +722,44 @@ export class ModelConfigModal extends Modal {
             if (!isNaN(n) && n > 0) this.formMaxTokens = n;
         });
 
+        // ── Temperature ───────────────────────────────────────────────────
+        if (!this.forEmbedding) {
+            this.temperatureRow = form.createDiv('mcm-row mcm-temperature-row');
+            const tempLabel = this.temperatureRow.createDiv('mcm-label');
+            tempLabel.createSpan({ text: 'Temperature' });
+            tempLabel.createSpan({ text: 'Randomness of responses (0 = deterministic, higher = creative)', cls: 'mcm-desc' });
+
+            const tempControls = this.temperatureRow.createDiv('mcm-temperature-controls');
+
+            const toggleWrap = tempControls.createDiv('mcm-temperature-toggle');
+            const toggleChk = toggleWrap.createEl('input', { attr: { type: 'checkbox' } });
+            toggleChk.checked = this.formTemperatureEnabled;
+            toggleWrap.createSpan({ text: 'Custom temperature', cls: 'mcm-temperature-toggle-label' });
+
+            const sliderWrap = tempControls.createDiv('mcm-temperature-slider-wrap');
+            this.temperatureSliderEl = sliderWrap.createEl('input', {
+                attr: { type: 'range', min: '0', max: '2', step: '0.05' },
+                cls: 'mcm-temperature-slider',
+            });
+            this.temperatureSliderEl.value = String(this.formTemperatureValue);
+            this.temperatureValueEl = sliderWrap.createSpan({
+                cls: 'mcm-temperature-value',
+                text: this.formTemperatureValue.toFixed(2),
+            });
+            this.temperatureNoteEl = tempControls.createDiv({ cls: 'mcm-temperature-note' });
+
+            toggleChk.addEventListener('change', () => {
+                this.formTemperatureEnabled = toggleChk.checked;
+                this.updateTemperatureUI();
+            });
+            this.temperatureSliderEl.addEventListener('input', () => {
+                this.formTemperatureValue = parseFloat(this.temperatureSliderEl!.value);
+                if (this.temperatureValueEl) {
+                    this.temperatureValueEl.setText(this.formTemperatureValue.toFixed(2));
+                }
+            });
+        }
+
         // Test result (inline)
         this.testResultEl = form.createDiv('mcm-test-result');
         this.testResultEl.style.display = 'none';
@@ -790,6 +850,46 @@ export class ModelConfigModal extends Modal {
         // Render provider setup guide
         this.providerGuideEl.empty();
         this.renderProviderGuide(this.providerGuideEl, p);
+        this.updateTemperatureUI();
+    }
+
+    private updateTemperatureUI(): void {
+        if (!this.temperatureRow || !this.temperatureSliderEl || this.forEmbedding) return;
+        const fixed = isTemperatureFixed(this.formProvider, this.formName);
+        const max = maxTemperature(this.formProvider);
+
+        // Clamp current value to provider max
+        if (this.formTemperatureValue > max) {
+            this.formTemperatureValue = max;
+            this.temperatureSliderEl.value = String(max);
+            if (this.temperatureValueEl) this.temperatureValueEl.setText(max.toFixed(2));
+        }
+        this.temperatureSliderEl.max = String(max);
+
+        if (fixed) {
+            this.formTemperatureEnabled = false;
+            this.formTemperatureValue = 1.0;
+            this.temperatureSliderEl.value = '1';
+            this.temperatureSliderEl.disabled = true;
+            if (this.temperatureValueEl) this.temperatureValueEl.setText('1.00');
+            if (this.temperatureNoteEl) {
+                this.temperatureNoteEl.setText('This model only accepts temperature = 1.0 (enforced by the API).');
+                this.temperatureNoteEl.style.display = '';
+            }
+            this.temperatureRow.querySelectorAll('input[type=checkbox]').forEach((el) => {
+                (el as HTMLInputElement).checked = false;
+                (el as HTMLInputElement).disabled = true;
+            });
+        } else {
+            if (this.temperatureNoteEl) this.temperatureNoteEl.style.display = 'none';
+            this.temperatureRow.querySelectorAll('input[type=checkbox]').forEach((el) => {
+                (el as HTMLInputElement).disabled = false;
+            });
+            this.temperatureSliderEl.disabled = !this.formTemperatureEnabled;
+        }
+
+        const sliderWrap = this.temperatureSliderEl.closest('.mcm-temperature-slider-wrap') as HTMLElement | null;
+        if (sliderWrap) sliderWrap.style.display = this.formTemperatureEnabled ? '' : 'none';
     }
 
     private renderProviderGuide(container: HTMLElement, provider: ProviderType): void {
@@ -1055,6 +1155,7 @@ export class ModelConfigModal extends Modal {
             baseUrl: this.formBaseUrl || undefined,
             apiVersion: this.formApiVersion || undefined,
             maxTokens: this.formMaxTokens,
+            temperature: this.formTemperatureEnabled ? this.formTemperatureValue : undefined,
         });
         this.close();
     }
@@ -2058,32 +2159,8 @@ export class AgentSettingsTab extends PluginSettingTab {
     // ---------------------------------------------------------------------------
 
     private buildAdvancedTab(container: HTMLElement): void {
-        // ── API Tuning ────────────────────────────────────────────────────────
-        container.createEl('h3', { cls: 'agent-settings-section', text: 'API Tuning' });
-
-        new Setting(container)
-            .setName('Use custom temperature')
-            .setDesc('Override the model\'s default temperature. Leave off to use the provider default.')
-            .addToggle((t) =>
-                t.setValue(this.plugin.settings.advancedApi.useCustomTemperature).onChange(async (v) => {
-                    this.plugin.settings.advancedApi.useCustomTemperature = v;
-                    await this.plugin.saveSettings();
-                }),
-            );
-
-        new Setting(container)
-            .setName('Temperature')
-            .setDesc('0.0 = deterministic · 1.0 = default · 2.0 = very creative. Only applied when "Use custom temperature" is on.')
-            .addSlider((s) =>
-                s
-                    .setLimits(0, 2, 0.05)
-                    .setValue(this.plugin.settings.advancedApi.temperature)
-                    .setDynamicTooltip()
-                    .onChange(async (v) => {
-                        this.plugin.settings.advancedApi.temperature = v;
-                        await this.plugin.saveSettings();
-                    }),
-            );
+        // ── Agent Loop ────────────────────────────────────────────────────────
+        container.createEl('h3', { cls: 'agent-settings-section', text: 'Agent Loop' });
 
         new Setting(container)
             .setName('Consecutive error limit')
