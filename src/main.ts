@@ -169,6 +169,14 @@ export default class ObsidianAgentPlugin extends Plugin {
         if (OLD_MODE_MAP[this.settings.currentMode]) {
             this.settings.currentMode = OLD_MODE_MAP[this.settings.currentMode];
         }
+        // Migrate source: 'custom' → 'vault' (introduced in Phase 3.1+)
+        this.settings.globalCustomInstructions = this.settings.globalCustomInstructions ?? '';
+        this.settings.modeModelKeys = this.settings.modeModelKeys ?? {};
+        for (const mode of this.settings.customModes) {
+            if ((mode.source as string) === 'custom') {
+                mode.source = 'vault';
+            }
+        }
     }
 
     /** Return the currently active CustomModel, or null if none configured */

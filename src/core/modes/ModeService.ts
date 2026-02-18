@@ -12,26 +12,57 @@ import type { ModeConfig, ToolGroup } from '../../types/settings';
 import type { ToolRegistry } from '../tools/ToolRegistry';
 import type { ToolDefinition } from '../tools/types';
 import { BUILT_IN_MODES, TOOL_GROUP_MAP, expandToolGroups } from './builtinModes';
+import { GlobalModeStore } from './GlobalModeStore';
 
 export class ModeService {
     private plugin: ObsidianAgentPlugin;
     private toolRegistry: ToolRegistry;
+    /** Global modes loaded from ~/.obsidian-agent/modes.json */
+    private globalModes: ModeConfig[] = [];
 
     constructor(plugin: ObsidianAgentPlugin, toolRegistry: ToolRegistry) {
         this.plugin = plugin;
         this.toolRegistry = toolRegistry;
     }
 
+    /** Load global modes from disk. Call once during plugin onload. */
+    async initialize(): Promise<void> {
+        this.globalModes = await GlobalModeStore.loadModes();
+    }
+
+    /** Reload global modes from disk (call after add/remove/update). */
+    async reloadGlobalModes(): Promise<void> {
+        this.globalModes = await GlobalModeStore.loadModes();
+    }
+
     // ---------------------------------------------------------------------------
     // Mode resolution
     // ---------------------------------------------------------------------------
 
-    /** All available modes: built-in first, then custom */
+    /**
+     * All available modes (excl. __custom instruction entries):
+     * built-in → global → vault
+     */
     getAllModes(): ModeConfig[] {
-        return [...BUILT_IN_MODES, ...this.plugin.settings.customModes];
+        const vault = this.plugin.settings.customModes.filter(
+            (m) => !m.slug.endsWith('__custom'),
+        );
+        return [...BUILT_IN_MODES, ...this.globalModes, ...vault];
     }
 
-    /** Get a mode by slug (built-in or custom) */
+    /** Vault-only custom modes (source === 'vault'). */
+    getVaultModes(): ModeConfig[] {
+        return this.plugin.settings.customModes.filter(
+            (m) => m.source === 'vault' && !m.slug.endsWith('__custom'),
+        );
+    }
+
+    /** Global modes (loaded from ~/.obsidian-agent/modes.json). */
+    getGlobalModes(): ModeConfig[] {
+        return this.globalModes;
+    }
+
+    /** Get a mode by slug (built-in, global, or vault) */
     getMode(slug: string): ModeConfig | undefined {
         return this.getAllModes().find((m) => m.slug === slug);
     }

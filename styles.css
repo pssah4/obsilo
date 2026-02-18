@@ -1859,6 +1859,95 @@
     margin-left: 4px;
 }
 
+.modes-preview-btn {
+    /* sits before export — no extra margin needed */
+}
+
+/* Tools header row (label + Edit button) */
+
+.modes-tools-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+}
+
+.modes-tools-header .modes-field-label {
+    margin-bottom: 0;
+}
+
+.modes-edit-tools-btn {
+    font-size: 0.8em;
+    padding: 2px 10px;
+    border: 1px solid var(--interactive-accent);
+    color: var(--interactive-accent);
+    background: transparent;
+    border-radius: 4px;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.modes-edit-tools-btn:hover {
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+}
+
+.modes-tools-list {
+    font-size: 0.88em;
+    color: var(--text-muted);
+    line-height: 1.6;
+    display: block;
+    margin-top: 2px;
+}
+
+.modes-tools-none {
+    font-size: 0.88em;
+    color: var(--text-faint);
+    font-style: italic;
+    display: block;
+    margin-top: 2px;
+}
+
+.modes-group-desc {
+    font-size: 0.82em;
+    color: var(--text-muted);
+    font-weight: normal;
+}
+
+/* Global Custom Instructions section */
+
+.modes-global-section {
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid var(--background-modifier-border);
+}
+
+.modes-global-section h3 {
+    margin-top: 0;
+    margin-bottom: 6px;
+}
+
+/* ── System Prompt Preview Modal ───────────────────────────────────────── */
+
+.system-prompt-preview-modal {
+    max-width: 800px;
+}
+
+.system-prompt-preview-pre {
+    font-family: var(--font-monospace);
+    font-size: 0.78em;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+    padding: 12px;
+    background: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    overflow-y: auto;
+    max-height: 70vh;
+    color: var(--text-normal);
+}
+
 /* ── New Mode Modal ─────────────────────────────────────────────────────── */
 
 .new-mode-modal .new-mode-groups {
@@ -1907,4 +1996,37 @@
     display: flex;
     gap: 8px;
     justify-content: flex-end;
+}
+
+.new-mode-field-desc {
+    font-size: 0.8em;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+    line-height: 1.4;
+}
+
+.new-mode-location {
+    margin: 10px 0;
+}
+
+.new-mode-loc-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 6px 0;
+}
+
+.new-mode-loc-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    font-size: 0.88em;
+}
+
+/* Backup section */
+
+.agent-backup-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
 }

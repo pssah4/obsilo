@@ -3,7 +3,8 @@ import type ObsidianAgentPlugin from '../main';
 import { AgentTask } from '../core/AgentTask';
 import { ModeService } from '../core/modes/ModeService';
 import type { MessageParam, ContentBlock, ImageMediaType } from '../api/types';
-import { getModelKey } from '../types/settings';
+import { getModelKey, modelToLLMProvider } from '../types/settings';
+import { buildApiHandler } from '../api/index';
 
 export const VIEW_TYPE_AGENT_SIDEBAR = 'obsidian-agent-sidebar';
 
@@ -73,6 +74,9 @@ export class AgentSidebarView extends ItemView {
     }
 
     async onOpen(): Promise<void> {
+        // Initialize ModeService — loads global modes from ~/.obsidian-agent/modes.json
+        await this.modeService.initialize();
+
         const container = this.containerEl.children[1] as HTMLElement;
         container.empty();
         container.addClass('obsidian-agent-sidebar');
@@ -410,7 +414,23 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
             messageToSend = textWithContext;
         }
 
-        if (!this.plugin.apiHandler) {
+        // Resolve mode-specific model (Sticky Models: each mode remembers its last-used model)
+        const currentModeSlug = this.modeService.getActiveMode().slug;
+        const modeModelKey = this.plugin.settings.modeModelKeys?.[currentModeSlug] || this.plugin.settings.activeModelKey;
+        const resolvedModel = this.plugin.settings.activeModels.find((m) => getModelKey(m) === modeModelKey)
+            ?? this.plugin.settings.activeModels.find((m) => getModelKey(m) === this.plugin.settings.activeModelKey);
+
+        let resolvedApiHandler = this.plugin.apiHandler;
+        if (resolvedModel && modeModelKey !== this.plugin.settings.activeModelKey) {
+            // Mode has a different model — build a fresh handler for it
+            try {
+                resolvedApiHandler = buildApiHandler(modelToLLMProvider(resolvedModel));
+            } catch {
+                resolvedApiHandler = this.plugin.apiHandler;
+            }
+        }
+
+        if (!resolvedApiHandler) {
             const activeKey = this.plugin.settings.activeModelKey;
             const activeModel = this.plugin.settings.activeModels.find((m) => getModelKey(m) === activeKey);
             if (!activeKey || !activeModel) {
@@ -454,7 +474,7 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
         let taskWriteCount = 0;
 
         const task = new AgentTask(
-            this.plugin.apiHandler,
+            resolvedApiHandler,
             this.plugin.toolRegistry,
             {
                 onIterationStart: (iteration) => {

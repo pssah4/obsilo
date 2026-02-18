@@ -191,8 +191,12 @@ export interface ModeConfig {
     customInstructions?: string;
     /** Which tool groups are available in this mode */
     toolGroups: ToolGroup[];
-    /** 'built-in' modes ship with the plugin; 'custom' modes are user-created */
-    source: 'built-in' | 'custom';
+    /**
+     * 'built-in'  — ships with the plugin (not user-editable)
+     * 'global'    — user-created, stored in ~/.obsidian-agent/modes.json (all vaults)
+     * 'vault'     — user-created, stored in this vault's plugin settings (this vault only)
+     */
+    source: 'built-in' | 'global' | 'vault';
 }
 
 // ---------------------------------------------------------------------------
@@ -281,6 +285,8 @@ export interface ObsidianAgentSettings {
     // Modes
     currentMode: string;
     customModes: ModeConfig[];
+    /** Per-mode model override: maps mode slug → model key. Falls back to activeModelKey if not set. */
+    modeModelKeys: Record<string, string>;
     /** Instructions appended to the system prompt for ALL modes */
     globalCustomInstructions: string;
 
@@ -325,6 +331,7 @@ export const DEFAULT_SETTINGS: ObsidianAgentSettings = {
     mcpServers: {},
     currentMode: 'librarian',
     customModes: [],
+    modeModelKeys: {},
     globalCustomInstructions: '',
 
     autoApproval: {
