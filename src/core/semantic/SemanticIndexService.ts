@@ -384,7 +384,7 @@ export class SemanticIndexService {
             const results = await this.index.queryItems(vector, query, topK);
             return results.map((r: any) => ({
                 path: r.item.metadata?.path as string ?? '',
-                excerpt: (r.item.metadata?.chunk as string ?? '').slice(0, 300),
+                excerpt: r.item.metadata?.chunk as string ?? '',
                 score: r.score,
             }));
         } catch (e) {
@@ -680,11 +680,19 @@ export class SemanticIndexService {
                     current = '';
                 }
                 if (para.length > maxChars) {
-                    // Hard-split giant paragraph
+                    // Hard-split giant paragraph at word boundaries
                     if (current.trim()) result.push(current.trim());
                     current = '';
-                    for (let i = 0; i < para.length; i += maxChars) {
-                        result.push(para.slice(i, i + maxChars).trim());
+                    let i = 0;
+                    while (i < para.length) {
+                        let chunk = para.slice(i, i + maxChars);
+                        if (i + maxChars < para.length) {
+                            const b = Math.max(chunk.lastIndexOf(' '), chunk.lastIndexOf('\n'));
+                            if (b > maxChars * 0.7) chunk = chunk.slice(0, b);
+                        }
+                        const t = chunk.trim();
+                        if (t) result.push(t);
+                        i += chunk.length || 1;
                     }
                 } else {
                     current = current ? current + '\n\n' + para : para;
@@ -693,6 +701,19 @@ export class SemanticIndexService {
             if (current.trim()) result.push(current.trim());
         }
 
-        return result.filter((c) => c.length > 0);
+        const filtered = result.filter((c) => c.length > 0);
+
+        // Add overlap: prepend the last ~200 chars of the previous chunk to each
+        // subsequent chunk so that content at chunk boundaries is not lost.
+        const OVERLAP = 200;
+        return filtered.map((chunk, i) => {
+            if (i === 0) return chunk;
+            const prev = filtered[i - 1];
+            const tail = prev.slice(-OVERLAP).trim();
+            if (!tail) return chunk;
+            // Avoid duplicating content if the chunk already starts with the tail
+            if (chunk.startsWith(tail)) return chunk;
+            return `…${tail}\n\n${chunk}`;
+        });
     }
 }

@@ -27,11 +27,6 @@ export class OperationLogger {
     private readonly MAX_LOG_DAYS = 30;
     private currentLogPath: string | null = null;
 
-    // In-memory buffer: avoids reading the entire log file before every append.
-    // The file is read once (on first write of the day) to seed the buffer;
-    // subsequent appends just concatenate to the string and write it back.
-    private logBuffer: string = '';
-    private logBufferDate: string = '';
 
     constructor(vault: Vault, pluginDir: string) {
         this.vault = vault;
@@ -90,6 +85,7 @@ export class OperationLogger {
 
     /**
      * Log a tool operation.
+     * Uses adapter.append() for true O(1) appends — no full-file rewrite needed.
      */
     async log(entry: LogEntry): Promise<void> {
         try {
@@ -98,25 +94,16 @@ export class OperationLogger {
             const sanitized = { ...entry, params: this.sanitizeParams(entry.tool, entry.params) };
             const line = JSON.stringify(sanitized) + '\n';
 
-            // Seed the in-memory buffer from disk on the first write of each day.
-            // After that, every append is a pure string concatenation + one write —
-            // no disk read needed, eliminating the previous O(n²) read-then-write pattern.
-            if (today !== this.logBufferDate) {
-                this.logBufferDate = today;
-                const exists = await this.vault.adapter.exists(logPath);
-                if (exists) {
-                    this.logBuffer = await this.vault.adapter.read(logPath);
-                } else {
-                    this.logBuffer = '';
-                    // New day file — rotate old logs asynchronously
-                    this.rotateLogs().catch((e) =>
-                        console.warn('[OperationLogger] Rotation error:', e)
-                    );
-                }
+            const exists = await this.vault.adapter.exists(logPath);
+            if (!exists) {
+                // New day file: create it and rotate old logs asynchronously
+                await this.vault.adapter.write(logPath, line);
+                this.rotateLogs().catch((e) =>
+                    console.warn('[OperationLogger] Rotation error:', e)
+                );
+            } else {
+                await this.vault.adapter.append(logPath, line);
             }
-
-            this.logBuffer += line;
-            await this.vault.adapter.write(logPath, this.logBuffer);
         } catch (e) {
             // Logging must never break agent execution
             console.warn('[OperationLogger] Failed to write log entry:', e);

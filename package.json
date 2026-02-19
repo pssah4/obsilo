@@ -1,6 +1,6 @@
 {
   "name": "obsidian-agent",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Agentic operating layer for Obsidian - Kilo Code for knowledge work",
   "main": "main.js",
   "scripts": {

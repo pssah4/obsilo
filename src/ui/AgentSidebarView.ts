@@ -7,17 +7,12 @@ import type { MessageParam, ContentBlock, ImageMediaType } from '../api/types';
 import { getModelKey, modelToLLMProvider } from '../types/settings';
 import { buildApiHandler } from '../api/index';
 import { resolvePromptContent } from '../core/context/SupportPrompts';
+import { ToolPickerPopover } from './sidebar/ToolPickerPopover';
+import { AttachmentHandler } from './sidebar/AttachmentHandler';
+import type { AttachmentItem } from './sidebar/AttachmentHandler';
+import { AutocompleteHandler } from './sidebar/AutocompleteHandler';
 
 export const VIEW_TYPE_AGENT_SIDEBAR = 'obsidian-agent-sidebar';
-
-/** A file (image or text) attached to the current compose turn. */
-interface AttachmentItem {
-    name: string;
-    /** Object URL for thumbnail display (images only); revoked when removed before send. */
-    objectUrl?: string;
-    /** The ContentBlock that will be included in the API message. */
-    block: ContentBlock;
-}
 
 /**
  * Agent Sidebar View
@@ -53,32 +48,21 @@ export class AgentSidebarView extends ItemView {
     private lastUserMessage = '';
     // Last known active MarkdownView — tracked because clicking sidebar loses getActiveViewOfType
     private lastMarkdownView: MarkdownView | null = null;
-    // Attachments pending for the next sent message
-    private pendingAttachments: AttachmentItem[] = [];
-    private attachmentChipBar: HTMLElement | null = null;
 
     // Tool picker (pocket-knife button)
     private toolPickerButton: HTMLElement | null = null;
-    /** Session-only tool overrides: mode slug → enabled tool names (RAM only, not persisted) */
-    private sessionToolOverrides = new Map<string, string[]>();
-    /** Currently open tool-picker popover element */
-    private toolPickerPopover: HTMLElement | null = null;
-    /** Outside-click handler for tool-picker — stored so it can be removed on close */
-    private toolPickerCloseHandler: ((e: MouseEvent) => void) | null = null;
-    /** Session-only forced skill names: mode slug → skill names to force-include */
-    private sessionForcedSkills = new Map<string, string[]>();
-    /** Session-only forced workflow: mode slug → workflow slug ('' = none) */
-    private sessionForcedWorkflow = new Map<string, string>();
-
-    // Autocomplete dropdown (Sprint B3)
-    private autocompleteDropdown: HTMLElement | null = null;
-    private autocompleteItems: { label: string; sub?: string; onSelect: () => void }[] = [];
-    private autocompleteIndex = 0;
+    /** Manages tool/skill/workflow picker and session overrides */
+    private toolPicker!: ToolPickerPopover;
+    /** Manages pending attachments and chip bar UI */
+    private attachments!: AttachmentHandler;
+    /** Manages / and @ autocomplete dropdown */
+    private autocomplete!: AutocompleteHandler;
 
     constructor(leaf: WorkspaceLeaf, plugin: ObsidianAgentPlugin) {
         super(leaf);
         this.plugin = plugin;
         this.modeService = new ModeService(plugin, plugin.toolRegistry);
+        this.toolPicker = new ToolPickerPopover(plugin, this.modeService);
     }
 
     getViewType(): string {
@@ -130,7 +114,7 @@ export class AgentSidebarView extends ItemView {
 
     async onClose(): Promise<void> {
         this.currentAbortController?.abort();
-        this.clearAttachments();
+        this.attachments.clear();
     }
 
     private buildHeader(container: HTMLElement): void {
@@ -174,44 +158,31 @@ export class AgentSidebarView extends ItemView {
         this.updateContextBadge();
 
         // Attachment chip bar (below context chips, above textarea)
-        this.attachmentChipBar = inputWrapper.createDiv('chat-attachment-chips');
+        const chipBar = inputWrapper.createDiv('chat-attachment-chips');
+        this.attachments = new AttachmentHandler(this.app.vault, chipBar);
 
         this.textarea = inputWrapper.createEl('textarea', {
             cls: 'chat-textarea',
             attr: { placeholder: 'Type your message here...', rows: '3' },
         });
 
+        // Initialize autocomplete handler after textarea is created
+        this.autocomplete = new AutocompleteHandler(
+            this.plugin,
+            this.app,
+            () => this.textarea,
+            () => this.inputArea,
+            (file) => this.attachments.addVaultFile(file),
+        );
+
         this.textarea.addEventListener('input', () => {
             this.autoResizeTextarea();
-            this.handleAutocompleteInput();
+            this.autocomplete.handleInput();
         });
 
         this.textarea.addEventListener('keydown', (e: KeyboardEvent) => {
             // Autocomplete navigation takes priority
-            if (this.autocompleteDropdown) {
-                if (e.key === 'ArrowDown') {
-                    e.preventDefault();
-                    this.autocompleteIndex = Math.min(this.autocompleteIndex + 1, this.autocompleteItems.length - 1);
-                    this.renderAutocompleteDropdown();
-                    return;
-                }
-                if (e.key === 'ArrowUp') {
-                    e.preventDefault();
-                    this.autocompleteIndex = Math.max(this.autocompleteIndex - 1, 0);
-                    this.renderAutocompleteDropdown();
-                    return;
-                }
-                if (e.key === 'Tab' || (e.key === 'Enter' && this.autocompleteDropdown)) {
-                    e.preventDefault();
-                    this.autocompleteItems[this.autocompleteIndex]?.onSelect();
-                    return;
-                }
-                if (e.key === 'Escape') {
-                    e.preventDefault();
-                    this.hideAutocompleteDropdown();
-                    return;
-                }
-            }
+            if (this.autocomplete.handleKeyDown(e)) return;
 
             if (e.key === 'Enter') {
                 const sendWithEnter = this.plugin.settings.sendWithEnter ?? true;
@@ -233,7 +204,7 @@ export class AgentSidebarView extends ItemView {
                 if (item.kind === 'file') {
                     e.preventDefault();
                     const file = item.getAsFile();
-                    if (file) this.processAttachmentFile(file);
+                    if (file) this.attachments.processFile(file);
                 }
             }
         });
@@ -249,7 +220,7 @@ export class AgentSidebarView extends ItemView {
             inputWrapper.removeClass('drag-over');
             const files = e.dataTransfer?.files;
             if (files) {
-                for (const file of Array.from(files)) this.processAttachmentFile(file);
+                for (const file of Array.from(files)) this.attachments.processFile(file);
             }
         });
 
@@ -279,7 +250,7 @@ export class AgentSidebarView extends ItemView {
             attr: { 'aria-label': 'Select tools' },
         });
         setIcon(this.toolPickerButton.createSpan('toolbar-icon'), 'pocket-knife');
-        this.toolPickerButton.addEventListener('click', (e) => this.showToolPicker(e));
+        this.toolPickerButton.addEventListener('click', (e) => this.toolPicker.show(e, this.toolPickerButton!, this.containerEl as HTMLElement));
         this.updateToolPickerButton();
 
         // Attach file button (ghost style)
@@ -288,7 +259,7 @@ export class AgentSidebarView extends ItemView {
             attr: { 'aria-label': 'Attach file' },
         });
         setIcon(attachBtn.createSpan('toolbar-icon'), 'paperclip');
-        attachBtn.addEventListener('click', () => this.openFilePicker());
+        attachBtn.addEventListener('click', () => this.attachments.openFilePicker());
 
         // Ellipsis options menu button
         const ellipsisBtn = toolbarLeft.createEl('button', {
@@ -454,470 +425,6 @@ export class AgentSidebarView extends ItemView {
     }
 
     // ---------------------------------------------------------------------------
-    // Tool Picker (pocket-knife button)
-    // ---------------------------------------------------------------------------
-
-    private showToolPicker(event: MouseEvent): void {
-        this.closeToolPicker();
-
-        const slug = this.plugin.settings.currentMode;
-        const mode = this.modeService.getMode(slug);
-        if (!mode) return;
-
-        const popover = document.createElement('div');
-        popover.className = 'tool-picker-popover';
-        this.toolPickerPopover = popover;
-
-        // ── Header ───────────────────────────────────────────────────────────
-        const headerEl = popover.createDiv('tool-picker-header');
-        headerEl.createSpan({ cls: 'tool-picker-title', text: 'Configure tools' });
-        const countBadge = headerEl.createSpan('tool-picker-count');
-
-        // ── Search ───────────────────────────────────────────────────────────
-        const searchInput = popover.createEl('input', {
-            cls: 'tool-picker-search',
-            attr: { placeholder: 'Filter tools…', type: 'text', spellcheck: 'false' },
-        }) as HTMLInputElement;
-
-        // ── Scroll container ─────────────────────────────────────────────────
-        const scrollEl = popover.createDiv('tool-picker-scroll');
-
-        // ── Data tables ──────────────────────────────────────────────────────
-        const GROUP_TOOLS: Record<string, string[]> = {
-            read:  ['read_file', 'list_files', 'search_files'],
-            vault: ['get_vault_stats', 'get_frontmatter', 'search_by_tag', 'get_linked_notes',
-                    'get_daily_note', 'open_note', 'semantic_search', 'query_base'],
-            edit:  ['write_file', 'edit_file', 'append_to_file', 'create_folder',
-                    'delete_file', 'move_file', 'update_frontmatter',
-                    'generate_canvas', 'create_base', 'update_base'],
-            web:   ['web_fetch', 'web_search'],
-            agent: ['ask_followup_question', 'attempt_completion', 'update_todo_list', 'new_task'],
-            mcp:   ['use_mcp_tool'],
-        };
-        const GROUP_LABELS: Record<string, string> = {
-            read: 'Read Files', vault: 'Vault Intelligence', edit: 'Edit Files',
-            web: 'Web Access', agent: 'Agent Control', mcp: 'MCP Tools',
-        };
-        const GROUP_ICONS: Record<string, string> = {
-            read: 'file-search', vault: 'layers', edit: 'file-edit',
-            web: 'globe', agent: 'cpu', mcp: 'plug-2',
-        };
-        const TOOL_LABELS: Record<string, string> = {
-            read_file: 'Read File', list_files: 'List Files', search_files: 'Search Files',
-            get_vault_stats: 'Vault Stats', get_frontmatter: 'Frontmatter',
-            search_by_tag: 'Search by Tag', get_linked_notes: 'Linked Notes',
-            get_daily_note: 'Daily Note', open_note: 'Open Note',
-            semantic_search: 'Semantic Search', query_base: 'Query Base',
-            write_file: 'Write File', edit_file: 'Edit File', append_to_file: 'Append',
-            create_folder: 'Create Folder', delete_file: 'Delete File', move_file: 'Move File',
-            update_frontmatter: 'Update Frontmatter', generate_canvas: 'Canvas',
-            create_base: 'Create Base', update_base: 'Update Base',
-            web_fetch: 'Fetch URL', web_search: 'Web Search',
-            ask_followup_question: 'Ask User', attempt_completion: 'Complete Task',
-            update_todo_list: 'Update Plan', new_task: 'Sub-agent',
-            use_mcp_tool: 'MCP Tool',
-        };
-        const TOOL_ICONS: Record<string, string> = {
-            read_file: 'file-text', list_files: 'folder-open', search_files: 'search',
-            get_vault_stats: 'bar-chart-2', get_frontmatter: 'tag',
-            search_by_tag: 'hash', get_linked_notes: 'link',
-            get_daily_note: 'calendar', open_note: 'external-link',
-            semantic_search: 'brain', query_base: 'database',
-            write_file: 'file-plus', edit_file: 'file-pen', append_to_file: 'plus-circle',
-            create_folder: 'folder-plus', delete_file: 'trash-2', move_file: 'move',
-            update_frontmatter: 'tag', generate_canvas: 'layout-dashboard',
-            create_base: 'table-2', update_base: 'table-properties',
-            web_fetch: 'globe', web_search: 'search',
-            ask_followup_question: 'message-circle', attempt_completion: 'check-circle',
-            update_todo_list: 'list-checks', new_task: 'git-fork',
-            use_mcp_tool: 'plug-2',
-        };
-        const TOOL_DESCS: Record<string, string> = {
-            read_file: 'Read file content', list_files: 'List directory',
-            search_files: 'Search by regex', get_vault_stats: 'Overview & stats',
-            get_frontmatter: 'Read YAML metadata', search_by_tag: 'Find by tags',
-            get_linked_notes: 'Forward/back links', get_daily_note: 'Today\'s note',
-            open_note: 'Open in editor', semantic_search: 'Search by meaning',
-            query_base: 'Query Bases filter', write_file: 'Create or overwrite',
-            edit_file: 'Targeted edit', append_to_file: 'Add to end',
-            create_folder: 'New folder', delete_file: 'Move to trash',
-            move_file: 'Move or rename', update_frontmatter: 'Set YAML fields',
-            generate_canvas: 'Visual map', create_base: 'New database view',
-            update_base: 'Edit Bases view', web_fetch: 'Fetch URL as text',
-            web_search: 'Search the web', ask_followup_question: 'Ask user a question',
-            attempt_completion: 'Signal done', update_todo_list: 'Publish task plan',
-            new_task: 'Spawn sub-agent', use_mcp_tool: 'Call MCP server',
-        };
-
-        // Current effective tools (session → settings → defaults)
-        const effectiveTools = new Set(
-            this.sessionToolOverrides.get(slug)
-            ?? this.plugin.settings.modeToolOverrides?.[slug]
-            ?? this.modeService.getEffectiveToolNames(mode)
-        );
-        const toolChecks = new Map<string, HTMLInputElement>();
-        const allItemRows: HTMLElement[] = [];   // for search filtering
-
-        // ── Helpers ──────────────────────────────────────────────────────────
-
-        const applyToolOverride = () => {
-            const allGroupTools = mode.toolGroups.flatMap((g) => GROUP_TOOLS[g] ?? []);
-            const selected = allGroupTools.filter((t) => toolChecks.get(t)?.checked ?? false);
-            this.sessionToolOverrides.set(slug, selected);
-        };
-
-        const updateCount = () => {
-            let n = 0;
-            for (const cb of toolChecks.values()) { if (cb.checked) n++; }
-            countBadge.setText(`${n} selected`);
-        };
-
-        // Create a top-level expandable category row
-        const makeTopCat = (label: string, startOpen = true): { catRow: HTMLElement; catBody: HTMLElement } => {
-            const catRow = scrollEl.createDiv('tp-cat-row');
-            if (startOpen) catRow.addClass('is-open');
-            catRow.createSpan('tp-cat-arrow').setText('▸');
-            catRow.createSpan({ cls: 'tp-cat-label', text: label });
-            const catBody = scrollEl.createDiv('tp-cat-body');
-            catBody.style.display = startOpen ? '' : 'none';
-            catRow.addEventListener('click', (e) => {
-                if ((e.target as HTMLElement).tagName === 'INPUT') return;
-                const open = catRow.classList.toggle('is-open');
-                catBody.style.display = open ? '' : 'none';
-            });
-            return { catRow, catBody };
-        };
-
-        // Create a sub-category row inside Built-In (no icon — icons only on item level)
-        const makeSubCat = (
-            parent: HTMLElement, label: string, _iconName: string,
-        ): { subRow: HTMLElement; subBody: HTMLElement; subGroupCb: HTMLInputElement } => {
-            const subRow = parent.createDiv('tp-subcat-row is-open');
-            subRow.createSpan('tp-subcat-arrow').setText('▸');
-            subRow.createSpan({ cls: 'tp-subcat-label', text: label });
-            const subGroupCb = subRow.createEl('input', { type: 'checkbox' }) as HTMLInputElement;
-            subGroupCb.className = 'tp-cat-group-cb';
-            const subBody = parent.createDiv('tp-subcat-body');
-            subRow.addEventListener('click', (e) => {
-                if ((e.target as HTMLElement).tagName === 'INPUT') return;
-                const open = subRow.classList.toggle('is-open');
-                subBody.style.display = open ? '' : 'none';
-            });
-            return { subRow, subBody, subGroupCb };
-        };
-
-        // Create an item row with checkbox, icon, name, description
-        const makeItemRow = (
-            parent: HTMLElement, label: string, desc: string, iconName: string,
-            checked: boolean, indentCls = 'tp-item-row',
-        ): HTMLInputElement => {
-            const row = parent.createDiv(indentCls);
-            row.setAttribute('data-label', label.toLowerCase());
-            row.setAttribute('data-desc', desc.toLowerCase());
-            allItemRows.push(row);
-            const cb = row.createEl('input', { type: 'checkbox' }) as HTMLInputElement;
-            cb.checked = checked;
-            const iconEl = row.createSpan('tp-item-icon');
-            setIcon(iconEl, iconName);
-            row.createSpan({ cls: 'tp-item-name', text: label });
-            if (desc) row.createSpan({ cls: 'tp-item-desc', text: desc });
-            return cb;
-        };
-
-        // ── Built-In section ─────────────────────────────────────────────────
-        const { catRow: builtInCatRow, catBody: builtInCatBody } = makeTopCat('Built-In');
-        const builtInGroupCb = builtInCatRow.createEl('input', { type: 'checkbox' }) as HTMLInputElement;
-        builtInGroupCb.className = 'tp-cat-group-cb';
-        const allBuiltInTools = mode.toolGroups.filter((g) => g !== 'mcp').flatMap((g) => GROUP_TOOLS[g] ?? []);
-        const biAllEnabled = allBuiltInTools.every((t) => effectiveTools.has(t));
-        const biSomeEnabled = allBuiltInTools.some((t) => effectiveTools.has(t));
-        builtInGroupCb.checked = biAllEnabled;
-        builtInGroupCb.indeterminate = !biAllEnabled && biSomeEnabled;
-
-        for (const group of mode.toolGroups) {
-            if (group === 'mcp') continue;
-            const tools = GROUP_TOOLS[group] ?? [];
-            if (tools.length === 0) continue;
-
-            const { subRow, subBody, subGroupCb } = makeSubCat(
-                builtInCatBody, GROUP_LABELS[group] ?? group, GROUP_ICONS[group] ?? 'tool',
-            );
-            const grpAllEnabled = tools.every((t) => effectiveTools.has(t));
-            const grpSomeEnabled = tools.some((t) => effectiveTools.has(t));
-            subGroupCb.checked = grpAllEnabled;
-            subGroupCb.indeterminate = !grpAllEnabled && grpSomeEnabled;
-
-            for (const toolName of tools) {
-                const cb = makeItemRow(
-                    subBody,
-                    TOOL_LABELS[toolName] ?? toolName,
-                    TOOL_DESCS[toolName] ?? '',
-                    TOOL_ICONS[toolName] ?? 'tool',
-                    effectiveTools.has(toolName),
-                );
-                toolChecks.set(toolName, cb);
-                cb.addEventListener('change', () => {
-                    const allInGrp = tools.every((t) => toolChecks.get(t)?.checked);
-                    const someInGrp = tools.some((t) => toolChecks.get(t)?.checked);
-                    subGroupCb.checked = allInGrp;
-                    subGroupCb.indeterminate = !allInGrp && someInGrp;
-                    const allBI = allBuiltInTools.every((t) => toolChecks.get(t)?.checked);
-                    const someBI = allBuiltInTools.some((t) => toolChecks.get(t)?.checked);
-                    builtInGroupCb.checked = allBI;
-                    builtInGroupCb.indeterminate = !allBI && someBI;
-                    applyToolOverride();
-                    updateCount();
-                });
-            }
-            subGroupCb.addEventListener('change', () => {
-                for (const t of tools) { const cb = toolChecks.get(t); if (cb) cb.checked = subGroupCb.checked; }
-                subGroupCb.indeterminate = false;
-                applyToolOverride();
-                updateCount();
-            });
-        }
-        builtInGroupCb.addEventListener('change', () => {
-            for (const t of allBuiltInTools) { const cb = toolChecks.get(t); if (cb) cb.checked = builtInGroupCb.checked; }
-            builtInGroupCb.indeterminate = false;
-            applyToolOverride();
-            updateCount();
-        });
-
-        // ── MCP Servers section ───────────────────────────────────────────────
-        if (mode.toolGroups.includes('mcp')) {
-            const servers = Object.keys(this.plugin.settings.mcpServers ?? {});
-            const { catRow: mcpCatRow, catBody: mcpCatBody } = makeTopCat('MCP Servers', servers.length > 0);
-            const mcpGroupCb = mcpCatRow.createEl('input', { type: 'checkbox' }) as HTMLInputElement;
-            mcpGroupCb.className = 'tp-cat-group-cb';
-            const mcpChecks: HTMLInputElement[] = [];
-
-            if (servers.length > 0) {
-                const activeMcpServers: string[] = this.plugin.settings.activeMcpServers ?? [];
-                for (const serverName of servers) {
-                    const cb = makeItemRow(
-                        mcpCatBody, serverName, 'MCP server', 'plug-2',
-                        activeMcpServers.length === 0 || activeMcpServers.includes(serverName),
-                        'tp-item-row tp-item-indent-cat',
-                    );
-                    mcpChecks.push(cb);
-                    cb.addEventListener('change', async () => {
-                        const cur: string[] = this.plugin.settings.activeMcpServers ?? [];
-                        if (cur.length === 0) {
-                            const all = Object.keys(this.plugin.settings.mcpServers ?? {});
-                            this.plugin.settings.activeMcpServers = all.filter((s) => s !== serverName);
-                        } else if (cb.checked) {
-                            this.plugin.settings.activeMcpServers = [...cur, serverName];
-                        } else {
-                            this.plugin.settings.activeMcpServers = cur.filter((s) => s !== serverName);
-                        }
-                        await this.plugin.saveSettings();
-                        const allCb = mcpChecks.every((c) => c.checked);
-                        const someCb = mcpChecks.some((c) => c.checked);
-                        mcpGroupCb.checked = allCb;
-                        mcpGroupCb.indeterminate = !allCb && someCb;
-                    });
-                }
-                const allMcp = mcpChecks.every((c) => c.checked);
-                const someMcp = mcpChecks.some((c) => c.checked);
-                mcpGroupCb.checked = allMcp;
-                mcpGroupCb.indeterminate = !allMcp && someMcp;
-            } else {
-                mcpCatBody.createEl('span', { cls: 'tp-empty-hint', text: 'No MCP servers configured.' });
-                mcpGroupCb.checked = false;
-                mcpGroupCb.disabled = true;
-            }
-            mcpGroupCb.addEventListener('change', async () => {
-                for (const cb of mcpChecks) cb.checked = mcpGroupCb.checked;
-                mcpGroupCb.indeterminate = false;
-                this.plugin.settings.activeMcpServers = mcpGroupCb.checked ? [] : [];
-                await this.plugin.saveSettings();
-            });
-        }
-
-        // ── Skills section (async) ────────────────────────────────────────────
-        const { catRow: skillsCatRow, catBody: skillsCatBody } = makeTopCat('Skills', false);
-        const skillsGroupCb = skillsCatRow.createEl('input', { type: 'checkbox' }) as HTMLInputElement;
-        skillsGroupCb.className = 'tp-cat-group-cb';
-        skillsCatBody.createEl('span', { cls: 'tp-empty-hint', text: 'Loading…' });
-
-        // ── Workflows section (async) ─────────────────────────────────────────
-        const { catRow: wfCatRow, catBody: wfCatBody } = makeTopCat('Workflows', false);
-        const wfGroupCb = wfCatRow.createEl('input', { type: 'checkbox' }) as HTMLInputElement;
-        wfGroupCb.className = 'tp-cat-group-cb';
-        wfCatBody.createEl('span', { cls: 'tp-empty-hint', text: 'Loading…' });
-
-        // ── Footer ───────────────────────────────────────────────────────────
-        const footerEl = popover.createDiv('tool-picker-footer');
-        const saveBtn = footerEl.createEl('button', { cls: 'tool-picker-save-btn' });
-        const saveBtnIcon = saveBtn.createSpan('tp-save-icon');
-        setIcon(saveBtnIcon, 'save');
-        const saveBtnText = saveBtn.createSpan({ text: 'Save to Settings' });
-        saveBtn.addEventListener('click', async () => {
-            const sessionTools = this.sessionToolOverrides.get(slug);
-            if (sessionTools) await this.modeService.setModeToolOverride(slug, sessionTools);
-            const sessionSkills = this.sessionForcedSkills.get(slug);
-            if (sessionSkills !== undefined) {
-                if (!this.plugin.settings.forcedSkills) this.plugin.settings.forcedSkills = {};
-                this.plugin.settings.forcedSkills[slug] = sessionSkills;
-            }
-            const sessionWorkflow = this.sessionForcedWorkflow.get(slug);
-            if (sessionWorkflow !== undefined) {
-                if (!this.plugin.settings.forcedWorkflow) this.plugin.settings.forcedWorkflow = {};
-                this.plugin.settings.forcedWorkflow[slug] = sessionWorkflow;
-            }
-            await this.plugin.saveSettings();
-            saveBtnText.setText('Saved');
-            setTimeout(() => saveBtnText.setText('Save to Settings'), 1500);
-        });
-
-        // ── Position (upward) ─────────────────────────────────────────────────
-        const btnRect = (event.currentTarget as HTMLElement).getBoundingClientRect();
-        const containerRect = this.containerEl.getBoundingClientRect();
-        popover.style.position = 'fixed';
-        popover.style.bottom = (window.innerHeight - btnRect.top + 4) + 'px';
-        popover.style.left = Math.max(btnRect.left, containerRect.left) + 'px';
-        document.body.appendChild(popover);
-
-        updateCount();
-
-        // ── Search filter ─────────────────────────────────────────────────────
-        searchInput.addEventListener('input', () => {
-            const q = searchInput.value.toLowerCase();
-            for (const row of allItemRows) {
-                const matches = !q
-                    || (row.getAttribute('data-label') ?? '').includes(q)
-                    || (row.getAttribute('data-desc') ?? '').includes(q);
-                row.style.display = matches ? '' : 'none';
-            }
-            if (q) {
-                builtInCatRow.addClass('is-open');
-                builtInCatBody.style.display = '';
-            }
-        });
-
-        // ── Async: skills + workflows ─────────────────────────────────────────
-        (async () => {
-            const skillsManager = (this.plugin as any).skillsManager;
-            if (skillsManager) {
-                skillsCatBody.empty();
-                try {
-                    const skills = await skillsManager.discoverSkills();
-                    if (skills.length === 0) {
-                        skillsCatBody.createEl('span', { cls: 'tp-empty-hint', text: 'No skills found.' });
-                        skillsGroupCb.disabled = true;
-                    } else {
-                        const skillCbs: HTMLInputElement[] = [];
-                        const activeForcedSkills = new Set(
-                            this.sessionForcedSkills.get(slug) ?? this.plugin.settings.forcedSkills?.[slug] ?? []
-                        );
-                        skillsCatRow.addClass('is-open');
-                        skillsCatBody.style.display = '';
-                        for (const skill of skills) {
-                            const cb = makeItemRow(
-                                skillsCatBody, skill.name, skill.description ?? '', 'wand-2',
-                                activeForcedSkills.has(skill.name), 'tp-item-row tp-item-indent-cat',
-                            );
-                            skillCbs.push(cb);
-                            cb.addEventListener('change', () => {
-                                const cur = new Set(this.sessionForcedSkills.get(slug) ?? this.plugin.settings.forcedSkills?.[slug] ?? []);
-                                if (cb.checked) cur.add(skill.name);
-                                else cur.delete(skill.name);
-                                this.sessionForcedSkills.set(slug, [...cur]);
-                                const allSk = skillCbs.every((c) => c.checked);
-                                const someSk = skillCbs.some((c) => c.checked);
-                                skillsGroupCb.checked = allSk;
-                                skillsGroupCb.indeterminate = !allSk && someSk;
-                                updateCount();
-                            });
-                        }
-                        const allSk = skillCbs.every((c) => c.checked);
-                        const someSk = skillCbs.some((c) => c.checked);
-                        skillsGroupCb.checked = allSk;
-                        skillsGroupCb.indeterminate = !allSk && someSk;
-                        skillsGroupCb.addEventListener('change', () => {
-                            for (const c of skillCbs) c.checked = skillsGroupCb.checked;
-                            skillsGroupCb.indeterminate = false;
-                            const next = skillsGroupCb.checked ? skills.map((s: any) => s.name) : [];
-                            this.sessionForcedSkills.set(slug, next);
-                            updateCount();
-                        });
-                    }
-                } catch {
-                    skillsCatBody.createEl('span', { cls: 'tp-empty-hint', text: 'Error loading skills.' });
-                }
-            } else {
-                skillsCatRow.remove();
-                skillsCatBody.remove();
-            }
-
-            const workflowLoader = (this.plugin as any).workflowLoader;
-            if (workflowLoader) {
-                wfCatBody.empty();
-                try {
-                    const workflows = await workflowLoader.discoverWorkflows();
-                    if (workflows.length === 0) {
-                        wfCatBody.createEl('span', { cls: 'tp-empty-hint', text: 'No workflows found.' });
-                        wfGroupCb.disabled = true;
-                    } else {
-                        const wfCbs: HTMLInputElement[] = [];
-                        const activeWfSlug = this.sessionForcedWorkflow.get(slug) ?? this.plugin.settings.forcedWorkflow?.[slug] ?? '';
-                        wfCatRow.addClass('is-open');
-                        wfCatBody.style.display = '';
-                        for (const wf of workflows) {
-                            const cb = makeItemRow(
-                                wfCatBody, wf.displayName, `/${wf.slug}`, 'git-branch',
-                                activeWfSlug === wf.slug, 'tp-item-row tp-item-indent-cat',
-                            );
-                            wfCbs.push(cb);
-                            cb.addEventListener('change', () => {
-                                if (cb.checked) {
-                                    for (const other of wfCbs) { if (other !== cb) other.checked = false; }
-                                    this.sessionForcedWorkflow.set(slug, wf.slug);
-                                } else {
-                                    this.sessionForcedWorkflow.set(slug, '');
-                                }
-                                wfGroupCb.checked = wfCbs.some((c) => c.checked);
-                                wfGroupCb.indeterminate = false;
-                                updateCount();
-                            });
-                        }
-                        wfGroupCb.checked = wfCbs.some((c) => c.checked);
-                        wfGroupCb.addEventListener('change', () => {
-                            if (!wfGroupCb.checked) {
-                                for (const c of wfCbs) c.checked = false;
-                                this.sessionForcedWorkflow.set(slug, '');
-                            }
-                            updateCount();
-                        });
-                    }
-                } catch {
-                    wfCatBody.createEl('span', { cls: 'tp-empty-hint', text: 'Error loading workflows.' });
-                }
-            } else {
-                wfCatRow.remove();
-                wfCatBody.remove();
-            }
-        })();
-
-        // Close on outside click — store handler as class property so closeToolPicker() can remove it
-        this.toolPickerCloseHandler = (e: MouseEvent) => {
-            if (!popover.contains(e.target as Node) && e.target !== this.toolPickerButton) {
-                this.closeToolPicker();
-            }
-        };
-        setTimeout(() => document.addEventListener('mousedown', this.toolPickerCloseHandler!), 50);
-    }
-
-    private closeToolPicker(): void {
-        if (this.toolPickerCloseHandler) {
-            document.removeEventListener('mousedown', this.toolPickerCloseHandler);
-            this.toolPickerCloseHandler = null;
-        }
-        if (this.toolPickerPopover) {
-            this.toolPickerPopover.remove();
-            this.toolPickerPopover = null;
-        }
-    }
 
     /**
      * Build the skills section for the system prompt.
@@ -989,14 +496,14 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
         if (!this.textarea) return;
 
         const text = this.textarea.value.trim();
-        if (!text && this.pendingAttachments.length === 0) return;
+        if (!text && this.attachments.pending.length === 0) return;
         if (this.currentAbortController) return; // Already running
 
         this.lastUserMessage = text;
 
         // Snapshot attachments, clear the chip bar, render user bubble with previews
-        const attachments = [...this.pendingAttachments];
-        this.clearAttachments();
+        const attachments = [...this.attachments.pending];
+        this.attachments.clear();
         const activeFileForBubble = (this.plugin.settings.autoAddActiveFileContext && !this.userDismissedContext)
             ? this.app.workspace.getActiveFile()
             : null;
@@ -1520,12 +1027,12 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
             ? messageToSend
             : (messageToSend as any[]).find((b: any) => b.type === 'text')?.text ?? '';
         const forcedSkillNames = [
-            ...(this.sessionForcedSkills.get(activeMode.slug) ?? this.plugin.settings.forcedSkills?.[activeMode.slug] ?? []),
+            ...(this.toolPicker.sessionForcedSkills.get(activeMode.slug) ?? this.plugin.settings.forcedSkills?.[activeMode.slug] ?? []),
         ];
         const skillsSection = await this.buildSkillsSection(userMessageText, forcedSkillNames);
 
         // Apply forced workflow from tool picker (when message doesn't start with slash command)
-        const forcedWorkflowSlug = this.sessionForcedWorkflow.get(activeMode.slug)
+        const forcedWorkflowSlug = this.toolPicker.sessionForcedWorkflow.get(activeMode.slug)
             ?? this.plugin.settings.forcedWorkflow?.[activeMode.slug]
             ?? '';
         if (typeof messageToSend === 'string' && !text.startsWith('/') && forcedWorkflowSlug) {
@@ -1543,7 +1050,7 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
             }
         }
 
-        const sessionToolOverride = this.sessionToolOverrides.get(activeMode.slug);
+        const sessionToolOverride = this.toolPicker.sessionToolOverrides.get(activeMode.slug);
         const allowedMcpServers = this.plugin.settings.modeMcpServers?.[activeMode.slug];
         await task.run(
             messageToSend,
@@ -1586,7 +1093,7 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
     private clearConversation(): void {
         this.conversationHistory = [];
         this.userDismissedContext = false;
-        this.clearAttachments();
+        this.attachments.clear();
         if (this.chatContainer) {
             this.chatContainer.empty();
         }
@@ -1704,202 +1211,7 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
         this.updateModelButton(); // model may differ per mode
     }
 
-    // -------------------------------------------------------------------------
-    // Attachment handling
-    // -------------------------------------------------------------------------
 
-    private openFilePicker(): void {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.multiple = true;
-        input.accept = 'image/png,image/jpeg,image/gif,image/webp,.txt,.md,.json,.py,.ts,.js,.jsx,.tsx,.css,.html,.xml,.yaml,.yml,.csv,.sh';
-        input.addEventListener('change', () => {
-            if (input.files) {
-                for (const file of Array.from(input.files)) this.processAttachmentFile(file);
-            }
-        });
-        input.click();
-    }
-
-    private async processAttachmentFile(file: File): Promise<void> {
-        const MAX_BYTES = 10 * 1024 * 1024; // 10 MB
-        if (file.size > MAX_BYTES) {
-            new Notice(`"${file.name}" exceeds the 10 MB limit.`);
-            return;
-        }
-
-        const IMAGE_TYPES: Record<string, ImageMediaType> = {
-            'image/png': 'image/png',
-            'image/jpeg': 'image/jpeg',
-            'image/gif': 'image/gif',
-            'image/webp': 'image/webp',
-        };
-        const TEXT_EXTENSIONS = ['.txt', '.md', '.json', '.py', '.ts', '.js', '.jsx', '.tsx', '.css', '.html', '.xml', '.yaml', '.yml', '.csv', '.sh'];
-
-        const mediaType = IMAGE_TYPES[file.type];
-        if (mediaType) {
-            // Convert image to base64
-            const arrayBuffer = await file.arrayBuffer();
-            const bytes = new Uint8Array(arrayBuffer);
-            let binary = '';
-            for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
-            const base64 = btoa(binary);
-            const objectUrl = URL.createObjectURL(file);
-            this.pendingAttachments.push({
-                name: file.name || 'image.png',
-                objectUrl,
-                block: { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } },
-            });
-        } else if (TEXT_EXTENSIONS.some(ext => file.name.toLowerCase().endsWith(ext)) || file.type.startsWith('text/')) {
-            const text = await file.text();
-            this.pendingAttachments.push({
-                name: file.name,
-                block: { type: 'text', text: `<attached_file name="${file.name}">\n${text}\n</attached_file>` },
-            });
-        } else {
-            new Notice(`"${file.name}" is not supported. Use images (PNG/JPG/GIF/WebP) or text files.`);
-            return;
-        }
-        this.renderAttachmentChips();
-    }
-
-    // ── Autocomplete (Sprint B3) ────────────────────────────────────────────
-
-    /**
-     * Called on every textarea input event.
-     * Decides whether to show the / or @ autocomplete dropdown.
-     */
-    private async handleAutocompleteInput(): Promise<void> {
-        if (!this.textarea) return;
-        const value = this.textarea.value;
-
-        // / at the very start → workflow + prompt autocomplete
-        if (value.startsWith('/')) {
-            const query = value.slice(1).split(' ')[0].toLowerCase();
-
-            // Workflows
-            const workflowLoader = (this.plugin as any).workflowLoader;
-            const workflows: { slug: string; displayName: string }[] = workflowLoader
-                ? await workflowLoader.discoverWorkflows()
-                : [];
-            const workflowItems = workflows
-                .filter((w) => query === '' || w.slug.startsWith(query))
-                .map((w) => ({
-                    label: w.displayName,
-                    sub: `/${w.slug}`,
-                    onSelect: () => {
-                        if (!this.textarea) return;
-                        const rest = value.includes(' ') ? value.slice(value.indexOf(' ') + 1) : '';
-                        this.textarea.value = `/${w.slug}${rest ? ' ' + rest : ''}`;
-                        this.hideAutocompleteDropdown();
-                        this.textarea.focus();
-                    },
-                }));
-
-            // Helper: replace textarea with resolved prompt template
-            const makePromptSelector = (content: string) => () => {
-                if (!this.textarea) return;
-                const userInput = value.includes(' ') ? value.slice(value.indexOf(' ') + 1) : '';
-                const activeFile = this.app.workspace.getActiveFile()?.name;
-                this.textarea.value = resolvePromptContent(content, { userInput, activeFile });
-                this.hideAutocompleteDropdown();
-                this.textarea.focus();
-            };
-
-            // User-defined custom prompts — filtered by enabled flag, slug query, and optional mode
-            const activeMode = this.plugin.settings.currentMode;
-            const customItems = (this.plugin.settings.customPrompts ?? [])
-                .filter((p) =>
-                    p.enabled !== false &&
-                    (query === '' || p.slug.startsWith(query)) &&
-                    (!p.mode || p.mode === activeMode)
-                )
-                .map((p) => ({
-                    label: p.name,
-                    sub: `/${p.slug}`,
-                    onSelect: makePromptSelector(p.content),
-                }));
-
-            this.autocompleteItems = [...workflowItems, ...customItems];
-            if (this.autocompleteItems.length === 0) { this.hideAutocompleteDropdown(); return; }
-            this.autocompleteIndex = 0;
-            this.renderAutocompleteDropdown();
-            return;
-        }
-
-        // @ anywhere in the text → file mention autocomplete
-        const cursorPos = this.textarea.selectionStart ?? value.length;
-        const beforeCursor = value.slice(0, cursorPos);
-        const atIdx = beforeCursor.lastIndexOf('@');
-        if (atIdx !== -1 && (atIdx === 0 || /\s/.test(beforeCursor[atIdx - 1]))) {
-            const query = beforeCursor.slice(atIdx + 1).toLowerCase();
-
-            const makeFileOnSelect = (f: import('obsidian').TFile) => async () => {
-                if (!this.textarea) return;
-                const newValue = value.slice(0, atIdx) + value.slice(atIdx + 1 + query.length);
-                this.textarea.value = newValue.trim();
-                this.hideAutocompleteDropdown();
-                await this.addVaultFileAttachment(f);
-                this.textarea.focus();
-            };
-
-            // @active shortcut — currently open note
-            const currentFile = this.app.workspace.getActiveFile();
-            const activeOption = (currentFile && (query === '' || 'active'.startsWith(query)))
-                ? [{ label: 'Active note', sub: `@active → ${currentFile.basename}`, onSelect: makeFileOnSelect(currentFile) }]
-                : [];
-
-            const allFiles = this.app.vault.getMarkdownFiles();
-            const filtered = allFiles
-                .filter((f) => f.path.toLowerCase().includes(query))
-                .slice(0, 10);
-
-            this.autocompleteItems = [
-                ...activeOption,
-                ...filtered.map((f) => ({ label: f.basename, sub: f.path, onSelect: makeFileOnSelect(f) })),
-            ];
-            if (this.autocompleteItems.length === 0) { this.hideAutocompleteDropdown(); return; }
-            this.autocompleteIndex = 0;
-            this.renderAutocompleteDropdown();
-            return;
-        }
-
-        this.hideAutocompleteDropdown();
-    }
-
-    private renderAutocompleteDropdown(): void {
-        if (!this.inputArea) return;
-
-        if (!this.autocompleteDropdown) {
-            this.autocompleteDropdown = this.inputArea.createDiv('autocomplete-dropdown');
-            // Click outside to close
-            document.addEventListener('click', (e) => {
-                if (this.autocompleteDropdown && !this.autocompleteDropdown.contains(e.target as Node)) {
-                    this.hideAutocompleteDropdown();
-                }
-            }, { once: true });
-        }
-
-        this.autocompleteDropdown.empty();
-        this.autocompleteItems.forEach((item, idx) => {
-            const row = this.autocompleteDropdown!.createDiv({
-                cls: `autocomplete-item${idx === this.autocompleteIndex ? ' active' : ''}`,
-            });
-            row.createSpan({ cls: 'autocomplete-label', text: item.label });
-            if (item.sub) row.createSpan({ cls: 'autocomplete-sub', text: item.sub });
-            row.addEventListener('mousedown', (e) => {
-                e.preventDefault();
-                item.onSelect();
-            });
-        });
-    }
-
-    private hideAutocompleteDropdown(): void {
-        this.autocompleteDropdown?.remove();
-        this.autocompleteDropdown = null;
-        this.autocompleteItems = [];
-        this.autocompleteIndex = 0;
-    }
 
     // ── Ellipsis options menu ─────────────────────────────────────────────────
 
@@ -2008,56 +1320,6 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
                 this.addUserMessage(msg.content);
             }
         }
-    }
-
-
-    /**
-     * Add an Obsidian vault file as a text attachment (for @ mentions).
-     */
-    private async addVaultFileAttachment(file: TFile): Promise<void> {
-        try {
-            const content = await this.app.vault.read(file);
-            this.pendingAttachments.push({
-                name: file.path,
-                block: { type: 'text', text: `<attached_file name="${file.path}">\n${content}\n</attached_file>` },
-            });
-            this.renderAttachmentChips();
-        } catch {
-            new Notice(`Could not read "${file.path}"`);
-        }
-    }
-
-    private renderAttachmentChips(): void {
-        if (!this.attachmentChipBar) return;
-        this.attachmentChipBar.empty();
-        this.pendingAttachments.forEach((item, i) => {
-            const chip = this.attachmentChipBar!.createDiv('chat-attachment-chip');
-            if (item.objectUrl) {
-                const img = chip.createEl('img', { cls: 'attachment-chip-thumb' });
-                img.src = item.objectUrl;
-                img.alt = item.name;
-            } else {
-                setIcon(chip.createSpan('attachment-chip-icon'), 'file-text');
-                chip.createSpan('attachment-chip-name').setText(item.name);
-            }
-            const removeBtn = chip.createSpan('attachment-chip-remove');
-            setIcon(removeBtn, 'x');
-            removeBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                if (item.objectUrl) URL.revokeObjectURL(item.objectUrl);
-                this.pendingAttachments.splice(i, 1);
-                this.renderAttachmentChips();
-            });
-        });
-    }
-
-    private clearAttachments(): void {
-        // Revoke object URLs for any unsent attachments
-        for (const att of this.pendingAttachments) {
-            if (att.objectUrl) URL.revokeObjectURL(att.objectUrl);
-        }
-        this.pendingAttachments = [];
-        if (this.attachmentChipBar) this.attachmentChipBar.empty();
     }
 
     // -------------------------------------------------------------------------

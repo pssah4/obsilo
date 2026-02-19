@@ -103,7 +103,8 @@ const TOOL_DECISION_GUIDELINES = `Tool decision guidelines:
 3. Choose the minimal tool path. If a single search_files call answers the question, don't also list_files and read every result. Prefer the shortest route to the correct answer.
 4. Do not call tools "just in case". Only call a tool when you genuinely need its result to continue.
 5. For orientation (first time seeing the vault), one get_vault_stats call is enough. Do not follow it with list_files on every folder unless the task requires it.
-6. Prefer semantic_search over search_files when looking for notes by topic or concept. The Semantic Index finds conceptually related content even when exact keywords differ — use it before reading individual files.`;
+6. RAG PATTERN — For questions about vault content: call semantic_search ONCE, then synthesize your answer directly from the returned excerpts. Do NOT call read_file on results just to get more context — the excerpts already contain the relevant content. Only call read_file when you need to modify a file or when a specific file is explicitly requested.
+7. CITE WITH WIKILINKS. When referencing notes in your answer, use [[Note Name]] format so the user can navigate to them directly.`;
 
 // ---------------------------------------------------------------------------
 // Response format (always included)
