@@ -69,6 +69,31 @@ export class WebFetchTool extends BaseTool<'web_fetch'> {
             return;
         }
 
+        // H-3: Block SSRF — deny access to private/internal network addresses.
+        try {
+            const parsed = new URL(url);
+            const host = parsed.hostname.toLowerCase();
+            const isPrivate =
+                host === 'localhost' ||
+                /^127\./.test(host) ||
+                /^10\./.test(host) ||
+                /^192\.168\./.test(host) ||
+                /^172\.(1[6-9]|2\d|3[01])\./.test(host) ||
+                /^169\.254\./.test(host) ||   // link-local / AWS metadata endpoint
+                /^0\./.test(host) ||
+                host === '::1' ||
+                /^fc[0-9a-f]{2}:/i.test(host);  // IPv6 unique-local
+            if (isPrivate) {
+                callbacks.pushToolResult(
+                    this.formatError(new Error('Access to private/internal network addresses is not allowed'))
+                );
+                return;
+            }
+        } catch {
+            callbacks.pushToolResult(this.formatError(new Error('Invalid URL')));
+            return;
+        }
+
         try {
             callbacks.log(`Fetching: ${url}`);
 
@@ -97,11 +122,17 @@ export class WebFetchTool extends BaseTool<'web_fetch'> {
             const contentType = (response.headers['content-type'] ?? '').toLowerCase();
             let content: string;
 
+            // M-4: Limit raw response size before HTML parsing to prevent ReDoS on
+            // giant pages with complex regex patterns in htmlToMarkdown().
+            const MAX_PARSE_BYTES = 2_000_000; // 2 MB
+            const rawText = response.text ?? '';
+            const safeText = rawText.length > MAX_PARSE_BYTES ? rawText.slice(0, MAX_PARSE_BYTES) : rawText;
+
             if (contentType.includes('text/html') || contentType === '') {
-                content = this.htmlToMarkdown(response.text ?? '');
+                content = this.htmlToMarkdown(safeText);
             } else {
                 // Plain text, JSON, etc.
-                content = response.text ?? '';
+                content = safeText;
             }
 
             // Apply pagination

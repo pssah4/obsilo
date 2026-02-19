@@ -130,8 +130,13 @@ export class AnthropicProvider implements ApiHandler {
                     let parsedInput: Record<string, any> = {};
                     try {
                         parsedInput = tool.inputJson ? JSON.parse(tool.inputJson) : {};
-                    } catch {
-                        console.error('[AnthropicProvider] Failed to parse tool input JSON:', tool.inputJson);
+                    } catch (e) {
+                        yield {
+                            type: 'text',
+                            text: `[Tool input parse error for "${tool.name}": ${(e as Error).message}]`,
+                        } satisfies ApiStreamChunk;
+                        toolAccumulator.delete(event.index);
+                        continue;
                     }
 
                     yield {

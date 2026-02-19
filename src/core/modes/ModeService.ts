@@ -74,10 +74,10 @@ export class ModeService {
         return this.getAllModes().find((m) => m.slug === slug);
     }
 
-    /** Get the currently active mode; falls back to 'librarian' */
+    /** Get the currently active mode; falls back to 'ask' if the saved slug no longer exists */
     getActiveMode(): ModeConfig {
         const slug = this.plugin.settings.currentMode;
-        return this.getMode(slug) ?? BUILT_IN_MODES.find((m) => m.slug === 'librarian')!;
+        return this.getMode(slug) ?? BUILT_IN_MODES.find((m) => m.slug === 'ask')!;
     }
 
     /** Check whether a given slug is a valid mode */
@@ -89,23 +89,57 @@ export class ModeService {
     // Tool access
     // ---------------------------------------------------------------------------
 
-    /** Get the expanded list of tool names for a mode */
+    /** Get the raw expanded list of all tool names for a mode's groups (no overrides) */
     getToolNames(mode: ModeConfig): string[] {
         return expandToolGroups(mode.toolGroups);
     }
 
-    /** Get ToolDefinitions filtered to what a mode is allowed to use */
-    getToolDefinitions(mode: ModeConfig): ToolDefinition[] {
-        const allowed = new Set(this.getToolNames(mode));
+    /**
+     * Get the effective list of tool names for a mode, applying overrides in priority order:
+     *   1. sessionOverride (passed from chat view for session-only selection)
+     *   2. settings.modeToolOverrides[slug] (permanent user override)
+     *   3. All tools in the mode's groups (default)
+     *
+     * The result is always filtered to tools actually in the mode's groups.
+     */
+    getEffectiveToolNames(mode: ModeConfig, sessionOverride?: string[]): string[] {
+        const allInGroups = new Set(expandToolGroups(mode.toolGroups));
+        const override = sessionOverride ?? this.plugin.settings.modeToolOverrides?.[mode.slug];
+        if (override && override.length > 0) {
+            // Intersect with group-allowed tools (never escalate beyond what the mode allows)
+            return override.filter((t) => allInGroups.has(t));
+        }
+        return [...allInGroups];
+    }
+
+    /** Get ToolDefinitions filtered to the effective tool set for a mode */
+    getToolDefinitions(mode: ModeConfig, sessionOverride?: string[]): ToolDefinition[] {
+        const allowed = new Set(this.getEffectiveToolNames(mode, sessionOverride));
         return this.toolRegistry
             .getAllTools()
             .filter((t) => allowed.has(t.name))
             .map((t) => t.getDefinition());
     }
 
-    /** Check whether a mode has access to a specific tool */
+    /** Check whether a mode has access to a specific tool (respects overrides) */
     modeHasTool(mode: ModeConfig, toolName: string): boolean {
-        return this.getToolNames(mode).includes(toolName);
+        return this.getEffectiveToolNames(mode).includes(toolName);
+    }
+
+    /**
+     * Permanently set the tool override for a mode.
+     * Pass an empty array or undefined to clear the override (restore defaults).
+     */
+    async setModeToolOverride(slug: string, tools: string[]): Promise<void> {
+        if (!this.plugin.settings.modeToolOverrides) {
+            this.plugin.settings.modeToolOverrides = {};
+        }
+        if (tools.length === 0) {
+            delete this.plugin.settings.modeToolOverrides[slug];
+        } else {
+            this.plugin.settings.modeToolOverrides[slug] = tools;
+        }
+        await this.plugin.saveSettings();
     }
 
     /** Check whether a mode has access to a specific tool group */

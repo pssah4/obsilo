@@ -33,6 +33,7 @@ export class SkillsManager {
     readonly skillsDir: string;
 
     constructor(vault: Vault) {
+        this.vault = vault;
         this.skillsDir = '.obsidian-agent/skills';
     }
 

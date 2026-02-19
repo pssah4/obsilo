@@ -1,18 +1,22 @@
 /**
  * NewTaskTool
  *
- * Spawns a child agent task in the specified mode and returns its response.
- * Adapted from Kilo Code's NewTaskTool.ts — simplified for Obsidian (no VSCode provider).
+ * Spawns a child agent task and returns its response.
+ * Available in Agent mode — enables agentic workflow patterns:
+ *   Prompt Chaining, Orchestrator-Worker, Evaluator-Optimizer, Routing.
  *
- * The child task runs synchronously within the parent's iteration loop.
- * The parent resumes with the child's response as the tool result.
+ * The child task runs in the specified mode ('agent' or 'ask') with a fresh
+ * conversation history and returns its complete response as the tool result.
  *
- * Use case: Orchestrator mode delegates sub-tasks to specialist modes.
+ * The parent resumes with the child's response as context for the next step.
  */
 
 import { BaseTool } from '../BaseTool';
 import type { ToolDefinition, ToolExecutionContext } from '../types';
 import type ObsidianAgentPlugin from '../../../main';
+
+/** Modes that are permitted as sub-agent targets */
+const ALLOWED_SUB_MODES = new Set(['agent', 'ask']);
 
 export class NewTaskTool extends BaseTool<'new_task'> {
     readonly name = 'new_task' as const;
@@ -26,19 +30,25 @@ export class NewTaskTool extends BaseTool<'new_task'> {
         return {
             name: 'new_task',
             description:
-                'Spawn a subtask in a specified agent mode. The subtask runs with a fresh conversation ' +
-                'and returns its complete response. Use this to delegate work to a specialist mode. ' +
-                'Only available in Orchestrator mode.',
+                'Spawn a sub-agent that executes a task and returns its complete response. ' +
+                'The sub-agent runs with a fresh conversation — pass all necessary context in the message. ' +
+                'Use this for agentic workflows: prompt chaining, parallel delegation, ' +
+                'orchestrator-worker patterns, or evaluator-optimizer loops. ' +
+                'Only available in Agent mode.',
             input_schema: {
                 type: 'object',
                 properties: {
                     mode: {
                         type: 'string',
-                        description: 'Mode slug to run the subtask in (e.g. "researcher", "writer", "librarian")',
+                        description:
+                            'Sub-agent mode: "agent" (full capabilities — reading, writing, web) ' +
+                            'or "ask" (read-only vault queries and search).',
                     },
                     message: {
                         type: 'string',
-                        description: 'The task description or question to send to the subtask agent',
+                        description:
+                            'The task description for the sub-agent. Include all context needed — ' +
+                            'the sub-agent cannot see the current conversation.',
                     },
                 },
                 required: ['mode', 'message'],
@@ -60,23 +70,33 @@ export class NewTaskTool extends BaseTool<'new_task'> {
             return;
         }
 
-        // Only the Orchestrator mode is permitted to spawn subtasks.
-        // Check context.mode instead of context.spawnSubtask — spawnSubtask is always
-        // injected by AgentTask regardless of mode, so the old check was dead code.
-        if (context.mode !== 'orchestrator') {
+        // Only available in Agent mode.
+        if (context.mode !== 'agent') {
             callbacks.pushToolResult(
-                'new_task is only available in Orchestrator mode. ' +
-                'Switch to Orchestrator mode to use multi-agent delegation.'
+                'new_task is only available in Agent mode. ' +
+                'Switch to Agent mode to use sub-agent workflows.'
             );
             return;
         }
 
-        callbacks.log(`Spawning subtask in mode "${mode}": ${message.slice(0, 80)}…`);
+        // Restrict sub-agent targets to known safe modes.
+        if (!ALLOWED_SUB_MODES.has(mode)) {
+            callbacks.pushToolResult(
+                this.formatError(
+                    new Error(
+                        `Unknown sub-agent mode "${mode}". Use "agent" (full capabilities) or "ask" (read-only).`
+                    )
+                )
+            );
+            return;
+        }
+
+        callbacks.log(`Spawning sub-agent in mode "${mode}": ${message.slice(0, 80)}…`);
 
         try {
             const result = await context.spawnSubtask!(mode, message);
             callbacks.pushToolResult(
-                `[Subtask completed — mode: ${mode}]\n\n${result || '(No response from subtask)'}`
+                `[Sub-agent completed — mode: ${mode}]\n\n${result || '(No response from sub-agent)'}`
             );
         } catch (error) {
             callbacks.pushToolResult(this.formatError(error));

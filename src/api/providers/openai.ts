@@ -274,8 +274,12 @@ export class OpenAiProvider implements ApiHandler {
                             let input: Record<string, any> = {};
                             try {
                                 input = JSON.parse(acc.argumentsJson);
-                            } catch {
-                                // malformed JSON — pass empty object
+                            } catch (e) {
+                                yield {
+                                    type: 'text',
+                                    text: `[Tool input parse error for "${acc.name}": ${(e as Error).message}]`,
+                                } satisfies ApiStreamChunk;
+                                continue;
                             }
                             yield {
                                 type: 'tool_use',

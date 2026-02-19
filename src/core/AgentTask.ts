@@ -113,6 +113,10 @@ export class AgentTask {
         rulesContent?: string,
         skillsSection?: string,
         mcpClient?: McpClient,
+        /** Session-only tool override: list of enabled tool names for this task only */
+        sessionToolOverride?: string[],
+        /** Per-mode MCP server whitelist — undefined = all servers allowed */
+        allowedMcpServers?: string[],
     ): Promise<void> {
         // Resolve mode to ModeConfig
         let activeMode: ModeConfig = this.resolveMode(initialMode);
@@ -179,6 +183,9 @@ export class AgentTask {
                         // Accumulate subtask tokens into parent's total — forwarded here as noop
                         // (parent already tracks its own via onUsage; subtask usage is additive)
                     },
+                    // K-1: Forward parent approval callback so subtask write ops are not
+                    // auto-rejected by the fail-closed fallback in ToolExecutionPipeline.
+                    onApprovalRequired: this.taskCallbacks.onApprovalRequired,
                 },
                 this.modeService,
                 this.consecutiveMistakeLimit,
@@ -196,6 +203,10 @@ export class AgentTask {
                 globalCustomInstructions,
                 includeTime,
                 rulesContent,
+                skillsSection,
+                mcpClient,
+                undefined,          // no per-session tool override for subtasks
+                allowedMcpServers,
             );
             return childText;
         };
@@ -209,9 +220,9 @@ export class AgentTask {
 
         const rebuildPromptCache = () => {
             const allModes = this.modeService?.getAllModes();
-            cachedSystemPrompt = buildSystemPromptForMode(activeMode, allModes, globalCustomInstructions, includeTime, rulesContent, skillsSection, mcpClient);
+            cachedSystemPrompt = buildSystemPromptForMode(activeMode, allModes, globalCustomInstructions, includeTime, rulesContent, skillsSection, mcpClient, allowedMcpServers);
             cachedTools = this.modeService
-                ? this.modeService.getToolDefinitions(activeMode)
+                ? this.modeService.getToolDefinitions(activeMode, sessionToolOverride)
                 : this.toolRegistry.getToolDefinitions();
             cachedPromptMode = activeMode.slug;
         };
@@ -291,19 +302,17 @@ export class AgentTask {
                 assistantContent.push(...toolUses);
                 history.push({ role: 'assistant', content: assistantContent });
 
-                // Context Condensing: check after each iteration (skip on very first)
-                if (iteration > 0 && this.condensingEnabled) {
-                    const estimatedTokens = this.estimateTokens(history);
-                    const contextWindow = this.getModelContextWindow();
-                    const threshold = Math.floor(contextWindow * (this.condensingThreshold / 100));
-                    if (estimatedTokens > threshold) {
-                        await this.condenseHistory(history, systemPrompt, abortSignal);
-                        this.taskCallbacks.onContextCondensed?.();
-                    }
-                }
-
-                // If no tool calls, the LLM is done
+                // If no tool calls, the LLM is done — run condensing on text-only turns
                 if (toolUses.length === 0) {
+                    if (iteration > 0 && this.condensingEnabled) {
+                        const estimatedTokens = this.estimateTokens(history);
+                        const contextWindow = this.getModelContextWindow();
+                        const threshold = Math.floor(contextWindow * (this.condensingThreshold / 100));
+                        if (estimatedTokens > threshold) {
+                            await this.condenseHistory(history, systemPrompt, abortSignal);
+                            this.taskCallbacks.onContextCondensed?.();
+                        }
+                    }
                     break;
                 }
 
@@ -404,7 +413,21 @@ export class AgentTask {
                 }
 
                 // Add tool results as the next user message
+                // IMPORTANT: condensing runs AFTER this push so history is always consistent
+                // (every assistant tool_call has a matching tool_result before condensing)
                 history.push({ role: 'user', content: toolResultBlocks });
+
+                // Context Condensing: check only after history is fully consistent
+                // (assistant tool_calls + tool_results both present, no orphaned calls)
+                if (iteration > 0 && this.condensingEnabled && completionResult === null) {
+                    const estimatedTokens = this.estimateTokens(history);
+                    const contextWindow = this.getModelContextWindow();
+                    const threshold = Math.floor(contextWindow * (this.condensingThreshold / 100));
+                    if (estimatedTokens > threshold) {
+                        await this.condenseHistory(history, systemPrompt, abortSignal);
+                        this.taskCallbacks.onContextCondensed?.();
+                    }
+                }
 
                 // Break loop if attempt_completion was signaled
                 if (completionResult !== null) {
@@ -425,6 +448,24 @@ export class AgentTask {
                 this.taskCallbacks.onComplete();
                 return;
             }
+
+            // Remove orphaned assistant tool_call messages from history.
+            // These arise when an error occurs after the assistant message was pushed
+            // but before tool results were added. Leaving them causes OpenAI 400 errors
+            // ("assistant message with tool_calls must be followed by tool messages")
+            // on the next user message in the same conversation.
+            while (history.length > 0) {
+                const last = history[history.length - 1];
+                const isOrphaned = last.role === 'assistant'
+                    && Array.isArray(last.content)
+                    && (last.content as ContentBlock[]).some((b) => (b as any).type === 'tool_use');
+                if (isOrphaned) {
+                    history.pop();
+                } else {
+                    break;
+                }
+            }
+
             const err = error instanceof Error ? error : new Error(String(error));
             console.error('[AgentTask] Task failed:', err);
             this.taskCallbacks.onError(err);
@@ -454,9 +495,13 @@ export class AgentTask {
 
     /** Approximate context window for the active model (tokens). */
     private getModelContextWindow(): number {
-        const modelName = (this.api as any).getModel?.() ?? '';
-        if (modelName.includes('claude')) return 200_000;
-        if (modelName.includes('gpt-4')) return 128_000;
+        const model = (this.api as any).getModel?.();
+        // getModel() returns { id: string; info: ModelInfo } — extract the id string
+        const modelId: string = typeof model === 'string' ? model : (model?.id ?? '');
+        // Use the provider-reported context window when available
+        if (model?.info?.contextWindow) return model.info.contextWindow;
+        if (modelId.includes('claude')) return 200_000;
+        if (modelId.includes('gpt-4') || modelId.includes('gpt-5')) return 128_000;
         return 128_000;
     }
 

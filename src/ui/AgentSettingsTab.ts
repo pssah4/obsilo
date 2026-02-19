@@ -111,14 +111,77 @@ const EMBEDDING_SUGGESTIONS: Record<string, { group: string; id: string; label: 
     ],
 };
 
-// Human-readable tool group labels shown in the mode editor and new mode modal
-const TOOL_GROUP_META: Record<string, { label: string; desc: string }> = {
-    read:  { label: 'Read Files',         desc: 'read_file, list_files, search_files' },
-    vault: { label: 'Vault Intelligence', desc: 'Frontmatter, tags, backlinks, daily notes, open notes' },
-    edit:  { label: 'Edit Files',         desc: 'write_file, edit_file, append, create_folder, delete, move' },
-    web:   { label: 'Web Access',         desc: 'web_fetch, web_search' },
-    agent: { label: 'Agent Control',      desc: 'ask_followup_question, attempt_completion, update_todo_list, switch_mode, new_task' },
-    mcp:   { label: 'MCP Tools',          desc: 'use_mcp_tool — calls configured MCP servers' },
+// Human-readable labels and descriptions for individual tools
+const TOOL_LABEL_MAP: Record<string, { label: string; desc: string }> = {
+    read_file:              { label: 'Read File',           desc: 'Read the contents of a vault file' },
+    list_files:             { label: 'List Files',          desc: 'List files and folders in a directory' },
+    search_files:           { label: 'Search Files',        desc: 'Search file contents by keyword or regex' },
+    get_vault_stats:        { label: 'Vault Stats',         desc: 'Get overview stats (file count, tags, etc.)' },
+    get_frontmatter:        { label: 'Frontmatter',         desc: 'Read YAML frontmatter from a note' },
+    search_by_tag:          { label: 'Search by Tag',       desc: 'Find notes with specific tags' },
+    get_linked_notes:       { label: 'Linked Notes',        desc: 'Find notes that link to or from a note' },
+    get_daily_note:         { label: 'Daily Note',          desc: 'Get or create today\'s daily note' },
+    open_note:              { label: 'Open Note',           desc: 'Open a note in the editor' },
+    semantic_search:        { label: 'Semantic Search',     desc: 'Find notes by meaning using the vector index' },
+    query_base:             { label: 'Query Base',          desc: 'Query an Obsidian Bases database' },
+    write_file:             { label: 'Write File',          desc: 'Create a new file or overwrite completely' },
+    edit_file:              { label: 'Edit File',           desc: 'Make targeted edits to a file' },
+    append_to_file:         { label: 'Append to File',      desc: 'Add content at the end of a file' },
+    create_folder:          { label: 'Create Folder',       desc: 'Create a new folder in the vault' },
+    delete_file:            { label: 'Delete File',         desc: 'Permanently delete a file or folder' },
+    move_file:              { label: 'Move / Rename',       desc: 'Move or rename a file' },
+    update_frontmatter:     { label: 'Update Frontmatter',  desc: 'Set or update YAML frontmatter fields' },
+    generate_canvas:        { label: 'Generate Canvas',     desc: 'Create an Obsidian Canvas file' },
+    create_base:            { label: 'Create Base',         desc: 'Create an Obsidian Bases database' },
+    update_base:            { label: 'Update Base',         desc: 'Modify an Obsidian Bases database' },
+    web_fetch:              { label: 'Fetch URL',           desc: 'Download and read a web page' },
+    web_search:             { label: 'Web Search',          desc: 'Search the web for current information' },
+    ask_followup_question:  { label: 'Ask User',            desc: 'Ask the user a clarifying question' },
+    attempt_completion:     { label: 'Complete Task',       desc: 'Signal that the task is done' },
+    update_todo_list:       { label: 'Update Todos',        desc: 'Show a task checklist in the chat' },
+    new_task:               { label: 'Spawn Sub-agent',     desc: 'Delegate a subtask to a fresh agent' },
+    use_mcp_tool:           { label: 'MCP Tool',            desc: 'Call an external tool via an MCP server' },
+};
+
+// Human-readable tool group labels and individual tool lists (for per-tool selection UI)
+const TOOL_GROUP_META: Record<string, { label: string; desc: string; tools: string[] }> = {
+    read:  {
+        label: 'Read Files',
+        desc: 'Read and search vault files',
+        tools: ['read_file', 'list_files', 'search_files'],
+    },
+    vault: {
+        label: 'Vault Intelligence',
+        desc: 'Frontmatter, tags, backlinks, daily notes, semantic search, canvas, bases',
+        tools: [
+            'get_vault_stats', 'get_frontmatter', 'search_by_tag', 'get_linked_notes',
+            'get_daily_note', 'open_note', 'semantic_search', 'query_base',
+        ],
+    },
+    edit:  {
+        label: 'Edit Files',
+        desc: 'Create, edit, move, and structure vault files and canvases',
+        tools: [
+            'write_file', 'edit_file', 'append_to_file', 'create_folder',
+            'delete_file', 'move_file', 'update_frontmatter',
+            'generate_canvas', 'create_base', 'update_base',
+        ],
+    },
+    web:   {
+        label: 'Web Access',
+        desc: 'Fetch web pages and search the internet',
+        tools: ['web_fetch', 'web_search'],
+    },
+    agent: {
+        label: 'Agent Control',
+        desc: 'Task planning, completion, clarification, and sub-agent spawning',
+        tools: ['ask_followup_question', 'attempt_completion', 'update_todo_list', 'new_task'],
+    },
+    mcp:   {
+        label: 'MCP Tools',
+        desc: 'Call external tools via configured MCP servers',
+        tools: ['use_mcp_tool'],
+    },
 };
 
 // ---------------------------------------------------------------------------
@@ -1981,10 +2044,11 @@ export class AgentSettingsTab extends PluginSettingTab {
                 const actions = row.createDiv({ cls: 'agent-rules-actions' });
                 const editBtn = actions.createEl('button', { text: 'Edit', cls: 'agent-rules-edit-btn' });
                 editBtn.addEventListener('click', async () => {
-                    const file = this.app.vault.getAbstractFileByPath(rPath);
-                    if (file) {
-                        await this.app.workspace.getLeaf().openFile(file as any);
-                    }
+                    const content = await this.app.vault.adapter.read(rPath);
+                    const { RulesLoader } = await import('../core/context/RulesLoader');
+                    new ContentEditorModal(this.app, `Edit rule: ${RulesLoader.displayName(rPath)}`, content, async (newContent) => {
+                        await this.app.vault.adapter.write(rPath, newContent);
+                    }).open();
                 });
 
                 const delBtn = actions.createEl('button', { text: 'Delete', cls: 'agent-rules-delete-btn' });
@@ -2001,9 +2065,13 @@ export class AgentSettingsTab extends PluginSettingTab {
         createBtn.addEventListener('click', async () => {
             const name = nameInput.value.trim();
             if (!name || !rulesLoader) return;
-            await rulesLoader.createRule(name, `# ${name}\n\n`);
+            const template = `# ${name}\n\n`;
+            const rPath = await rulesLoader.createRule(name, template);
             nameInput.value = '';
             await refreshList();
+            new ContentEditorModal(this.app, `Edit rule: ${name}`, template, async (content) => {
+                await this.app.vault.adapter.write(rPath, content);
+            }).open();
         });
 
         refreshList();
@@ -2025,6 +2093,23 @@ export class AgentSettingsTab extends PluginSettingTab {
             cls: 'agent-rules-name-input',
         });
         const createBtn = createRow.createEl('button', { text: 'Create workflow', cls: 'mod-cta' });
+
+        // Import button
+        const importWfBtn = createRow.createEl('button', { text: 'Import', cls: 'agent-rules-import-btn' });
+        importWfBtn.addEventListener('click', () => {
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.accept = '.md,.txt';
+            fileInput.addEventListener('change', async () => {
+                const file = fileInput.files?.[0];
+                if (!file || !workflowLoader) return;
+                const content = await file.text();
+                const nameWithoutExt = file.name.replace(/\.[^.]+$/, '');
+                await workflowLoader.createWorkflow(nameWithoutExt, content);
+                await refreshList();
+            });
+            fileInput.click();
+        });
 
         // ── Workflow list ──────────────────────────────────────────────────
         const listEl = container.createDiv({ cls: 'agent-rules-list' });
@@ -2061,10 +2146,22 @@ export class AgentSettingsTab extends PluginSettingTab {
                 const actions = row.createDiv({ cls: 'agent-rules-actions' });
                 const editBtn = actions.createEl('button', { text: 'Edit', cls: 'agent-rules-edit-btn' });
                 editBtn.addEventListener('click', async () => {
-                    const file = this.app.vault.getAbstractFileByPath(wf.path);
-                    if (file) {
-                        await this.app.workspace.getLeaf().openFile(file as any);
-                    }
+                    const content = await this.app.vault.adapter.read(wf.path);
+                    new ContentEditorModal(this.app, `Edit workflow: ${wf.displayName}`, content, async (newContent) => {
+                        await this.app.vault.adapter.write(wf.path, newContent);
+                    }).open();
+                });
+
+                const exportWfBtn = actions.createEl('button', { text: 'Export', cls: 'agent-rules-export-btn' });
+                exportWfBtn.addEventListener('click', async () => {
+                    const content = await this.app.vault.adapter.read(wf.path);
+                    const blob = new Blob([content], { type: 'text/markdown' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${wf.slug}.md`;
+                    a.click();
+                    URL.revokeObjectURL(url);
                 });
 
                 const delBtn = actions.createEl('button', { text: 'Delete', cls: 'agent-rules-delete-btn' });
@@ -2081,9 +2178,13 @@ export class AgentSettingsTab extends PluginSettingTab {
         createBtn.addEventListener('click', async () => {
             const name = nameInput.value.trim();
             if (!name || !workflowLoader) return;
-            await workflowLoader.createWorkflow(name, `# ${name}\n\n`);
+            const template = `# ${name}\n\n`;
+            const wPath = await workflowLoader.createWorkflow(name, template);
             nameInput.value = '';
             await refreshList();
+            new ContentEditorModal(this.app, `Edit workflow: ${name}`, template, async (content) => {
+                await this.app.vault.adapter.write(wPath, content);
+            }).open();
         });
 
         refreshList();
@@ -2105,6 +2206,34 @@ export class AgentSettingsTab extends PluginSettingTab {
             cls: 'agent-rules-name-input',
         });
         const createBtn = createRow.createEl('button', { text: 'Create skill', cls: 'mod-cta' });
+
+        // Import button
+        const importSkillBtn = createRow.createEl('button', { text: 'Import', cls: 'agent-rules-import-btn' });
+        importSkillBtn.addEventListener('click', () => {
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.accept = '.md,.txt';
+            fileInput.addEventListener('change', async () => {
+                const file = fileInput.files?.[0];
+                if (!file || !skillsManager) return;
+                const content = await file.text();
+                // Extract name from frontmatter if present, otherwise use filename
+                let skillName = file.name.replace(/\.[^.]+$/, '');
+                const fmMatch = content.match(/^---[\s\S]*?^name:\s*(.+)$/m);
+                if (fmMatch) skillName = fmMatch[1].trim();
+                const safeName = skillName.replace(/[^a-zA-Z0-9\-_ ]/g, '').trim();
+                const dir = `${skillsManager.skillsDir}/${safeName}`;
+                try {
+                    const exists = await this.app.vault.adapter.exists(dir);
+                    if (!exists) await this.app.vault.adapter.mkdir(dir);
+                    await this.app.vault.adapter.write(`${dir}/SKILL.md`, content);
+                    await refreshList();
+                } catch {
+                    new Notice('Could not import skill');
+                }
+            });
+            fileInput.click();
+        });
 
         // ── Skill list ─────────────────────────────────────────────────────
         const listEl = container.createDiv({ cls: 'agent-rules-list' });
@@ -2130,10 +2259,22 @@ export class AgentSettingsTab extends PluginSettingTab {
                 const actions = row.createDiv({ cls: 'agent-rules-actions' });
                 const editBtn = actions.createEl('button', { text: 'Edit', cls: 'agent-rules-edit-btn' });
                 editBtn.addEventListener('click', async () => {
-                    const file = this.app.vault.getAbstractFileByPath(skill.path);
-                    if (file) {
-                        await this.app.workspace.getLeaf().openFile(file as any);
-                    }
+                    const content = await this.app.vault.adapter.read(skill.path);
+                    new ContentEditorModal(this.app, `Edit skill: ${skill.name}`, content, async (newContent) => {
+                        await this.app.vault.adapter.write(skill.path, newContent);
+                    }).open();
+                });
+
+                const exportSkillBtn = actions.createEl('button', { text: 'Export', cls: 'agent-rules-export-btn' });
+                exportSkillBtn.addEventListener('click', async () => {
+                    const content = await this.app.vault.adapter.read(skill.path);
+                    const blob = new Blob([content], { type: 'text/markdown' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `SKILL-${skill.name}.md`;
+                    a.click();
+                    URL.revokeObjectURL(url);
                 });
 
                 const delBtn = actions.createEl('button', { text: 'Delete', cls: 'agent-rules-delete-btn' });
@@ -2153,16 +2294,17 @@ export class AgentSettingsTab extends PluginSettingTab {
             if (!name || !skillsManager) return;
             const safeName = name.replace(/[^a-zA-Z0-9\-_ ]/g, '').trim();
             const dir = `${skillsManager.skillsDir}/${safeName}`;
+            const skillPath = `${dir}/SKILL.md`;
+            const template = `---\nname: ${safeName}\ndescription: Describe when this skill applies\nkeywords: []\n---\n\n# ${safeName}\n\n<!-- Describe what this skill does and when to use it. The agent reads this file when the skill is relevant. -->\n\n`;
             try {
                 const exists = await this.app.vault.adapter.exists(dir);
                 if (!exists) await this.app.vault.adapter.mkdir(dir);
-                const skillPath = `${dir}/SKILL.md`;
-                await this.app.vault.adapter.write(
-                    skillPath,
-                    `---\nname: ${safeName}\ndescription: Describe when this skill applies\n---\n\n# ${safeName}\n\n`,
-                );
+                await this.app.vault.adapter.write(skillPath, template);
                 nameInput.value = '';
                 await refreshList();
+                new ContentEditorModal(this.app, `Edit skill: ${safeName}`, template, async (content) => {
+                    await this.app.vault.adapter.write(skillPath, content);
+                }).open();
             } catch {
                 new Notice('Could not create skill');
             }
@@ -2387,41 +2529,180 @@ export class AgentSettingsTab extends PluginSettingTab {
 
             const renderToolsEdit = () => {
                 toolsBody.empty();
-                const grid = toolsBody.createDiv('modes-groups-grid');
+                // Current per-tool override for this mode (if any)
+                const currentOverride: string[] | undefined =
+                    this.plugin.settings.modeToolOverrides?.[slug];
+
                 for (const [group, meta] of Object.entries(TOOL_GROUP_META)) {
-                    const row = grid.createDiv('modes-group-row');
-                    const cb = row.createEl('input', { type: 'checkbox' });
-                    cb.checked = mode.toolGroups.includes(group as any);
-                    const labelEl = row.createEl('label');
-                    labelEl.createEl('strong', { text: meta.label });
-                    labelEl.createEl('span', { cls: 'modes-group-desc', text: ` — ${meta.desc}` });
-                    cb.addEventListener('change', async () => {
+                    const isGroupEnabled = mode.toolGroups.includes(group as any);
+
+                    // --- Group accordion ---
+                    const details = toolsBody.createEl('details', { cls: 'modes-tool-group-accordion' });
+                    if (isGroupEnabled) details.open = true;
+
+                    const summary = details.createEl('summary', { cls: 'modes-tool-group-summary' });
+
+                    // Group enable/disable checkbox
+                    const groupCb = summary.createEl('input', { type: 'checkbox' });
+                    groupCb.checked = isGroupEnabled;
+                    groupCb.addEventListener('click', (e) => e.stopPropagation()); // prevent accordion toggle
+                    groupCb.addEventListener('change', async () => {
                         const editable = getOrCreateEditable();
-                        if (cb.checked) {
+                        if (groupCb.checked) {
                             if (!editable.toolGroups.includes(group as any)) editable.toolGroups.push(group as any);
+                            details.open = true;
                         } else {
                             editable.toolGroups = editable.toolGroups.filter((g) => g !== group);
+                            details.open = false;
                         }
-                        // Keep display-mode object in sync
                         (mode as any).toolGroups = [...editable.toolGroups];
                         await saveMode();
+                        // Recount active tools badge
+                        badgeEl.setText(getCountBadge(group, groupCb.checked));
                     });
+
+                    summary.createEl('span', { cls: 'modes-tool-group-label', text: meta.label });
+
+                    // Active tools count badge
+                    const getCountBadge = (grp: string, enabled: boolean): string => {
+                        if (!enabled) return '0 / ' + TOOL_GROUP_META[grp].tools.length;
+                        const override = this.plugin.settings.modeToolOverrides?.[slug];
+                        if (!override) return meta.tools.length + ' / ' + meta.tools.length;
+                        const active = meta.tools.filter((t) => override.includes(t)).length;
+                        return `${active} / ${meta.tools.length}`;
+                    };
+                    const badgeEl = summary.createEl('span', {
+                        cls: 'modes-tool-count-badge',
+                        text: getCountBadge(group, isGroupEnabled),
+                    });
+
+                    // --- Individual tool checkboxes ---
+                    const toolsGrid = details.createDiv('modes-tool-checkboxes');
+                    for (const toolName of meta.tools) {
+                        const row = toolsGrid.createDiv('modes-tool-row');
+                        const toolCb = row.createEl('input', { type: 'checkbox' });
+                        const isEnabled = !currentOverride || currentOverride.includes(toolName);
+                        toolCb.checked = isEnabled && isGroupEnabled;
+                        toolCb.disabled = !isGroupEnabled;
+
+                        const toolMeta = TOOL_LABEL_MAP[toolName];
+                        const labelEl = row.createEl('label', { cls: 'modes-tool-name' });
+                        labelEl.createSpan({ cls: 'modes-tool-label-text', text: toolMeta?.label ?? toolName });
+                        if (toolMeta?.desc) {
+                            labelEl.createSpan({ cls: 'modes-tool-label-desc', text: toolMeta.desc });
+                        }
+
+                        toolCb.addEventListener('change', async () => {
+                            // Compute new override for this mode
+                            const allGroupTools = meta.tools;
+                            // Start from current override or all tools in all groups
+                            let allActiveTools: string[] = this.plugin.settings.modeToolOverrides?.[slug]
+                                ?? (this.plugin as any).modeService?.getToolNames(mode) ?? [];
+                            if (toolCb.checked) {
+                                if (!allActiveTools.includes(toolName)) allActiveTools = [...allActiveTools, toolName];
+                            } else {
+                                allActiveTools = allActiveTools.filter((t) => t !== toolName);
+                            }
+                            await (this.plugin as any).modeService?.setModeToolOverride(slug, allActiveTools);
+                            badgeEl.setText(getCountBadge(group, isGroupEnabled));
+                        });
+                    }
                 }
             };
 
             renderToolsReadOnly();
 
-            // "Edit tools" button (all modes)
-            const editToolsBtn = toolsHeaderRow.createEl('button', {
-                text: 'Edit tools',
-                cls: 'modes-edit-tools-btn',
-            });
-            editToolsBtn.addEventListener('click', () => {
-                toolsEditMode = !toolsEditMode;
-                editToolsBtn.setText(toolsEditMode ? 'Done' : 'Edit tools');
-                if (toolsEditMode) renderToolsEdit();
-                else renderToolsReadOnly();
-            });
+            // "Edit tools" button — hidden for Ask mode (protected)
+            if (slug !== 'ask') {
+                const editToolsBtn = toolsHeaderRow.createEl('button', {
+                    text: 'Edit tools',
+                    cls: 'modes-edit-tools-btn',
+                });
+                editToolsBtn.addEventListener('click', () => {
+                    toolsEditMode = !toolsEditMode;
+                    editToolsBtn.setText(toolsEditMode ? 'Done' : 'Edit tools');
+                    if (toolsEditMode) renderToolsEdit();
+                    else renderToolsReadOnly();
+                });
+            }
+
+            // ── Forced Skills ────────────────────────────────────────────────
+            const skillsMgrForMode = (this.plugin as any).skillsManager;
+            if (skillsMgrForMode) {
+                const skillsWrap = formArea.createDiv('modes-field');
+                skillsWrap.createEl('div', { cls: 'modes-field-label', text: 'Forced Skills' });
+                skillsWrap.createEl('div', {
+                    cls: 'modes-field-desc',
+                    text: 'Skills always injected into the system prompt for this mode, regardless of message keyword matching.',
+                });
+                const skillsCbList = skillsWrap.createDiv('modes-skills-list');
+                skillsCbList.createEl('span', { cls: 'modes-loading-hint', text: 'Loading skills…' });
+                (async () => {
+                    skillsCbList.empty();
+                    try {
+                        const allSkills: { path: string; name: string; description: string }[] =
+                            await skillsMgrForMode.discoverSkills();
+                        if (allSkills.length === 0) {
+                            skillsCbList.createEl('span', { cls: 'modes-loading-hint', text: 'No skills found. Create skills in the Skills tab.' });
+                        } else {
+                            const forcedSet = new Set<string>(this.plugin.settings.forcedSkills?.[slug] ?? []);
+                            for (const skill of allSkills) {
+                                const row = skillsCbList.createDiv('modes-skills-row');
+                                const cb = row.createEl('input', { type: 'checkbox' }) as HTMLInputElement;
+                                cb.checked = forcedSet.has(skill.name);
+                                const lbl = row.createEl('label', { cls: 'modes-skills-label' });
+                                lbl.createSpan({ text: skill.name });
+                                if (skill.description) lbl.createSpan({ cls: 'modes-skills-desc', text: skill.description });
+                                cb.addEventListener('change', async () => {
+                                    if (!this.plugin.settings.forcedSkills) this.plugin.settings.forcedSkills = {};
+                                    const cur = new Set<string>(this.plugin.settings.forcedSkills[slug] ?? []);
+                                    if (cb.checked) cur.add(skill.name);
+                                    else cur.delete(skill.name);
+                                    this.plugin.settings.forcedSkills[slug] = [...cur];
+                                    await this.plugin.saveSettings();
+                                });
+                            }
+                        }
+                    } catch {
+                        skillsCbList.createEl('span', { cls: 'modes-loading-hint', text: 'Error loading skills.' });
+                    }
+                })();
+            }
+
+            // ── Allowed MCP Servers ──────────────────────────────────────────
+            const mcpServerNames = Object.keys(this.plugin.settings.mcpServers ?? {});
+            if (mcpServerNames.length > 0) {
+                const mcpWrap = formArea.createDiv('modes-field');
+                mcpWrap.createEl('div', { cls: 'modes-field-label', text: 'Allowed MCP Servers' });
+                mcpWrap.createEl('div', {
+                    cls: 'modes-field-desc',
+                    text: 'MCP servers available in this mode. All checked = all servers allowed (default).',
+                });
+                const mcpCbList = mcpWrap.createDiv('modes-skills-list');
+                const modeMcpAllowed = this.plugin.settings.modeMcpServers?.[slug];
+                // undefined or empty = all allowed
+                const allowedSet = new Set<string>(modeMcpAllowed && modeMcpAllowed.length > 0 ? modeMcpAllowed : mcpServerNames);
+                for (const serverName of mcpServerNames) {
+                    const row = mcpCbList.createDiv('modes-skills-row');
+                    const cb = row.createEl('input', { type: 'checkbox' }) as HTMLInputElement;
+                    cb.checked = allowedSet.has(serverName);
+                    row.createEl('label', { cls: 'modes-skills-label', text: serverName });
+                    cb.addEventListener('change', async () => {
+                        if (!this.plugin.settings.modeMcpServers) this.plugin.settings.modeMcpServers = {};
+                        const cur = new Set<string>(
+                            this.plugin.settings.modeMcpServers[slug]?.length
+                                ? this.plugin.settings.modeMcpServers[slug]
+                                : mcpServerNames
+                        );
+                        if (cb.checked) cur.add(serverName);
+                        else cur.delete(serverName);
+                        // If all are checked, store empty array (= no restriction)
+                        const next = [...cur];
+                        this.plugin.settings.modeMcpServers[slug] = next.length === mcpServerNames.length ? [] : next;
+                        await this.plugin.saveSettings();
+                    });
+                }
+            }
 
             // ── Role Definition ───────────────────────────────────────────────
             const roleWrap = formArea.createDiv('modes-field');
@@ -2590,8 +2871,22 @@ export class AgentSettingsTab extends PluginSettingTab {
                 if (!file) return;
                 const text = await file.text();
                 try {
-                    const parsed = JSON.parse(text) as ModeConfig;
-                    if (!parsed.slug || !parsed.name || !parsed.roleDefinition) {
+                    // M-1: Validate JSON size and structure before accepting imported mode
+                    if (text.length > 500_000) {
+                        new Notice('Mode file too large (max 500 KB)');
+                        return;
+                    }
+                    let parsed: any;
+                    try {
+                        parsed = JSON.parse(text);
+                    } catch {
+                        new Notice('Invalid mode file: not valid JSON');
+                        return;
+                    }
+                    if (!parsed || typeof parsed !== 'object' ||
+                        typeof parsed.slug !== 'string' ||
+                        typeof parsed.name !== 'string' ||
+                        typeof parsed.roleDefinition !== 'string') {
                         new Notice('Invalid mode file: missing slug, name, or roleDefinition');
                         return;
                     }
@@ -3660,6 +3955,53 @@ class NewModeModal extends Modal {
 
         const cancelBtn = actions.createEl('button', { text: 'Cancel' });
         cancelBtn.addEventListener('click', () => this.close());
+    }
+
+    onClose(): void {
+        this.contentEl.empty();
+    }
+}
+
+// ---------------------------------------------------------------------------
+// ContentEditorModal — inline markdown editor for Skills, Workflows, Rules
+// ---------------------------------------------------------------------------
+
+class ContentEditorModal extends Modal {
+    private readonly initialContent: string;
+    private readonly onSave: (content: string) => void;
+    private readonly modalTitle: string;
+
+    constructor(app: App, title: string, initialContent: string, onSave: (content: string) => void) {
+        super(app);
+        this.modalTitle = title;
+        this.initialContent = initialContent;
+        this.onSave = onSave;
+    }
+
+    onOpen(): void {
+        const { contentEl } = this;
+        contentEl.addClass('content-editor-modal');
+        contentEl.createEl('h3', { cls: 'content-editor-title', text: this.modalTitle });
+
+        const textarea = contentEl.createEl('textarea', { cls: 'content-editor-textarea' });
+        textarea.value = this.initialContent;
+        textarea.setAttribute('rows', '20');
+        textarea.setAttribute('spellcheck', 'false');
+
+        const btnRow = contentEl.createDiv({ cls: 'content-editor-btn-row' });
+        const saveBtn = btnRow.createEl('button', { text: 'Save', cls: 'mod-cta' });
+        const cancelBtn = btnRow.createEl('button', { text: 'Cancel' });
+
+        saveBtn.addEventListener('click', () => {
+            this.onSave(textarea.value);
+            this.close();
+        });
+        cancelBtn.addEventListener('click', () => this.close());
+
+        setTimeout(() => {
+            textarea.focus();
+            textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+        }, 50);
     }
 
     onClose(): void {

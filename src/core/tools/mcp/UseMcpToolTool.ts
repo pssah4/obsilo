@@ -18,7 +18,10 @@ interface UseMcpToolInput {
 
 export class UseMcpToolTool extends BaseTool<'use_mcp_tool'> {
     readonly name = 'use_mcp_tool' as const;
-    readonly isWriteOperation = false;
+    // H-6: MCP tools are dynamic and may perform writes, deletes, or other destructive ops.
+    // Treat as write so IgnoreService path-checks apply if the tool passes a 'path' argument.
+    // Approval is already triggered via TOOL_GROUPS['use_mcp_tool'] = 'mcp' regardless of this flag.
+    readonly isWriteOperation = true;
 
     private mcpClient: McpClient;
 
@@ -61,6 +64,18 @@ export class UseMcpToolTool extends BaseTool<'use_mcp_tool'> {
         if (!server_name || !tool_name) {
             callbacks.pushToolResult(
                 this.formatError(new Error('server_name and tool_name are required'))
+            );
+            return;
+        }
+
+        // Check MCP server whitelist (activeMcpServers in settings)
+        const activeMcpServers: string[] = (this.plugin.settings as any).activeMcpServers ?? [];
+        if (activeMcpServers.length > 0 && !activeMcpServers.includes(server_name)) {
+            callbacks.pushToolResult(
+                this.formatError(new Error(
+                    `MCP server "${server_name}" is not enabled. ` +
+                    `Use the tool picker (pocket-knife button) in the chat toolbar to enable it.`
+                ))
             );
             return;
         }

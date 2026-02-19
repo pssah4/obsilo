@@ -57,6 +57,19 @@ export class AgentSidebarView extends ItemView {
     private pendingAttachments: AttachmentItem[] = [];
     private attachmentChipBar: HTMLElement | null = null;
 
+    // Tool picker (pocket-knife button)
+    private toolPickerButton: HTMLElement | null = null;
+    /** Session-only tool overrides: mode slug → enabled tool names (RAM only, not persisted) */
+    private sessionToolOverrides = new Map<string, string[]>();
+    /** Currently open tool-picker popover element */
+    private toolPickerPopover: HTMLElement | null = null;
+    /** Outside-click handler for tool-picker — stored so it can be removed on close */
+    private toolPickerCloseHandler: ((e: MouseEvent) => void) | null = null;
+    /** Session-only forced skill names: mode slug → skill names to force-include */
+    private sessionForcedSkills = new Map<string, string[]>();
+    /** Session-only forced workflow: mode slug → workflow slug ('' = none) */
+    private sessionForcedWorkflow = new Map<string, string>();
+
     // Autocomplete dropdown (Sprint B3)
     private autocompleteDropdown: HTMLElement | null = null;
     private autocompleteItems: { label: string; sub?: string; onSelect: () => void }[] = [];
@@ -260,6 +273,15 @@ export class AgentSidebarView extends ItemView {
         this.updateModelButton();
         this.modelButton.addEventListener('click', (e) => this.showModelMenu(e));
 
+        // Tool picker button (ghost style) — hidden for Ask mode
+        this.toolPickerButton = toolbarLeft.createEl('button', {
+            cls: 'toolbar-button toolbar-ghost tool-picker-button',
+            attr: { 'aria-label': 'Select tools' },
+        });
+        setIcon(this.toolPickerButton.createSpan('toolbar-icon'), 'pocket-knife');
+        this.toolPickerButton.addEventListener('click', (e) => this.showToolPicker(e));
+        this.updateToolPickerButton();
+
         // Attach file button (ghost style)
         const attachBtn = toolbarLeft.createEl('button', {
             cls: 'toolbar-button toolbar-ghost attach-button',
@@ -330,7 +352,6 @@ export class AgentSidebarView extends ItemView {
         const label = model ? (model.displayName ?? model.name) : 'No model';
         // Show an indicator if the current mode has a model override
         const hasModeOverride = !!this.plugin.settings.modeModelKeys?.[this.plugin.settings.currentMode];
-        setIcon(this.modelButton.createSpan('toolbar-icon'), hasModeOverride ? 'cpu' : 'cpu');
         this.modelButton.createSpan('model-label').setText(label);
         setIcon(this.modelButton.createSpan('mode-chevron'), 'chevron-down');
         (this.modelButton as HTMLButtonElement).title = hasModeOverride
@@ -400,6 +421,13 @@ export class AgentSidebarView extends ItemView {
         setIcon(this.modeButton.createSpan('toolbar-icon'), this.getModeIcon(currentMode));
         this.modeButton.createSpan('mode-label').setText(this.getModeDisplayName(currentMode));
         setIcon(this.modeButton.createSpan('mode-chevron'), 'chevron-down');
+        this.updateToolPickerButton();
+    }
+
+    private updateToolPickerButton(): void {
+        if (!this.toolPickerButton) return;
+        const isAsk = this.plugin.settings.currentMode === 'ask';
+        this.toolPickerButton.style.display = isAsk ? 'none' : '';
     }
 
     private showModeMenu(event: MouseEvent): void {
@@ -418,11 +446,517 @@ export class AgentSidebarView extends ItemView {
     }
 
     private getModeIcon(modeSlug: string): string {
-        return this.modeService.getMode(modeSlug)?.icon ?? 'cpu';
+        return this.modeService.getMode(modeSlug)?.icon ?? 'zap';
     }
 
     private getModeDisplayName(modeSlug: string): string {
         return this.modeService.getMode(modeSlug)?.name ?? modeSlug;
+    }
+
+    // ---------------------------------------------------------------------------
+    // Tool Picker (pocket-knife button)
+    // ---------------------------------------------------------------------------
+
+    private showToolPicker(event: MouseEvent): void {
+        this.closeToolPicker();
+
+        const slug = this.plugin.settings.currentMode;
+        const mode = this.modeService.getMode(slug);
+        if (!mode) return;
+
+        const popover = document.createElement('div');
+        popover.className = 'tool-picker-popover';
+        this.toolPickerPopover = popover;
+
+        // ── Header ───────────────────────────────────────────────────────────
+        const headerEl = popover.createDiv('tool-picker-header');
+        headerEl.createSpan({ cls: 'tool-picker-title', text: 'Configure tools' });
+        const countBadge = headerEl.createSpan('tool-picker-count');
+
+        // ── Search ───────────────────────────────────────────────────────────
+        const searchInput = popover.createEl('input', {
+            cls: 'tool-picker-search',
+            attr: { placeholder: 'Filter tools…', type: 'text', spellcheck: 'false' },
+        }) as HTMLInputElement;
+
+        // ── Scroll container ─────────────────────────────────────────────────
+        const scrollEl = popover.createDiv('tool-picker-scroll');
+
+        // ── Data tables ──────────────────────────────────────────────────────
+        const GROUP_TOOLS: Record<string, string[]> = {
+            read:  ['read_file', 'list_files', 'search_files'],
+            vault: ['get_vault_stats', 'get_frontmatter', 'search_by_tag', 'get_linked_notes',
+                    'get_daily_note', 'open_note', 'semantic_search', 'query_base'],
+            edit:  ['write_file', 'edit_file', 'append_to_file', 'create_folder',
+                    'delete_file', 'move_file', 'update_frontmatter',
+                    'generate_canvas', 'create_base', 'update_base'],
+            web:   ['web_fetch', 'web_search'],
+            agent: ['ask_followup_question', 'attempt_completion', 'update_todo_list', 'new_task'],
+            mcp:   ['use_mcp_tool'],
+        };
+        const GROUP_LABELS: Record<string, string> = {
+            read: 'Read Files', vault: 'Vault Intelligence', edit: 'Edit Files',
+            web: 'Web Access', agent: 'Agent Control', mcp: 'MCP Tools',
+        };
+        const GROUP_ICONS: Record<string, string> = {
+            read: 'file-search', vault: 'layers', edit: 'file-edit',
+            web: 'globe', agent: 'cpu', mcp: 'plug-2',
+        };
+        const TOOL_LABELS: Record<string, string> = {
+            read_file: 'Read File', list_files: 'List Files', search_files: 'Search Files',
+            get_vault_stats: 'Vault Stats', get_frontmatter: 'Frontmatter',
+            search_by_tag: 'Search by Tag', get_linked_notes: 'Linked Notes',
+            get_daily_note: 'Daily Note', open_note: 'Open Note',
+            semantic_search: 'Semantic Search', query_base: 'Query Base',
+            write_file: 'Write File', edit_file: 'Edit File', append_to_file: 'Append',
+            create_folder: 'Create Folder', delete_file: 'Delete File', move_file: 'Move File',
+            update_frontmatter: 'Update Frontmatter', generate_canvas: 'Canvas',
+            create_base: 'Create Base', update_base: 'Update Base',
+            web_fetch: 'Fetch URL', web_search: 'Web Search',
+            ask_followup_question: 'Ask User', attempt_completion: 'Complete Task',
+            update_todo_list: 'Update Plan', new_task: 'Sub-agent',
+            use_mcp_tool: 'MCP Tool',
+        };
+        const TOOL_ICONS: Record<string, string> = {
+            read_file: 'file-text', list_files: 'folder-open', search_files: 'search',
+            get_vault_stats: 'bar-chart-2', get_frontmatter: 'tag',
+            search_by_tag: 'hash', get_linked_notes: 'link',
+            get_daily_note: 'calendar', open_note: 'external-link',
+            semantic_search: 'brain', query_base: 'database',
+            write_file: 'file-plus', edit_file: 'file-pen', append_to_file: 'plus-circle',
+            create_folder: 'folder-plus', delete_file: 'trash-2', move_file: 'move',
+            update_frontmatter: 'tag', generate_canvas: 'layout-dashboard',
+            create_base: 'table-2', update_base: 'table-properties',
+            web_fetch: 'globe', web_search: 'search',
+            ask_followup_question: 'message-circle', attempt_completion: 'check-circle',
+            update_todo_list: 'list-checks', new_task: 'git-fork',
+            use_mcp_tool: 'plug-2',
+        };
+        const TOOL_DESCS: Record<string, string> = {
+            read_file: 'Read file content', list_files: 'List directory',
+            search_files: 'Search by regex', get_vault_stats: 'Overview & stats',
+            get_frontmatter: 'Read YAML metadata', search_by_tag: 'Find by tags',
+            get_linked_notes: 'Forward/back links', get_daily_note: 'Today\'s note',
+            open_note: 'Open in editor', semantic_search: 'Search by meaning',
+            query_base: 'Query Bases filter', write_file: 'Create or overwrite',
+            edit_file: 'Targeted edit', append_to_file: 'Add to end',
+            create_folder: 'New folder', delete_file: 'Move to trash',
+            move_file: 'Move or rename', update_frontmatter: 'Set YAML fields',
+            generate_canvas: 'Visual map', create_base: 'New database view',
+            update_base: 'Edit Bases view', web_fetch: 'Fetch URL as text',
+            web_search: 'Search the web', ask_followup_question: 'Ask user a question',
+            attempt_completion: 'Signal done', update_todo_list: 'Publish task plan',
+            new_task: 'Spawn sub-agent', use_mcp_tool: 'Call MCP server',
+        };
+
+        // Current effective tools (session → settings → defaults)
+        const effectiveTools = new Set(
+            this.sessionToolOverrides.get(slug)
+            ?? this.plugin.settings.modeToolOverrides?.[slug]
+            ?? this.modeService.getEffectiveToolNames(mode)
+        );
+        const toolChecks = new Map<string, HTMLInputElement>();
+        const allItemRows: HTMLElement[] = [];   // for search filtering
+
+        // ── Helpers ──────────────────────────────────────────────────────────
+
+        const applyToolOverride = () => {
+            const allGroupTools = mode.toolGroups.flatMap((g) => GROUP_TOOLS[g] ?? []);
+            const selected = allGroupTools.filter((t) => toolChecks.get(t)?.checked ?? false);
+            this.sessionToolOverrides.set(slug, selected);
+        };
+
+        const updateCount = () => {
+            let n = 0;
+            for (const cb of toolChecks.values()) { if (cb.checked) n++; }
+            countBadge.setText(`${n} selected`);
+        };
+
+        // Create a top-level expandable category row
+        const makeTopCat = (label: string, startOpen = true): { catRow: HTMLElement; catBody: HTMLElement } => {
+            const catRow = scrollEl.createDiv('tp-cat-row');
+            if (startOpen) catRow.addClass('is-open');
+            catRow.createSpan('tp-cat-arrow').setText('▸');
+            catRow.createSpan({ cls: 'tp-cat-label', text: label });
+            const catBody = scrollEl.createDiv('tp-cat-body');
+            catBody.style.display = startOpen ? '' : 'none';
+            catRow.addEventListener('click', (e) => {
+                if ((e.target as HTMLElement).tagName === 'INPUT') return;
+                const open = catRow.classList.toggle('is-open');
+                catBody.style.display = open ? '' : 'none';
+            });
+            return { catRow, catBody };
+        };
+
+        // Create a sub-category row inside Built-In (no icon — icons only on item level)
+        const makeSubCat = (
+            parent: HTMLElement, label: string, _iconName: string,
+        ): { subRow: HTMLElement; subBody: HTMLElement; subGroupCb: HTMLInputElement } => {
+            const subRow = parent.createDiv('tp-subcat-row is-open');
+            subRow.createSpan('tp-subcat-arrow').setText('▸');
+            subRow.createSpan({ cls: 'tp-subcat-label', text: label });
+            const subGroupCb = subRow.createEl('input', { type: 'checkbox' }) as HTMLInputElement;
+            subGroupCb.className = 'tp-cat-group-cb';
+            const subBody = parent.createDiv('tp-subcat-body');
+            subRow.addEventListener('click', (e) => {
+                if ((e.target as HTMLElement).tagName === 'INPUT') return;
+                const open = subRow.classList.toggle('is-open');
+                subBody.style.display = open ? '' : 'none';
+            });
+            return { subRow, subBody, subGroupCb };
+        };
+
+        // Create an item row with checkbox, icon, name, description
+        const makeItemRow = (
+            parent: HTMLElement, label: string, desc: string, iconName: string,
+            checked: boolean, indentCls = 'tp-item-row',
+        ): HTMLInputElement => {
+            const row = parent.createDiv(indentCls);
+            row.setAttribute('data-label', label.toLowerCase());
+            row.setAttribute('data-desc', desc.toLowerCase());
+            allItemRows.push(row);
+            const cb = row.createEl('input', { type: 'checkbox' }) as HTMLInputElement;
+            cb.checked = checked;
+            const iconEl = row.createSpan('tp-item-icon');
+            setIcon(iconEl, iconName);
+            row.createSpan({ cls: 'tp-item-name', text: label });
+            if (desc) row.createSpan({ cls: 'tp-item-desc', text: desc });
+            return cb;
+        };
+
+        // ── Built-In section ─────────────────────────────────────────────────
+        const { catRow: builtInCatRow, catBody: builtInCatBody } = makeTopCat('Built-In');
+        const builtInGroupCb = builtInCatRow.createEl('input', { type: 'checkbox' }) as HTMLInputElement;
+        builtInGroupCb.className = 'tp-cat-group-cb';
+        const allBuiltInTools = mode.toolGroups.filter((g) => g !== 'mcp').flatMap((g) => GROUP_TOOLS[g] ?? []);
+        const biAllEnabled = allBuiltInTools.every((t) => effectiveTools.has(t));
+        const biSomeEnabled = allBuiltInTools.some((t) => effectiveTools.has(t));
+        builtInGroupCb.checked = biAllEnabled;
+        builtInGroupCb.indeterminate = !biAllEnabled && biSomeEnabled;
+
+        for (const group of mode.toolGroups) {
+            if (group === 'mcp') continue;
+            const tools = GROUP_TOOLS[group] ?? [];
+            if (tools.length === 0) continue;
+
+            const { subRow, subBody, subGroupCb } = makeSubCat(
+                builtInCatBody, GROUP_LABELS[group] ?? group, GROUP_ICONS[group] ?? 'tool',
+            );
+            const grpAllEnabled = tools.every((t) => effectiveTools.has(t));
+            const grpSomeEnabled = tools.some((t) => effectiveTools.has(t));
+            subGroupCb.checked = grpAllEnabled;
+            subGroupCb.indeterminate = !grpAllEnabled && grpSomeEnabled;
+
+            for (const toolName of tools) {
+                const cb = makeItemRow(
+                    subBody,
+                    TOOL_LABELS[toolName] ?? toolName,
+                    TOOL_DESCS[toolName] ?? '',
+                    TOOL_ICONS[toolName] ?? 'tool',
+                    effectiveTools.has(toolName),
+                );
+                toolChecks.set(toolName, cb);
+                cb.addEventListener('change', () => {
+                    const allInGrp = tools.every((t) => toolChecks.get(t)?.checked);
+                    const someInGrp = tools.some((t) => toolChecks.get(t)?.checked);
+                    subGroupCb.checked = allInGrp;
+                    subGroupCb.indeterminate = !allInGrp && someInGrp;
+                    const allBI = allBuiltInTools.every((t) => toolChecks.get(t)?.checked);
+                    const someBI = allBuiltInTools.some((t) => toolChecks.get(t)?.checked);
+                    builtInGroupCb.checked = allBI;
+                    builtInGroupCb.indeterminate = !allBI && someBI;
+                    applyToolOverride();
+                    updateCount();
+                });
+            }
+            subGroupCb.addEventListener('change', () => {
+                for (const t of tools) { const cb = toolChecks.get(t); if (cb) cb.checked = subGroupCb.checked; }
+                subGroupCb.indeterminate = false;
+                applyToolOverride();
+                updateCount();
+            });
+        }
+        builtInGroupCb.addEventListener('change', () => {
+            for (const t of allBuiltInTools) { const cb = toolChecks.get(t); if (cb) cb.checked = builtInGroupCb.checked; }
+            builtInGroupCb.indeterminate = false;
+            applyToolOverride();
+            updateCount();
+        });
+
+        // ── MCP Servers section ───────────────────────────────────────────────
+        if (mode.toolGroups.includes('mcp')) {
+            const servers = Object.keys(this.plugin.settings.mcpServers ?? {});
+            const { catRow: mcpCatRow, catBody: mcpCatBody } = makeTopCat('MCP Servers', servers.length > 0);
+            const mcpGroupCb = mcpCatRow.createEl('input', { type: 'checkbox' }) as HTMLInputElement;
+            mcpGroupCb.className = 'tp-cat-group-cb';
+            const mcpChecks: HTMLInputElement[] = [];
+
+            if (servers.length > 0) {
+                const activeMcpServers: string[] = this.plugin.settings.activeMcpServers ?? [];
+                for (const serverName of servers) {
+                    const cb = makeItemRow(
+                        mcpCatBody, serverName, 'MCP server', 'plug-2',
+                        activeMcpServers.length === 0 || activeMcpServers.includes(serverName),
+                        'tp-item-row tp-item-indent-cat',
+                    );
+                    mcpChecks.push(cb);
+                    cb.addEventListener('change', async () => {
+                        const cur: string[] = this.plugin.settings.activeMcpServers ?? [];
+                        if (cur.length === 0) {
+                            const all = Object.keys(this.plugin.settings.mcpServers ?? {});
+                            this.plugin.settings.activeMcpServers = all.filter((s) => s !== serverName);
+                        } else if (cb.checked) {
+                            this.plugin.settings.activeMcpServers = [...cur, serverName];
+                        } else {
+                            this.plugin.settings.activeMcpServers = cur.filter((s) => s !== serverName);
+                        }
+                        await this.plugin.saveSettings();
+                        const allCb = mcpChecks.every((c) => c.checked);
+                        const someCb = mcpChecks.some((c) => c.checked);
+                        mcpGroupCb.checked = allCb;
+                        mcpGroupCb.indeterminate = !allCb && someCb;
+                    });
+                }
+                const allMcp = mcpChecks.every((c) => c.checked);
+                const someMcp = mcpChecks.some((c) => c.checked);
+                mcpGroupCb.checked = allMcp;
+                mcpGroupCb.indeterminate = !allMcp && someMcp;
+            } else {
+                mcpCatBody.createEl('span', { cls: 'tp-empty-hint', text: 'No MCP servers configured.' });
+                mcpGroupCb.checked = false;
+                mcpGroupCb.disabled = true;
+            }
+            mcpGroupCb.addEventListener('change', async () => {
+                for (const cb of mcpChecks) cb.checked = mcpGroupCb.checked;
+                mcpGroupCb.indeterminate = false;
+                this.plugin.settings.activeMcpServers = mcpGroupCb.checked ? [] : [];
+                await this.plugin.saveSettings();
+            });
+        }
+
+        // ── Skills section (async) ────────────────────────────────────────────
+        const { catRow: skillsCatRow, catBody: skillsCatBody } = makeTopCat('Skills', false);
+        const skillsGroupCb = skillsCatRow.createEl('input', { type: 'checkbox' }) as HTMLInputElement;
+        skillsGroupCb.className = 'tp-cat-group-cb';
+        skillsCatBody.createEl('span', { cls: 'tp-empty-hint', text: 'Loading…' });
+
+        // ── Workflows section (async) ─────────────────────────────────────────
+        const { catRow: wfCatRow, catBody: wfCatBody } = makeTopCat('Workflows', false);
+        const wfGroupCb = wfCatRow.createEl('input', { type: 'checkbox' }) as HTMLInputElement;
+        wfGroupCb.className = 'tp-cat-group-cb';
+        wfCatBody.createEl('span', { cls: 'tp-empty-hint', text: 'Loading…' });
+
+        // ── Footer ───────────────────────────────────────────────────────────
+        const footerEl = popover.createDiv('tool-picker-footer');
+        const saveBtn = footerEl.createEl('button', { cls: 'tool-picker-save-btn' });
+        const saveBtnIcon = saveBtn.createSpan('tp-save-icon');
+        setIcon(saveBtnIcon, 'save');
+        const saveBtnText = saveBtn.createSpan({ text: 'Save to Settings' });
+        saveBtn.addEventListener('click', async () => {
+            const sessionTools = this.sessionToolOverrides.get(slug);
+            if (sessionTools) await this.modeService.setModeToolOverride(slug, sessionTools);
+            const sessionSkills = this.sessionForcedSkills.get(slug);
+            if (sessionSkills !== undefined) {
+                if (!this.plugin.settings.forcedSkills) this.plugin.settings.forcedSkills = {};
+                this.plugin.settings.forcedSkills[slug] = sessionSkills;
+            }
+            const sessionWorkflow = this.sessionForcedWorkflow.get(slug);
+            if (sessionWorkflow !== undefined) {
+                if (!this.plugin.settings.forcedWorkflow) this.plugin.settings.forcedWorkflow = {};
+                this.plugin.settings.forcedWorkflow[slug] = sessionWorkflow;
+            }
+            await this.plugin.saveSettings();
+            saveBtnText.setText('Saved');
+            setTimeout(() => saveBtnText.setText('Save to Settings'), 1500);
+        });
+
+        // ── Position (upward) ─────────────────────────────────────────────────
+        const btnRect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+        const containerRect = this.containerEl.getBoundingClientRect();
+        popover.style.position = 'fixed';
+        popover.style.bottom = (window.innerHeight - btnRect.top + 4) + 'px';
+        popover.style.left = Math.max(btnRect.left, containerRect.left) + 'px';
+        document.body.appendChild(popover);
+
+        updateCount();
+
+        // ── Search filter ─────────────────────────────────────────────────────
+        searchInput.addEventListener('input', () => {
+            const q = searchInput.value.toLowerCase();
+            for (const row of allItemRows) {
+                const matches = !q
+                    || (row.getAttribute('data-label') ?? '').includes(q)
+                    || (row.getAttribute('data-desc') ?? '').includes(q);
+                row.style.display = matches ? '' : 'none';
+            }
+            if (q) {
+                builtInCatRow.addClass('is-open');
+                builtInCatBody.style.display = '';
+            }
+        });
+
+        // ── Async: skills + workflows ─────────────────────────────────────────
+        (async () => {
+            const skillsManager = (this.plugin as any).skillsManager;
+            if (skillsManager) {
+                skillsCatBody.empty();
+                try {
+                    const skills = await skillsManager.discoverSkills();
+                    if (skills.length === 0) {
+                        skillsCatBody.createEl('span', { cls: 'tp-empty-hint', text: 'No skills found.' });
+                        skillsGroupCb.disabled = true;
+                    } else {
+                        const skillCbs: HTMLInputElement[] = [];
+                        const activeForcedSkills = new Set(
+                            this.sessionForcedSkills.get(slug) ?? this.plugin.settings.forcedSkills?.[slug] ?? []
+                        );
+                        skillsCatRow.addClass('is-open');
+                        skillsCatBody.style.display = '';
+                        for (const skill of skills) {
+                            const cb = makeItemRow(
+                                skillsCatBody, skill.name, skill.description ?? '', 'wand-2',
+                                activeForcedSkills.has(skill.name), 'tp-item-row tp-item-indent-cat',
+                            );
+                            skillCbs.push(cb);
+                            cb.addEventListener('change', () => {
+                                const cur = new Set(this.sessionForcedSkills.get(slug) ?? this.plugin.settings.forcedSkills?.[slug] ?? []);
+                                if (cb.checked) cur.add(skill.name);
+                                else cur.delete(skill.name);
+                                this.sessionForcedSkills.set(slug, [...cur]);
+                                const allSk = skillCbs.every((c) => c.checked);
+                                const someSk = skillCbs.some((c) => c.checked);
+                                skillsGroupCb.checked = allSk;
+                                skillsGroupCb.indeterminate = !allSk && someSk;
+                                updateCount();
+                            });
+                        }
+                        const allSk = skillCbs.every((c) => c.checked);
+                        const someSk = skillCbs.some((c) => c.checked);
+                        skillsGroupCb.checked = allSk;
+                        skillsGroupCb.indeterminate = !allSk && someSk;
+                        skillsGroupCb.addEventListener('change', () => {
+                            for (const c of skillCbs) c.checked = skillsGroupCb.checked;
+                            skillsGroupCb.indeterminate = false;
+                            const next = skillsGroupCb.checked ? skills.map((s: any) => s.name) : [];
+                            this.sessionForcedSkills.set(slug, next);
+                            updateCount();
+                        });
+                    }
+                } catch {
+                    skillsCatBody.createEl('span', { cls: 'tp-empty-hint', text: 'Error loading skills.' });
+                }
+            } else {
+                skillsCatRow.remove();
+                skillsCatBody.remove();
+            }
+
+            const workflowLoader = (this.plugin as any).workflowLoader;
+            if (workflowLoader) {
+                wfCatBody.empty();
+                try {
+                    const workflows = await workflowLoader.discoverWorkflows();
+                    if (workflows.length === 0) {
+                        wfCatBody.createEl('span', { cls: 'tp-empty-hint', text: 'No workflows found.' });
+                        wfGroupCb.disabled = true;
+                    } else {
+                        const wfCbs: HTMLInputElement[] = [];
+                        const activeWfSlug = this.sessionForcedWorkflow.get(slug) ?? this.plugin.settings.forcedWorkflow?.[slug] ?? '';
+                        wfCatRow.addClass('is-open');
+                        wfCatBody.style.display = '';
+                        for (const wf of workflows) {
+                            const cb = makeItemRow(
+                                wfCatBody, wf.displayName, `/${wf.slug}`, 'git-branch',
+                                activeWfSlug === wf.slug, 'tp-item-row tp-item-indent-cat',
+                            );
+                            wfCbs.push(cb);
+                            cb.addEventListener('change', () => {
+                                if (cb.checked) {
+                                    for (const other of wfCbs) { if (other !== cb) other.checked = false; }
+                                    this.sessionForcedWorkflow.set(slug, wf.slug);
+                                } else {
+                                    this.sessionForcedWorkflow.set(slug, '');
+                                }
+                                wfGroupCb.checked = wfCbs.some((c) => c.checked);
+                                wfGroupCb.indeterminate = false;
+                                updateCount();
+                            });
+                        }
+                        wfGroupCb.checked = wfCbs.some((c) => c.checked);
+                        wfGroupCb.addEventListener('change', () => {
+                            if (!wfGroupCb.checked) {
+                                for (const c of wfCbs) c.checked = false;
+                                this.sessionForcedWorkflow.set(slug, '');
+                            }
+                            updateCount();
+                        });
+                    }
+                } catch {
+                    wfCatBody.createEl('span', { cls: 'tp-empty-hint', text: 'Error loading workflows.' });
+                }
+            } else {
+                wfCatRow.remove();
+                wfCatBody.remove();
+            }
+        })();
+
+        // Close on outside click — store handler as class property so closeToolPicker() can remove it
+        this.toolPickerCloseHandler = (e: MouseEvent) => {
+            if (!popover.contains(e.target as Node) && e.target !== this.toolPickerButton) {
+                this.closeToolPicker();
+            }
+        };
+        setTimeout(() => document.addEventListener('mousedown', this.toolPickerCloseHandler!), 50);
+    }
+
+    private closeToolPicker(): void {
+        if (this.toolPickerCloseHandler) {
+            document.removeEventListener('mousedown', this.toolPickerCloseHandler);
+            this.toolPickerCloseHandler = null;
+        }
+        if (this.toolPickerPopover) {
+            this.toolPickerPopover.remove();
+            this.toolPickerPopover = null;
+        }
+    }
+
+    /**
+     * Build the skills section for the system prompt.
+     * Combines keyword-matched skills with any forced skills from the tool picker.
+     */
+    private async buildSkillsSection(userMessage: string, forcedSkillNames: string[]): Promise<string | undefined> {
+        const skillsManager = (this.plugin as any).skillsManager;
+        if (!skillsManager) return undefined;
+
+        const allSkills = await skillsManager.discoverSkills();
+        if (allSkills.length === 0) return undefined;
+
+        // Keyword matching
+        const msgWords = new Set((userMessage.toLowerCase().match(/\b\w{3,}\b/g) ?? []));
+        const keywordNames = new Set(
+            allSkills
+                .filter((s: any) => {
+                    const descWords: string[] = s.description.toLowerCase().match(/\b\w{3,}\b/g) ?? [];
+                    return descWords.some((w: string) => msgWords.has(w));
+                })
+                .map((s: any) => s.name as string)
+        );
+
+        // Merge forced + keyword-matched (deduplicated)
+        const activeNames = new Set([...forcedSkillNames, ...keywordNames]);
+        const activeSkills = allSkills.filter((s: any) => activeNames.has(s.name));
+        if (activeSkills.length === 0) return undefined;
+
+        const xmlEscape = (v: string) => v.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const lines: string[] = ['<available_skills>'];
+        for (const s of activeSkills) {
+            lines.push(`  <skill>`);
+            lines.push(`    <name>${xmlEscape(s.name)}</name>`);
+            lines.push(`    <description>${xmlEscape(s.description)}</description>`);
+            lines.push(`    <file>${xmlEscape(s.path)}</file>`);
+            lines.push(`  </skill>`);
+        }
+        lines.push('</available_skills>');
+        return lines.join('\n');
     }
 
     private autoResizeTextarea(): void {
@@ -562,6 +1096,7 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
         let accumulatedThinking = '';   // full thinking text for collapse/expand
         let hasTools = false;           // have any tools been called in this task?
         let isThinking = false;         // thinking is currently active
+        let activityActionCount = 0;    // number of completed tool calls (for activity badge)
 
         // Streaming text container: during Q&A streaming we append raw text chunks
         // directly into this element (O(1) per chunk, zero re-parses).
@@ -834,6 +1369,16 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
                         }
                         details.open = isError;
                     }
+                    // Update activity badge in plan box (only if a plan is active).
+                    // Use closest('.assistant-message') so the lookup works both before
+                    // and after the DOM-move (toolsEl.parentElement changes on move).
+                    activityActionCount++;
+                    const actBadge = toolsEl.closest('.assistant-message')?.querySelector('.todo-activity-badge') as HTMLElement | null;
+                    if (actBadge) actBadge.setText(`${activityActionCount} action${activityActionCount !== 1 ? 's' : ''}`);
+                    if (isError) {
+                        const actDetails = toolsEl.closest('.todo-activity-log') as HTMLDetailsElement | null;
+                        if (actDetails) actDetails.open = true;
+                    }
                 },
                 onUsage: (inputTokens, outputTokens) => {
                     const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -965,21 +1510,45 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
             ? await rulesLoader.loadEnabledRules(this.plugin.settings.rulesToggles ?? {})
             : undefined;
 
+        // Feature 1: Pass the shared history — it accumulates across messages
+        // Feature 4: Pass messageToSend (with active file context) instead of raw text
+        const activeMode = this.modeService.getActiveMode();
+
         // Load relevant skills for this message (Sprint 3.4)
-        const skillsManager = (this.plugin as any).skillsManager;
+        // Combines keyword-matched + forced skills from tool picker
         const userMessageText = typeof messageToSend === 'string'
             ? messageToSend
             : (messageToSend as any[]).find((b: any) => b.type === 'text')?.text ?? '';
-        const skillsSection = skillsManager
-            ? await skillsManager.getRelevantSkills(userMessageText)
-            : undefined;
+        const forcedSkillNames = [
+            ...(this.sessionForcedSkills.get(activeMode.slug) ?? this.plugin.settings.forcedSkills?.[activeMode.slug] ?? []),
+        ];
+        const skillsSection = await this.buildSkillsSection(userMessageText, forcedSkillNames);
 
-        // Feature 1: Pass the shared history — it accumulates across messages
-        // Feature 4: Pass messageToSend (with active file context) instead of raw text
+        // Apply forced workflow from tool picker (when message doesn't start with slash command)
+        const forcedWorkflowSlug = this.sessionForcedWorkflow.get(activeMode.slug)
+            ?? this.plugin.settings.forcedWorkflow?.[activeMode.slug]
+            ?? '';
+        if (typeof messageToSend === 'string' && !text.startsWith('/') && forcedWorkflowSlug) {
+            const workflowLoader = (this.plugin as any).workflowLoader;
+            if (workflowLoader) {
+                const processedText = await workflowLoader.processSlashCommand(
+                    `/${forcedWorkflowSlug} ${text}`,
+                    this.plugin.settings.workflowToggles ?? {},
+                );
+                if (processedText !== `/${forcedWorkflowSlug} ${text}`) {
+                    messageToSend = processedText + (activeFile
+                        ? `\n\n<context>\nActive file in editor: ${activeFile.path}\n</context>`
+                        : '');
+                }
+            }
+        }
+
+        const sessionToolOverride = this.sessionToolOverrides.get(activeMode.slug);
+        const allowedMcpServers = this.plugin.settings.modeMcpServers?.[activeMode.slug];
         await task.run(
             messageToSend,
             taskId,
-            this.modeService.getActiveMode(),
+            activeMode,
             this.conversationHistory,
             this.currentAbortController.signal,
             this.plugin.settings.globalCustomInstructions || undefined,
@@ -987,6 +1556,8 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
             rulesContent || undefined,
             skillsSection || undefined,
             this.plugin.mcpClient,
+            sessionToolOverride,
+            allowedMcpServers,
         );
     }
 
@@ -1663,33 +2234,61 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
     // -------------------------------------------------------------------------
 
     /**
-     * Render (or update) the Todo-Box inside the tool-status area of a streaming message.
-     * Called each time the agent calls update_todo_list — replaces the previous box.
+     * Render (or update) the Plan box for a streaming message.
+     *
+     * First call: creates the plan box BEFORE toolsEl in the message, then
+     * DOM-moves toolsEl (with any already-rendered tool calls) into a collapsed
+     * <details> inside the plan box — making tool calls hidden by default.
+     *
+     * Subsequent calls: updates the todo items list and badge in place.
      */
     private renderTodoBox(
         toolsEl: HTMLElement,
         items: import('../core/tools/agent/UpdateTodoListTool').TodoItem[],
     ): void {
-        // Remove existing todo box (update in place)
-        toolsEl.querySelector('.agent-todo-box')?.remove();
+        const messageEl = toolsEl.closest('.assistant-message') as HTMLElement | null;
+        if (!messageEl) return;
 
-        const box = toolsEl.createDiv('agent-todo-box');
-        const header = box.createDiv('todo-box-header');
-        header.createSpan('todo-box-icon').setText('☑');
-        header.createSpan('todo-box-title').setText('Plan');
+        let planBoxEl = messageEl.querySelector<HTMLElement>(':scope > .agent-todo-box');
+        let planListEl: HTMLElement;
+        let activityBadgeEl: HTMLElement | null;
 
-        const list = box.createDiv('todo-box-list');
+        if (!planBoxEl) {
+            // First call — build the plan box and move toolsEl into it
+            planBoxEl = document.createElement('div');
+            planBoxEl.className = 'agent-todo-box';
+            // Insert before toolsEl (direct child of messageEl on first call)
+            messageEl.insertBefore(planBoxEl, toolsEl);
+
+            const header = planBoxEl.createDiv('todo-box-header');
+            setIcon(header.createSpan('todo-box-icon'), 'list-checks');
+            header.createSpan('todo-box-title').setText('Plan');
+            activityBadgeEl = header.createSpan('todo-activity-badge');
+
+            planListEl = planBoxEl.createDiv('todo-box-list');
+
+            const activityDetails = planBoxEl.createEl('details', { cls: 'todo-activity-log' });
+            activityDetails.createEl('summary', { cls: 'todo-activity-summary', text: 'Activity' });
+            // DOM-move: relocate toolsEl (with any already-rendered tool calls) into collapsed details
+            activityDetails.appendChild(toolsEl);
+        } else {
+            planListEl = planBoxEl.querySelector<HTMLElement>('.todo-box-list')!;
+            activityBadgeEl = planBoxEl.querySelector<HTMLElement>('.todo-activity-badge');
+        }
+
+        // Update the todo items list
+        planListEl.empty();
         for (const item of items) {
-            const row = list.createDiv('todo-item');
+            const row = planListEl.createDiv('todo-item');
             const icon = row.createSpan('todo-item-icon');
             if (item.status === 'done') {
-                icon.setText('✓');
+                setIcon(icon, 'check-circle-2');
                 row.addClass('todo-done');
             } else if (item.status === 'in_progress') {
-                icon.setText('●');
+                setIcon(icon, 'loader-2');
                 row.addClass('todo-in-progress');
             } else {
-                icon.setText('○');
+                setIcon(icon, 'circle');
                 row.addClass('todo-pending');
             }
             row.createSpan('todo-item-text').setText(item.text);

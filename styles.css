@@ -255,7 +255,7 @@
     display: flex;
     flex-wrap: wrap;
     gap: 4px;
-    padding: 8px 10px 0;
+    padding: 8px 10px 4px;
 }
 
 .chat-context-chips:empty {
@@ -1484,6 +1484,35 @@
 .todo-pending .todo-item-icon { color: var(--text-faint); }
 .todo-pending .todo-item-text { color: var(--text-muted); }
 
+/* ── Activity log (collapsed tool calls inside Plan box) ─────────────────── */
+.todo-activity-log {
+    margin-top: 4px;
+    border-top: 1px solid var(--background-modifier-border);
+    padding-top: 0;
+}
+
+.todo-activity-summary {
+    font-size: 11px;
+    color: var(--text-faint);
+    cursor: pointer;
+    list-style: none;
+    padding: 3px 8px;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.todo-activity-summary::-webkit-details-marker { display: none; }
+
+.todo-activity-badge {
+    font-size: 10px;
+    color: var(--text-faint);
+    background: var(--background-secondary);
+    padding: 1px 6px;
+    border-radius: 8px;
+}
+
 /* ── Question card ───────────────────────────────────────────────────────── */
 .question-card {
     padding: 7px 10px;
@@ -1850,7 +1879,7 @@
     display: flex;
     flex-wrap: wrap;
     gap: 4px;
-    padding: 6px 10px 0;
+    padding: 6px 10px 4px;
 }
 
 .chat-attachment-chips:empty {
@@ -2416,6 +2445,16 @@
     color: var(--color-red);
 }
 
+.agent-rules-import-btn {
+    font-size: 12px;
+    padding: 2px 8px;
+}
+
+.agent-rules-export-btn {
+    font-size: 12px;
+    padding: 2px 8px;
+}
+
 .agent-workflow-slug {
     font-size: 11px;
     color: var(--text-muted);
@@ -2790,4 +2829,427 @@
     padding: 1px 5px;
     margin-left: 4px;
     vertical-align: middle;
+}
+
+/* ── Tool Picker Popover (Copilot style) ───────────────────────────────── */
+.tool-picker-popover {
+    position: fixed;
+    z-index: 1000;
+    background: var(--background-primary);
+    border-radius: 8px;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.22);
+    min-width: 320px;
+    max-width: 400px;
+    max-height: 520px;
+    padding: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    border: none;
+}
+
+.tool-picker-header {
+    padding: 10px 12px 6px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+}
+
+.tool-picker-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-normal);
+}
+
+.tool-picker-count {
+    font-size: 11px;
+    color: var(--text-faint);
+}
+
+.tool-picker-search {
+    width: 100%;
+    border: none;
+    border-bottom: 1px solid var(--background-modifier-border);
+    border-radius: 0;
+    padding: 5px 12px;
+    font-size: 12px;
+    background: transparent;
+    box-shadow: none;
+    outline: none;
+    flex-shrink: 0;
+}
+
+.tool-picker-scroll {
+    overflow-y: auto;
+    flex: 1;
+    padding: 2px 0;
+}
+
+/* Top-level category row */
+.tp-cat-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px 5px 8px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.tp-cat-row:hover {
+    background: var(--background-modifier-hover);
+}
+
+.tp-cat-arrow {
+    font-size: 10px;
+    color: var(--text-faint);
+    display: inline-block;
+    transition: transform 0.15s;
+    flex-shrink: 0;
+    width: 10px;
+    text-align: center;
+}
+
+.tp-cat-row.is-open .tp-cat-arrow {
+    transform: rotate(90deg);
+}
+
+.tp-cat-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-faint);
+    flex: 1;
+}
+
+.tp-cat-group-cb {
+    margin: 0;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.tp-cat-body {
+    /* display toggled by JS */
+}
+
+/* Sub-category row (tool group inside Built-In) */
+.tp-subcat-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px 3px 20px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.tp-subcat-row:hover {
+    background: var(--background-modifier-hover);
+}
+
+.tp-subcat-arrow {
+    font-size: 9px;
+    color: var(--text-faint);
+    transition: transform 0.15s;
+    flex-shrink: 0;
+    width: 10px;
+    text-align: center;
+}
+
+.tp-subcat-row.is-open .tp-subcat-arrow {
+    transform: rotate(90deg);
+}
+
+.tp-subcat-label {
+    font-size: 12px;
+    color: var(--text-normal);
+    flex: 1;
+}
+
+.tp-subcat-body {
+    /* display toggled by JS */
+}
+
+/* Individual item row */
+.tp-item-row {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 3px 10px 3px 36px;
+}
+
+/* Deeper indent for items under top-level categories (MCP/Skills/Workflows) */
+.tp-item-indent-cat {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 3px 10px 3px 28px;
+}
+
+.tp-item-row:hover,
+.tp-item-indent-cat:hover {
+    background: var(--background-modifier-hover);
+}
+
+.tp-item-icon {
+    width: 13px;
+    height: 13px;
+    color: var(--text-muted);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.tp-item-icon svg {
+    width: 13px;
+    height: 13px;
+}
+
+.tp-item-name {
+    font-size: 12px;
+    color: var(--text-normal);
+    flex-shrink: 0;
+}
+
+.tp-item-desc {
+    font-size: 11px;
+    color: var(--text-faint);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+}
+
+.tp-empty-hint {
+    display: block;
+    font-size: 11px;
+    color: var(--text-faint);
+    font-style: italic;
+    padding: 4px 10px 4px 28px;
+}
+
+/* Footer */
+.tool-picker-footer {
+    border-top: 1px solid var(--background-modifier-border);
+    padding: 5px 10px;
+    flex-shrink: 0;
+}
+
+.tool-picker-save-btn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    color: var(--text-muted);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 2px 0;
+}
+
+.tool-picker-save-btn:hover {
+    color: var(--text-normal);
+}
+
+.tp-save-icon {
+    display: flex;
+    align-items: center;
+}
+
+.tp-save-icon svg {
+    width: 12px;
+    height: 12px;
+}
+
+/* ── Settings: Tool Group Accordion ────────────────────────────────────── */
+.modes-tool-group-accordion {
+    margin-bottom: 4px;
+    border-radius: 6px;
+    border: 1px solid var(--background-modifier-border);
+    overflow: hidden;
+}
+
+.modes-tool-group-summary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    cursor: pointer;
+    background: var(--background-secondary);
+    list-style: none;
+    user-select: none;
+    transition: background 0.1s;
+}
+
+.modes-tool-group-summary:hover {
+    background: var(--background-modifier-hover);
+}
+
+.modes-tool-group-summary::-webkit-details-marker { display: none; }
+
+.modes-tool-group-label {
+    font-weight: 500;
+    font-size: 13px;
+    flex: 1;
+}
+
+.modes-tool-count-badge {
+    font-size: 11px;
+    color: var(--text-faint);
+    background: var(--background-primary);
+    border-radius: 10px;
+    padding: 1px 7px;
+    margin-left: auto;
+    border: 1px solid var(--background-modifier-border);
+}
+
+.modes-tool-checkboxes {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    padding: 4px 0;
+    background: var(--background-primary);
+}
+
+.modes-tool-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 5px 10px 5px 28px;
+    transition: background 0.08s;
+}
+
+.modes-tool-row:hover {
+    background: var(--background-modifier-hover);
+}
+
+.modes-tool-row input[type="checkbox"] {
+    margin-top: 3px;
+    flex-shrink: 0;
+    cursor: pointer;
+}
+
+/* Label container: stacked label + description */
+.modes-tool-name {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    cursor: pointer;
+}
+
+.modes-tool-label-text {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-normal);
+}
+
+.modes-tool-label-desc {
+    font-size: 11px;
+    color: var(--text-muted);
+    line-height: 1.3;
+}
+
+/* ── Mode Editor: Forced Skills + Allowed MCP sections ─────────────────── */
+.modes-skills-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    padding: 4px 0;
+    background: var(--background-primary);
+}
+
+.modes-skills-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 5px 10px 5px 28px;
+    transition: background 0.08s;
+}
+
+.modes-skills-row:hover {
+    background: var(--background-modifier-hover);
+}
+
+.modes-skills-row input[type="checkbox"] {
+    margin-top: 3px;
+    flex-shrink: 0;
+    cursor: pointer;
+}
+
+.modes-skills-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-normal);
+    cursor: pointer;
+}
+
+.modes-skills-desc {
+    display: block;
+    font-size: 11px;
+    color: var(--text-muted);
+    line-height: 1.3;
+    margin-top: 1px;
+}
+
+.modes-loading-hint {
+    font-size: 11px;
+    color: var(--text-faint);
+    font-style: italic;
+    padding: 6px 28px;
+}
+
+/* ── Global: Borderless buttons and selects inside the plugin ───────────── */
+.agent-sidebar button,
+.agent-settings-panel button {
+    border: none;
+}
+
+.agent-sidebar select,
+.agent-settings-panel select {
+    border: none;
+    background: var(--background-secondary);
+}
+
+/* Sub-category label: bold (icons removed, rely on label weight) */
+.tp-subcat-label {
+    font-weight: 600;
+}
+
+/* ── ContentEditorModal ──────────────────────────────────────────────────── */
+.content-editor-modal {
+    padding: 16px;
+}
+
+.content-editor-title {
+    margin: 0 0 12px;
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.content-editor-textarea {
+    width: 100%;
+    min-height: 360px;
+    font-family: var(--font-monospace);
+    font-size: 13px;
+    line-height: 1.6;
+    padding: 10px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--background-secondary);
+    color: var(--text-normal);
+    resize: vertical;
+    box-sizing: border-box;
+}
+
+.content-editor-textarea:focus {
+    outline: none;
+    border-color: var(--color-accent);
+}
+
+.content-editor-btn-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    justify-content: flex-end;
 }

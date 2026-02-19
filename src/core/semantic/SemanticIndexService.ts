@@ -564,9 +564,15 @@ export class SemanticIndexService {
     private async loadCheckpoint(): Promise<IndexCheckpoint | null> {
         try {
             const raw = await fs.promises.readFile(this.checkpointPath(), 'utf8');
-            const cp = JSON.parse(raw) as IndexCheckpoint;
-            if (cp.version !== CHECKPOINT_VERSION) return null;
-            return cp;
+            // M-1: Guard against corrupted or maliciously crafted checkpoint files.
+            if (raw.length > 50_000_000) return null; // 50 MB sanity limit
+            const cp = JSON.parse(raw) as any;
+            if (cp?.version !== CHECKPOINT_VERSION) return null;
+            if (typeof cp.embeddingModel !== 'string') return null;
+            if (typeof cp.chunkSize !== 'number') return null;
+            if (!cp.files || typeof cp.files !== 'object' || Array.isArray(cp.files)) return null;
+            if (typeof cp.docCount !== 'number') return null;
+            return cp as IndexCheckpoint;
         } catch {
             return null;
         }
