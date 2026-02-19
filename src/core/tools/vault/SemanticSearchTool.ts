@@ -14,9 +14,10 @@ export class SemanticSearchTool extends BaseTool<'semantic_search'> {
         return {
             name: 'semantic_search',
             description:
-                'Search the vault by meaning (semantic similarity) rather than exact keywords. ' +
-                'Returns the most relevant note excerpts with enough content to answer Q&A questions directly. ' +
-                'Also automatically includes 1-hop wikilink neighbors of matched notes as linked context. ' +
+                'Search the vault by meaning AND keywords (hybrid search). ' +
+                'Combines semantic similarity with exact keyword matching so both conceptual questions ' +
+                'and exact names/tags/codes are found reliably. ' +
+                'Also automatically includes 1-hop wikilink neighbors as linked context. ' +
                 'For questions about vault content, synthesize your answer from the returned excerpts — ' +
                 'do NOT call read_file on the results just to gather more context. ' +
                 'Requires the Semantic Index to be built first (Settings → Semantic Index).',
@@ -63,10 +64,38 @@ export class SemanticSearchTool extends BaseTool<'semantic_search'> {
         }
 
         try {
-            const results = await semanticIndex.search(query, topK);
+            // ── Hybrid search: semantic + keyword in parallel, fused via RRF ──
+            const [semanticResults, keywordResults] = await Promise.all([
+                semanticIndex.search(query, topK),
+                semanticIndex.keywordSearch(query, topK),
+            ]);
+
+            // Reciprocal Rank Fusion (RRF k=60): score(d) = Σ 1/(k + rank)
+            // Results appearing in both lists float naturally to the top.
+            const RRF_K = 60;
+            type HybridEntry = { path: string; excerpt: string; score: number; method: 'semantic' | 'keyword' | 'hybrid' };
+            const fused = new Map<string, HybridEntry>();
+
+            semanticResults.forEach((r: any, i: number) => {
+                fused.set(r.path, { path: r.path, excerpt: r.excerpt, score: 1 / (RRF_K + i + 1), method: 'semantic' });
+            });
+            keywordResults.forEach((r: any, i: number) => {
+                const rrf = 1 / (RRF_K + i + 1);
+                const existing = fused.get(r.path);
+                if (existing) {
+                    existing.score += rrf;
+                    existing.method = 'hybrid';
+                } else {
+                    fused.set(r.path, { path: r.path, excerpt: r.excerpt, score: rrf, method: 'keyword' });
+                }
+            });
+
+            const results = Array.from(fused.values())
+                .sort((a, b) => b.score - a.score)
+                .slice(0, topK);
 
             if (results.length === 0) {
-                callbacks.pushToolResult(`No semantic matches found for: "${query}"`);
+                callbacks.pushToolResult(`No results found for: "${query}"`);
                 return;
             }
 
@@ -77,16 +106,16 @@ export class SemanticSearchTool extends BaseTool<'semantic_search'> {
                 return `[[${name}]]`;
             };
 
+            const kwCount = results.filter((r) => r.method !== 'semantic').length;
             const lines = [
-                `Semantic search results for: "${query}"`,
-                `(Use these excerpts to answer directly — do not call read_file unless you need to edit the file)\n`,
+                `Hybrid search results for: "${query}"`,
+                `(${results.length} results — ${kwCount} via keyword/hybrid match. Synthesize answer directly — do not call read_file)\n`,
             ];
             for (let i = 0; i < results.length; i++) {
                 const r = results[i];
-                const score = Math.round(r.score * 100);
                 const wikilink = toWikilink(r.path);
-                lines.push(`${i + 1}. ${wikilink} — \`${r.path}\` (${score}% match)`);
-                // Show the full chunk — 2000 chars gives the LLM enough context to answer without read_file
+                const label = r.method === 'hybrid' ? 'semantic+keyword' : r.method;
+                lines.push(`${i + 1}. ${wikilink} — \`${r.path}\` (${label})`);
                 lines.push(r.excerpt);
                 lines.push('');
             }
@@ -127,7 +156,7 @@ export class SemanticSearchTool extends BaseTool<'semantic_search'> {
             }
 
             callbacks.pushToolResult(lines.join('\n'));
-            callbacks.log(`Semantic search: "${query}" → ${results.length} results, ${shownLinked.size} linked`);
+            callbacks.log(`Hybrid search: "${query}" → ${results.length} results (${kwCount} keyword), ${shownLinked.size} linked`);
         } catch (error) {
             callbacks.pushToolResult(this.formatError(error));
             await callbacks.handleError('semantic_search', error);
