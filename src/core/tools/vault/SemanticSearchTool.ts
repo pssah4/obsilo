@@ -87,9 +87,33 @@ export class SemanticSearchTool extends BaseTool<'semantic_search'> {
         }
 
         try {
+            // ── HyDE: generate hypothetical document for better query embedding ──
+            // If enabled, ask the LLM to write a short note excerpt that would answer
+            // the query. We embed that hypothetical text instead of the raw query,
+            // which gives the embedding model a much richer signal to match against.
+            let hydeText: string | undefined;
+            const hydeEnabled = (this.plugin as any).settings?.hydeEnabled === true;
+            const apiHandler = (this.plugin as any).apiHandler;
+            if (hydeEnabled && apiHandler) {
+                try {
+                    const hydePrompt = `Write a 2-3 sentence Obsidian note excerpt that would directly answer this question: "${query}". Write only the note content itself, no meta-commentary.`;
+                    let generated = '';
+                    for await (const chunk of apiHandler.createMessage(
+                        'You are a document generator for an Obsidian vault. Given a question, write a short realistic note excerpt that would answer it.',
+                        [{ role: 'user', content: hydePrompt }],
+                        [],
+                    )) {
+                        if (chunk.type === 'text') generated += chunk.text;
+                    }
+                    if (generated.trim()) hydeText = generated.trim();
+                } catch {
+                    // HyDE is best-effort — fall back to raw query on any error
+                }
+            }
+
             // ── Hybrid search: semantic + keyword in parallel, fused via RRF ──
             const [semanticResults, keywordResults] = await Promise.all([
-                semanticIndex.search(query, searchK),
+                semanticIndex.search(query, searchK, hydeText),
                 semanticIndex.keywordSearch(query, searchK),
             ]);
 
@@ -164,9 +188,10 @@ export class SemanticSearchTool extends BaseTool<'semantic_search'> {
                 tagsFilter ? `tags: ${tagsFilter.join(', ')}` : '',
                 sinceFilter ? `since: ${input.since}` : '',
             ].filter(Boolean).join(' | ');
+            const hydeNote = hydeText ? ' · HyDE' : '';
             const lines = [
                 `Hybrid search results for: "${query}"${activeFilters ? ` [${activeFilters}]` : ''}`,
-                `(${results.length} results — ${kwCount} via keyword/hybrid match. Synthesize answer directly — do not call read_file)\n`,
+                `(${results.length} results — ${kwCount} via keyword/hybrid${hydeNote}. Synthesize answer directly — do not call read_file)\n`,
             ];
             for (let i = 0; i < results.length; i++) {
                 const r = results[i];
