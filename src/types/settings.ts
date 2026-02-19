@@ -319,6 +319,33 @@ export interface ObsidianAgentSettings {
     modeModelKeys: Record<string, string>;
     /** Instructions appended to the system prompt for ALL modes */
     globalCustomInstructions: string;
+    /**
+     * Permanent per-mode tool overrides: maps mode slug → explicit list of enabled tool names.
+     * When set, only the listed tools are available (intersection with mode's tool groups).
+     * When absent, all tools in the mode's groups are available.
+     */
+    modeToolOverrides: Record<string, string[]>;
+    /**
+     * MCP server whitelist: which configured MCP servers are active.
+     * Empty array = all configured servers are allowed (when use_mcp_tool is enabled).
+     * Non-empty array = only listed server names are allowed.
+     */
+    activeMcpServers: string[];
+    /**
+     * Permanent per-mode forced skill names: maps mode slug → skill names to always inject.
+     * When set, these skills are included in the system prompt regardless of keyword matching.
+     */
+    forcedSkills: Record<string, string[]>;
+    /**
+     * Permanent per-mode forced workflow slug: maps mode slug → workflow slug.
+     * When set, this workflow is applied to each message (unless message starts with /).
+     */
+    forcedWorkflow: Record<string, string>;
+    /**
+     * Per-mode MCP server whitelist: maps mode slug → allowed server names.
+     * Missing entry or empty array = all configured servers allowed.
+     */
+    modeMcpServers: Record<string, string[]>;
 
     // Approval (Sprint 1.3)
     autoApproval: AutoApprovalConfig;
@@ -380,10 +407,26 @@ export const DEFAULT_SETTINGS: ObsidianAgentSettings = {
     providers: {},
 
     mcpServers: {},
-    currentMode: 'librarian',
+    currentMode: 'agent',
     customModes: [],
     modeModelKeys: {},
     globalCustomInstructions: '',
+    modeToolOverrides: {
+        // Agent: all tools enabled EXCEPT delete_file and use_mcp_tool (safe defaults)
+        agent: [
+            'read_file', 'list_files', 'search_files',
+            'get_vault_stats', 'get_frontmatter', 'search_by_tag', 'get_linked_notes',
+            'get_daily_note', 'open_note', 'semantic_search', 'query_base',
+            'write_file', 'edit_file', 'append_to_file', 'create_folder',
+            'move_file', 'update_frontmatter', 'generate_canvas', 'create_base', 'update_base',
+            'web_fetch', 'web_search',
+            'ask_followup_question', 'attempt_completion', 'update_todo_list', 'new_task',
+        ],
+    },
+    activeMcpServers: [],
+    forcedSkills: {},
+    forcedWorkflow: {},
+    modeMcpServers: {},
 
     autoApproval: {
         enabled: false,

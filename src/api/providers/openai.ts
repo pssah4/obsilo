@@ -163,8 +163,8 @@ export class OpenAiProvider implements ApiHandler {
         // API-side and reject any other value. For all other models, pass temperature if explicitly
         // configured — including 0 for deterministic mode.
         const isOSeries = /^o[1-9]/.test(this.config.model);
-        if (!isOSeries && this.config.temperature !== undefined) {
-            body.temperature = this.config.temperature;
+        if (!isOSeries) {
+            body.temperature = this.config.temperature ?? 0.2;
         }
 
         if (openAiTools && openAiTools.length > 0) {
@@ -274,8 +274,12 @@ export class OpenAiProvider implements ApiHandler {
                             let input: Record<string, any> = {};
                             try {
                                 input = JSON.parse(acc.argumentsJson);
-                            } catch {
-                                // malformed JSON — pass empty object
+                            } catch (e) {
+                                yield {
+                                    type: 'text',
+                                    text: `[Tool input parse error for "${acc.name}": ${(e as Error).message}]`,
+                                } satisfies ApiStreamChunk;
+                                continue;
                             }
                             yield {
                                 type: 'tool_use',

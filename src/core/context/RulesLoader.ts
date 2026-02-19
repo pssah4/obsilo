@@ -15,6 +15,7 @@ export class RulesLoader {
     readonly rulesDir: string;
 
     constructor(vault: Vault) {
+        this.vault = vault;
         this.rulesDir = '.obsidian-agent/rules';
     }
 
@@ -62,7 +63,9 @@ export class RulesLoader {
             try {
                 const content = await this.vault.adapter.read(rPath);
                 if (content.trim()) {
-                    parts.push(content.trim());
+                    // M-3: Limit per-file size to prevent injection of huge system-prompt payloads
+                    const limited = content.length > 50_000 ? content.slice(0, 50_000) : content;
+                    parts.push(limited.trim());
                 }
             } catch {
                 // Skip files that can't be read

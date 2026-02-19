@@ -144,15 +144,21 @@ export class WebSearchTool extends BaseTool<'web_search'> {
 
         const url = `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query)}&count=${count}`;
 
-        const response = await requestUrl({
-            url,
-            method: 'GET',
-            headers: {
-                'X-Subscription-Token': apiKey,
-                Accept: 'application/json',
-            },
-            throw: false,
-        });
+        const TIMEOUT_MS = 15_000;
+        const response = await Promise.race([
+            requestUrl({
+                url,
+                method: 'GET',
+                headers: {
+                    'X-Subscription-Token': apiKey,
+                    Accept: 'application/json',
+                },
+                throw: false,
+            }),
+            new Promise<never>((_, reject) =>
+                setTimeout(() => reject(new Error(`Brave search timed out after ${TIMEOUT_MS / 1000}s`)), TIMEOUT_MS)
+            ),
+        ]);
 
         if (response.status >= 400) {
             throw new Error(`Brave API error: HTTP ${response.status}`);
@@ -184,22 +190,28 @@ export class WebSearchTool extends BaseTool<'web_search'> {
             );
         }
 
-        const response = await requestUrl({
-            url: 'https://api.tavily.com/search',
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                api_key: apiKey,
-                query,
-                num_results: count,
-                search_depth: 'basic',
-                include_answer: false,
-                include_raw_content: false,
+        const TIMEOUT_MS = 15_000;
+        const response = await Promise.race([
+            requestUrl({
+                url: 'https://api.tavily.com/search',
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    api_key: apiKey,
+                    query,
+                    num_results: count,
+                    search_depth: 'basic',
+                    include_answer: false,
+                    include_raw_content: false,
+                }),
+                throw: false,
             }),
-            throw: false,
-        });
+            new Promise<never>((_, reject) =>
+                setTimeout(() => reject(new Error(`Tavily search timed out after ${TIMEOUT_MS / 1000}s`)), TIMEOUT_MS)
+            ),
+        ]);
 
         if (response.status >= 400) {
             throw new Error(`Tavily API error: HTTP ${response.status}`);

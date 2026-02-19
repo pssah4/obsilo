@@ -1,4 +1,4 @@
-import { Plugin, WorkspaceLeaf, Notice, addIcon } from 'obsidian';
+import { Plugin, WorkspaceLeaf, Notice } from 'obsidian';
 import { ObsidianAgentSettings, DEFAULT_SETTINGS, getModelKey, modelToLLMProvider } from './types/settings';
 import type { CustomModel, AutoApprovalConfig } from './types/settings';
 import { AgentSidebarView, VIEW_TYPE_AGENT_SIDEBAR } from './ui/AgentSidebarView';
@@ -62,37 +62,6 @@ export default class ObsidianAgentPlugin extends Plugin {
     async onload() {
         console.log('Loading Obsilo Agent plugin');
 
-        // Register custom plugin icon — pixel-art OBSILO logo.
-        // 5×7 pixel grid per character (4×5 units/pixel), 2 rows: OBS / ILO.
-        // Border: evenodd path creates a 6-unit thick square frame.
-        addIcon('obsidian-agent', `<g fill="currentColor">
-<path fill-rule="evenodd" d="M2 2H98V98H2ZM8 8H92V92H8Z"/>
-<rect x="18" y="12" width="12" height="5"/>
-<rect x="14" y="17" width="4" height="25"/>
-<rect x="30" y="17" width="4" height="25"/>
-<rect x="18" y="42" width="12" height="5"/>
-<rect x="40" y="12" width="16" height="5"/>
-<rect x="40" y="17" width="4" height="10"/>
-<rect x="56" y="17" width="4" height="10"/>
-<rect x="40" y="27" width="16" height="5"/>
-<rect x="40" y="32" width="4" height="10"/>
-<rect x="56" y="32" width="4" height="10"/>
-<rect x="40" y="42" width="16" height="5"/>
-<rect x="70" y="12" width="16" height="5"/>
-<rect x="66" y="17" width="4" height="10"/>
-<rect x="70" y="27" width="12" height="5"/>
-<rect x="82" y="32" width="4" height="10"/>
-<rect x="66" y="42" width="16" height="5"/>
-<rect x="14" y="53" width="20" height="5"/>
-<rect x="22" y="58" width="4" height="25"/>
-<rect x="14" y="83" width="20" height="5"/>
-<rect x="40" y="53" width="4" height="30"/>
-<rect x="40" y="83" width="20" height="5"/>
-<rect x="70" y="53" width="12" height="5"/>
-<rect x="66" y="58" width="4" height="25"/>
-<rect x="82" y="58" width="4" height="25"/>
-<rect x="70" y="83" width="12" height="5"/>
-</g>`);
 
         // 1. Load settings
         await this.loadSettings();
