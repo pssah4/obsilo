@@ -42,6 +42,8 @@ export interface SemanticIndexOptions {
     storageLocation?: 'obsidian-sync' | 'local';
     /** Whether to also index PDF files. Default: false */
     indexPdfs?: boolean;
+    /** Characters per chunk. Default: 2000. Changing this forces a full index rebuild. */
+    chunkSize?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -84,6 +86,7 @@ export class SemanticIndexService {
     private embeddingBatchSize: number;
     private excludedFolders: string[];
     private indexPdfs: boolean;
+    private chunkSize: number;
 
     /** Number of unique files indexed (updated live during build). */
     docCount = 0;
@@ -98,6 +101,7 @@ export class SemanticIndexService {
         this.embeddingBatchSize = options.embeddingBatchSize ?? DEFAULT_EMBED_BATCH;
         this.excludedFolders = options.excludedFolders ?? [];
         this.indexPdfs = options.indexPdfs ?? false;
+        this.chunkSize = options.chunkSize ?? DEFAULT_CHUNK_SIZE;
 
         const basePath = (vault.adapter as any).getBasePath?.() ?? '';
         this.indexDir = options.storageLocation === 'local'
@@ -116,6 +120,7 @@ export class SemanticIndexService {
         if (options.embeddingBatchSize !== undefined) this.embeddingBatchSize = options.embeddingBatchSize;
         if (options.excludedFolders !== undefined) this.excludedFolders = options.excludedFolders;
         if (options.indexPdfs !== undefined) this.indexPdfs = options.indexPdfs;
+        if (options.chunkSize !== undefined) this.chunkSize = options.chunkSize;
     }
 
     get isIndexed(): boolean { return this.builtAt !== null; }
@@ -192,7 +197,13 @@ export class SemanticIndexService {
             const existingCheckpoint = force ? null : await this.loadCheckpoint();
             const isModelChange = existingCheckpoint !== null
                 && existingCheckpoint.embeddingModel !== modelKey;
-            const isFullRebuild = force || isModelChange || existingCheckpoint === null;
+            const isChunkSizeChange = existingCheckpoint !== null
+                && existingCheckpoint.chunkSize !== this.chunkSize;
+            const isFullRebuild = force || isModelChange || isChunkSizeChange || existingCheckpoint === null;
+
+            if (isChunkSizeChange) {
+                console.log(`[SemanticIndex] Chunk size changed (${existingCheckpoint!.chunkSize} → ${this.chunkSize}) — full rebuild.`);
+            }
 
             if (isFullRebuild) {
                 if (await this.index.isIndexCreated().catch(() => false)) {
@@ -264,7 +275,7 @@ export class SemanticIndexService {
 
                 try {
                     const content = await this.readFileContent(file);
-                    const chunks = this.splitIntoChunks(content, DEFAULT_CHUNK_SIZE);
+                    const chunks = this.splitIntoChunks(content, this.chunkSize);
 
                     if (chunks.length > 0) {
                         // --- KEY IMPROVEMENT: batch all chunks of this file ---
@@ -348,7 +359,7 @@ export class SemanticIndexService {
 
             // Embed + insert new chunks
             const content = await this.readFileContent(file);
-            const chunks = this.splitIntoChunks(content, DEFAULT_CHUNK_SIZE);
+            const chunks = this.splitIntoChunks(content, this.chunkSize);
             if (chunks.length > 0) {
                 const vectors = await this.embedBatch(chunks);
                 for (let ci = 0; ci < chunks.length; ci++) {
@@ -637,7 +648,7 @@ export class SemanticIndexService {
         return {
             version: CHECKPOINT_VERSION,
             embeddingModel: modelKey,
-            chunkSize: DEFAULT_CHUNK_SIZE,
+            chunkSize: this.chunkSize,
             files: {},
             builtAt: new Date().toISOString(),
             docCount: 0,
@@ -786,9 +797,9 @@ export class SemanticIndexService {
 
         const filtered = result.filter((c) => c.length > 0);
 
-        // Add overlap: prepend the last ~200 chars of the previous chunk to each
-        // subsequent chunk so that content at chunk boundaries is not lost.
-        const OVERLAP = 200;
+        // Add overlap: prepend the last 10% of the previous chunk to each
+        // subsequent chunk so content at boundaries is not lost.
+        const OVERLAP = Math.round(maxChars * 0.1);
         return filtered.map((chunk, i) => {
             if (i === 0) return chunk;
             const prev = filtered[i - 1];
