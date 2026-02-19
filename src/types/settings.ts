@@ -367,6 +367,8 @@ export interface ObsidianAgentSettings {
     semanticIndexPdfs: boolean;
     /** Chunk size in characters. Changing this invalidates and rebuilds the index. */
     semanticChunkSize: number;
+    /** HyDE: generate a hypothetical document before embedding the query. Off by default (costs 1 extra LLM call per search). */
+    hydeEnabled: boolean;
 
     // Checkpoints (Sprint 1.4)
     enableCheckpoints: boolean;
@@ -469,6 +471,7 @@ export const DEFAULT_SETTINGS: ObsidianAgentSettings = {
     semanticStorageLocation: 'obsidian-sync',
     semanticIndexPdfs: false,
     semanticChunkSize: 2000,
+    hydeEnabled: false,
 
     enableCheckpoints: true,
     checkpointTimeoutSeconds: 30,

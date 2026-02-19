@@ -250,6 +250,17 @@ export class EmbeddingsTab {
                 }),
         );
 
+        const hydeSetting = new Setting(containerEl)
+            .setName('HyDE (Hypothetical Document Embeddings)')
+            .setDesc('Before searching, ask the LLM to write a short hypothetical note that would answer the query. Embed that instead of the raw query — improves recall for vague or abstract questions. Costs one extra LLM call per semantic_search.');
+        addInfoButton(hydeSetting, this.app, 'HyDE', 'HyDE (Hypothetical Document Embeddings) is a technique that improves semantic search recall. Instead of embedding your query directly, the agent first asks the LLM to write a short note that would answer your question. That hypothetical text is then embedded and used for the search. This is especially helpful for vague queries like "what are my goals?" where a direct embedding might not match well. The downside is one extra LLM call per search.');
+        hydeSetting.addToggle((t) =>
+            t.setValue(this.plugin.settings.hydeEnabled ?? false).onChange(async (v) => {
+                this.plugin.settings.hydeEnabled = v;
+                await this.plugin.saveSettings();
+            }),
+        );
+
         const autoIndexSetting = new Setting(containerEl)
             .setName('Auto-index strategy')
             .setDesc('When to automatically rebuild the index. "On Startup" is best for active vaults. "Never" lets you trigger it manually from the ellipsis menu in the chat.');
