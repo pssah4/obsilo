@@ -51,7 +51,7 @@ export class IgnoreService {
      * Returns true if the path should be denied.
      */
     isIgnored(path: string): boolean {
-        if (!this.loaded) return false;
+        if (!this.loaded) return true; // fail-closed: deny all until rules are loaded
         const normalPath = this.normalize(path);
 
         // Always-blocked paths
@@ -68,7 +68,7 @@ export class IgnoreService {
      * Protected paths can be read but never written/deleted/moved.
      */
     isProtected(path: string): boolean {
-        if (!this.loaded) return false;
+        if (!this.loaded) return true; // fail-closed: protect all until rules are loaded
         const normalPath = this.normalize(path);
 
         // Always-protected governance files
@@ -139,6 +139,10 @@ export class IgnoreService {
         if (p.endsWith('/')) {
             return path.startsWith(p) || path === p.slice(0, -1);
         }
+
+        // M-2: Reject pathologically long or complex patterns to prevent ReDoS
+        if (p.length > 200) return false;
+        if (/(\*\*){3,}/.test(p)) return false;
 
         // Convert glob to regex
         const regexStr = p

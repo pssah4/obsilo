@@ -25,6 +25,7 @@ export class WorkflowLoader {
     readonly workflowsDir: string;
 
     constructor(vault: Vault) {
+        this.vault = vault;
         this.workflowsDir = '.obsidian-agent/workflows';
     }
 

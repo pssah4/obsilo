@@ -24,11 +24,22 @@ export const GlobalModeStore = {
         try {
             await fsModule.promises.mkdir(GLOBAL_DIR, { recursive: true });
             const raw = await fsModule.promises.readFile(GLOBAL_MODES_FILE, 'utf-8');
-            const parsed = JSON.parse(raw);
+            // M-1: Validate size before parsing — reject absurdly large files
+            if (raw.length > 500_000) return [];
+            let parsed: unknown;
+            try {
+                parsed = JSON.parse(raw);
+            } catch {
+                return [];
+            }
             if (!Array.isArray(parsed)) return [];
             return parsed.filter(
                 (m): m is ModeConfig =>
-                    typeof m?.slug === 'string' && typeof m?.name === 'string',
+                    m !== null &&
+                    typeof m === 'object' &&
+                    typeof (m as any).slug === 'string' &&
+                    typeof (m as any).name === 'string' &&
+                    typeof (m as any).roleDefinition === 'string',
             );
         } catch {
             return [];

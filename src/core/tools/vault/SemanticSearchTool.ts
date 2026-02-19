@@ -15,7 +15,9 @@ export class SemanticSearchTool extends BaseTool<'semantic_search'> {
             name: 'semantic_search',
             description:
                 'Search the vault by meaning (semantic similarity) rather than exact keywords. ' +
-                'Returns the most relevant note excerpts for a given natural-language query. ' +
+                'Returns the most relevant note excerpts with enough content to answer Q&A questions directly. ' +
+                'For questions about vault content, synthesize your answer from the returned excerpts — ' +
+                'do NOT call read_file on the results just to gather more context. ' +
                 'Requires the Semantic Index to be built first (Settings → Semantic Index).',
             input_schema: {
                 type: 'object',
@@ -37,7 +39,7 @@ export class SemanticSearchTool extends BaseTool<'semantic_search'> {
     async execute(input: Record<string, any>, context: ToolExecutionContext): Promise<void> {
         const { callbacks } = context;
         const query: string = input.query ?? '';
-        const topK: number = Math.min(Number(input.top_k) || 5, 20);
+        const topK: number = Math.min(Number(input.top_k) || 8, 20);
 
         if (!query.trim()) {
             callbacks.pushToolResult(this.formatError(new Error('query parameter is required')));
@@ -67,12 +69,24 @@ export class SemanticSearchTool extends BaseTool<'semantic_search'> {
                 return;
             }
 
-            const lines = [`Semantic search results for: "${query}"\n`];
+            // Format path as Obsidian wikilink (strip extension)
+            const toWikilink = (filePath: string): string => {
+                const base = filePath.replace(/\.[^/.]+$/, '');
+                const name = base.split('/').pop() ?? base;
+                return `[[${name}]]`;
+            };
+
+            const lines = [
+                `Semantic search results for: "${query}"`,
+                `(Use these excerpts to answer directly — do not call read_file unless you need to edit the file)\n`,
+            ];
             for (let i = 0; i < results.length; i++) {
                 const r = results[i];
                 const score = Math.round(r.score * 100);
-                lines.push(`${i + 1}. **${r.path}** (${score}% match)`);
-                lines.push(`   ${r.excerpt.replace(/\n/g, ' ').slice(0, 200)}`);
+                const wikilink = toWikilink(r.path);
+                lines.push(`${i + 1}. ${wikilink} — \`${r.path}\` (${score}% match)`);
+                // Show the full chunk — 2000 chars gives the LLM enough context to answer without read_file
+                lines.push(r.excerpt);
                 lines.push('');
             }
 

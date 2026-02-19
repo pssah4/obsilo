@@ -65,6 +65,9 @@ export class McpClient {
             let transport;
             if (config.type === 'stdio') {
                 if (!config.command) throw new Error(`stdio server "${name}" has no command configured`);
+                // H-4: Block commands containing shell metacharacters that could enable injection.
+                // MCP commands are exec'd directly (not via shell), so these characters are suspicious.
+                this.validateStdioCommand(config.command, config.args ?? []);
                 transport = new StdioClientTransport({
                     command: config.command,
                     args: config.args ?? [],
@@ -107,6 +110,18 @@ export class McpClient {
             conn.status = 'error';
             conn.error = e instanceof Error ? e.message : String(e);
             console.error(`[McpClient] Failed to connect to "${name}":`, e);
+        }
+    }
+
+    private validateStdioCommand(command: string, args: string[]): void {
+        const DANGEROUS = /[;&|`$(){}[\]<>\\]/;
+        if (DANGEROUS.test(command)) {
+            throw new Error(`MCP stdio command contains shell metacharacters: "${command}"`);
+        }
+        for (const arg of args) {
+            if (DANGEROUS.test(arg)) {
+                throw new Error(`MCP stdio argument contains shell metacharacters: "${arg}"`);
+            }
         }
     }
 

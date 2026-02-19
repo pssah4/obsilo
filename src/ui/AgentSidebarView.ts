@@ -7,17 +7,13 @@ import type { MessageParam, ContentBlock, ImageMediaType } from '../api/types';
 import { getModelKey, modelToLLMProvider } from '../types/settings';
 import { buildApiHandler } from '../api/index';
 import { resolvePromptContent } from '../core/context/SupportPrompts';
+import { ToolPickerPopover } from './sidebar/ToolPickerPopover';
+import { AttachmentHandler } from './sidebar/AttachmentHandler';
+import type { AttachmentItem } from './sidebar/AttachmentHandler';
+import { AutocompleteHandler } from './sidebar/AutocompleteHandler';
+import { VaultFilePicker } from './sidebar/VaultFilePicker';
 
 export const VIEW_TYPE_AGENT_SIDEBAR = 'obsidian-agent-sidebar';
-
-/** A file (image or text) attached to the current compose turn. */
-interface AttachmentItem {
-    name: string;
-    /** Object URL for thumbnail display (images only); revoked when removed before send. */
-    objectUrl?: string;
-    /** The ContentBlock that will be included in the API message. */
-    block: ContentBlock;
-}
 
 /**
  * Agent Sidebar View
@@ -53,19 +49,27 @@ export class AgentSidebarView extends ItemView {
     private lastUserMessage = '';
     // Last known active MarkdownView — tracked because clicking sidebar loses getActiveViewOfType
     private lastMarkdownView: MarkdownView | null = null;
-    // Attachments pending for the next sent message
-    private pendingAttachments: AttachmentItem[] = [];
-    private attachmentChipBar: HTMLElement | null = null;
 
-    // Autocomplete dropdown (Sprint B3)
-    private autocompleteDropdown: HTMLElement | null = null;
-    private autocompleteItems: { label: string; sub?: string; onSelect: () => void }[] = [];
-    private autocompleteIndex = 0;
+    // Tool picker (pocket-knife button)
+    private toolPickerButton: HTMLElement | null = null;
+    /** Manages tool/skill/workflow picker and session overrides */
+    private toolPicker!: ToolPickerPopover;
+    /** Manages pending attachments and chip bar UI */
+    private attachments!: AttachmentHandler;
+    /** Manages / and @ autocomplete dropdown */
+    private autocomplete!: AutocompleteHandler;
+    /** Vault file picker popover (@ button) */
+    private vaultFilePicker!: VaultFilePicker;
 
     constructor(leaf: WorkspaceLeaf, plugin: ObsidianAgentPlugin) {
         super(leaf);
         this.plugin = plugin;
         this.modeService = new ModeService(plugin, plugin.toolRegistry);
+        this.toolPicker = new ToolPickerPopover(plugin, this.modeService);
+        this.vaultFilePicker = new VaultFilePicker(
+            this.app,
+            async (files) => { for (const f of files) await this.attachments.addVaultFile(f); },
+        );
     }
 
     getViewType(): string {
@@ -77,7 +81,7 @@ export class AgentSidebarView extends ItemView {
     }
 
     getIcon(): string {
-        return 'obsidian-agent';
+        return 'message-square-more';
     }
 
     async onOpen(): Promise<void> {
@@ -117,7 +121,7 @@ export class AgentSidebarView extends ItemView {
 
     async onClose(): Promise<void> {
         this.currentAbortController?.abort();
-        this.clearAttachments();
+        this.attachments.clear();
     }
 
     private buildHeader(container: HTMLElement): void {
@@ -133,7 +137,7 @@ export class AgentSidebarView extends ItemView {
             cls: 'header-button',
             attr: { 'aria-label': 'Settings' },
         });
-        setIcon(settingsBtn, 'settings');
+        setIcon(settingsBtn.createSpan('toolbar-icon'), 'settings');
         settingsBtn.addEventListener('click', () => {
             (this.app as any).setting?.open();
             (this.app as any).setting?.openTabById('obsidian-agent');
@@ -144,7 +148,7 @@ export class AgentSidebarView extends ItemView {
             cls: 'header-button',
             attr: { 'aria-label': 'New chat' },
         });
-        setIcon(newChatBtn, 'message-circle-plus');
+        setIcon(newChatBtn.createSpan('toolbar-icon'), 'plus');
         newChatBtn.addEventListener('click', () => this.clearConversation());
     }
 
@@ -161,44 +165,31 @@ export class AgentSidebarView extends ItemView {
         this.updateContextBadge();
 
         // Attachment chip bar (below context chips, above textarea)
-        this.attachmentChipBar = inputWrapper.createDiv('chat-attachment-chips');
+        const chipBar = inputWrapper.createDiv('chat-attachment-chips');
+        this.attachments = new AttachmentHandler(this.app.vault, chipBar);
 
         this.textarea = inputWrapper.createEl('textarea', {
             cls: 'chat-textarea',
             attr: { placeholder: 'Type your message here...', rows: '3' },
         });
 
+        // Initialize autocomplete handler after textarea is created
+        this.autocomplete = new AutocompleteHandler(
+            this.plugin,
+            this.app,
+            () => this.textarea,
+            () => this.inputArea,
+            (file) => this.attachments.addVaultFile(file),
+        );
+
         this.textarea.addEventListener('input', () => {
             this.autoResizeTextarea();
-            this.handleAutocompleteInput();
+            this.autocomplete.handleInput();
         });
 
         this.textarea.addEventListener('keydown', (e: KeyboardEvent) => {
             // Autocomplete navigation takes priority
-            if (this.autocompleteDropdown) {
-                if (e.key === 'ArrowDown') {
-                    e.preventDefault();
-                    this.autocompleteIndex = Math.min(this.autocompleteIndex + 1, this.autocompleteItems.length - 1);
-                    this.renderAutocompleteDropdown();
-                    return;
-                }
-                if (e.key === 'ArrowUp') {
-                    e.preventDefault();
-                    this.autocompleteIndex = Math.max(this.autocompleteIndex - 1, 0);
-                    this.renderAutocompleteDropdown();
-                    return;
-                }
-                if (e.key === 'Tab' || (e.key === 'Enter' && this.autocompleteDropdown)) {
-                    e.preventDefault();
-                    this.autocompleteItems[this.autocompleteIndex]?.onSelect();
-                    return;
-                }
-                if (e.key === 'Escape') {
-                    e.preventDefault();
-                    this.hideAutocompleteDropdown();
-                    return;
-                }
-            }
+            if (this.autocomplete.handleKeyDown(e)) return;
 
             if (e.key === 'Enter') {
                 const sendWithEnter = this.plugin.settings.sendWithEnter ?? true;
@@ -220,7 +211,7 @@ export class AgentSidebarView extends ItemView {
                 if (item.kind === 'file') {
                     e.preventDefault();
                     const file = item.getAsFile();
-                    if (file) this.processAttachmentFile(file);
+                    if (file) this.attachments.processFile(file);
                 }
             }
         });
@@ -236,7 +227,7 @@ export class AgentSidebarView extends ItemView {
             inputWrapper.removeClass('drag-over');
             const files = e.dataTransfer?.files;
             if (files) {
-                for (const file of Array.from(files)) this.processAttachmentFile(file);
+                for (const file of Array.from(files)) this.attachments.processFile(file);
             }
         });
 
@@ -260,13 +251,32 @@ export class AgentSidebarView extends ItemView {
         this.updateModelButton();
         this.modelButton.addEventListener('click', (e) => this.showModelMenu(e));
 
+        // Tool picker button (ghost style) — hidden for Ask mode
+        this.toolPickerButton = toolbarLeft.createEl('button', {
+            cls: 'toolbar-button toolbar-ghost tool-picker-button',
+            attr: { 'aria-label': 'Select tools' },
+        });
+        setIcon(this.toolPickerButton.createSpan('toolbar-icon'), 'pocket-knife');
+        this.toolPickerButton.addEventListener('click', (e) => this.toolPicker.show(e, this.toolPickerButton!, this.containerEl as HTMLElement));
+        this.updateToolPickerButton();
+
         // Attach file button (ghost style)
         const attachBtn = toolbarLeft.createEl('button', {
             cls: 'toolbar-button toolbar-ghost attach-button',
             attr: { 'aria-label': 'Attach file' },
         });
         setIcon(attachBtn.createSpan('toolbar-icon'), 'paperclip');
-        attachBtn.addEventListener('click', () => this.openFilePicker());
+        attachBtn.addEventListener('click', () => this.attachments.openFilePicker());
+
+        // Vault file button — inserts @ and triggers autocomplete
+        const vaultBtn = toolbarLeft.createEl('button', {
+            cls: 'toolbar-button toolbar-ghost vault-attach-button',
+            attr: { 'aria-label': 'Add vault file' },
+        });
+        setIcon(vaultBtn.createSpan('toolbar-icon'), 'at-sign');
+        vaultBtn.addEventListener('click', () => {
+            this.vaultFilePicker.show(vaultBtn);
+        });
 
         // Ellipsis options menu button
         const ellipsisBtn = toolbarLeft.createEl('button', {
@@ -290,7 +300,7 @@ export class AgentSidebarView extends ItemView {
             cls: 'toolbar-button send-button',
             attr: { 'aria-label': 'Send message' },
         });
-        setIcon(this.sendButton.createSpan('toolbar-icon'), 'send');
+        setIcon(this.sendButton.createSpan('toolbar-icon'), 'send-horizontal');
         this.sendButton.addEventListener('click', () => this.handleSendMessage());
     }
 
@@ -328,9 +338,7 @@ export class AgentSidebarView extends ItemView {
         const effectiveKey = this.getEffectiveModelKey();
         const model = this.plugin.settings.activeModels.find((m) => getModelKey(m) === effectiveKey);
         const label = model ? (model.displayName ?? model.name) : 'No model';
-        // Show an indicator if the current mode has a model override
         const hasModeOverride = !!this.plugin.settings.modeModelKeys?.[this.plugin.settings.currentMode];
-        setIcon(this.modelButton.createSpan('toolbar-icon'), hasModeOverride ? 'cpu' : 'cpu');
         this.modelButton.createSpan('model-label').setText(label);
         setIcon(this.modelButton.createSpan('mode-chevron'), 'chevron-down');
         (this.modelButton as HTMLButtonElement).title = hasModeOverride
@@ -400,6 +408,13 @@ export class AgentSidebarView extends ItemView {
         setIcon(this.modeButton.createSpan('toolbar-icon'), this.getModeIcon(currentMode));
         this.modeButton.createSpan('mode-label').setText(this.getModeDisplayName(currentMode));
         setIcon(this.modeButton.createSpan('mode-chevron'), 'chevron-down');
+        this.updateToolPickerButton();
+    }
+
+    private updateToolPickerButton(): void {
+        if (!this.toolPickerButton) return;
+        const isAsk = this.plugin.settings.currentMode === 'ask';
+        this.toolPickerButton.style.display = isAsk ? 'none' : '';
     }
 
     private showModeMenu(event: MouseEvent): void {
@@ -418,11 +433,114 @@ export class AgentSidebarView extends ItemView {
     }
 
     private getModeIcon(modeSlug: string): string {
-        return this.modeService.getMode(modeSlug)?.icon ?? 'cpu';
+        return this.modeService.getMode(modeSlug)?.icon ?? 'zap';
     }
 
     private getModeDisplayName(modeSlug: string): string {
         return this.modeService.getMode(modeSlug)?.name ?? modeSlug;
+    }
+
+    // ---------------------------------------------------------------------------
+
+    /**
+     * Build the skills section for the system prompt.
+     * Combines keyword-matched skills with any forced skills from the tool picker.
+     */
+    /**
+     * Build a compact vault-structure snapshot injected into every user message.
+     * Gives the model immediate orientation (top-level folders, note count, recent files)
+     * so it doesn't need to call list_files or get_vault_stats just to orient itself.
+     * Mirrors the <environment_details> pattern used by Kilo Code and Craft Agents.
+     */
+    private buildVaultContext(): string {
+        try {
+            const root = this.app.vault.getRoot();
+            const folders: string[] = [];
+            const rootFiles: string[] = [];
+
+            for (const child of root.children) {
+                if ((child as any).children !== undefined) {
+                    // It's a folder — skip hidden/system dirs
+                    const name = child.name;
+                    if (!name.startsWith('.')) folders.push(name);
+                } else {
+                    rootFiles.push(child.name);
+                }
+            }
+
+            const allMd = this.app.vault.getMarkdownFiles();
+            const noteCount = allMd.length;
+
+            // 5 most recently modified notes (path only)
+            const recent = [...allMd]
+                .sort((a, b) => b.stat.mtime - a.stat.mtime)
+                .slice(0, 5)
+                .map((f) => f.path);
+
+            const lines: string[] = ['<vault_context>'];
+            lines.push(`Notes: ${noteCount}`);
+            if (folders.length > 0) lines.push(`Top-level folders: ${folders.join(', ')}`);
+            if (rootFiles.length > 0) lines.push(`Root files: ${rootFiles.join(', ')}`);
+            if (recent.length > 0) lines.push(`Recently modified: ${recent.join(', ')}`);
+            lines.push('</vault_context>');
+            return lines.join('\n');
+        } catch {
+            return '';
+        }
+    }
+
+    private async buildSkillsSection(userMessage: string, forcedSkillNames: string[]): Promise<string | undefined> {
+        const skillsManager = (this.plugin as any).skillsManager;
+        if (!skillsManager) return undefined;
+
+        // For keyword-matched skills, use getRelevantSkills() which inlines full SKILL.md content.
+        // This eliminates the read_file round-trip the agent would otherwise need.
+        let section = await skillsManager.getRelevantSkills(userMessage) as string;
+
+        // Also inject any forced skills that weren't keyword-matched
+        if (forcedSkillNames.length > 0) {
+            const allSkills = await skillsManager.discoverSkills() as any[];
+            const keywordSection = section; // already built above
+            const keywordNames = new Set(
+                allSkills
+                    .filter((s: any) => {
+                        const msgWords = new Set((userMessage.toLowerCase().match(/\b\w{3,}\b/g) ?? []));
+                        const descWords: string[] = s.description.toLowerCase().match(/\b\w{3,}\b/g) ?? [];
+                        return descWords.some((w: string) => msgWords.has(w));
+                    })
+                    .map((s: any) => s.name as string)
+            );
+            const extraForced = allSkills.filter(
+                (s: any) => forcedSkillNames.includes(s.name) && !keywordNames.has(s.name)
+            );
+            if (extraForced.length > 0) {
+                // Build inline XML for forced-only skills
+                const xmlEscape = (v: string) => v.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                const forcedLines: string[] = keywordSection ? [] : ['<available_skills>'];
+                for (const s of extraForced) {
+                    let fullContent = '';
+                    try {
+                        const raw = await this.app.vault.adapter.read(s.path);
+                        fullContent = raw.replace(/^---\n[\s\S]*?\n---\n?/, '').trim();
+                        if (fullContent.length > 4000) fullContent = fullContent.slice(0, 4000) + '\n…(truncated)';
+                    } catch { /* skip */ }
+                    forcedLines.push(`  <skill>`);
+                    forcedLines.push(`    <name>${xmlEscape(s.name)}</name>`);
+                    forcedLines.push(`    <description>${xmlEscape(s.description)}</description>`);
+                    if (fullContent) forcedLines.push(`    <instructions>${xmlEscape(fullContent)}</instructions>`);
+                    forcedLines.push(`  </skill>`);
+                }
+                if (keywordSection) {
+                    // Insert forced skills before the closing tag
+                    section = keywordSection.replace('</available_skills>', forcedLines.join('\n') + '\n</available_skills>');
+                } else {
+                    forcedLines.push('</available_skills>');
+                    section = forcedLines.join('\n');
+                }
+            }
+        }
+
+        return section || undefined;
     }
 
     private autoResizeTextarea(): void {
@@ -455,14 +573,14 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
         if (!this.textarea) return;
 
         const text = this.textarea.value.trim();
-        if (!text && this.pendingAttachments.length === 0) return;
+        if (!text && this.attachments.pending.length === 0) return;
         if (this.currentAbortController) return; // Already running
 
         this.lastUserMessage = text;
 
         // Snapshot attachments, clear the chip bar, render user bubble with previews
-        const attachments = [...this.pendingAttachments];
-        this.clearAttachments();
+        const attachments = [...this.attachments.pending];
+        this.attachments.clear();
         const activeFileForBubble = (this.plugin.settings.autoAddActiveFileContext && !this.userDismissedContext)
             ? this.app.workspace.getActiveFile()
             : null;
@@ -475,9 +593,10 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
         const activeFile = (this.plugin.settings.autoAddActiveFileContext && !this.userDismissedContext)
             ? this.app.workspace.getActiveFile()
             : null;
-        const textWithContext = text + (activeFile
-            ? `\n\n<context>\nActive file in editor: ${activeFile.path}\n</context>`
-            : '');
+        const vaultCtx = this.buildVaultContext();
+        const textWithContext = text
+            + (activeFile ? `\n\n<context>\nActive file in editor: ${activeFile.path}\n</context>` : '')
+            + (vaultCtx ? `\n\n${vaultCtx}` : '');
 
         // Build ContentBlock[] when there are attachments, plain string otherwise
         let messageToSend: string | ContentBlock[];
@@ -562,6 +681,7 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
         let accumulatedThinking = '';   // full thinking text for collapse/expand
         let hasTools = false;           // have any tools been called in this task?
         let isThinking = false;         // thinking is currently active
+        let activityActionCount = 0;    // number of completed tool calls (for activity badge)
 
         // Streaming text container: during Q&A streaming we append raw text chunks
         // directly into this element (O(1) per chunk, zero re-parses).
@@ -834,6 +954,16 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
                         }
                         details.open = isError;
                     }
+                    // Update activity badge in plan box (only if a plan is active).
+                    // Use closest('.assistant-message') so the lookup works both before
+                    // and after the DOM-move (toolsEl.parentElement changes on move).
+                    activityActionCount++;
+                    const actBadge = toolsEl.closest('.assistant-message')?.querySelector('.todo-activity-badge') as HTMLElement | null;
+                    if (actBadge) actBadge.setText(`${activityActionCount} action${activityActionCount !== 1 ? 's' : ''}`);
+                    if (isError) {
+                        const actDetails = toolsEl.closest('.todo-activity-log') as HTMLDetailsElement | null;
+                        if (actDetails) actDetails.open = true;
+                    }
                 },
                 onUsage: (inputTokens, outputTokens) => {
                     const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -965,21 +1095,45 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
             ? await rulesLoader.loadEnabledRules(this.plugin.settings.rulesToggles ?? {})
             : undefined;
 
+        // Feature 1: Pass the shared history — it accumulates across messages
+        // Feature 4: Pass messageToSend (with active file context) instead of raw text
+        const activeMode = this.modeService.getActiveMode();
+
         // Load relevant skills for this message (Sprint 3.4)
-        const skillsManager = (this.plugin as any).skillsManager;
+        // Combines keyword-matched + forced skills from tool picker
         const userMessageText = typeof messageToSend === 'string'
             ? messageToSend
             : (messageToSend as any[]).find((b: any) => b.type === 'text')?.text ?? '';
-        const skillsSection = skillsManager
-            ? await skillsManager.getRelevantSkills(userMessageText)
-            : undefined;
+        const forcedSkillNames = [
+            ...(this.toolPicker.sessionForcedSkills.get(activeMode.slug) ?? this.plugin.settings.forcedSkills?.[activeMode.slug] ?? []),
+        ];
+        const skillsSection = await this.buildSkillsSection(userMessageText, forcedSkillNames);
 
-        // Feature 1: Pass the shared history — it accumulates across messages
-        // Feature 4: Pass messageToSend (with active file context) instead of raw text
+        // Apply forced workflow from tool picker (when message doesn't start with slash command)
+        const forcedWorkflowSlug = this.toolPicker.sessionForcedWorkflow.get(activeMode.slug)
+            ?? this.plugin.settings.forcedWorkflow?.[activeMode.slug]
+            ?? '';
+        if (typeof messageToSend === 'string' && !text.startsWith('/') && forcedWorkflowSlug) {
+            const workflowLoader = (this.plugin as any).workflowLoader;
+            if (workflowLoader) {
+                const processedText = await workflowLoader.processSlashCommand(
+                    `/${forcedWorkflowSlug} ${text}`,
+                    this.plugin.settings.workflowToggles ?? {},
+                );
+                if (processedText !== `/${forcedWorkflowSlug} ${text}`) {
+                    messageToSend = processedText + (activeFile
+                        ? `\n\n<context>\nActive file in editor: ${activeFile.path}\n</context>`
+                        : '');
+                }
+            }
+        }
+
+        const sessionToolOverride = this.toolPicker.sessionToolOverrides.get(activeMode.slug);
+        const allowedMcpServers = this.plugin.settings.modeMcpServers?.[activeMode.slug];
         await task.run(
             messageToSend,
             taskId,
-            this.modeService.getActiveMode(),
+            activeMode,
             this.conversationHistory,
             this.currentAbortController.signal,
             this.plugin.settings.globalCustomInstructions || undefined,
@@ -987,6 +1141,8 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
             rulesContent || undefined,
             skillsSection || undefined,
             this.plugin.mcpClient,
+            sessionToolOverride,
+            allowedMcpServers,
         );
     }
 
@@ -1015,7 +1171,7 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
     private clearConversation(): void {
         this.conversationHistory = [];
         this.userDismissedContext = false;
-        this.clearAttachments();
+        this.attachments.clear();
         if (this.chatContainer) {
             this.chatContainer.empty();
         }
@@ -1133,202 +1289,7 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
         this.updateModelButton(); // model may differ per mode
     }
 
-    // -------------------------------------------------------------------------
-    // Attachment handling
-    // -------------------------------------------------------------------------
 
-    private openFilePicker(): void {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.multiple = true;
-        input.accept = 'image/png,image/jpeg,image/gif,image/webp,.txt,.md,.json,.py,.ts,.js,.jsx,.tsx,.css,.html,.xml,.yaml,.yml,.csv,.sh';
-        input.addEventListener('change', () => {
-            if (input.files) {
-                for (const file of Array.from(input.files)) this.processAttachmentFile(file);
-            }
-        });
-        input.click();
-    }
-
-    private async processAttachmentFile(file: File): Promise<void> {
-        const MAX_BYTES = 10 * 1024 * 1024; // 10 MB
-        if (file.size > MAX_BYTES) {
-            new Notice(`"${file.name}" exceeds the 10 MB limit.`);
-            return;
-        }
-
-        const IMAGE_TYPES: Record<string, ImageMediaType> = {
-            'image/png': 'image/png',
-            'image/jpeg': 'image/jpeg',
-            'image/gif': 'image/gif',
-            'image/webp': 'image/webp',
-        };
-        const TEXT_EXTENSIONS = ['.txt', '.md', '.json', '.py', '.ts', '.js', '.jsx', '.tsx', '.css', '.html', '.xml', '.yaml', '.yml', '.csv', '.sh'];
-
-        const mediaType = IMAGE_TYPES[file.type];
-        if (mediaType) {
-            // Convert image to base64
-            const arrayBuffer = await file.arrayBuffer();
-            const bytes = new Uint8Array(arrayBuffer);
-            let binary = '';
-            for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
-            const base64 = btoa(binary);
-            const objectUrl = URL.createObjectURL(file);
-            this.pendingAttachments.push({
-                name: file.name || 'image.png',
-                objectUrl,
-                block: { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } },
-            });
-        } else if (TEXT_EXTENSIONS.some(ext => file.name.toLowerCase().endsWith(ext)) || file.type.startsWith('text/')) {
-            const text = await file.text();
-            this.pendingAttachments.push({
-                name: file.name,
-                block: { type: 'text', text: `<attached_file name="${file.name}">\n${text}\n</attached_file>` },
-            });
-        } else {
-            new Notice(`"${file.name}" is not supported. Use images (PNG/JPG/GIF/WebP) or text files.`);
-            return;
-        }
-        this.renderAttachmentChips();
-    }
-
-    // ── Autocomplete (Sprint B3) ────────────────────────────────────────────
-
-    /**
-     * Called on every textarea input event.
-     * Decides whether to show the / or @ autocomplete dropdown.
-     */
-    private async handleAutocompleteInput(): Promise<void> {
-        if (!this.textarea) return;
-        const value = this.textarea.value;
-
-        // / at the very start → workflow + prompt autocomplete
-        if (value.startsWith('/')) {
-            const query = value.slice(1).split(' ')[0].toLowerCase();
-
-            // Workflows
-            const workflowLoader = (this.plugin as any).workflowLoader;
-            const workflows: { slug: string; displayName: string }[] = workflowLoader
-                ? await workflowLoader.discoverWorkflows()
-                : [];
-            const workflowItems = workflows
-                .filter((w) => query === '' || w.slug.startsWith(query))
-                .map((w) => ({
-                    label: w.displayName,
-                    sub: `/${w.slug}`,
-                    onSelect: () => {
-                        if (!this.textarea) return;
-                        const rest = value.includes(' ') ? value.slice(value.indexOf(' ') + 1) : '';
-                        this.textarea.value = `/${w.slug}${rest ? ' ' + rest : ''}`;
-                        this.hideAutocompleteDropdown();
-                        this.textarea.focus();
-                    },
-                }));
-
-            // Helper: replace textarea with resolved prompt template
-            const makePromptSelector = (content: string) => () => {
-                if (!this.textarea) return;
-                const userInput = value.includes(' ') ? value.slice(value.indexOf(' ') + 1) : '';
-                const activeFile = this.app.workspace.getActiveFile()?.name;
-                this.textarea.value = resolvePromptContent(content, { userInput, activeFile });
-                this.hideAutocompleteDropdown();
-                this.textarea.focus();
-            };
-
-            // User-defined custom prompts — filtered by enabled flag, slug query, and optional mode
-            const activeMode = this.plugin.settings.currentMode;
-            const customItems = (this.plugin.settings.customPrompts ?? [])
-                .filter((p) =>
-                    p.enabled !== false &&
-                    (query === '' || p.slug.startsWith(query)) &&
-                    (!p.mode || p.mode === activeMode)
-                )
-                .map((p) => ({
-                    label: p.name,
-                    sub: `/${p.slug}`,
-                    onSelect: makePromptSelector(p.content),
-                }));
-
-            this.autocompleteItems = [...workflowItems, ...customItems];
-            if (this.autocompleteItems.length === 0) { this.hideAutocompleteDropdown(); return; }
-            this.autocompleteIndex = 0;
-            this.renderAutocompleteDropdown();
-            return;
-        }
-
-        // @ anywhere in the text → file mention autocomplete
-        const cursorPos = this.textarea.selectionStart ?? value.length;
-        const beforeCursor = value.slice(0, cursorPos);
-        const atIdx = beforeCursor.lastIndexOf('@');
-        if (atIdx !== -1 && (atIdx === 0 || /\s/.test(beforeCursor[atIdx - 1]))) {
-            const query = beforeCursor.slice(atIdx + 1).toLowerCase();
-
-            const makeFileOnSelect = (f: import('obsidian').TFile) => async () => {
-                if (!this.textarea) return;
-                const newValue = value.slice(0, atIdx) + value.slice(atIdx + 1 + query.length);
-                this.textarea.value = newValue.trim();
-                this.hideAutocompleteDropdown();
-                await this.addVaultFileAttachment(f);
-                this.textarea.focus();
-            };
-
-            // @active shortcut — currently open note
-            const currentFile = this.app.workspace.getActiveFile();
-            const activeOption = (currentFile && (query === '' || 'active'.startsWith(query)))
-                ? [{ label: 'Active note', sub: `@active → ${currentFile.basename}`, onSelect: makeFileOnSelect(currentFile) }]
-                : [];
-
-            const allFiles = this.app.vault.getMarkdownFiles();
-            const filtered = allFiles
-                .filter((f) => f.path.toLowerCase().includes(query))
-                .slice(0, 10);
-
-            this.autocompleteItems = [
-                ...activeOption,
-                ...filtered.map((f) => ({ label: f.basename, sub: f.path, onSelect: makeFileOnSelect(f) })),
-            ];
-            if (this.autocompleteItems.length === 0) { this.hideAutocompleteDropdown(); return; }
-            this.autocompleteIndex = 0;
-            this.renderAutocompleteDropdown();
-            return;
-        }
-
-        this.hideAutocompleteDropdown();
-    }
-
-    private renderAutocompleteDropdown(): void {
-        if (!this.inputArea) return;
-
-        if (!this.autocompleteDropdown) {
-            this.autocompleteDropdown = this.inputArea.createDiv('autocomplete-dropdown');
-            // Click outside to close
-            document.addEventListener('click', (e) => {
-                if (this.autocompleteDropdown && !this.autocompleteDropdown.contains(e.target as Node)) {
-                    this.hideAutocompleteDropdown();
-                }
-            }, { once: true });
-        }
-
-        this.autocompleteDropdown.empty();
-        this.autocompleteItems.forEach((item, idx) => {
-            const row = this.autocompleteDropdown!.createDiv({
-                cls: `autocomplete-item${idx === this.autocompleteIndex ? ' active' : ''}`,
-            });
-            row.createSpan({ cls: 'autocomplete-label', text: item.label });
-            if (item.sub) row.createSpan({ cls: 'autocomplete-sub', text: item.sub });
-            row.addEventListener('mousedown', (e) => {
-                e.preventDefault();
-                item.onSelect();
-            });
-        });
-    }
-
-    private hideAutocompleteDropdown(): void {
-        this.autocompleteDropdown?.remove();
-        this.autocompleteDropdown = null;
-        this.autocompleteItems = [];
-        this.autocompleteIndex = 0;
-    }
 
     // ── Ellipsis options menu ─────────────────────────────────────────────────
 
@@ -1437,56 +1398,6 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
                 this.addUserMessage(msg.content);
             }
         }
-    }
-
-
-    /**
-     * Add an Obsidian vault file as a text attachment (for @ mentions).
-     */
-    private async addVaultFileAttachment(file: TFile): Promise<void> {
-        try {
-            const content = await this.app.vault.read(file);
-            this.pendingAttachments.push({
-                name: file.path,
-                block: { type: 'text', text: `<attached_file name="${file.path}">\n${content}\n</attached_file>` },
-            });
-            this.renderAttachmentChips();
-        } catch {
-            new Notice(`Could not read "${file.path}"`);
-        }
-    }
-
-    private renderAttachmentChips(): void {
-        if (!this.attachmentChipBar) return;
-        this.attachmentChipBar.empty();
-        this.pendingAttachments.forEach((item, i) => {
-            const chip = this.attachmentChipBar!.createDiv('chat-attachment-chip');
-            if (item.objectUrl) {
-                const img = chip.createEl('img', { cls: 'attachment-chip-thumb' });
-                img.src = item.objectUrl;
-                img.alt = item.name;
-            } else {
-                setIcon(chip.createSpan('attachment-chip-icon'), 'file-text');
-                chip.createSpan('attachment-chip-name').setText(item.name);
-            }
-            const removeBtn = chip.createSpan('attachment-chip-remove');
-            setIcon(removeBtn, 'x');
-            removeBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                if (item.objectUrl) URL.revokeObjectURL(item.objectUrl);
-                this.pendingAttachments.splice(i, 1);
-                this.renderAttachmentChips();
-            });
-        });
-    }
-
-    private clearAttachments(): void {
-        // Revoke object URLs for any unsent attachments
-        for (const att of this.pendingAttachments) {
-            if (att.objectUrl) URL.revokeObjectURL(att.objectUrl);
-        }
-        this.pendingAttachments = [];
-        if (this.attachmentChipBar) this.attachmentChipBar.empty();
     }
 
     // -------------------------------------------------------------------------
@@ -1663,33 +1574,61 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
     // -------------------------------------------------------------------------
 
     /**
-     * Render (or update) the Todo-Box inside the tool-status area of a streaming message.
-     * Called each time the agent calls update_todo_list — replaces the previous box.
+     * Render (or update) the Plan box for a streaming message.
+     *
+     * First call: creates the plan box BEFORE toolsEl in the message, then
+     * DOM-moves toolsEl (with any already-rendered tool calls) into a collapsed
+     * <details> inside the plan box — making tool calls hidden by default.
+     *
+     * Subsequent calls: updates the todo items list and badge in place.
      */
     private renderTodoBox(
         toolsEl: HTMLElement,
         items: import('../core/tools/agent/UpdateTodoListTool').TodoItem[],
     ): void {
-        // Remove existing todo box (update in place)
-        toolsEl.querySelector('.agent-todo-box')?.remove();
+        const messageEl = toolsEl.closest('.assistant-message') as HTMLElement | null;
+        if (!messageEl) return;
 
-        const box = toolsEl.createDiv('agent-todo-box');
-        const header = box.createDiv('todo-box-header');
-        header.createSpan('todo-box-icon').setText('☑');
-        header.createSpan('todo-box-title').setText('Plan');
+        let planBoxEl = messageEl.querySelector<HTMLElement>(':scope > .agent-todo-box');
+        let planListEl: HTMLElement;
+        let activityBadgeEl: HTMLElement | null;
 
-        const list = box.createDiv('todo-box-list');
+        if (!planBoxEl) {
+            // First call — build the plan box and move toolsEl into it
+            planBoxEl = document.createElement('div');
+            planBoxEl.className = 'agent-todo-box';
+            // Insert before toolsEl (direct child of messageEl on first call)
+            messageEl.insertBefore(planBoxEl, toolsEl);
+
+            const header = planBoxEl.createDiv('todo-box-header');
+            setIcon(header.createSpan('todo-box-icon'), 'list-checks');
+            header.createSpan('todo-box-title').setText('Plan');
+            activityBadgeEl = header.createSpan('todo-activity-badge');
+
+            planListEl = planBoxEl.createDiv('todo-box-list');
+
+            const activityDetails = planBoxEl.createEl('details', { cls: 'todo-activity-log' });
+            activityDetails.createEl('summary', { cls: 'todo-activity-summary', text: 'Activity' });
+            // DOM-move: relocate toolsEl (with any already-rendered tool calls) into collapsed details
+            activityDetails.appendChild(toolsEl);
+        } else {
+            planListEl = planBoxEl.querySelector<HTMLElement>('.todo-box-list')!;
+            activityBadgeEl = planBoxEl.querySelector<HTMLElement>('.todo-activity-badge');
+        }
+
+        // Update the todo items list
+        planListEl.empty();
         for (const item of items) {
-            const row = list.createDiv('todo-item');
+            const row = planListEl.createDiv('todo-item');
             const icon = row.createSpan('todo-item-icon');
             if (item.status === 'done') {
-                icon.setText('✓');
+                setIcon(icon, 'check-circle-2');
                 row.addClass('todo-done');
             } else if (item.status === 'in_progress') {
-                icon.setText('●');
+                setIcon(icon, 'loader-2');
                 row.addClass('todo-in-progress');
             } else {
-                icon.setText('○');
+                setIcon(icon, 'circle');
                 row.addClass('todo-pending');
             }
             row.createSpan('todo-item-text').setText(item.text);

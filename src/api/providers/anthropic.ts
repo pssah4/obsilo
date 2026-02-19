@@ -58,7 +58,7 @@ export class AnthropicProvider implements ApiHandler {
             {
                 model: this.config.model,
                 max_tokens: this.config.maxTokens ?? 8192,
-                temperature: Math.min(this.config.temperature ?? 0.7, 1.0),
+                temperature: Math.min(this.config.temperature ?? 0.2, 1.0),
                 system: systemPrompt,
                 messages: anthropicMessages,
                 tools: anthropicTools.length > 0 ? anthropicTools : undefined,
@@ -130,8 +130,13 @@ export class AnthropicProvider implements ApiHandler {
                     let parsedInput: Record<string, any> = {};
                     try {
                         parsedInput = tool.inputJson ? JSON.parse(tool.inputJson) : {};
-                    } catch {
-                        console.error('[AnthropicProvider] Failed to parse tool input JSON:', tool.inputJson);
+                    } catch (e) {
+                        yield {
+                            type: 'text',
+                            text: `[Tool input parse error for "${tool.name}": ${(e as Error).message}]`,
+                        } satisfies ApiStreamChunk;
+                        toolAccumulator.delete(event.index);
+                        continue;
                     }
 
                     yield {

@@ -176,9 +176,8 @@ export class EditFileTool extends BaseTool<'edit_file'> {
             // Simple approach: rebuild using the normalized replacement
             const normNew = normalize(newStr);
             const replaced = normContent.replace(normOld, normNew);
-            // Re-apply: this loses original whitespace, so return null to use exact match
-            // Only apply if the normalized content has the match
-            return content.replace(oldStr.trim(), newStr);
+            // Use the normalized replacement — whitespace is collapsed but the edit succeeds
+            return replaced;
         }
         return null;
     }

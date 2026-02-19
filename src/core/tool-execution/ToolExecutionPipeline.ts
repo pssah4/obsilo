@@ -141,10 +141,12 @@ export class ToolExecutionPipeline {
             if (tool.isWriteOperation && (this.plugin.settings.enableCheckpoints ?? true)) {
                 const path: string | undefined = toolCall.input?.path;
                 if (path && !this.snapshotedPaths.has(path)) {
-                    this.snapshotedPaths.add(path); // mark before async call to avoid races
-                    this.plugin.checkpointService?.snapshot(this.taskId, [path]).catch((e) =>
-                        console.warn('[Pipeline] Checkpoint snapshot failed (non-fatal):', e)
-                    );
+                    try {
+                        await this.plugin.checkpointService?.snapshot(this.taskId, [path]);
+                        this.snapshotedPaths.add(path); // mark only after successful snapshot
+                    } catch (e) {
+                        console.warn('[Pipeline] Checkpoint snapshot failed (non-fatal):', e);
+                    }
                 }
             }
 
@@ -243,11 +245,12 @@ export class ToolExecutionPipeline {
             if (group === 'mcp' && cfg.mcp) return 'auto';
         }
 
-        // No auto-approve config AND no approval callback — default allow
-        // (avoids blocking when UI hasn't wired up approval yet)
+        // No auto-approve config AND no approval callback — fail-closed.
+        // Silently auto-approving writes when no callback is wired (e.g. subtasks) is a
+        // security risk. Deny by default to prevent unauthorized vault changes.
         if (!extensions?.onApprovalRequired) {
-            console.log(`[Pipeline] No approval callback — auto-allowing ${toolCall.name}`);
-            return 'auto';
+            console.warn(`[Pipeline] No approval callback for ${toolCall.name} — denying (fail-closed)`);
+            return 'rejected';
         }
 
         // Ask for user approval
