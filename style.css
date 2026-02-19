@@ -1,0 +1,949 @@
+/* ============================================================
+ * Obsilo Plugin — Stylesheet
+ *
+ * Section order:
+ *   §1  Tokens (design tokens, 8pt spacing system)
+ *   §2  Layout containers
+ *   §3  Typography
+ *   §4  Messages
+ *   §5  Tool calls & status
+ *   §6  Inputs & interactive controls
+ *   §7  Tree-panel rows (tp-*)
+ *   §8  Settings tabs
+ *   §9  Modals
+ *   §10 Utilities & scrollbars
+ *   §11 Reduced-motion overrides
+ * ============================================================ */
+
+
+/* ============================================================
+ * §1  TOKENS
+ *
+ * All magic numbers live here. Use these throughout the file
+ * so a single edit propagates everywhere.
+ * ============================================================ */
+:root {
+  /* --- Spacing (4 pt base, 8 pt primary rhythm) ------------ */
+  --ob-sp-1:   4px;
+  --ob-sp-2:   8px;
+  --ob-sp-3:  12px;
+  --ob-sp-4:  16px;
+  --ob-sp-5:  20px;
+  --ob-sp-6:  24px;
+  --ob-sp-8:  32px;
+
+  /* --- Border radius --------------------------------------- */
+  --ob-r-xs:    3px;
+  --ob-r-sm:    6px;
+  --ob-r-md:   10px;
+  --ob-r-lg:   14px;
+  --ob-r-full: 9999px;
+
+  /* --- Borders -------------------------------------------- */
+  --ob-border:        1px solid var(--background-modifier-border);
+  --ob-border-accent: 1px solid var(--interactive-accent);
+
+  /* --- Focus ring (used on every interactive element) ------ */
+  /* color-mix keeps it readable on both light and dark themes */
+  --ob-focus-ring: 0 0 0 2px
+    color-mix(in srgb, var(--interactive-accent) 35%, transparent);
+
+  /* --- Shadows -------------------------------------------- */
+  --ob-shadow-sm: 0 1px 3px
+    color-mix(in srgb, var(--background-modifier-border) 60%, transparent);
+  --ob-shadow-md: 0 4px 12px
+    color-mix(in srgb, var(--background-modifier-border) 80%, transparent);
+
+  /* --- Icon sizes ----------------------------------------- */
+  --ob-icon-sm: 14px;
+  --ob-icon-md: 16px;
+  --ob-icon-lg: 20px;
+
+  /* --- Semantic tool-status colors (one change = all badges) */
+  --ob-status-run-bg:  color-mix(in srgb, var(--color-yellow) 14%, transparent);
+  --ob-status-run-fg:  color-mix(in srgb, var(--color-yellow) 85%, var(--text-normal));
+  --ob-status-done-bg: color-mix(in srgb, var(--color-green)  14%, transparent);
+  --ob-status-done-fg: color-mix(in srgb, var(--color-green)  85%, var(--text-normal));
+  --ob-status-err-bg:  color-mix(in srgb, var(--color-red)    14%, transparent);
+  --ob-status-err-fg:  color-mix(in srgb, var(--color-red)    85%, var(--text-normal));
+
+  /* --- Chip / attachment background (replaces hardcoded white) */
+  --ob-chip-bg:     var(--background-secondary);
+  --ob-chip-border: var(--background-modifier-border);
+}
+
+
+/* ============================================================
+ * §2  LAYOUT CONTAINERS
+ * ============================================================ */
+
+.agent-sidebar {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  /*
+   * user-select:text here so message text stays copyable while
+   * the sidebar wrapper itself doesn't accidentally drag-select
+   * nav chrome when clicking quickly.
+   */
+  user-select: text;
+}
+
+.agent-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--ob-sp-2);
+  padding: var(--ob-sp-2) var(--ob-sp-3);
+  border-bottom: var(--ob-border);
+  flex-shrink: 0;
+}
+
+.chat-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--ob-sp-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--ob-sp-4);
+}
+
+.chat-input-area {
+  flex-shrink: 0;
+  border-top: var(--ob-border);
+  padding: var(--ob-sp-3) var(--ob-sp-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--ob-sp-2);
+}
+
+.agent-settings-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ob-sp-4);
+  padding: var(--ob-sp-4);
+  overflow-y: auto;
+}
+
+
+/* ============================================================
+ * §3  TYPOGRAPHY
+ * ============================================================ */
+
+.agent-sidebar,
+.agent-settings-panel {
+  font-size: var(--font-ui-small);
+  color: var(--text-normal);
+}
+
+/* Small all-caps labels used above groups of controls */
+.ob-label {
+  font-size: var(--font-ui-smaller);
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: var(--ob-sp-1);
+}
+
+
+/* ============================================================
+ * §4  MESSAGES
+ * ============================================================ */
+
+/* --- Message list ----------------------------------------- */
+.chat-messages {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ob-sp-3);
+  padding: var(--ob-sp-2) 0;
+}
+
+/* Compact mode: tighter gap only — no other side-effects */
+.compact-chat .chat-messages {
+  gap: var(--ob-sp-1);
+}
+
+/* --- Message row ------------------------------------------ */
+.message-row {
+  display: flex;
+  flex-direction: column;
+  max-width: 100%;
+}
+
+/* Base bubble */
+.message-content {
+  border-radius: var(--ob-r-md);
+  padding: var(--ob-sp-3) var(--ob-sp-4);
+  line-height: 1.6;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+/* Compact mode: tighter padding only */
+.compact-chat .message-content {
+  padding: var(--ob-sp-2) var(--ob-sp-3);
+  border-radius: var(--ob-r-sm);
+}
+
+/* User bubble */
+.user-message .message-content {
+  background: color-mix(in srgb, var(--interactive-accent) 12%, var(--background-secondary));
+  border: var(--ob-border);
+  align-self: flex-end;
+}
+
+/* Assistant bubble */
+.assistant-message .message-content {
+  background: var(--background-secondary);
+  border: var(--ob-border);
+  align-self: flex-start;
+}
+
+/* --- Markdown rendered inside any message bubble ---------- */
+/* Keep all message markdown in one place — no scattered overrides */
+
+.message-content p {
+  margin: 0 0 var(--ob-sp-2);
+}
+.message-content p:last-child {
+  margin-bottom: 0;
+}
+
+.message-content ul,
+.message-content ol {
+  padding-left: var(--ob-sp-4);
+  margin: var(--ob-sp-2) 0;
+}
+.message-content li {
+  margin-bottom: var(--ob-sp-1);
+}
+
+.message-content h1,
+.message-content h2,
+.message-content h3,
+.message-content h4 {
+  margin: var(--ob-sp-3) 0 var(--ob-sp-2);
+  line-height: 1.3;
+}
+
+.message-content blockquote {
+  border-left: 3px solid var(--interactive-accent);
+  margin: var(--ob-sp-2) 0;
+  padding-left: var(--ob-sp-3);
+  color: var(--text-muted);
+}
+
+.message-content hr {
+  border: none;
+  border-top: var(--ob-border);
+  margin: var(--ob-sp-4) 0;
+}
+
+/* Code blocks (pre + code) — consolidated, no duplicate blocks */
+.message-content pre {
+  background: var(--background-primary-alt);
+  border: var(--ob-border);
+  border-radius: var(--ob-r-sm);
+  padding: var(--ob-sp-3) var(--ob-sp-4);
+  overflow-x: auto;
+  margin: var(--ob-sp-2) 0;
+}
+.message-content pre code {
+  /* Reset inline-code styles when code lives inside pre */
+  background: transparent;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  font-size: var(--font-smaller);
+  line-height: 1.5;
+}
+.message-content code {
+  background: var(--background-primary-alt);
+  border: var(--ob-border);
+  border-radius: var(--ob-r-xs);
+  padding: 1px var(--ob-sp-1);
+  font-size: var(--font-smaller);
+  font-family: var(--font-monospace);
+}
+
+/* Message timestamp / metadata line */
+.message-meta {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-faint);
+  margin-top: var(--ob-sp-1);
+  padding: 0 var(--ob-sp-1);
+}
+
+/* --- Streaming / thinking indicator ----------------------- */
+.thinking-indicator {
+  display: flex;
+  align-items: center;
+  gap: var(--ob-sp-2);
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  padding: var(--ob-sp-2) var(--ob-sp-4);
+}
+
+.thinking-spinner {
+  width: var(--ob-icon-md);
+  height: var(--ob-icon-md);
+  border: 2px solid var(--background-modifier-border);
+  border-top-color: var(--interactive-accent);
+  border-radius: var(--ob-r-full);
+  animation: thinking-spin 0.8s linear infinite;
+}
+
+@keyframes thinking-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Blinking inline cursor during streaming */
+.streaming-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  background: var(--text-normal);
+  border-radius: 1px;
+  vertical-align: text-bottom;
+  animation: blink 1s step-end infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+/* --- Attachment chips ------------------------------------ */
+/*
+ * Previously used `background: white` which breaks dark themes.
+ * Now uses --ob-chip-bg (= var(--background-secondary)) which
+ * adapts to the active Obsidian theme automatically.
+ */
+.message-attachment-chip,
+.chat-attachment-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ob-sp-1);
+  background: var(--ob-chip-bg);
+  border: 1px solid var(--ob-chip-border);
+  border-radius: var(--ob-r-full);
+  padding: 2px var(--ob-sp-2);
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.message-attachment-chip .chip-icon,
+.chat-attachment-chip .chip-icon {
+  flex-shrink: 0;
+  width: var(--ob-icon-sm);
+  height: var(--ob-icon-sm);
+  color: var(--text-faint);
+}
+
+.chat-attachments-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ob-sp-1);
+}
+
+
+/* ============================================================
+ * §5  TOOL CALLS & STATUS
+ *
+ * Unified here — all tool-status rules live in ONE block with
+ * modifier classes. Do not add tool-status rules elsewhere.
+ * ============================================================ */
+
+/* Expandable summary row */
+.tool-call-summary {
+  display: flex;
+  align-items: center;
+  gap: var(--ob-sp-2);
+  padding: var(--ob-sp-2) var(--ob-sp-3);
+  border-radius: var(--ob-r-sm);
+  background: var(--background-secondary);
+  border: var(--ob-border);
+  cursor: pointer;
+  font-size: var(--font-ui-small);
+  color: var(--text-muted);
+  user-select: none;
+  transition: background 0.15s ease;
+}
+.tool-call-summary:hover {
+  background: var(--background-modifier-hover);
+}
+.tool-call-summary:focus-visible {
+  outline: none;
+  box-shadow: var(--ob-focus-ring);
+}
+
+/* Detail / output pane */
+.tool-call-detail {
+  background: var(--background-primary-alt);
+  border: var(--ob-border);
+  border-top: none;
+  border-radius: 0 0 var(--ob-r-sm) var(--ob-r-sm);
+  padding: var(--ob-sp-3) var(--ob-sp-4);
+  font-size: var(--font-ui-smaller);
+  font-family: var(--font-monospace);
+  overflow-x: auto;
+  white-space: pre-wrap;
+  color: var(--text-normal);
+}
+
+/* Status badge — base style */
+.tool-status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ob-sp-1);
+  border-radius: var(--ob-r-xs);
+  padding: 1px var(--ob-sp-2);
+  font-size: var(--font-ui-smaller);
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+/* Modifier: running */
+.tool-status.tool-running {
+  background: var(--ob-status-run-bg);
+  color: var(--ob-status-run-fg);
+}
+.tool-status.tool-running .tool-status-icon {
+  animation: tool-pulse 1.2s ease-in-out infinite;
+}
+
+/* Modifier: done */
+.tool-status.tool-done {
+  background: var(--ob-status-done-bg);
+  color: var(--ob-status-done-fg);
+}
+
+/* Modifier: error */
+.tool-status.tool-error {
+  background: var(--ob-status-err-bg);
+  color: var(--ob-status-err-fg);
+}
+
+@keyframes tool-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.35; }
+}
+
+
+/* ============================================================
+ * §6  INPUTS & INTERACTIVE CONTROLS
+ * ============================================================ */
+
+/* --- Main content / prompt textarea ----------------------- */
+.content-editor-textarea {
+  width: 100%;
+  min-height: 80px;
+  resize: vertical;
+  background: var(--background-primary);
+  color: var(--text-normal);
+  border: var(--ob-border);
+  border-radius: var(--ob-r-sm);
+  padding: var(--ob-sp-2) var(--ob-sp-3);
+  font-size: var(--font-ui-small);
+  font-family: var(--font-text);
+  line-height: 1.5;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.content-editor-textarea:focus,
+.content-editor-textarea:focus-visible {
+  /*
+   * Was: border-color: var(--color-accent)  ← inconsistent
+   * Now: standardised on --interactive-accent throughout the file.
+   */
+  outline: none;
+  border-color: var(--interactive-accent);
+  box-shadow: var(--ob-focus-ring);
+}
+
+/* --- Inputs & textareas inside the chat bar or settings ----
+ *
+ * Scoped explicitly — NOT `.agent-sidebar input` — so that
+ * Obsidian's own native controls (toggle, slider, etc.) that
+ * happen to live in the same panel are NOT accidentally styled.
+ */
+.chat-input-area input[type="text"],
+.chat-input-area input[type="search"],
+.agent-settings-panel input[type="text"],
+.agent-settings-panel input[type="number"],
+.agent-settings-panel input[type="password"],
+.agent-settings-panel textarea {
+  background: var(--background-primary);
+  color: var(--text-normal);
+  border: var(--ob-border);
+  border-radius: var(--ob-r-sm);
+  padding: var(--ob-sp-1) var(--ob-sp-2);
+  font-size: var(--font-ui-small);
+  width: 100%;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.chat-input-area input:focus-visible,
+.agent-settings-panel input:focus-visible,
+.agent-settings-panel textarea:focus-visible {
+  outline: none;
+  border-color: var(--interactive-accent);
+  box-shadow: var(--ob-focus-ring);
+}
+
+/* --- Selects inside settings panel only -------------------
+ *
+ * Previously `.agent-sidebar select { border: none }` which
+ * wiped borders from ALL selects including Obsidian-native ones.
+ * Now scoped to .agent-settings-panel only.
+ */
+.agent-settings-panel select {
+  background: var(--background-primary);
+  color: var(--text-normal);
+  border: var(--ob-border);
+  border-radius: var(--ob-r-sm);
+  padding: var(--ob-sp-1) var(--ob-sp-2);
+  font-size: var(--font-ui-small);
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.agent-settings-panel select:focus-visible {
+  outline: none;
+  border-color: var(--interactive-accent);
+  box-shadow: var(--ob-focus-ring);
+}
+
+/* --- Primary send / action button ------------------------- */
+.chat-send-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ob-sp-1);
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  border: none;
+  border-radius: var(--ob-r-sm);
+  padding: var(--ob-sp-2) var(--ob-sp-4);
+  font-size: var(--font-ui-small);
+  font-weight: 500;
+  cursor: pointer;
+  /*
+   * Hover uses color-mix darkening rather than opacity.
+   * Opacity on the whole element desaturates text and looks
+   * washed-out in high-contrast themes.
+   */
+  transition: background 0.15s ease;
+}
+.chat-send-btn:hover {
+  background: color-mix(in srgb, var(--interactive-accent) 82%, var(--background-primary));
+}
+.chat-send-btn:active {
+  background: color-mix(in srgb, var(--interactive-accent) 70%, var(--background-primary));
+}
+.chat-send-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--ob-focus-ring);
+}
+.chat-send-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* --- Approve / Deny semantic buttons ---------------------- */
+.approve-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ob-sp-1);
+  background: color-mix(in srgb, var(--color-green) 13%, var(--background-secondary));
+  color: color-mix(in srgb, var(--color-green) 88%, var(--text-normal));
+  border: 1px solid color-mix(in srgb, var(--color-green) 30%, transparent);
+  border-radius: var(--ob-r-sm);
+  padding: var(--ob-sp-1) var(--ob-sp-3);
+  font-size: var(--font-ui-small);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.approve-btn:hover {
+  background: color-mix(in srgb, var(--color-green) 22%, var(--background-secondary));
+}
+.approve-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-green) 40%, transparent);
+}
+
+.deny-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ob-sp-1);
+  background: color-mix(in srgb, var(--color-red) 13%, var(--background-secondary));
+  color: color-mix(in srgb, var(--color-red) 88%, var(--text-normal));
+  border: 1px solid color-mix(in srgb, var(--color-red) 30%, transparent);
+  border-radius: var(--ob-r-sm);
+  padding: var(--ob-sp-1) var(--ob-sp-3);
+  font-size: var(--font-ui-small);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.deny-btn:hover {
+  background: color-mix(in srgb, var(--color-red) 22%, var(--background-secondary));
+}
+.deny-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-red) 40%, transparent);
+}
+
+/* --- Question / choice option buttons --------------------- */
+.question-option-btn {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: var(--background-secondary);
+  color: var(--text-normal);
+  border: var(--ob-border);
+  border-radius: var(--ob-r-sm);
+  padding: var(--ob-sp-2) var(--ob-sp-3);
+  font-size: var(--font-ui-small);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.question-option-btn:hover {
+  background: var(--background-modifier-hover);
+  border-color: var(--interactive-accent);
+}
+.question-option-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--ob-focus-ring);
+}
+.question-option-btn.selected {
+  background: color-mix(in srgb, var(--interactive-accent) 13%, var(--background-secondary));
+  border-color: var(--interactive-accent);
+}
+
+/* --- Toolbar icon buttons ---------------------------------
+ *
+ * Scoped to .agent-toolbar so Obsidian core buttons, modal
+ * buttons, and settings-panel buttons are NOT affected.
+ * Previously `.agent-sidebar button { border: none }` was
+ * too broad and nuked borders on controls it shouldn't touch.
+ */
+.agent-toolbar button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  color: var(--text-muted);
+  border: none;
+  border-radius: var(--ob-r-sm);
+  padding: var(--ob-sp-1);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.agent-toolbar button:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+.agent-toolbar button:focus-visible {
+  outline: none;
+  box-shadow: var(--ob-focus-ring);
+}
+
+
+/* ============================================================
+ * §7  TREE-PANEL ROWS  (tp-cat, tp-subcat, tp-item)
+ * ============================================================ */
+
+.tp-cat-row,
+.tp-subcat-row,
+.tp-item-row {
+  display: flex;
+  align-items: center;
+  gap: var(--ob-sp-2);
+  padding: var(--ob-sp-1) var(--ob-sp-2);
+  border-radius: var(--ob-r-xs);
+  cursor: pointer;
+  transition: background 0.1s ease;
+}
+
+.tp-cat-row:hover,
+.tp-subcat-row:hover,
+.tp-item-row:hover {
+  background: var(--background-modifier-hover);
+}
+
+.tp-cat-row:focus-visible,
+.tp-subcat-row:focus-visible,
+.tp-item-row:focus-visible {
+  outline: none;
+  box-shadow: var(--ob-focus-ring);
+}
+
+.tp-cat-row.active,
+.tp-subcat-row.active,
+.tp-item-row.active {
+  background: color-mix(in srgb, var(--interactive-accent) 10%, var(--background-secondary));
+}
+
+/* Visual hierarchy via indentation */
+.tp-cat-row {
+  font-weight: 600;
+  color: var(--text-normal);
+}
+.tp-subcat-row {
+  padding-left: var(--ob-sp-4);
+  font-size: var(--font-ui-small);
+  color: var(--text-muted);
+}
+.tp-item-row {
+  padding-left: var(--ob-sp-6);
+  font-size: var(--font-ui-small);
+  color: var(--text-muted);
+}
+
+/* Expand/collapse chevron icon */
+.tp-chevron {
+  width: var(--ob-icon-sm);
+  height: var(--ob-icon-sm);
+  flex-shrink: 0;
+  color: var(--text-faint);
+  transition: transform 0.15s ease;
+}
+.tp-cat-row.expanded  .tp-chevron,
+.tp-subcat-row.expanded .tp-chevron {
+  transform: rotate(90deg);
+}
+
+
+/* ============================================================
+ * §8  SETTINGS TABS
+ * ============================================================ */
+
+.settings-tab-bar {
+  display: flex;
+  border-bottom: var(--ob-border);
+  gap: var(--ob-sp-1);
+  padding: 0 var(--ob-sp-2);
+  flex-shrink: 0;
+}
+
+.settings-tab {
+  padding: var(--ob-sp-2) var(--ob-sp-3);
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  cursor: pointer;
+  border-radius: var(--ob-r-xs) var(--ob-r-xs) 0 0;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.settings-tab:hover {
+  color: var(--text-normal);
+}
+.settings-tab:focus-visible {
+  outline: none;
+  box-shadow: var(--ob-focus-ring);
+}
+.settings-tab.active {
+  color: var(--interactive-accent);
+  border-bottom-color: var(--interactive-accent);
+  font-weight: 500;
+}
+
+.settings-tab-content {
+  padding: var(--ob-sp-4);
+  overflow-y: auto;
+}
+
+/* Individual setting row: label on left, control on right */
+.setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ob-sp-3);
+  padding: var(--ob-sp-2) 0;
+  border-bottom: var(--ob-border);
+}
+.setting-row:last-child {
+  border-bottom: none;
+}
+
+.setting-row-label {
+  font-size: var(--font-ui-small);
+  color: var(--text-normal);
+  flex: 1;
+}
+
+.setting-row-desc {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.setting-row-control {
+  flex-shrink: 0;
+}
+
+
+/* ============================================================
+ * §9  MODALS
+ * ============================================================ */
+
+.ob-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: color-mix(in srgb, var(--background-primary) 20%, transparent);
+  backdrop-filter: blur(2px);
+  z-index: var(--layer-modal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ob-modal {
+  background: var(--background-primary);
+  border: var(--ob-border);
+  border-radius: var(--ob-r-lg);
+  box-shadow: var(--ob-shadow-md);
+  min-width: 320px;
+  max-width: 560px;
+  width: 90vw;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.ob-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--ob-sp-4) var(--ob-sp-6);
+  border-bottom: var(--ob-border);
+  font-weight: 600;
+}
+
+.ob-modal-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: var(--ob-r-sm);
+  color: var(--text-muted);
+  padding: var(--ob-sp-1);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.ob-modal-close:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+.ob-modal-close:focus-visible {
+  outline: none;
+  box-shadow: var(--ob-focus-ring);
+}
+
+.ob-modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--ob-sp-4) var(--ob-sp-6);
+}
+
+.ob-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--ob-sp-2);
+  padding: var(--ob-sp-3) var(--ob-sp-6);
+  border-top: var(--ob-border);
+}
+
+
+/* ============================================================
+ * §10  UTILITIES & SCROLLBARS
+ * ============================================================ */
+
+/* Empty / placeholder state */
+.ob-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ob-sp-3);
+  padding: var(--ob-sp-8);
+  color: var(--text-faint);
+  font-size: var(--font-ui-small);
+  text-align: center;
+}
+.ob-empty-state svg {
+  width: 32px;
+  height: 32px;
+  opacity: 0.4;
+}
+
+/* Subtle themed scrollbars for scrollable plugin panes */
+.chat-container::-webkit-scrollbar,
+.agent-settings-panel::-webkit-scrollbar,
+.settings-tab-content::-webkit-scrollbar,
+.tool-call-detail::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+.chat-container::-webkit-scrollbar-track,
+.agent-settings-panel::-webkit-scrollbar-track,
+.settings-tab-content::-webkit-scrollbar-track,
+.tool-call-detail::-webkit-scrollbar-track {
+  background: transparent;
+}
+.chat-container::-webkit-scrollbar-thumb,
+.agent-settings-panel::-webkit-scrollbar-thumb,
+.settings-tab-content::-webkit-scrollbar-thumb,
+.tool-call-detail::-webkit-scrollbar-thumb {
+  background: var(--background-modifier-border);
+  border-radius: var(--ob-r-full);
+}
+.chat-container::-webkit-scrollbar-thumb:hover,
+.agent-settings-panel::-webkit-scrollbar-thumb:hover,
+.settings-tab-content::-webkit-scrollbar-thumb:hover,
+.tool-call-detail::-webkit-scrollbar-thumb:hover {
+  background: var(--text-faint);
+}
+
+
+/* ============================================================
+ * §11  REDUCED MOTION
+ *
+ * Users with vestibular disorders or motion sensitivity set
+ * prefers-reduced-motion:reduce in their OS. Honour it by
+ * disabling blink, pulse, and spin animations entirely.
+ * ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  /* Named animations — disable explicitly */
+  .thinking-spinner {
+    animation: none;
+    /* Keep the accent colour so the indicator is still visible */
+    border-top-color: var(--interactive-accent);
+  }
+  .tool-status.tool-running .tool-status-icon {
+    animation: none;
+  }
+  .streaming-cursor {
+    animation: none;
+    opacity: 1;
+  }
+  .tp-chevron {
+    transition: none;
+  }
+
+  /* Blanket fallback for any transition/animation not covered above */
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
