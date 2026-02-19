@@ -77,7 +77,9 @@ export class SkillsManager {
 
     /**
      * Get skills relevant to the user's message (by keyword overlap).
-     * Returns a formatted prompt section string, or empty string if no matches.
+     * Returns a formatted prompt section string with full skill content inlined,
+     * or empty string if no matches. Inlining eliminates the read_file round-trip
+     * that the agent would otherwise need before applying the skill.
      */
     async getRelevantSkills(userMessage: string): Promise<string> {
         const skills = await this.discoverSkills();
@@ -93,10 +95,23 @@ export class SkillsManager {
 
         const lines: string[] = ['<available_skills>'];
         for (const s of relevant) {
+            // Read the full SKILL.md content and inline it — no agent read_file needed
+            let fullContent = '';
+            try {
+                const raw = await this.vault.adapter.read(s.path);
+                // Strip frontmatter, keep only the body
+                fullContent = raw.replace(/^---\n[\s\S]*?\n---\n?/, '').trim();
+                // Cap at 4000 chars to avoid bloating the system prompt
+                if (fullContent.length > 4000) fullContent = fullContent.slice(0, 4000) + '\n…(truncated)';
+            } catch {
+                // Fall back to name+description only if file can't be read
+            }
             lines.push(`  <skill>`);
             lines.push(`    <name>${this.xmlEscape(s.name)}</name>`);
             lines.push(`    <description>${this.xmlEscape(s.description)}</description>`);
-            lines.push(`    <file>${this.xmlEscape(s.path)}</file>`);
+            if (fullContent) {
+                lines.push(`    <instructions>${this.xmlEscape(fullContent)}</instructions>`);
+            }
             lines.push(`  </skill>`);
         }
         lines.push('</available_skills>');

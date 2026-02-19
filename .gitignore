@@ -70,5 +70,6 @@ temp/
 # Plugin data (runtime)
 .obsidian-agent/
 
-# Forked Kilocode (not synced)
+.kilocode
+.claude
 forked-kilocode/

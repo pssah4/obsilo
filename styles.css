@@ -19,14 +19,10 @@
 }
 
 .agent-title {
-    display: flex;
-    align-items: center;
-}
-
-.agent-title-logo {
-    height: 20px;
-    width: auto;
-    display: block;
+    font-size: 14px;
+    font-weight: 700;
+    font-family: Consolas, monospace;
+    color: var(--text-normal);
 }
 
 .agent-meta {

@@ -58,7 +58,7 @@ export class AnthropicProvider implements ApiHandler {
             {
                 model: this.config.model,
                 max_tokens: this.config.maxTokens ?? 8192,
-                temperature: Math.min(this.config.temperature ?? 0.7, 1.0),
+                temperature: Math.min(this.config.temperature ?? 0.2, 1.0),
                 system: systemPrompt,
                 messages: anthropicMessages,
                 tools: anthropicTools.length > 0 ? anthropicTools : undefined,

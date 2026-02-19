@@ -1,4 +1,4 @@
-import { ItemView, WorkspaceLeaf, setIcon, Menu, MarkdownRenderer, MarkdownView, Notice, TFile, normalizePath } from 'obsidian';
+import { ItemView, WorkspaceLeaf, setIcon, Menu, MarkdownRenderer, MarkdownView, Notice, TFile } from 'obsidian';
 import type { HistoryMessage } from '../core/ChatHistoryService';
 import type ObsidianAgentPlugin from '../main';
 import { AgentTask } from '../core/AgentTask';
@@ -81,7 +81,7 @@ export class AgentSidebarView extends ItemView {
     }
 
     getIcon(): string {
-        return 'obsidian-agent';
+        return 'message-square-more';
     }
 
     async onOpen(): Promise<void> {
@@ -128,12 +128,7 @@ export class AgentSidebarView extends ItemView {
         const header = container.createDiv('agent-header');
 
         const titleRow = header.createDiv('agent-title');
-        const logoUrl = this.app.vault.adapter.getResourcePath(
-            normalizePath(`${this.plugin.manifest.dir}/logo.png`)
-        );
-        const logoImg = titleRow.createEl('img', { cls: 'agent-title-logo' });
-        logoImg.src = logoUrl;
-        logoImg.alt = 'Obsilo Agent';
+        titleRow.createSpan('agent-title-text').setText('Obsilo Agent');
 
         const headerRight = header.createDiv('agent-header-right');
 
@@ -451,40 +446,101 @@ export class AgentSidebarView extends ItemView {
      * Build the skills section for the system prompt.
      * Combines keyword-matched skills with any forced skills from the tool picker.
      */
+    /**
+     * Build a compact vault-structure snapshot injected into every user message.
+     * Gives the model immediate orientation (top-level folders, note count, recent files)
+     * so it doesn't need to call list_files or get_vault_stats just to orient itself.
+     * Mirrors the <environment_details> pattern used by Kilo Code and Craft Agents.
+     */
+    private buildVaultContext(): string {
+        try {
+            const root = this.app.vault.getRoot();
+            const folders: string[] = [];
+            const rootFiles: string[] = [];
+
+            for (const child of root.children) {
+                if ((child as any).children !== undefined) {
+                    // It's a folder — skip hidden/system dirs
+                    const name = child.name;
+                    if (!name.startsWith('.')) folders.push(name);
+                } else {
+                    rootFiles.push(child.name);
+                }
+            }
+
+            const allMd = this.app.vault.getMarkdownFiles();
+            const noteCount = allMd.length;
+
+            // 5 most recently modified notes (path only)
+            const recent = [...allMd]
+                .sort((a, b) => b.stat.mtime - a.stat.mtime)
+                .slice(0, 5)
+                .map((f) => f.path);
+
+            const lines: string[] = ['<vault_context>'];
+            lines.push(`Notes: ${noteCount}`);
+            if (folders.length > 0) lines.push(`Top-level folders: ${folders.join(', ')}`);
+            if (rootFiles.length > 0) lines.push(`Root files: ${rootFiles.join(', ')}`);
+            if (recent.length > 0) lines.push(`Recently modified: ${recent.join(', ')}`);
+            lines.push('</vault_context>');
+            return lines.join('\n');
+        } catch {
+            return '';
+        }
+    }
+
     private async buildSkillsSection(userMessage: string, forcedSkillNames: string[]): Promise<string | undefined> {
         const skillsManager = (this.plugin as any).skillsManager;
         if (!skillsManager) return undefined;
 
-        const allSkills = await skillsManager.discoverSkills();
-        if (allSkills.length === 0) return undefined;
+        // For keyword-matched skills, use getRelevantSkills() which inlines full SKILL.md content.
+        // This eliminates the read_file round-trip the agent would otherwise need.
+        let section = await skillsManager.getRelevantSkills(userMessage) as string;
 
-        // Keyword matching
-        const msgWords = new Set((userMessage.toLowerCase().match(/\b\w{3,}\b/g) ?? []));
-        const keywordNames = new Set(
-            allSkills
-                .filter((s: any) => {
-                    const descWords: string[] = s.description.toLowerCase().match(/\b\w{3,}\b/g) ?? [];
-                    return descWords.some((w: string) => msgWords.has(w));
-                })
-                .map((s: any) => s.name as string)
-        );
-
-        // Merge forced + keyword-matched (deduplicated)
-        const activeNames = new Set([...forcedSkillNames, ...keywordNames]);
-        const activeSkills = allSkills.filter((s: any) => activeNames.has(s.name));
-        if (activeSkills.length === 0) return undefined;
-
-        const xmlEscape = (v: string) => v.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-        const lines: string[] = ['<available_skills>'];
-        for (const s of activeSkills) {
-            lines.push(`  <skill>`);
-            lines.push(`    <name>${xmlEscape(s.name)}</name>`);
-            lines.push(`    <description>${xmlEscape(s.description)}</description>`);
-            lines.push(`    <file>${xmlEscape(s.path)}</file>`);
-            lines.push(`  </skill>`);
+        // Also inject any forced skills that weren't keyword-matched
+        if (forcedSkillNames.length > 0) {
+            const allSkills = await skillsManager.discoverSkills() as any[];
+            const keywordSection = section; // already built above
+            const keywordNames = new Set(
+                allSkills
+                    .filter((s: any) => {
+                        const msgWords = new Set((userMessage.toLowerCase().match(/\b\w{3,}\b/g) ?? []));
+                        const descWords: string[] = s.description.toLowerCase().match(/\b\w{3,}\b/g) ?? [];
+                        return descWords.some((w: string) => msgWords.has(w));
+                    })
+                    .map((s: any) => s.name as string)
+            );
+            const extraForced = allSkills.filter(
+                (s: any) => forcedSkillNames.includes(s.name) && !keywordNames.has(s.name)
+            );
+            if (extraForced.length > 0) {
+                // Build inline XML for forced-only skills
+                const xmlEscape = (v: string) => v.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                const forcedLines: string[] = keywordSection ? [] : ['<available_skills>'];
+                for (const s of extraForced) {
+                    let fullContent = '';
+                    try {
+                        const raw = await this.app.vault.adapter.read(s.path);
+                        fullContent = raw.replace(/^---\n[\s\S]*?\n---\n?/, '').trim();
+                        if (fullContent.length > 4000) fullContent = fullContent.slice(0, 4000) + '\n…(truncated)';
+                    } catch { /* skip */ }
+                    forcedLines.push(`  <skill>`);
+                    forcedLines.push(`    <name>${xmlEscape(s.name)}</name>`);
+                    forcedLines.push(`    <description>${xmlEscape(s.description)}</description>`);
+                    if (fullContent) forcedLines.push(`    <instructions>${xmlEscape(fullContent)}</instructions>`);
+                    forcedLines.push(`  </skill>`);
+                }
+                if (keywordSection) {
+                    // Insert forced skills before the closing tag
+                    section = keywordSection.replace('</available_skills>', forcedLines.join('\n') + '\n</available_skills>');
+                } else {
+                    forcedLines.push('</available_skills>');
+                    section = forcedLines.join('\n');
+                }
+            }
         }
-        lines.push('</available_skills>');
-        return lines.join('\n');
+
+        return section || undefined;
     }
 
     private autoResizeTextarea(): void {
@@ -537,9 +593,10 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
         const activeFile = (this.plugin.settings.autoAddActiveFileContext && !this.userDismissedContext)
             ? this.app.workspace.getActiveFile()
             : null;
-        const textWithContext = text + (activeFile
-            ? `\n\n<context>\nActive file in editor: ${activeFile.path}\n</context>`
-            : '');
+        const vaultCtx = this.buildVaultContext();
+        const textWithContext = text
+            + (activeFile ? `\n\n<context>\nActive file in editor: ${activeFile.path}\n</context>` : '')
+            + (vaultCtx ? `\n\n${vaultCtx}` : '');
 
         // Build ContentBlock[] when there are attachments, plain string otherwise
         let messageToSend: string | ContentBlock[];
