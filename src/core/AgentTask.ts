@@ -15,6 +15,7 @@ import type { ApiHandler, MessageParam, ContentBlock } from '../api/types';
 import type { ToolRegistry } from './tools/ToolRegistry';
 import type { ToolCallbacks, ToolUse, ToolDefinition } from './tools/types';
 import { ToolExecutionPipeline } from './tool-execution/ToolExecutionPipeline';
+import { ToolRepetitionDetector } from './tool-execution/ToolRepetitionDetector';
 import { buildSystemPromptForMode } from './systemPrompt';
 import type { ModeService } from './modes/ModeService';
 import type { ModeConfig } from '../types/settings';
@@ -142,6 +143,7 @@ export class AgentTask {
         let pendingModeSwitch: string | null = null;
         // Phase B: consecutive error tracking
         let consecutiveMistakes = 0;
+        const repetitionDetector = new ToolRepetitionDetector();
 
         // Wire up context extensions for agent-control tools
         const askQuestion = this.taskCallbacks.onQuestion
@@ -240,6 +242,7 @@ export class AgentTask {
                         this.taskCallbacks.onModeSwitch?.(pendingModeSwitch);
                     }
                     pendingModeSwitch = null;
+                    repetitionDetector.reset();
                 }
 
                 this.taskCallbacks.onIterationStart?.(iteration);
@@ -330,7 +333,15 @@ export class AgentTask {
 
                 // Helper: run a single tool through the pipeline and return its result.
                 // Does NOT call onToolResult — caller is responsible for ordering.
-                const runTool = (toolUse: ContentBlock & { type: 'tool_use' }) => {
+                const runTool = async (toolUse: ContentBlock & { type: 'tool_use' }) => {
+                    // Detect repetitive tool loops before execution
+                    if (repetitionDetector.check(toolUse.name, toolUse.input as Record<string, unknown>)) {
+                        const errorContent =
+                            `<error>Tool loop detected: "${toolUse.name}" was called with identical input ` +
+                            `${3} times in a row. Try a different approach or use attempt_completion.</error>`;
+                        signalCompletion('aborted: tool repetition loop');
+                        return { content: errorContent, is_error: true as const };
+                    }
                     const toolCallbacks: ToolCallbacks = {
                         pushToolResult: () => {},
                         handleError: async (toolName, error) => {

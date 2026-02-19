@@ -57,9 +57,12 @@ export class SearchFilesTool extends BaseTool<'search_files'> {
             // (possessive quantifiers, nested quantifiers) are treated as literals.
             let regex: RegExp;
             const literalEscape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            // S-02: Extended ReDoS detection — covers catastrophic backtracking patterns
+            const REDOS_PATTERNS = /(\(.*\))[+*]{1,}|(\[.*\])[+*]{2,}|(\w+\|)+\w+[+*]/;
             const isComplex =
                 pattern.length > 500 ||
-                /(\(\?[=!<]|(\+|\*|\?)(\+|\?)|\{\d{3,}\})/.test(pattern);
+                /(\(\?[=!<]|(\+|\*|\?)(\+|\?)|\{\d{3,}\})/.test(pattern) ||
+                REDOS_PATTERNS.test(pattern);
             if (isComplex) {
                 regex = new RegExp(literalEscape(pattern), 'i');
             } else {

@@ -140,8 +140,9 @@ export class IgnoreService {
             return path.startsWith(p) || path === p.slice(0, -1);
         }
 
-        // M-2: Reject pathologically long patterns to prevent ReDoS
+        // M-2: Reject pathologically long or complex patterns to prevent ReDoS
         if (p.length > 200) return false;
+        if (/(\*\*){3,}/.test(p)) return false;
 
         // Convert glob to regex
         const regexStr = p

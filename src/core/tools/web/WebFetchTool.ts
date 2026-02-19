@@ -97,16 +97,24 @@ export class WebFetchTool extends BaseTool<'web_fetch'> {
         try {
             callbacks.log(`Fetching: ${url}`);
 
-            const response = await requestUrl({
-                url,
-                method: 'GET',
-                headers: {
-                    'User-Agent':
-                        'Mozilla/5.0 (compatible; ObsidianAgent/1.0; +https://obsidian.md)',
-                    Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                },
-                throw: false,
-            });
+            const TIMEOUT_MS = 15_000;
+            const timeoutPromise = new Promise<never>((_, reject) =>
+                setTimeout(() => reject(new Error(`Request timed out after ${TIMEOUT_MS / 1000}s`)), TIMEOUT_MS)
+            );
+
+            const response = await Promise.race([
+                requestUrl({
+                    url,
+                    method: 'GET',
+                    headers: {
+                        'User-Agent':
+                            'Mozilla/5.0 (compatible; ObsidianAgent/1.0; +https://obsidian.md)',
+                        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                    },
+                    throw: false,
+                }),
+                timeoutPromise,
+            ]);
 
             const statusCode = response.status;
 
