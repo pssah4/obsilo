@@ -30,7 +30,20 @@ export class SemanticSearchTool extends BaseTool<'semantic_search'> {
                     },
                     top_k: {
                         type: 'number',
-                        description: 'Maximum number of results to return (default: 5, max: 20)',
+                        description: 'Maximum number of results to return (default: 8, max: 20)',
+                    },
+                    folder: {
+                        type: 'string',
+                        description: 'Restrict results to notes inside this folder (e.g. "Projects" or "Work/Q1"). Prefix match.',
+                    },
+                    tags: {
+                        type: 'array',
+                        items: { type: 'string' },
+                        description: 'Only return notes that have ANY of these tags (e.g. ["project", "active"]). Tags with or without # both work.',
+                    },
+                    since: {
+                        type: 'string',
+                        description: 'Only return notes modified on or after this date (ISO format: "2025-01-01").',
                     },
                 },
                 required: ['query'],
@@ -42,6 +55,16 @@ export class SemanticSearchTool extends BaseTool<'semantic_search'> {
         const { callbacks } = context;
         const query: string = input.query ?? '';
         const topK: number = Math.min(Number(input.top_k) || 8, 20);
+        const folderFilter: string | undefined = input.folder?.trim() || undefined;
+        const tagsFilter: string[] | undefined = Array.isArray(input.tags) && input.tags.length > 0
+            ? input.tags.map((t: string) => t.replace(/^#/, '').toLowerCase())
+            : undefined;
+        const sinceFilter: number | undefined = input.since
+            ? new Date(input.since).getTime()
+            : undefined;
+        const hasFilter = !!(folderFilter || tagsFilter || sinceFilter);
+        // Request more candidates when filters are active so we still return topK after filtering
+        const searchK = hasFilter ? Math.min(topK * 4, 80) : topK;
 
         if (!query.trim()) {
             callbacks.pushToolResult(this.formatError(new Error('query parameter is required')));
@@ -66,8 +89,8 @@ export class SemanticSearchTool extends BaseTool<'semantic_search'> {
         try {
             // ── Hybrid search: semantic + keyword in parallel, fused via RRF ──
             const [semanticResults, keywordResults] = await Promise.all([
-                semanticIndex.search(query, topK),
-                semanticIndex.keywordSearch(query, topK),
+                semanticIndex.search(query, searchK),
+                semanticIndex.keywordSearch(query, searchK),
             ]);
 
             // Reciprocal Rank Fusion (RRF k=60): score(d) = Σ 1/(k + rank)
@@ -90,12 +113,41 @@ export class SemanticSearchTool extends BaseTool<'semantic_search'> {
                 }
             });
 
-            const results = Array.from(fused.values())
-                .sort((a, b) => b.score - a.score)
-                .slice(0, topK);
+            let results = Array.from(fused.values())
+                .sort((a, b) => b.score - a.score);
+
+            // ── Metadata filters ─────────────────────────────────────────────
+            if (folderFilter) {
+                const prefix = folderFilter.replace(/\/$/, '') + '/';
+                results = results.filter((r) => r.path.startsWith(prefix));
+            }
+            if (tagsFilter) {
+                results = results.filter((r) => {
+                    const vaultFile = this.plugin.app.vault.getFileByPath(r.path);
+                    if (!vaultFile) return false;
+                    const cache = this.plugin.app.metadataCache.getFileCache(vaultFile);
+                    const raw = cache?.frontmatter?.tags ?? [];
+                    const fileTags: string[] = (Array.isArray(raw) ? raw : [raw])
+                        .map((t: any) => String(t).replace(/^#/, '').toLowerCase());
+                    return tagsFilter.some((t) => fileTags.includes(t));
+                });
+            }
+            if (sinceFilter) {
+                results = results.filter((r) => {
+                    const vaultFile = this.plugin.app.vault.getFileByPath(r.path);
+                    return (vaultFile?.stat?.mtime ?? 0) >= sinceFilter;
+                });
+            }
+
+            results = results.slice(0, topK);
 
             if (results.length === 0) {
-                callbacks.pushToolResult(`No results found for: "${query}"`);
+                const filterDesc = [
+                    folderFilter ? `folder="${folderFilter}"` : '',
+                    tagsFilter ? `tags=[${tagsFilter.join(',')}]` : '',
+                    sinceFilter ? `since=${input.since}` : '',
+                ].filter(Boolean).join(', ');
+                callbacks.pushToolResult(`No results found for: "${query}"${filterDesc ? ` with filters: ${filterDesc}` : ''}`);
                 return;
             }
 
@@ -107,8 +159,13 @@ export class SemanticSearchTool extends BaseTool<'semantic_search'> {
             };
 
             const kwCount = results.filter((r) => r.method !== 'semantic').length;
+            const activeFilters = [
+                folderFilter ? `folder: ${folderFilter}` : '',
+                tagsFilter ? `tags: ${tagsFilter.join(', ')}` : '',
+                sinceFilter ? `since: ${input.since}` : '',
+            ].filter(Boolean).join(' | ');
             const lines = [
-                `Hybrid search results for: "${query}"`,
+                `Hybrid search results for: "${query}"${activeFilters ? ` [${activeFilters}]` : ''}`,
                 `(${results.length} results — ${kwCount} via keyword/hybrid match. Synthesize answer directly — do not call read_file)\n`,
             ];
             for (let i = 0; i < results.length; i++) {
