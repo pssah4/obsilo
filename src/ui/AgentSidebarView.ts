@@ -1,4 +1,4 @@
-import { ItemView, WorkspaceLeaf, setIcon, Menu, MarkdownRenderer, MarkdownView, Notice, TFile } from 'obsidian';
+import { ItemView, WorkspaceLeaf, setIcon, Menu, MarkdownRenderer, MarkdownView, Notice, TFile, normalizePath } from 'obsidian';
 import type { HistoryMessage } from '../core/ChatHistoryService';
 import type ObsidianAgentPlugin from '../main';
 import { AgentTask } from '../core/AgentTask';
@@ -11,6 +11,7 @@ import { ToolPickerPopover } from './sidebar/ToolPickerPopover';
 import { AttachmentHandler } from './sidebar/AttachmentHandler';
 import type { AttachmentItem } from './sidebar/AttachmentHandler';
 import { AutocompleteHandler } from './sidebar/AutocompleteHandler';
+import { VaultFilePicker } from './sidebar/VaultFilePicker';
 
 export const VIEW_TYPE_AGENT_SIDEBAR = 'obsidian-agent-sidebar';
 
@@ -57,12 +58,18 @@ export class AgentSidebarView extends ItemView {
     private attachments!: AttachmentHandler;
     /** Manages / and @ autocomplete dropdown */
     private autocomplete!: AutocompleteHandler;
+    /** Vault file picker popover (@ button) */
+    private vaultFilePicker!: VaultFilePicker;
 
     constructor(leaf: WorkspaceLeaf, plugin: ObsidianAgentPlugin) {
         super(leaf);
         this.plugin = plugin;
         this.modeService = new ModeService(plugin, plugin.toolRegistry);
         this.toolPicker = new ToolPickerPopover(plugin, this.modeService);
+        this.vaultFilePicker = new VaultFilePicker(
+            this.app,
+            async (files) => { for (const f of files) await this.attachments.addVaultFile(f); },
+        );
     }
 
     getViewType(): string {
@@ -121,7 +128,12 @@ export class AgentSidebarView extends ItemView {
         const header = container.createDiv('agent-header');
 
         const titleRow = header.createDiv('agent-title');
-        titleRow.createSpan('agent-title-text').setText('Obsilo Agent');
+        const logoUrl = this.app.vault.adapter.getResourcePath(
+            normalizePath(`${this.plugin.manifest.dir}/logo.png`)
+        );
+        const logoImg = titleRow.createEl('img', { cls: 'agent-title-logo' });
+        logoImg.src = logoUrl;
+        logoImg.alt = 'Obsilo Agent';
 
         const headerRight = header.createDiv('agent-header-right');
 
@@ -130,7 +142,7 @@ export class AgentSidebarView extends ItemView {
             cls: 'header-button',
             attr: { 'aria-label': 'Settings' },
         });
-        setIcon(settingsBtn, 'settings');
+        setIcon(settingsBtn.createSpan('toolbar-icon'), 'settings');
         settingsBtn.addEventListener('click', () => {
             (this.app as any).setting?.open();
             (this.app as any).setting?.openTabById('obsidian-agent');
@@ -141,7 +153,7 @@ export class AgentSidebarView extends ItemView {
             cls: 'header-button',
             attr: { 'aria-label': 'New chat' },
         });
-        setIcon(newChatBtn, 'message-circle-plus');
+        setIcon(newChatBtn.createSpan('toolbar-icon'), 'plus');
         newChatBtn.addEventListener('click', () => this.clearConversation());
     }
 
@@ -261,6 +273,16 @@ export class AgentSidebarView extends ItemView {
         setIcon(attachBtn.createSpan('toolbar-icon'), 'paperclip');
         attachBtn.addEventListener('click', () => this.attachments.openFilePicker());
 
+        // Vault file button — inserts @ and triggers autocomplete
+        const vaultBtn = toolbarLeft.createEl('button', {
+            cls: 'toolbar-button toolbar-ghost vault-attach-button',
+            attr: { 'aria-label': 'Add vault file' },
+        });
+        setIcon(vaultBtn.createSpan('toolbar-icon'), 'at-sign');
+        vaultBtn.addEventListener('click', () => {
+            this.vaultFilePicker.show(vaultBtn);
+        });
+
         // Ellipsis options menu button
         const ellipsisBtn = toolbarLeft.createEl('button', {
             cls: 'toolbar-button toolbar-ghost ellipsis-button',
@@ -283,7 +305,7 @@ export class AgentSidebarView extends ItemView {
             cls: 'toolbar-button send-button',
             attr: { 'aria-label': 'Send message' },
         });
-        setIcon(this.sendButton.createSpan('toolbar-icon'), 'send');
+        setIcon(this.sendButton.createSpan('toolbar-icon'), 'send-horizontal');
         this.sendButton.addEventListener('click', () => this.handleSendMessage());
     }
 
@@ -321,7 +343,6 @@ export class AgentSidebarView extends ItemView {
         const effectiveKey = this.getEffectiveModelKey();
         const model = this.plugin.settings.activeModels.find((m) => getModelKey(m) === effectiveKey);
         const label = model ? (model.displayName ?? model.name) : 'No model';
-        // Show an indicator if the current mode has a model override
         const hasModeOverride = !!this.plugin.settings.modeModelKeys?.[this.plugin.settings.currentMode];
         this.modelButton.createSpan('model-label').setText(label);
         setIcon(this.modelButton.createSpan('mode-chevron'), 'chevron-down');

@@ -15,6 +15,7 @@ echo "📦 Copying files..."
 cp manifest.json "$PLUGIN_DIR/"
 cp main.js "$PLUGIN_DIR/"
 cp styles.css "$PLUGIN_DIR/"
+[ -f src/assets/logo.png ] && cp src/assets/logo.png "$PLUGIN_DIR/"
 
 echo "✅ Deployment complete!"
 echo ""
