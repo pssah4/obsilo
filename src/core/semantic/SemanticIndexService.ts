@@ -398,6 +398,50 @@ export class SemanticIndexService {
     }
 
     /**
+     * Keyword search over indexed chunks (in-memory, no file I/O).
+     * Scores each chunk by term frequency, returns best chunk per file.
+     * Used by hybrid search to catch exact names/tags the embedding model misses.
+     */
+    async keywordSearch(query: string, topK = 8): Promise<SemanticResult[]> {
+        if (!await this.index.isIndexCreated().catch(() => false)) return [];
+        try {
+            const terms = query.toLowerCase().split(/\s+/).filter((t) => t.length >= 3);
+            if (terms.length === 0) return [];
+
+            const allItems: any[] = await this.index.listItemsByMetadata({});
+
+            // Score each chunk by total term occurrence count, keep best chunk per file
+            const byPath = new Map<string, { excerpt: string; score: number }>();
+            for (const item of allItems) {
+                const chunk: string = (item.metadata?.chunk as string) ?? '';
+                const filePath: string = (item.metadata?.path as string) ?? '';
+                if (!chunk || !filePath) continue;
+                const lower = chunk.toLowerCase();
+                const termCount = terms.reduce((acc, term) => {
+                    let n = 0, pos = 0;
+                    while ((pos = lower.indexOf(term, pos)) !== -1) { n++; pos += term.length; }
+                    return acc + n;
+                }, 0);
+                if (termCount === 0) continue;
+                const existing = byPath.get(filePath);
+                if (!existing || termCount > existing.score) {
+                    byPath.set(filePath, { excerpt: chunk, score: termCount });
+                }
+            }
+
+            // Normalize scores 0-1, sort by score, return topK
+            const entries = Array.from(byPath.entries());
+            const maxScore = entries.reduce((m, [, v]) => Math.max(m, v.score), 1);
+            return entries
+                .map(([filePath, v]) => ({ path: filePath, excerpt: v.excerpt, score: v.score / maxScore }))
+                .sort((a, b) => b.score - a.score)
+                .slice(0, topK);
+        } catch {
+            return [];
+        }
+    }
+
+    /**
      * Return all indexed chunks for a specific file, sorted by chunk order.
      * Used by graph-augmented RAG to load linked-note context.
      */
