@@ -467,13 +467,19 @@ export class SemanticIndexService {
         }
     }
 
-    /** Search the index. Returns top-K most relevant chunks. */
-    async search(query: string, topK = 5): Promise<SemanticResult[]> {
+    /**
+     * Search the index. Returns top-K most relevant chunks.
+     * @param textForEmbedding - Optional override for what gets embedded (used by HyDE).
+     *   When provided, this text is embedded instead of `query`, but `query` is still
+     *   used for vectra's internal text-ranking and for logging.
+     */
+    async search(query: string, topK = 5, textForEmbedding?: string): Promise<SemanticResult[]> {
         if (!await this.index.isIndexCreated().catch(() => false)) {
             return [];
         }
         try {
-            const [vector] = await this.embedBatch([query]);
+            const embedText = textForEmbedding ?? query;
+            const [vector] = await this.embedBatch([embedText]);
             // vectra signature: queryItems(vector, textQuery, topK)
             const results = await this.index.queryItems(vector, query, topK);
             return results.map((r: any) => ({
