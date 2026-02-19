@@ -1,4 +1,4 @@
-import { Plugin, WorkspaceLeaf, Notice } from 'obsidian';
+import { Plugin, WorkspaceLeaf, Notice, TFile } from 'obsidian';
 import { ObsidianAgentSettings, DEFAULT_SETTINGS, getModelKey, modelToLLMProvider } from './types/settings';
 import type { CustomModel, AutoApprovalConfig } from './types/settings';
 import { AgentSidebarView, VIEW_TYPE_AGENT_SIDEBAR } from './ui/AgentSidebarView';
@@ -45,6 +45,7 @@ export default class ObsidianAgentPlugin extends Plugin {
     workflowLoader: WorkflowLoader;
     skillsManager: SkillsManager;
     semanticIndex: SemanticIndexService | null = null;
+    private autoIndexDebounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
     chatHistoryService: ChatHistoryService | null = null;
     mcpClient: McpClient;
 
@@ -135,6 +136,31 @@ export default class ObsidianAgentPlugin extends Plugin {
             }
         }
 
+        // Auto-index: keep semantic index current as vault files change
+        if (this.settings.enableSemanticIndex && this.semanticIndex) {
+            this.registerEvent(this.app.vault.on('modify', (file) => {
+                if (!(file instanceof TFile)) return;
+                if (file.extension !== 'md' && !(this.settings.semanticIndexPdfs && file.extension === 'pdf')) return;
+                this.scheduleFileIndex(file.path);
+            }));
+            this.registerEvent(this.app.vault.on('create', (file) => {
+                if (!(file instanceof TFile)) return;
+                if (file.extension !== 'md' && !(this.settings.semanticIndexPdfs && file.extension === 'pdf')) return;
+                this.scheduleFileIndex(file.path);
+            }));
+            this.registerEvent(this.app.vault.on('delete', (file) => {
+                if (!(file instanceof TFile)) return;
+                if (file.extension !== 'md' && !(this.settings.semanticIndexPdfs && file.extension === 'pdf')) return;
+                this.semanticIndex?.removeFile(file.path);
+            }));
+            this.registerEvent(this.app.vault.on('rename', (file, oldPath) => {
+                if (!(file instanceof TFile)) return;
+                if (file.extension !== 'md' && !(this.settings.semanticIndexPdfs && file.extension === 'pdf')) return;
+                this.semanticIndex?.removeFile(oldPath);
+                this.scheduleFileIndex(file.path);
+            }));
+        }
+
         // Chat history service (only when folder is configured)
         if (this.settings.chatHistoryFolder) {
             this.chatHistoryService = new ChatHistoryService(this.app.vault, this.settings.chatHistoryFolder);
@@ -182,6 +208,8 @@ export default class ObsidianAgentPlugin extends Plugin {
      */
     async onunload() {
         console.log('Unloading Obsilo Agent plugin');
+        for (const timer of this.autoIndexDebounceTimers.values()) clearTimeout(timer);
+        this.autoIndexDebounceTimers.clear();
         await this.mcpClient?.disconnectAll();
         console.log('Obsilo Agent plugin unloaded');
     }
@@ -333,6 +361,25 @@ export default class ObsidianAgentPlugin extends Plugin {
         if (leaf) {
             workspace.revealLeaf(leaf);
         }
+    }
+
+    /**
+     * Schedule a single file for re-indexing after a 2s debounce.
+     * Fires on vault modify/create events — debounce prevents thrashing
+     * while the user is actively typing in a note.
+     */
+    private scheduleFileIndex(filePath: string): void {
+        if (!this.semanticIndex?.isIndexed) return;
+        if (this.settings.semanticExcludedFolders?.some((f) => filePath.startsWith(f + '/'))) return;
+        const existing = this.autoIndexDebounceTimers.get(filePath);
+        if (existing) clearTimeout(existing);
+        const timer = setTimeout(async () => {
+            this.autoIndexDebounceTimers.delete(filePath);
+            await this.semanticIndex?.updateFile(filePath).catch((e) =>
+                console.warn('[Plugin] Auto-index updateFile failed:', e)
+            );
+        }, 2000);
+        this.autoIndexDebounceTimers.set(filePath, timer);
     }
 
     /**

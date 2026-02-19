@@ -373,6 +373,30 @@ export class SemanticIndexService {
         }
     }
 
+    /**
+     * Remove all chunks for a single file from the index.
+     * Called on vault delete and rename (old path).
+     */
+    async removeFile(filePath: string): Promise<void> {
+        if (!await this.index.isIndexCreated().catch(() => false)) return;
+        try {
+            const existing = await this.index.listItemsByMetadata({ path: filePath });
+            if (existing.length === 0) return;
+            await this.index.beginUpdate();
+            for (const item of existing) {
+                await this.index.deleteItem(item.id);
+            }
+            await this.index.endUpdate();
+            if (this.checkpoint?.files[filePath]) {
+                delete this.checkpoint.files[filePath];
+                this.docCount = Math.max(0, this.docCount - 1);
+                await this.saveCheckpoint(this.checkpoint);
+            }
+        } catch (e) {
+            console.warn(`[SemanticIndex] removeFile failed for "${filePath}":`, e);
+        }
+    }
+
     /** Search the index. Returns top-K most relevant chunks. */
     async search(query: string, topK = 5): Promise<SemanticResult[]> {
         if (!await this.index.isIndexCreated().catch(() => false)) {
