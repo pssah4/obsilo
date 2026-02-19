@@ -369,6 +369,8 @@ export interface ObsidianAgentSettings {
     semanticChunkSize: number;
     /** HyDE: generate a hypothetical document before embedding the query. Off by default (costs 1 extra LLM call per search). */
     hydeEnabled: boolean;
+    /** Auto-index vault files as they change (modify/create/delete/rename). Off by default — can slow down Obsidian if using a local embedding model. */
+    semanticAutoIndexOnChange: boolean;
 
     // Checkpoints (Sprint 1.4)
     enableCheckpoints: boolean;
@@ -472,6 +474,7 @@ export const DEFAULT_SETTINGS: ObsidianAgentSettings = {
     semanticIndexPdfs: false,
     semanticChunkSize: 2000,
     hydeEnabled: false,
+    semanticAutoIndexOnChange: false,
 
     enableCheckpoints: true,
     checkpointTimeoutSeconds: 30,

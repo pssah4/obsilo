@@ -46,6 +46,7 @@ export default class ObsidianAgentPlugin extends Plugin {
     skillsManager: SkillsManager;
     semanticIndex: SemanticIndexService | null = null;
     private autoIndexDebounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
+    private warmupFired = false;
     chatHistoryService: ChatHistoryService | null = null;
     mcpClient: McpClient;
 
@@ -137,8 +138,10 @@ export default class ObsidianAgentPlugin extends Plugin {
             }
         }
 
-        // Auto-index: keep semantic index current as vault files change
-        if (this.settings.enableSemanticIndex && this.semanticIndex) {
+        // Auto-index: keep semantic index current as vault files change.
+        // Only enabled when semanticAutoIndexOnChange is explicitly set — disabled by default
+        // because local Xenova embedding blocks the main thread and makes Obsidian sluggish.
+        if (this.settings.enableSemanticIndex && this.semanticIndex && this.settings.semanticAutoIndexOnChange) {
             this.registerEvent(this.app.vault.on('modify', (file) => {
                 if (!(file instanceof TFile)) return;
                 if (file.extension !== 'md' && !(this.settings.semanticIndexPdfs && file.extension === 'pdf')) return;
@@ -325,7 +328,8 @@ export default class ObsidianAgentPlugin extends Plugin {
                 custom:     model.baseUrl ?? '',
             };
             const warmupUrl = CLOUD_BASE_URLS[model.provider];
-            if (warmupUrl) {
+            if (warmupUrl && !this.warmupFired) {
+                this.warmupFired = true;
                 fetch(warmupUrl, { method: 'HEAD', signal: AbortSignal.timeout(8000) })
                     .catch(() => { /* expected — we only want the TCP/TLS handshake */ });
             }
@@ -374,11 +378,11 @@ export default class ObsidianAgentPlugin extends Plugin {
         if (this.settings.semanticExcludedFolders?.some((f) => filePath.startsWith(f + '/'))) return;
         const existing = this.autoIndexDebounceTimers.get(filePath);
         if (existing) clearTimeout(existing);
-        const timer = setTimeout(async () => {
+        const timer = setTimeout(() => {
             this.autoIndexDebounceTimers.delete(filePath);
-            await this.semanticIndex?.updateFile(filePath).catch((e) =>
-                console.warn('[Plugin] Auto-index updateFile failed:', e)
-            );
+            // Use queue (concurrency=1) instead of direct updateFile to prevent
+            // concurrent embedding calls from freezing Obsidian's main thread.
+            this.semanticIndex?.queueAutoUpdate(filePath);
         }, 2000);
         this.autoIndexDebounceTimers.set(filePath, timer);
     }

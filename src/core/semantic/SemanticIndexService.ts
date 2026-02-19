@@ -88,6 +88,16 @@ export class SemanticIndexService {
     private indexPdfs: boolean;
     private chunkSize: number;
 
+    // Auto-update queue: process one file at a time so concurrent vault events
+    // don't spawn dozens of simultaneous embedding calls (which freezes Obsidian).
+    private autoUpdateQueue = new Set<string>();
+    private autoIndexRunning = false;
+
+    // pdf-parse circuit breaker: if the module fails to load (known bundler issue
+    // where pdf-parse reads test files at import time), stop retrying for this session.
+    private pdfParseUnavailable = false;
+    private pdfParseFn: ((buf: Buffer) => Promise<{ text: string; numpages: number }>) | null = null;
+
     /** Number of unique files indexed (updated live during build). */
     docCount = 0;
     /** Live progress for external polling (e.g. Settings UI). */
@@ -385,6 +395,37 @@ export class SemanticIndexService {
     }
 
     /**
+     * Queue a file for auto-index. Safe to call on every vault event.
+     * Deduplicates: if the same file is queued multiple times before it's
+     * processed, only the latest version is indexed. All files are processed
+     * sequentially (concurrency = 1) to prevent concurrent embedding calls
+     * from freezing Obsidian's main thread.
+     */
+    queueAutoUpdate(filePath: string): void {
+        this.autoUpdateQueue.add(filePath);
+        if (!this.autoIndexRunning) {
+            this.autoIndexRunning = true;
+            this.runAutoUpdateQueue();
+        }
+    }
+
+    private async runAutoUpdateQueue(): Promise<void> {
+        while (this.autoUpdateQueue.size > 0) {
+            const paths = [...this.autoUpdateQueue];
+            this.autoUpdateQueue.clear();
+            for (const path of paths) {
+                await this.updateFile(path).catch((e) =>
+                    console.warn(`[SemanticIndex] Auto-update failed for ${path}:`, e)
+                );
+                // Yield to the event loop between files so Obsidian's UI can
+                // process user interactions and paint frames.
+                await new Promise<void>((r) => setTimeout(r, 0));
+            }
+        }
+        this.autoIndexRunning = false;
+    }
+
+    /**
      * Remove all chunks for a single file from the index.
      * Called on vault delete and rename (old path).
      */
@@ -628,6 +669,9 @@ export class SemanticIndexService {
     }
 
     private async embedXenova(text: string): Promise<number[]> {
+        // Yield to the event loop before WASM inference so Obsidian can process
+        // pending UI events (paint, keyboard, etc.) before the CPU-heavy part.
+        await new Promise<void>((r) => setTimeout(r, 0));
         const output = await this.pipeline(text, { pooling: 'mean', normalize: true });
         return Array.from(output.data as Float32Array);
     }
@@ -715,21 +759,35 @@ export class SemanticIndexService {
     /**
      * Extract plain text from a PDF using pdf-parse (no web worker required).
      * Returns empty string if the PDF is encrypted, image-only, or unreadable.
+     * Circuit breaker: if pdf-parse fails to import (known bundler issue where it
+     * reads test files at import time), the flag is set and subsequent calls return
+     * immediately without retrying the broken import.
      */
     private async extractPdfText(filePath: string): Promise<string> {
+        // Circuit breaker: pdf-parse module is broken in this environment
+        if (this.pdfParseUnavailable) return '';
+
         try {
-            // pdf-parse is a CommonJS module — dynamic import handles both CJS and ESM
-            const pdfParse: (buf: Buffer) => Promise<{ text: string; numpages: number }> =
-                (await import('pdf-parse' as any) as any).default ?? (await import('pdf-parse' as any) as any);
+            // Lazy-load and cache the pdf-parse function
+            if (!this.pdfParseFn) {
+                const mod = await import('pdf-parse' as any) as any;
+                this.pdfParseFn = mod.default ?? mod;
+            }
 
             const basePath = (this.vault.adapter as any).getBasePath?.() ?? '';
             const absPath = path.join(basePath, filePath);
             const buffer = await fs.promises.readFile(absPath);
-            const result = await pdfParse(buffer as unknown as Buffer);
+            const result = await this.pdfParseFn!(buffer as unknown as Buffer);
             return result.text ?? '';
         } catch (e: any) {
-            // PasswordException, image-only PDF, or parse error → skip silently
             const msg = String(e?.message ?? '');
+            // If pdf-parse itself is broken (test file ENOENT or worker error),
+            // trip the circuit breaker so we don't retry on every PDF.
+            if (msg.includes('test/data') || msg.includes('PDFJS.workerSrc') || msg.includes('ENOENT')) {
+                console.warn('[SemanticIndex] pdf-parse unavailable (bundler issue) — PDF indexing disabled for this session.');
+                this.pdfParseUnavailable = true;
+                return '';
+            }
             if (!msg.includes('PasswordException')) {
                 console.warn(`[SemanticIndex] PDF extraction failed for "${filePath}":`, msg);
             }
@@ -752,8 +810,17 @@ export class SemanticIndexService {
      *  5. For oversized paragraphs: hard split at maxChars
      */
     private splitIntoChunks(text: string, maxChars: number): string[] {
-        // Strip YAML frontmatter
-        const stripped = text.replace(/^---\n[\s\S]*?\n---\n?/, '').trim();
+        // Extract YAML frontmatter content — keep the key:value lines so that
+        // IDs, tags, and other frontmatter fields are searchable, but discard
+        // the --- delimiters which carry no semantic meaning.
+        let frontmatterContent = '';
+        const bodyText = text.replace(/^---\n([\s\S]*?)\n---\n?/, (_, fm: string) => {
+            frontmatterContent = fm.trim();
+            return '';
+        }).trim();
+
+        // Prepend frontmatter (if any) to the body so IDs/tags appear in chunk 0
+        const stripped = frontmatterContent ? `${frontmatterContent}\n\n${bodyText}` : bodyText;
         if (!stripped) return [];
         if (stripped.length <= maxChars) return [stripped];
 

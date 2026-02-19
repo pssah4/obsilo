@@ -123,6 +123,8 @@ export class EmbeddingsTab {
                     (this.plugin as any).semanticIndex = svc;
                     await svc.initialize().catch(console.warn);
                 } else {
+                    // Cancel any ongoing build before clearing the reference
+                    (this.plugin as any).semanticIndex?.cancelBuild();
                     (this.plugin as any).semanticIndex = null;
                 }
                 refreshStatus();
@@ -258,6 +260,18 @@ export class EmbeddingsTab {
             t.setValue(this.plugin.settings.hydeEnabled ?? false).onChange(async (v) => {
                 this.plugin.settings.hydeEnabled = v;
                 await this.plugin.saveSettings();
+            }),
+        );
+
+        const autoIndexOnChangeSetting = new Setting(containerEl)
+            .setName('Auto-index on file changes')
+            .setDesc('Re-index a note automatically when saved, created, renamed, or deleted. Keep OFF if using a local (Xenova) embedding model — runs on the main thread and slows Obsidian. Safe with an API embedding model (e.g. OpenAI text-embedding-3-small).');
+        addInfoButton(autoIndexOnChangeSetting, this.app, 'Auto-Index on Change', 'When enabled, every file you edit is re-embedded 2 seconds after you stop typing. With a local Xenova model the embedding runs on the main JavaScript thread and will noticeably slow Obsidian. Only enable this if you have an API-based embedding model configured.');
+        autoIndexOnChangeSetting.addToggle((t) =>
+            t.setValue(this.plugin.settings.semanticAutoIndexOnChange ?? false).onChange(async (v) => {
+                this.plugin.settings.semanticAutoIndexOnChange = v;
+                await this.plugin.saveSettings();
+                new Notice(v ? 'Auto-index on change enabled. Reload Obsidian to activate.' : 'Auto-index on change disabled. Reload Obsidian to deactivate.');
             }),
         );
 
