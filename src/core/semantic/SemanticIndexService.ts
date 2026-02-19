@@ -397,6 +397,21 @@ export class SemanticIndexService {
         }
     }
 
+    /**
+     * Return all indexed chunks for a specific file, sorted by chunk order.
+     * Used by graph-augmented RAG to load linked-note context.
+     */
+    async getChunksByPath(filePath: string): Promise<string[]> {
+        if (!await this.index.isIndexCreated().catch(() => false)) return [];
+        try {
+            const items: any[] = await this.index.listItemsByMetadata({ path: filePath });
+            items.sort((a, b) => ((a.metadata?.chunkIndex as number) ?? 0) - ((b.metadata?.chunkIndex as number) ?? 0));
+            return items.map((item) => (item.metadata?.chunk as string) ?? '').filter(Boolean);
+        } catch {
+            return [];
+        }
+    }
+
     /** Search the index. Returns top-K most relevant chunks. */
     async search(query: string, topK = 5): Promise<SemanticResult[]> {
         if (!await this.index.isIndexCreated().catch(() => false)) {

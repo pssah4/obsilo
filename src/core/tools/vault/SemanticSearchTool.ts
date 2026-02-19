@@ -16,6 +16,7 @@ export class SemanticSearchTool extends BaseTool<'semantic_search'> {
             description:
                 'Search the vault by meaning (semantic similarity) rather than exact keywords. ' +
                 'Returns the most relevant note excerpts with enough content to answer Q&A questions directly. ' +
+                'Also automatically includes 1-hop wikilink neighbors of matched notes as linked context. ' +
                 'For questions about vault content, synthesize your answer from the returned excerpts — ' +
                 'do NOT call read_file on the results just to gather more context. ' +
                 'Requires the Semantic Index to be built first (Settings → Semantic Index).',
@@ -90,8 +91,43 @@ export class SemanticSearchTool extends BaseTool<'semantic_search'> {
                 lines.push('');
             }
 
+            // ── Graph augmentation: follow [[wikilinks]] 1-hop ───────────────
+            // Parse [[wikilinks]] from each result's excerpt. For every linked
+            // note not already in the top-K results, load its first indexed
+            // chunk and append it as "Linked context". This surfaces notes that
+            // are intentionally connected but may not have matched semantically.
+            const WIKILINK_RE = /\[\[([^\]|#\n]+?)(?:[|#][^\]]*?)?\]\]/g;
+            const topKPaths = new Set<string>(results.map((r: any) => r.path));
+            const shownLinked = new Set<string>();
+            const linkedLines: string[] = [];
+
+            outer: for (const r of results) {
+                WIKILINK_RE.lastIndex = 0;
+                let match: RegExpExecArray | null;
+                while ((match = WIKILINK_RE.exec(r.excerpt)) !== null) {
+                    if (shownLinked.size >= 5) break outer;
+                    const linktext = match[1].trim();
+                    const linkedFile = this.plugin.app.metadataCache.getFirstLinkpathDest(linktext, r.path);
+                    if (!linkedFile) continue;
+                    if (topKPaths.has(linkedFile.path) || shownLinked.has(linkedFile.path)) continue;
+                    shownLinked.add(linkedFile.path);
+                    const chunks: string[] = await semanticIndex.getChunksByPath(linkedFile.path);
+                    if (chunks.length === 0) continue;
+                    linkedLines.push(`${shownLinked.size}. ${toWikilink(linkedFile.path)} — \`${linkedFile.path}\` (linked from ${toWikilink(r.path)})`);
+                    linkedLines.push(chunks[0]);
+                    linkedLines.push('');
+                }
+            }
+
+            if (linkedLines.length > 0) {
+                lines.push('─────────────────────────────────────────');
+                lines.push('Linked context (1-hop wikilink neighbors):');
+                lines.push('(Connected via [[wikilinks]] — relevant by association, not semantic match)\n');
+                lines.push(...linkedLines);
+            }
+
             callbacks.pushToolResult(lines.join('\n'));
-            callbacks.log(`Semantic search: "${query}" → ${results.length} results`);
+            callbacks.log(`Semantic search: "${query}" → ${results.length} results, ${shownLinked.size} linked`);
         } catch (error) {
             callbacks.pushToolResult(this.formatError(error));
             await callbacks.handleError('semantic_search', error);
