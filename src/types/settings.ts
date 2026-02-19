@@ -365,6 +365,8 @@ export interface ObsidianAgentSettings {
     semanticExcludedFolders: string[];
     semanticStorageLocation: 'obsidian-sync' | 'local';
     semanticIndexPdfs: boolean;
+    /** Chunk size in characters. Changing this invalidates and rebuilds the index. */
+    semanticChunkSize: number;
 
     // Checkpoints (Sprint 1.4)
     enableCheckpoints: boolean;
@@ -466,6 +468,7 @@ export const DEFAULT_SETTINGS: ObsidianAgentSettings = {
     semanticExcludedFolders: [],
     semanticStorageLocation: 'obsidian-sync',
     semanticIndexPdfs: false,
+    semanticChunkSize: 2000,
 
     enableCheckpoints: true,
     checkpointTimeoutSeconds: 30,

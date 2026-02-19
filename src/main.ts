@@ -122,6 +122,7 @@ export default class ObsidianAgentPlugin extends Plugin {
                 excludedFolders: this.settings.semanticExcludedFolders,
                 storageLocation: this.settings.semanticStorageLocation,
                 indexPdfs: this.settings.semanticIndexPdfs,
+                chunkSize: this.settings.semanticChunkSize ?? 2000,
             });
             const embeddingModel = this.getActiveEmbeddingModel();
             if (embeddingModel) this.semanticIndex.setEmbeddingModel(embeddingModel);

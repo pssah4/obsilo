@@ -230,6 +230,26 @@ export class EmbeddingsTab {
                 }),
         );
 
+        const chunkSizeSetting = new Setting(containerEl)
+            .setName('Chunk size')
+            .setDesc('Characters per chunk when indexing notes. Smaller = more precise results, more chunks. Larger = more context per chunk, fewer API calls. Changing this will trigger a full index rebuild.');
+        chunkSizeSetting.addDropdown((d) =>
+            d.addOptions({
+                '800':  'Small (800 chars) — best for short atomic notes',
+                '1200': 'Medium (1200 chars)',
+                '2000': 'Standard (2000 chars) — default',
+                '3000': 'Large (3000 chars) — best for long journals',
+            })
+                .setValue(String(this.plugin.settings.semanticChunkSize ?? 2000))
+                .onChange(async (v) => {
+                    const newSize = parseInt(v, 10);
+                    this.plugin.settings.semanticChunkSize = newSize;
+                    getIdx()?.configure({ chunkSize: newSize });
+                    await this.plugin.saveSettings();
+                    new Notice('Chunk size updated. Rebuild the index to apply the new setting.');
+                }),
+        );
+
         const autoIndexSetting = new Setting(containerEl)
             .setName('Auto-index strategy')
             .setDesc('When to automatically rebuild the index. "On Startup" is best for active vaults. "Never" lets you trigger it manually from the ellipsis menu in the chat.');
