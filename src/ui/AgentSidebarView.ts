@@ -1,5 +1,4 @@
 import { ItemView, WorkspaceLeaf, setIcon, Menu, MarkdownRenderer, MarkdownView, Notice, TFile } from 'obsidian';
-import type { HistoryMessage } from '../core/ChatHistoryService';
 import type ObsidianAgentPlugin from '../main';
 import { AgentTask } from '../core/AgentTask';
 import { ModeService } from '../core/modes/ModeService';
@@ -12,6 +11,10 @@ import { AttachmentHandler } from './sidebar/AttachmentHandler';
 import type { AttachmentItem } from './sidebar/AttachmentHandler';
 import { AutocompleteHandler } from './sidebar/AutocompleteHandler';
 import { VaultFilePicker } from './sidebar/VaultFilePicker';
+import { HistoryPanel } from './sidebar/HistoryPanel';
+import type { UiMessage } from '../core/history/ConversationStore';
+import { OnboardingService } from '../core/memory/OnboardingService';
+import { MemoryRetriever } from '../core/memory/MemoryRetriever';
 
 export const VIEW_TYPE_AGENT_SIDEBAR = 'obsidian-agent-sidebar';
 
@@ -39,6 +42,10 @@ export class AgentSidebarView extends ItemView {
 
     // Feature 1: Persistent conversation history (survives across messages)
     private conversationHistory: MessageParam[] = [];
+    // Chat History: active conversation tracking + UI messages for persistence
+    private activeConversationId: string | null = null;
+    private uiMessages: UiMessage[] = [];
+    private historyPanel: HistoryPanel | null = null;
 
     // Feature 3: AbortController for cancelling in-flight requests
     private currentAbortController: AbortController | null = null;
@@ -121,6 +128,8 @@ export class AgentSidebarView extends ItemView {
 
     async onClose(): Promise<void> {
         this.currentAbortController?.abort();
+        this.saveCurrentConversation();
+        this.enqueueMemoryExtraction();
         this.attachments.clear();
     }
 
@@ -143,6 +152,14 @@ export class AgentSidebarView extends ItemView {
             (this.app as any).setting?.openTabById('obsidian-agent');
         });
 
+        // History button — opens conversation history panel
+        const historyBtn = headerRight.createEl('button', {
+            cls: 'header-button',
+            attr: { 'aria-label': 'Chat History' },
+        });
+        setIcon(historyBtn.createSpan('toolbar-icon'), 'history');
+        historyBtn.addEventListener('click', () => this.historyPanel?.toggle());
+
         // New Chat button — clears conversation history
         const newChatBtn = headerRight.createEl('button', {
             cls: 'header-button',
@@ -153,7 +170,21 @@ export class AgentSidebarView extends ItemView {
     }
 
     private buildChatContainer(container: HTMLElement): void {
-        this.chatContainer = container.createDiv('chat-messages');
+        // Chat container is wrapped in a relative parent so the history panel can overlay it
+        const chatWrapper = container.createDiv('chat-wrapper');
+        this.chatContainer = chatWrapper.createDiv('chat-messages');
+
+        // History panel (absolute overlay inside the wrapper)
+        const store = this.plugin.conversationStore;
+        if (store) {
+            this.historyPanel = new HistoryPanel(
+                store,
+                (id) => this.loadConversation(id),
+                (id) => this.deleteConversation(id),
+                this.activeConversationId,
+            );
+            this.historyPanel.mount(chatWrapper);
+        }
     }
 
     private buildChatInput(container: HTMLElement): void {
@@ -577,6 +608,20 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
         if (this.currentAbortController) return; // Already running
 
         this.lastUserMessage = text;
+
+        // Create a new conversation on first message (if history enabled)
+        if (!this.activeConversationId && this.plugin.conversationStore) {
+            const mode = this.modeService.getActiveMode().slug;
+            const modelKey = this.plugin.settings.modeModelKeys?.[mode] || this.plugin.settings.activeModelKey;
+            const model = this.plugin.settings.activeModels.find((m) => getModelKey(m) === modelKey);
+            this.activeConversationId = await this.plugin.conversationStore.create(
+                mode,
+                model?.displayName ?? model?.name ?? modelKey,
+            );
+        }
+
+        // Track user UI message for history persistence
+        this.uiMessages.push({ role: 'user', text, ts: new Date().toISOString() });
 
         // Snapshot attachments, clear the chip bar, render user bubble with previews
         const attachments = [...this.attachments.pending];
@@ -1128,23 +1173,19 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
                     if (this.app.workspace.getMostRecentLeaf()?.view !== this) {
                         new Notice('Agent task complete', 3000);
                     }
-                    // Auto-save conversation to history (if folder configured)
-                    const svc = this.plugin.chatHistoryService;
-                    if (svc && this.conversationHistory.length > 0) {
-                        const histMsgs: HistoryMessage[] = this.conversationHistory
-                            .filter((m) => m.role === 'user' || m.role === 'assistant')
-                            .map((m) => ({
-                                role: m.role as 'user' | 'assistant',
-                                content: typeof m.content === 'string'
-                                    ? m.content
-                                    : (m.content as any[])
-                                        .filter((b: any) => b.type === 'text')
-                                        .map((b: any) => b.text)
-                                        .join(''),
-                            }));
-                        svc.save(histMsgs).catch((e) =>
-                            console.warn('[ChatHistory] Save failed:', e)
-                        );
+                    // Track assistant UI message for history persistence
+                    if (accumulatedText) {
+                        this.uiMessages.push({ role: 'assistant', text: accumulatedText, ts: new Date().toISOString() });
+                    }
+                    // Auto-save conversation to ConversationStore
+                    this.saveCurrentConversation();
+                    // Auto-title: update conversation title after first assistant response
+                    if (this.activeConversationId && this.uiMessages.length <= 2 && this.plugin.conversationStore) {
+                        const firstUserMsg = this.uiMessages.find((m) => m.role === 'user');
+                        if (firstUserMsg) {
+                            const title = firstUserMsg.text.slice(0, 60).replace(/\n/g, ' ').trim() || 'New Conversation';
+                            this.plugin.conversationStore.updateMeta(this.activeConversationId, { title }).catch(() => {});
+                        }
                     }
                 },
                 // Feature 5: Styled error display with friendly messages
@@ -1209,6 +1250,40 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
 
         const sessionToolOverride = this.toolPicker.sessionToolOverrides.get(activeMode.slug);
         const allowedMcpServers = this.plugin.settings.modeMcpServers?.[activeMode.slug];
+
+        // Load memory context for system prompt injection
+        let memoryContext: string | undefined;
+        if (this.plugin.settings.memory.enabled && this.plugin.memoryService) {
+            try {
+                const parts: string[] = [];
+
+                // Long-term memory files (user-profile, projects, patterns)
+                const files = await this.plugin.memoryService.loadMemoryFiles();
+                const ctx = this.plugin.memoryService.buildMemoryContext(files);
+                if (ctx) parts.push(ctx);
+
+                // Onboarding detection — inject instructions if profile is empty
+                const onboarding = new OnboardingService(this.plugin.memoryService);
+                const onboardingPrompt = await onboarding.getOnboardingPrompt();
+                if (onboardingPrompt) parts.push(onboardingPrompt);
+
+                // Session retrieval — inject relevant past sessions on first message
+                if (this.conversationHistory.length === 0 && userMessageText.trim()) {
+                    const retriever = new MemoryRetriever(
+                        this.plugin.app.vault,
+                        this.plugin.memoryService,
+                        () => this.plugin.semanticIndex,
+                    );
+                    const sessionContext = await retriever.retrieveSessionContext(userMessageText);
+                    if (sessionContext) parts.push(sessionContext);
+                }
+
+                if (parts.length > 0) memoryContext = parts.join('\n\n');
+            } catch (e) {
+                console.warn('[Memory] Failed to load memory context:', e);
+            }
+        }
+
         await task.run(
             messageToSend,
             taskId,
@@ -1222,6 +1297,7 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
             this.plugin.mcpClient,
             sessionToolOverride,
             allowedMcpServers,
+            memoryContext,
         );
     }
 
@@ -1248,6 +1324,12 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
      * Clear conversation history and chat UI (New Chat)
      */
     private clearConversation(): void {
+        // Save current conversation before clearing (if there is one)
+        this.saveCurrentConversation();
+        // Enqueue memory extraction (fire-and-forget, threshold-gated)
+        this.enqueueMemoryExtraction();
+        this.activeConversationId = null;
+        this.uiMessages = [];
         this.conversationHistory = [];
         this.userDismissedContext = false;
         this.attachments.clear();
@@ -1258,6 +1340,101 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
             this.showWelcomeMessage();
         }
         this.updateContextBadge();
+        this.historyPanel?.setActiveId(null);
+    }
+
+    /** Save the current conversation to ConversationStore (non-blocking). */
+    private saveCurrentConversation(): void {
+        const store = this.plugin.conversationStore;
+        if (!store || !this.activeConversationId || this.uiMessages.length === 0) return;
+        store.save(this.activeConversationId, this.conversationHistory, this.uiMessages).catch((e) =>
+            console.warn('[History] Save failed:', e)
+        );
+    }
+
+    /** Enqueue memory extraction if the conversation meets the threshold. Fire-and-forget. */
+    private enqueueMemoryExtraction(): void {
+        const mem = this.plugin.settings.memory;
+        const queue = this.plugin.extractionQueue;
+        if (!mem.enabled || !mem.autoExtractSessions || !queue) return;
+        if (!this.activeConversationId || this.uiMessages.length < mem.extractionThreshold) return;
+
+        // Build a minimal transcript from UI messages (~8000 chars max)
+        const MAX_TRANSCRIPT = 8000;
+        let transcript = '';
+        for (const msg of this.uiMessages) {
+            const prefix = msg.role === 'user' ? 'User: ' : 'Assistant: ';
+            const line = prefix + msg.text + '\n\n';
+            if (transcript.length + line.length > MAX_TRANSCRIPT) break;
+            transcript += line;
+        }
+
+        const title = this.uiMessages.find((m) => m.role === 'user')?.text.slice(0, 60).replace(/\n/g, ' ').trim()
+            || 'Conversation';
+
+        queue.enqueue({
+            conversationId: this.activeConversationId,
+            transcript,
+            title,
+            queuedAt: new Date().toISOString(),
+            type: 'session',
+        }).catch((e) => console.warn('[Memory] Enqueue failed:', e));
+    }
+
+    /** Load a conversation from history and restore it in the chat panel. */
+    private async loadConversation(id: string): Promise<void> {
+        const store = this.plugin.conversationStore;
+        if (!store) return;
+
+        const data = await store.load(id);
+        if (!data) {
+            new Notice('Could not load conversation');
+            return;
+        }
+
+        // Save current conversation before switching
+        this.saveCurrentConversation();
+
+        // Reset state
+        this.conversationHistory = data.messages;
+        this.uiMessages = data.uiMessages;
+        this.activeConversationId = id;
+        this.userDismissedContext = false;
+        this.attachments.clear();
+
+        // Re-render chat
+        if (this.chatContainer) {
+            this.chatContainer.empty();
+            for (const msg of data.uiMessages) {
+                if (msg.role === 'user') {
+                    this.addUserMessage(msg.text);
+                } else {
+                    this.renderMarkdownMessage(msg.text, 'assistant');
+                }
+            }
+        }
+        this.historyPanel?.setActiveId(id);
+        this.updateContextBadge();
+    }
+
+    /** Delete a conversation from history. */
+    private async deleteConversation(id: string): Promise<void> {
+        const store = this.plugin.conversationStore;
+        if (!store) return;
+        await store.delete(id);
+        // If the deleted conversation is the active one, clear the chat
+        if (this.activeConversationId === id) {
+            this.activeConversationId = null;
+            this.uiMessages = [];
+            this.conversationHistory = [];
+            if (this.chatContainer) {
+                this.chatContainer.empty();
+            }
+            if (this.plugin.settings.showWelcomeMessage) {
+                this.showWelcomeMessage();
+            }
+        }
+        this.historyPanel?.refresh();
     }
 
     /**
@@ -1445,39 +1622,9 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
             });
         });
 
-        menu.addSeparator();
-
-        // Chat History (wired in F6)
-        menu.addItem((item) => {
-            item.setTitle('Chat History');
-            item.setIcon('history');
-            item.onClick(() => this.openChatHistory());
-        });
-
         menu.showAtMouseEvent(e);
     }
 
-    /** Open the Chat History modal. */
-    openChatHistory(): void {
-        const svc = this.plugin.chatHistoryService;
-        if (!svc) {
-            new Notice('Chat History: set a folder in Settings → Advanced → Interface first');
-            return;
-        }
-        import('../ui/ChatHistoryModal').then(({ ChatHistoryModal }) => {
-            new ChatHistoryModal(this.app, svc, (msgs) => this.loadConversationHistory(msgs)).open();
-        });
-    }
-
-    /** Load a saved conversation into the current chat panel. */
-    loadConversationHistory(messages: HistoryMessage[]): void {
-        this.clearConversation();
-        for (const msg of messages) {
-            if (msg.role === 'user') {
-                this.addUserMessage(msg.content);
-            }
-        }
-    }
 
     // -------------------------------------------------------------------------
     // Tool display helpers (Kilo Code style)

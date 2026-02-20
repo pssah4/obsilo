@@ -1,7 +1,5 @@
 # Obsilo Agent
 
-[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-support-yellow?style=flat&logo=buy-me-a-coffee)](https://buymeacoffee.com/sebastianhanke)
-
 **Agentic AI layer for Obsidian — Kilo Code for knowledge work**
 
 Obsilo Agent transforms your Obsidian vault into an AI-driven knowledge operating system. An autonomous agent lives in your sidebar and can read, write, search, and connect notes on your behalf — with approval-based safety, local checkpoints, and a rich extension system.
@@ -15,7 +13,7 @@ Obsilo Agent transforms your Obsidian vault into an AI-driven knowledge operatin
 You describe a task in natural language. Obsilo plans, searches your vault, reads relevant notes, creates or edits content, browses the web when needed, and reports back — all while showing you exactly what it's doing in real time.
 
 ```
-You: "Summarize everything I've written about machine learning and create a structured overview note"
+You: "Summarize everything I've written about machine learning and create a structured overview note."
 
 Obsilo:
   ↳ semantic_search("machine learning") → 12 relevant notes
@@ -79,7 +77,7 @@ Connect MCP servers via stdio, SSE, or streamable-HTTP. Tools are dynamically di
    ```
 3. Copy `main.js`, `styles.css`, and `manifest.json` to your vault's plugin folder:
    ```
-   <vault>/.obsidian/plugins/obsidian-agent/
+   <vault>/.obsidian/plugins/obsilo-agent/
    ```
 4. Enable the plugin in Obsidian: Settings → Community Plugins → Enable "Obsilo Agent"
 
@@ -208,7 +206,7 @@ Templates/
 
 ## Documentation
 
-Full documentation: **[https://pssah4.github.io/obsilo-public](https://pssah4.github.io/obsilo-public)**
+Full documentation: **[https://yourusername.github.io/obsidian-agent](https://yourusername.github.io/obsidian-agent)**
 
 - [Getting Started](docs/getting-started.html)
 - [Chat Interface](docs/chat-interface.html)

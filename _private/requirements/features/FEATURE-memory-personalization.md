@@ -1,6 +1,6 @@
 # FEATURE: Memory, Chat History & Personalization
 
-**Status:** Planned
+**Status:** In Progress (Phase 1)
 **Epic:** Cross-Session Awareness
 **Sources:** CrewAI Memory, OpenClaw Memory, Claude Code Session Memory, ChatGPT Memory, Mem0
 
@@ -13,6 +13,15 @@ Persistent memory system that gives Obsilo awareness across sessions. Three pill
 
 The agent becomes more personal and context-aware over time by automatically extracting knowledge from conversations and maintaining structured memory files.
 
+### Design Constraints (Performance & Cost)
+
+- **Zero UX impact**: All memory extraction runs as fire-and-forget background process. The user must never notice delays or blocking.
+- **Dedicated memory model**: A separate cheap model (e.g., Haiku) handles all extraction LLM calls. Configured via `memoryModelKey` in settings — dropdown picks from already-configured models.
+- **Extraction threshold**: Configurable via slider in Memory settings (default: 6 messages). Only conversations meeting the threshold are queued for extraction.
+- **Queue persistence**: Pending extractions saved to `pending-extractions.json`. Survives Obsidian restarts.
+- **Retrieval is free**: Memory retrieval at session start = file reads + optional vector search. No LLM calls.
+- **No cost display**: Extraction costs are negligible with a cheap model.
+
 ---
 
 ## Architecture Overview
@@ -23,8 +32,7 @@ The agent becomes more personal and context-aware over time by automatically ext
 .obsidian/plugins/obsidian-agent/
 ├── history/                          # Chat History
 │   ├── index.json                    # Conversation index (id, title, created, updated, messageCount)
-│   ├── 2025-02-20-a1b2c3.json       # Individual conversation (full messages)
-│   ├── 2025-02-20-d4e5f6.json
+│   ├── 2026-02-20-a1b2c3.json       # Individual conversation (full messages)
 │   └── ...
 ├── memory/                           # Long-Term Memory
 │   ├── user-profile.md               # Identity, preferences, communication style
@@ -32,8 +40,9 @@ The agent becomes more personal and context-aware over time by automatically ext
 │   ├── patterns.md                   # Behavioral patterns, common requests, style preferences
 │   ├── knowledge.md                  # Domain knowledge, expertise areas
 │   └── sessions/                     # Short-Term / Session Memory
-│       ├── 2025-02-20-a1b2c3.md      # Session summary (linked to history conversation)
+│       ├── 2026-02-20-a1b2c3.md      # Session summary (linked to history conversation)
 │       └── ...
+├── pending-extractions.json          # Persistent extraction queue
 └── semantic-index/                   # (existing) Vectra index
 ```
 
@@ -65,44 +74,59 @@ Total memory budget: ~1200 tokens in system prompt. Knowledge memory is retrieve
 ### Conversation Lifecycle
 
 1. **New Chat** — creates a new conversation entry in `index.json`
-2. **During Chat** — messages appended to the conversation JSON file
+2. **During Chat** — messages saved to the conversation JSON file after each agent task
 3. **Auto-Title** — after the first assistant response, generate a title via LLM (short, 3-8 words)
-4. **End** — when user starts a new chat or closes Obsidian, trigger session memory extraction
+4. **End** — when user starts a new chat or closes Obsidian, trigger session memory extraction (if threshold met)
 
-### Conversation File Format (`history/*.json`)
+### Data Model
 
-```json
-{
-  "id": "2025-02-20-a1b2c3",
-  "title": "Vault Reorganization Plan",
-  "created": "2025-02-20T14:30:00Z",
-  "updated": "2025-02-20T15:45:00Z",
-  "mode": "agent",
-  "model": "claude-sonnet-4-20250514",
-  "messages": [
-    { "role": "user", "content": "...", "ts": "..." },
-    { "role": "assistant", "content": "...", "ts": "...", "toolCalls": [...] }
-  ]
+```typescript
+interface ConversationMeta {
+    id: string;                // "2026-02-20-a1b2c3"
+    title: string;
+    created: string;           // ISO 8601
+    updated: string;
+    messageCount: number;
+    mode: string;
+    model: string;
+    inputTokens: number;
+    outputTokens: number;
+}
+
+interface ConversationData {
+    meta: ConversationMeta;
+    messages: MessageParam[];  // full API-level (tool_use, tool_result preserved)
+    uiMessages: UiMessage[];   // display-level (text only, for rendering)
+}
+
+interface UiMessage {
+    role: 'user' | 'assistant';
+    text: string;
+    ts: string;
 }
 ```
 
-### History Index (`history/index.json`)
+### ConversationStore (`src/core/history/ConversationStore.ts`)
 
-```json
-{
-  "conversations": [
-    { "id": "2025-02-20-a1b2c3", "title": "Vault Reorganization Plan", "created": "...", "updated": "...", "messageCount": 12, "mode": "agent" }
-  ]
-}
-```
+Persistence layer with in-memory index for fast listing:
+- `initialize()` — ensure dir, load/create index
+- `create(mode, model)` — new conversation entry
+- `save(id, messages, uiMessages)` — write full conversation
+- `updateMeta(id, patch)` — update title, tokens, etc.
+- `load(id)` — load full conversation
+- `list()` — return cached in-memory index (no disk I/O)
+- `delete(id)` / `deleteAll()`
 
-### History UI
+Storage: `.obsidian/plugins/obsidian-agent/history/` (index.json + {id}.json)
+
+### History UI (`src/ui/sidebar/HistoryPanel.ts`)
 
 - **Button**: Lucide `history` icon, placed left of the "New Chat" button in the header
-- **Panel**: Sliding panel or dropdown showing conversations grouped by date (Today, Yesterday, This Week, Older)
-- **Each entry**: Title + timestamp + message count, compact font (11px)
-- **Actions**: Click to load, swipe/button to delete
+- **Panel**: Absolute-positioned overlay sliding from left
+- **Grouped by date**: Today / Yesterday / This Week / Older
+- **Each entry**: Title (12px bold) + date + message count (11px muted) + delete on hover
 - **Search**: Optional text filter at the top
+- **Click** = load conversation, close panel
 
 ---
 
@@ -110,19 +134,23 @@ Total memory budget: ~1200 tokens in system prompt. Knowledge memory is retrieve
 
 ### 2.1 Session Memory (Short-Term)
 
-**Trigger:** When a conversation ends (new chat, close, or manual trigger)
+**Trigger:** Conversation ends (new chat / close) AND message count >= `extractionThreshold` (default: 6)
 
-**Process:**
-1. Take the full conversation
-2. LLM extraction prompt: "Summarize this conversation. Extract: (a) what was accomplished, (b) decisions made, (c) user preferences observed, (d) open questions, (e) notable context"
-3. Save as `memory/sessions/{conversation-id}.md`
+**Flow:**
+1. Build minimal transcript from `uiMessages` (user+assistant text only, ~8000 chars max)
+2. Enqueue `PendingExtraction { type: 'session' }` in `ExtractionQueue`
+3. Queue processor runs asynchronously:
+   a. LLM call using `memoryModelKey` model → structured summary
+   b. Save as `memory/sessions/{conversation-id}.md` with YAML frontmatter
+   c. If `autoUpdateLongTerm` enabled → enqueue follow-up `type: 'long-term'` item
+4. Errors logged, never thrown. Failed items stay in queue for retry.
 
 **Format:**
 ```markdown
 ---
-conversation: 2025-02-20-a1b2c3
+conversation: 2026-02-20-a1b2c3
 title: Vault Reorganization Plan
-date: 2025-02-20
+date: 2026-02-20
 ---
 
 ## Summary
@@ -142,30 +170,33 @@ User reorganized their vault into a Zettelkasten structure with MOCs.
 
 ### 2.2 Long-Term Memory (Automatic Extraction)
 
-**Trigger:** After session memory is written, a background extraction step promotes durable facts to long-term memory files.
+**Trigger:** `ExtractionQueue` processes a `type: 'long-term'` item (chained after session extraction)
 
-**Extraction Prompt:**
+**Process:**
+1. Load current memory files + new session summary
+2. LLM call using `memoryModelKey`: identify NEW information, output JSON updates
+3. Parse JSON → apply section-level updates (add/update/remove)
+4. Every 5 sessions: pattern detection over recent summaries → update patterns.md
+
+### 2.3 Extraction Queue (`src/core/memory/ExtractionQueue.ts`)
+
+Persistent FIFO queue for background memory extraction. Survives Obsidian restarts.
+
+```typescript
+interface PendingExtraction {
+    conversationId: string;
+    transcript: string;       // pre-built minimal transcript
+    title: string;
+    queuedAt: string;         // ISO 8601
+    type: 'session' | 'long-term';
+}
 ```
-Given the following session summary and existing memory files,
-identify NEW information that should be added to long-term memory.
 
-Categories:
-- user-profile: Name, role, location, communication preferences, how they want the agent to behave
-- projects: Active projects, goals, deadlines, collaborators
-- patterns: Recurring requests, common refinements, workflow habits
-- knowledge: Domain expertise, technical skills, tools used
+Storage: `.obsidian/plugins/obsidian-agent/pending-extractions.json`
 
-Rules:
-- Only add genuinely new information (not already in memory)
-- Update existing entries if information changed
-- Remove outdated information
-- Keep each file under 150 lines
-- Use bullet points, not prose
+Processing: One item at a time, delay between items, retry on failure at next startup.
 
-Output as JSON: { "file": "user-profile.md", "action": "add|update|remove", "content": "..." }
-```
-
-### 2.3 Memory File Format
+### 2.4 Memory File Format
 
 **user-profile.md:**
 ```markdown
@@ -173,7 +204,7 @@ Output as JSON: { "file": "user-profile.md", "action": "add|update|remove", "con
 
 ## Identity
 - Name: Sebastian
-- Agent name: Obsilo (or custom name chosen by user)
+- Agent name: Obsilo (or custom)
 - Role: Software developer
 - Location: Germany
 
@@ -185,7 +216,6 @@ Output as JSON: { "file": "user-profile.md", "action": "add|update|remove", "con
 ## Agent Behavior
 - Always build and deploy after changes
 - Check Kilo Code patterns before implementing
-- Use semantic search first for vault queries
 ```
 
 **projects.md:**
@@ -195,8 +225,7 @@ Output as JSON: { "file": "user-profile.md", "action": "add|update|remove", "con
 ## Obsilo (Obsidian Agent Plugin)
 - Kilo Code clone as Obsidian plugin
 - Tech: TypeScript, Obsidian API, esbuild
-- Architecture: See _private/architecture/arc42.md
-- Current phase: UI polish and memory system
+- Current phase: Memory system
 ```
 
 **patterns.md:**
@@ -204,8 +233,7 @@ Output as JSON: { "file": "user-profile.md", "action": "add|update|remove", "con
 # Behavioral Patterns
 
 ## Common Refinements
-- User often asks for left-alignment fixes after layout changes
-- User prefers flush-left alignment for all UI elements
+- Prefers flush-left alignment for all UI elements
 - Settings UI: always add section headers with separator lines
 
 ## Workflow
@@ -228,15 +256,15 @@ The agent starts with a friendly greeting and asks 3-5 questions progressively:
 
 1. **Name**: "Hi! I'm your vault assistant. What should I call you?"
 2. **Agent name**: "And what would you like to call me? (Default: Obsilo)"
-3. **Role/Context**: "What do you mainly use your vault for? (e.g., work notes, research, journaling, project management)"
+3. **Role/Context**: "What do you mainly use your vault for?"
 4. **Style**: "How should I communicate? (concise vs. detailed, formal vs. casual)"
-5. **Anything else**: "Anything else I should know about you or how you like to work?"
+5. **Anything else**: "Anything else I should know about how you like to work?"
 
-After each answer, write to `user-profile.md`. The conversation flows naturally — not a form, but a dialogue. The agent can skip questions if the user provides enough info organically.
+Natural dialogue, not a form. Agent can skip questions if info is provided organically.
 
 ### Re-Onboarding
 
-User can trigger re-onboarding via Settings or a slash command (`/introduce`).
+User can trigger via Settings button or `/introduce` command.
 
 ---
 
@@ -246,15 +274,16 @@ User can trigger re-onboarding via Settings or a slash command (`/introduce`).
 
 **Section: Chat History**
 - Toggle: Enable chat history (default: on)
-- Toggle: Include history in semantic index (default: off)
 - Button: Clear all history
-- Display: Number of conversations stored, disk usage
+- Display: Number of conversations stored
 
 **Section: Memory**
 - Toggle: Enable memory system (default: on)
 - Toggle: Auto-extract session summaries (default: on)
 - Toggle: Auto-update long-term memory (default: on)
-- Button: View/edit memory files (opens in Obsidian editor)
+- Dropdown: Memory model (picks from configured models)
+- Slider: Extraction threshold (2-20, default: 6) — "Minimum messages before extraction"
+- Button: View/edit memory files
 - Button: Reset all memory
 - Display: Memory file count, last updated
 
@@ -266,50 +295,49 @@ User can trigger re-onboarding via Settings or a slash command (`/introduce`).
 
 ## Component 5: Retrieval & Indexing
 
-### History in Semantic Index
+### Vectra Extension for Sessions
 
-When enabled in settings:
-- History JSON files are chunked and indexed alongside vault notes
-- Metadata tag `source: "chat-history"` to distinguish from vault content
-- Agent can search past conversations via `semantic_search` with a filter
+The existing Vectra index handles session summaries alongside vault notes:
+- Add `source: 'vault' | 'session'` metadata field to indexed items
+- New method `indexSessionSummary(path, content)` — chunks + embeds + inserts with `source: 'session'`
+- Extend `search()` to accept optional `source` filter (post-search, same pattern as folder/tags/since)
+- `MemoryRetriever` calls `search(query, { source: 'session', topK: 3 })`
 
 ### Memory in Semantic Index
 
-- Session summaries (`memory/sessions/*.md`) are always indexed when semantic index is enabled
-- Long-term memory files are injected directly into system prompt (not searched)
+- Session summaries always indexed when semantic index is enabled
+- Long-term memory files injected directly into system prompt (not searched)
 
 ---
 
 ## Implementation Phases
 
 ### Phase 1: Chat History + UI
-- Conversation persistence (save/load JSON files)
-- History index management
-- History panel UI (button + sliding panel)
+- ConversationStore (persistence layer with in-memory index)
+- History panel UI (button + sliding overlay)
 - Auto-title generation
-- Load previous conversation
+- Load/restore previous conversation (full messages + continue)
+- Settings migration from old `chatHistoryFolder`
 
 ### Phase 2: Memory Foundation
-- Settings types and UI (Memory sub-tab)
-- Memory file structure and read/write utilities
-- Session memory extraction (end-of-conversation trigger)
-- Memory injection into system prompt
+- MemoryService (read/write memory files, build context for system prompt)
+- ExtractionQueue (persistent FIFO, survives restarts)
+- Memory settings (model, threshold, toggles)
+- System prompt injection of memory context
 
-### Phase 3: Long-Term Memory + Extraction
-- Background extraction pipeline (session → long-term)
-- Memory deduplication and update logic
+### Phase 3: Session Memory Extraction
+- SessionExtractor (LLM-based session summary)
+- Queue-based background processing
+- Threshold-gated extraction trigger
+
+### Phase 4: Long-Term Memory Extraction
+- LongTermExtractor (promote facts from sessions to long-term files)
+- Deduplication and update logic
 - Pattern detection across sessions
-- Memory management UI (view/edit/reset)
 
-### Phase 4: Onboarding
-- First-contact detection
-- Onboarding conversation flow
-- User profile bootstrapping
-- Re-onboarding command
-
-### Phase 5: Retrieval Integration
-- History indexing in semantic index
-- Session summary indexing
+### Phase 5: Onboarding + Retrieval Integration
+- First-contact detection + onboarding conversation
+- Vectra extension (source metadata + filter)
 - Cross-session context injection at session start
 - Memory-aware system prompt construction
 
@@ -319,8 +347,8 @@ When enabled in settings:
 
 - All memory files are Markdown (human-readable, editable, syncable)
 - History files are JSON (structured, fast to parse)
-- LLM calls for extraction use the active model (not a separate model)
-- Memory extraction is async/background (does not block UI)
-- Total memory budget in system prompt: ~1200 tokens (configurable)
+- Dedicated cheap model for extraction (separate from chat model)
+- Memory extraction is async/background via persistent queue (zero UX impact)
+- Total memory budget in system prompt: ~1200 tokens
 - Files stored inside the plugin directory (syncs with Obsidian Sync if configured)
 - No additional dependencies required (uses existing LLM API + Vectra index)

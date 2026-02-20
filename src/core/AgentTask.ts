@@ -118,6 +118,8 @@ export class AgentTask {
         sessionToolOverride?: string[],
         /** Per-mode MCP server whitelist — undefined = all servers allowed */
         allowedMcpServers?: string[],
+        /** Pre-built memory context for system prompt injection */
+        memoryContext?: string,
     ): Promise<void> {
         // Resolve mode to ModeConfig
         let activeMode: ModeConfig = this.resolveMode(initialMode);
@@ -222,7 +224,7 @@ export class AgentTask {
 
         const rebuildPromptCache = () => {
             const allModes = this.modeService?.getAllModes();
-            cachedSystemPrompt = buildSystemPromptForMode(activeMode, allModes, globalCustomInstructions, includeTime, rulesContent, skillsSection, mcpClient, allowedMcpServers);
+            cachedSystemPrompt = buildSystemPromptForMode(activeMode, allModes, globalCustomInstructions, includeTime, rulesContent, skillsSection, mcpClient, allowedMcpServers, memoryContext);
             cachedTools = this.modeService
                 ? this.modeService.getToolDefinitions(activeMode, sessionToolOverride)
                 : this.toolRegistry.getToolDefinitions();

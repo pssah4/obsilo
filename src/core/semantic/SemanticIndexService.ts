@@ -532,6 +532,61 @@ export class SemanticIndexService {
         }
     }
 
+    /**
+     * Index a session summary into the vector store.
+     * Called after SessionExtractor saves a summary file.
+     * Items are tagged with source='session' so they can be filtered separately.
+     */
+    async indexSessionSummary(sessionId: string, content: string): Promise<void> {
+        if (!await this.index.isIndexCreated().catch(() => false)) return;
+        try {
+            const chunks = this.splitIntoChunks(content, this.chunkSize);
+            if (chunks.length === 0) return;
+
+            const vectors = await this.embedBatch(chunks);
+            await this.index.beginUpdate();
+            for (let ci = 0; ci < chunks.length; ci++) {
+                await this.index.insertItem({
+                    vector: vectors[ci],
+                    metadata: {
+                        path: `session:${sessionId}`,
+                        chunk: chunks[ci],
+                        chunkIndex: ci,
+                        source: 'session',
+                    },
+                });
+            }
+            await this.index.endUpdate();
+            console.log(`[SemanticIndex] Indexed session summary: ${sessionId} (${chunks.length} chunks)`);
+        } catch (e) {
+            console.warn(`[SemanticIndex] Failed to index session ${sessionId}:`, e);
+        }
+    }
+
+    /**
+     * Search only session summaries in the index.
+     * Returns top-K results filtered to source='session' items.
+     */
+    async searchSessions(query: string, topK = 3): Promise<SemanticResult[]> {
+        if (!await this.index.isIndexCreated().catch(() => false)) return [];
+        try {
+            // Request more candidates to ensure enough session results after filtering
+            const [vector] = await this.embedBatch([query]);
+            const results = await this.index.queryItems(vector, query, topK * 5);
+            return results
+                .filter((r: any) => r.item.metadata?.source === 'session')
+                .slice(0, topK)
+                .map((r: any) => ({
+                    path: r.item.metadata?.path as string ?? '',
+                    excerpt: r.item.metadata?.chunk as string ?? '',
+                    score: r.score,
+                }));
+        } catch (e) {
+            console.warn('[SemanticIndex] Session search failed:', e);
+            return [];
+        }
+    }
+
     /** Delete the on-disk index and reset state. */
     async deleteIndex(): Promise<void> {
         try {
