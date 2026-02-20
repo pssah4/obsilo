@@ -1,0 +1,39 @@
+name: Sync dev to test (strip _private/)
+
+on:
+  push:
+    branches: [dev]
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout obsilo/dev
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Strip _private/ and restore gitignore entry
+        run: |
+          # Remove _private/ from working tree and index
+          git rm -r --cached _private/ 2>/dev/null || true
+          rm -rf _private/
+
+          # Add _private/ back to .gitignore for test/main branches
+          echo "" >> .gitignore
+          echo "# Private / internal files — stripped by CI for test/main" >> .gitignore
+          echo "_private/" >> .gitignore
+
+          git add .gitignore
+
+      - name: Commit filtered state
+        run: |
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: strip _private/ for test branch [skip ci]"
+          fi
+
+      - name: Push to test branch
+        run: |
+          git push origin HEAD:test --force
