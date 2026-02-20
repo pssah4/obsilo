@@ -147,12 +147,10 @@ td code { font-size: 0.8rem; }
   color: #f1f5f9;
   text-decoration: none;
 }
-.site-header .logo-icon {
-  width: 28px; height: 28px;
-  background: linear-gradient(135deg, var(--accent), #5b21b6);
-  border-radius: 6px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 0.9rem;
+.site-header .logo-img {
+  height: 32px;
+  width: auto;
+  display: block;
 }
 .site-header .spacer { flex: 1; }
 .site-header .header-links {
