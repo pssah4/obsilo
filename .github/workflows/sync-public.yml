@@ -1,0 +1,35 @@
+name: Sync to obsilo-public
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout obsilo/main
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Remove internal-only files
+        run: |
+          # Remove files that must not appear in the public repo
+          git rm --cached CLAUDE.md 2>/dev/null || true
+          rm -f CLAUDE.md
+
+      - name: Commit filtered state
+        run: |
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: remove internal-only files for public release [skip ci]"
+          fi
+
+      - name: Push to obsilo-public
+        env:
+          TOKEN: ${{ secrets.OBSILO_PUBLIC_TOKEN }}
+        run: |
+          git remote add obsilo-public "https://x-access-token:${TOKEN}@github.com/pssah4/obsilo-public.git"
+          git push obsilo-public HEAD:main --force
