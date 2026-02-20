@@ -74,5 +74,4 @@ temp/
 .claude
 forked-kilocode/
 
-# Private / internal files — never publish
-_private/
+# Private / internal files — only tracked in dev branch, filtered out by CI for test/main
