@@ -1,289 +1,250 @@
-# Obsidian Agent
+# Obsilo Agent
 
-> Agentic operating layer for Obsidian - Kilo Code for knowledge work
+**Agentic AI layer for Obsidian — Kilo Code for knowledge work**
 
-**Status:** 🚧 In Development (MVP Phase)
+Obsilo Agent transforms your Obsidian vault into an AI-driven knowledge operating system. An autonomous agent lives in your sidebar and can read, write, search, and connect notes on your behalf — with approval-based safety, local checkpoints, and a rich extension system.
 
-Obsidian Agent is an Obsidian plugin that provides a safe, controlled, agentic interface for vault operations. It brings the tool-use, approval, and checkpoint patterns from Kilo Code to Obsidian's knowledge management context.
-
----
-
-## ✨ Features
-
-### Core Capabilities
-- 🤖 **Agent Modes**: Specialized personas (Ask, Writer, Architect) with scoped tool access
-- ✅ **Approval System**: All write operations require explicit user approval
-- 💾 **Local Checkpoints**: Automatic version control with restore capability (isomorphic-git)
-- 🔌 **MCP Support**: Extend functionality with Model Context Protocol servers
-- 🔍 **Semantic Search**: Local vector search for vault-wide knowledge retrieval
-- 📝 **Context Awareness**: Automatically includes active file and @mentions
-
-### Safety & Privacy
-- 🔒 **Local-Only**: No cloud dependencies (except user-configured LLM providers)
-- 🛡️ **Approval-by-Default**: Explicit consent for all write operations
-- ⏮️ **Undo Capability**: Restore vault to any previous checkpoint
-- 📋 **Operation Logging**: Complete audit trail of all actions
-- 🚫 **Ignore System**: `.obsidianagentignore` file support
+> Inspired by [Kilo Code](https://kilo.ai) — adapted for the Obsidian knowledge worker.
 
 ---
 
-## 🏗️ Architecture
+## What it does
 
-Obsidian Agent adapts the proven Kilo Code architecture:
+You describe a task in natural language. Obsilo plans, searches your vault, reads relevant notes, creates or edits content, browses the web when needed, and reports back — all while showing you exactly what it's doing in real time.
 
 ```
-┌─────────────────────────────────────────┐
-│        Tool Execution Pipeline          │
-│     (Central Governance Layer)          │
-└─────────────┬───────────────────────────┘
-              │
-    ┌─────────┼─────────┐
-    ▼         ▼         ▼
-┌────────┐ ┌──────┐ ┌──────────┐
-│ Vault  │ │ MCP  │ │ Semantic │
-│ Tools  │ │Tools │ │  Search  │
-└────────┘ └──────┘ └──────────┘
-```
+You: "Summarize everything I've written about machine learning and create a structured overview note"
 
-### Key Components
-- **Tool Execution Pipeline**: Single entry point for all operations (ASR-02)
-- **Shadow Checkpoint System**: isomorphic-git based restore points (ASR-01)
-- **MCP Integration**: External tools through governance layer (ASR-mcp-01)
-- **Semantic Index**: Local vector DB with Orama + @xenova/transformers (ASR-03)
-
----
-
-## 📋 Requirements
-
-- **Obsidian**: v1.4.0 or higher
-- **Platform**: Desktop only (Electron/Node.js environment)
-- **API Keys**: Bring your own (Anthropic, OpenAI, or use local Ollama)
-
----
-
-## 🚀 Installation
-
-### Development Installation
-
-1. Clone this repository:
-```bash
-git clone https://github.com/yourusername/obsidian-agent.git
-cd obsidian-agent
-```
-
-2. Install dependencies:
-```bash
-npm install
-```
-
-3. Build the plugin:
-```bash
-npm run build
-```
-
-4. Link to your Obsidian vault:
-```bash
-# Create symbolic link in your vault's plugins directory
-ln -s /path/to/obsidian-agent /path/to/your-vault/.obsidian/plugins/obsidian-agent
-```
-
-5. Enable the plugin in Obsidian:
-   - Open Settings → Community Plugins
-   - Enable "Obsidian Agent"
-
-### Development Mode
-
-For active development with auto-rebuild:
-```bash
-npm run dev
+Obsilo:
+  ↳ semantic_search("machine learning") → 12 relevant notes
+  ↳ read_file("Projects/ML-Pipeline.md")
+  ↳ read_file("Daily/2025-11-03.md")
+  ↳ write_file("MOC/Machine Learning Overview.md", ...)
+  ↳ "Done — created Machine Learning Overview.md with 5 sections linking to 8 existing notes"
 ```
 
 ---
 
-## 🎯 Usage
+## Features
 
-### Opening the Agent Sidebar
+### 30+ Vault Tools
+- **Read & Search**: `read_file`, `list_files`, `search_files`
+- **Vault Intelligence**: `semantic_search`, `get_frontmatter`, `search_by_tag`, `get_linked_notes`, `get_vault_stats`, `get_daily_note`, `query_base`
+- **Write & Edit**: `write_file`, `edit_file`, `append_to_file`, `update_frontmatter`, `create_folder`, `delete_file`, `move_file`
+- **Advanced**: `generate_canvas`, `create_base`, `update_base`
+- **Web**: `web_fetch`, `web_search` (Brave / Tavily)
+- **Agent Control**: `update_todo_list`, `ask_followup_question`, `new_task`
+- **MCP**: `use_mcp_tool` — connect any MCP server
 
-- **Command Palette**: `Ctrl/Cmd+P` → "Open Agent Sidebar"
-- **Sidebar Icon**: Click the robot icon in the left/right sidebar
+### Hybrid Semantic Search
+Local vector index (Vectra + Xenova transformers) with no cloud required. Combines semantic similarity with full-text keyword search (RRF fusion), 1-hop wikilink graph augmentation, and optional HyDE query enhancement.
 
 ### Agent Modes
+Two built-in modes — **Ask** (read-only knowledge assistant) and **Agent** (full capabilities). Create custom modes with their own roles, tool sets, and instructions. Per-mode model overrides let you run a fast model for quick questions and a powerful one for complex tasks.
 
-**Ask Mode** (Read-Only)
-- Purpose: Answer questions about your vault
-- Tools: Read, search, semantic search
+### Multi-Agent Workflows
+Spawn sub-agents with `new_task` for complex parallel or sequential workflows — Orchestrator-Worker, Prompt Chaining, Evaluator-Optimizer, and Routing patterns built in.
 
-**Writer Mode**
-- Purpose: Edit and create content
-- Tools: Read + write operations, diffs
+### Context Injection
+- **Rules** (`.obsidian-agent/rules/`): permanent instructions injected into every system prompt
+- **Skills** (`.obsidian-agent/skills/`): keyword-matched mini-instructions auto-injected per message
+- **Workflows** (`.obsidian-agent/workflows/`): slash-command driven instruction sets
+- **Custom Prompts**: `/prompt-slug` templates with `{{userInput}}` and `{{activeFile}}` variables
 
-**Architect Mode**
-- Purpose: Organize and structure vault
-- Tools: All vault ops + canvas generation
+### Safety First
+- **Approval-based writes**: every write operation requires explicit approval (or configured auto-approval)
+- **Automatic checkpoints**: isomorphic-git shadow repo snapshots before every task's first write
+- **Vault governance**: `.obsidian-agentignore` and `.obsidian-agentprotected` access control files
+- **Audit log**: JSONL operation trail with parameter sanitization
 
-### Using @Mentions
+### Provider Flexibility
+Anthropic, OpenAI, Ollama, LM Studio, OpenRouter, Azure OpenAI — or any OpenAI-compatible API. Configure multiple models and switch between them per-mode or per-chat.
 
-Reference notes in your prompts:
+### MCP Integration
+Connect MCP servers via stdio, SSE, or streamable-HTTP. Tools are dynamically discovered and exposed to the agent. Per-mode whitelisting available.
+
+---
+
+## Installation
+
+### Manual Installation
+
+1. Clone or download this repository
+2. Build the plugin:
+   ```bash
+   npm install
+   npm run build
+   ```
+3. Copy `main.js`, `styles.css`, and `manifest.json` to your vault's plugin folder:
+   ```
+   <vault>/.obsidian/plugins/obsidian-agent/
+   ```
+4. Enable the plugin in Obsidian: Settings → Community Plugins → Enable "Obsilo Agent"
+
+### Requirements
+- Obsidian 1.4.0 or later
+- Desktop only (not available on mobile)
+- Node.js 18+ for building
+
+---
+
+## Quick Start
+
+1. **Add a model**: Settings → Providers → Models → Enable a built-in model and enter your API key
+2. **Open the sidebar**: Click the Obsilo icon in the ribbon
+3. **Ask a question**: Type any question about your vault, e.g. *"What are my most-linked notes?"*
+4. **Run a task**: Switch to Agent mode and try *"Create a weekly review template"*
+
+For search to work at its best, build the semantic index: Settings → Semantic Index → Build Index.
+
+---
+
+## Configuration
+
+### Settings Overview
+
+| Section | What you configure |
+|---------|-------------------|
+| **Models** | Add API keys, enable/disable models, set defaults |
+| **Embeddings** | Select local or API embedding model for semantic search |
+| **Modes** | Create and edit custom agent modes |
+| **Permissions** | Configure which operations require manual approval |
+| **Loop** | Rate limits, error limits, context condensing, power steering |
+| **Rules** | Manage permanent instruction files |
+| **Workflows** | Manage slash-command workflow files |
+| **Skills** | Manage keyword-matched skill files |
+| **Prompts** | Create custom `/slash-command` templates |
+| **MCP** | Add MCP server configurations |
+| **Semantic Index** | Configure vector search (model, chunks, auto-index) |
+| **Checkpoints** | Configure automatic undo snapshots |
+| **Web Search** | Configure Brave or Tavily search API |
+| **Interface** | Sidebar position, keyboard shortcuts, context injection |
+| **Logs** | View the operation audit trail |
+
+### Supported Providers
+
+| Provider | Type | Models |
+|----------|------|--------|
+| Anthropic | Cloud | Claude Opus 4.6, Sonnet 4.5, Haiku 4.5 |
+| OpenAI | Cloud | GPT-4o, GPT-4o mini, GPT-4.1 |
+| OpenRouter | Gateway | Any model on OpenRouter |
+| Azure OpenAI | Enterprise | Any Azure-deployed model |
+| Ollama | Local | Llama 3.2, Qwen 2.5, etc. |
+| LM Studio | Local | Any local model |
+| Custom | Any | Any OpenAI-compatible endpoint |
+
+---
+
+## Context Injection
+
+### Rules
+Create Markdown files at `.obsidian-agent/rules/my-rule.md`. They are automatically injected into every system prompt.
+
+```markdown
+Always use ISO dates (YYYY-MM-DD) in frontmatter.
+Prefer [[wikilinks]] over markdown links for internal notes.
+Tag all new notes with at least one tag.
 ```
-Summarize the key points from @[[Meeting Notes]] and @[[Project Plan]]
+
+### Skills
+Create `.obsidian-agent/skills/meeting-notes/SKILL.md`:
+
+```markdown
+---
+name: meeting-notes
+description: taking meeting notes, capturing action items, agenda
+---
+
+When writing meeting notes:
+1. Use H2 for sections: ## Attendees, ## Agenda, ## Notes, ## Action Items
+2. Format action items as `- [ ] @person: task (due: YYYY-MM-DD)`
+3. Link to relevant projects with [[wikilinks]]
 ```
 
-### Approval Workflow
-
-When the agent proposes a write operation:
-1. Review the proposed change (diff preview)
-2. Click **Approve** to execute or **Deny** to reject
-3. Option to **Always Allow** for trusted operations
-
-### Checkpoints & Restore
-
-- Checkpoints are created automatically before write operations
-- View checkpoint history in the sidebar
-- Restore to any previous state with one click
-- Diff preview shows what changed
+### Workflows
+Create `.obsidian-agent/workflows/daily-review.md` and invoke with `/daily-review`.
 
 ---
 
-## ⚙️ Configuration
+## Permissions
 
-### LLM Provider Setup
+Obsilo follows a safe-by-default model:
 
-Settings → Obsidian Agent → Providers
+- **Read operations** — auto-approved by default
+- **All write operations** — require explicit approval by default
+- Configure auto-approval per category in Settings → Permissions
 
-**Anthropic (Claude):**
-```json
-{
-  "type": "anthropic",
-  "apiKey": "sk-ant-...",
-  "model": "claude-sonnet-4-5-20250929"
-}
+Access control files:
+
 ```
+# .obsidian-agentignore  — blocks all access
+Private/
+Archive/**
 
-**OpenAI:**
-```json
-{
-  "type": "openai",
-  "apiKey": "sk-...",
-  "model": "gpt-4-turbo-preview"
-}
-```
-
-**Ollama (Local):**
-```json
-{
-  "type": "ollama",
-  "baseUrl": "http://localhost:11434",
-  "model": "llama2"
-}
-```
-
-### MCP Server Setup
-
-Add external tools via MCP servers:
-
-```json
-{
-  "fetch": {
-    "type": "stdio",
-    "command": "npx",
-    "args": ["-y", "@modelcontextprotocol/server-fetch"]
-  }
-}
+# .obsidian-agentprotected  — read-only
+Templates/
 ```
 
 ---
 
-## 🗺️ Roadmap
+## Directory Structure
 
-### Phase 1: Foundation ✅
-- [x] Plugin structure
-- [x] Basic UI
-- [ ] Tool execution pipeline
+```
+<vault>/
+└── .obsidian-agent/
+    ├── rules/            # Permanent system prompt instructions
+    ├── workflows/        # Slash-command workflow files
+    └── skills/           # Keyword-matched skill instructions
 
-### Phase 2-3: Safety (In Progress)
-- [ ] Approval system
-- [ ] Checkpoint system
-
-### Phase 4: Agent Core
-- [ ] LLM integration
-- [ ] Conversational interface
-
-### Phase 5: Modes
-- [ ] Mode system
-- [ ] Specialized personas
-
-### Phase 6: MCP
-- [ ] MCP client
-- [ ] External tools
-
-### Phase 7: Semantic Index
-- [ ] Vector search
-- [ ] Background indexing
-
-### Phase 8: Polish
-- [ ] Performance optimization
-- [ ] Documentation
-- [ ] Testing
-
-**Target:** MVP complete in 12 weeks
+<vault>/.obsidian/plugins/obsidian-agent/
+├── checkpoints/          # Shadow git repo (automatic undo)
+├── logs/                 # JSONL operation audit trail
+└── semantic-index/       # Local vector index
+```
 
 ---
 
-## 📚 Documentation
+## Documentation
 
-- [System Architecture](docs/architecture/system-overview.md)
-- [Component Designs](docs/architecture/component-designs.md)
-- [Implementation Roadmap](docs/architecture/implementation-roadmap.md)
-- [Requirements](requirements/overview.md)
+Full documentation: **[https://yourusername.github.io/obsidian-agent](https://yourusername.github.io/obsidian-agent)**
 
----
-
-## 🤝 Contributing
-
-Contributions welcome! This project is in active development.
-
-### Development Setup
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Submit a pull request
-
-### Code Style
-- TypeScript with strict mode
-- Follow existing patterns
-- Add comments for complex logic
-- Update documentation
+- [Getting Started](docs/getting-started.html)
+- [Chat Interface](docs/chat-interface.html)
+- [Modes](docs/modes.html)
+- [Tools Reference](docs/tools.html)
+- [Semantic Search](docs/semantic-search.html)
+- [Rules, Skills & Workflows](docs/rules-skills-workflows.html)
+- [Providers & Models](docs/providers.html)
+- [MCP Servers](docs/mcp-servers.html)
+- [Permissions & Safety](docs/permissions.html)
+- [Checkpoints](docs/checkpoints.html)
+- [Settings Reference](docs/settings-reference.html)
 
 ---
 
-## 📄 License
+## Development
 
-Apache-2.0 License - see [LICENSE](LICENSE) file for details
-
----
-
-## 🙏 Acknowledgments
-
-- **Kilo Code**: Reference architecture and patterns
-- **Obsidian Team**: Amazing plugin API
-- **MCP Project**: Extensibility protocol
+```bash
+npm install       # Install dependencies
+npm run dev       # Dev build with watch mode
+npm run build     # Production build
+npm run lint      # ESLint
+npm run format    # Prettier
+```
 
 ---
 
-## ⚠️ Status
+## License
 
-**Current Phase:** Foundation (Phase 1)
-**Last Updated:** 2026-02-17
-
-This plugin is under active development. Features are being implemented according to the 8-phase roadmap. See [Implementation Roadmap](docs/architecture/implementation-roadmap.md) for details.
+Apache 2.0
 
 ---
 
-## 📞 Support
+## Acknowledgements
 
-- **Issues**: [GitHub Issues](https://github.com/yourusername/obsidian-agent/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/yourusername/obsidian-agent/discussions)
-
----
-
-Built with ❤️ for the Obsidian community
+- [Kilo Code](https://kilo.ai) — the architecture this is based on
+- [Obsidian](https://obsidian.md) — the platform
+- [Vectra](https://github.com/Stevenic/vectra) — local vector database
+- [Xenova Transformers](https://github.com/xenova/transformers.js) — local ONNX embeddings
+- [isomorphic-git](https://isomorphic-git.org) — pure JS git for checkpoints
+- [MCP SDK](https://github.com/modelcontextprotocol/typescript-sdk) — Model Context Protocol

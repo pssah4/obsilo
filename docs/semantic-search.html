@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Semantic Search — Obsilo Agent Docs</title>
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <a href="index.html" class="logo"><div class="logo-icon">O</div>Obsilo Agent</a>
+  <div class="spacer"></div>
+  <nav class="header-links">
+    <a href="index.html">Home</a>
+    <a href="tools.html">Tools</a>
+    <a href="https://github.com/yourusername/obsidian-agent" class="github-btn">GitHub</a>
+  </nav>
+</header>
+
+<div class="docs-layout">
+  <aside class="docs-sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Get Started</div>
+      <nav class="sidebar-nav"><a href="getting-started.html">Getting Started</a></nav>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Using Obsilo</div>
+      <nav class="sidebar-nav">
+        <a href="chat-interface.html">Chat Interface</a>
+        <a href="modes.html">Modes</a>
+        <a href="permissions.html">Permissions &amp; Safety</a>
+      </nav>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Context &amp; Knowledge</div>
+      <nav class="sidebar-nav">
+        <a href="rules-skills-workflows.html">Rules, Skills &amp; Workflows</a>
+        <a href="semantic-search.html" class="active">Semantic Search</a>
+      </nav>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Reference</div>
+      <nav class="sidebar-nav">
+        <a href="tools.html">Tools Reference</a>
+        <a href="providers.html">Providers &amp; Models</a>
+        <a href="mcp-servers.html">MCP Servers</a>
+        <a href="checkpoints.html">Checkpoints</a>
+        <a href="settings-reference.html">Settings Reference</a>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="docs-main">
+    <article class="docs-content">
+      <div class="breadcrumb">
+        <a href="index.html">Docs</a> <span class="breadcrumb-sep">›</span>
+        Context &amp; Knowledge <span class="breadcrumb-sep">›</span>
+        Semantic Search
+      </div>
+
+      <h1>Semantic Search</h1>
+      <p>Obsilo's semantic search finds notes by <em>meaning</em>, not just keywords — using a local vector index that stays entirely on your machine.</p>
+
+      <h2 id="overview">How It Works</h2>
+      <p>When you build the semantic index, Obsilo:</p>
+      <ol>
+        <li>Reads each note in your vault</li>
+        <li>Splits it into chunks (default: ~2000 characters, split at headings)</li>
+        <li>Generates an embedding (a vector of numbers representing the chunk's meaning) for each chunk</li>
+        <li>Stores the vectors in a local HNSW index (Vectra)</li>
+      </ol>
+      <p>When you (or the agent) run a search, the query is embedded using the same model, and the nearest vectors are retrieved — finding notes with similar meaning even if they share no keywords with the query.</p>
+
+      <h2 id="hybrid-search">Hybrid Search</h2>
+      <p>Obsilo doesn't rely on semantic search alone. Every <code>semantic_search</code> call runs two searches in parallel:</p>
+      <ul>
+        <li><strong>Semantic search</strong> — vector similarity via Vectra (finds conceptual matches)</li>
+        <li><strong>Keyword search</strong> — full-text search via Orama (finds exact word matches)</li>
+      </ul>
+      <p>The results are combined using <strong>Reciprocal Rank Fusion (RRF)</strong> — notes appearing in both lists rise to the top. This means exact names, tags, dates, and codes are found reliably alongside conceptual matches.</p>
+
+      <h2 id="graph-augmentation">Graph Augmentation</h2>
+      <p>After ranking the top results, Obsilo scans the excerpts for <code>[[wikilinks]]</code> and fetches the first indexed chunk of each linked note that isn't already in the results. These are appended as "linked context" — notes that are intentionally connected to the results but may not have matched semantically themselves.</p>
+      <p>This surfaces the structure of your knowledge graph, not just individual note matches.</p>
+
+      <h2 id="hyde">HyDE (Hypothetical Document Embeddings)</h2>
+      <p>HyDE is an optional technique that improves recall for conceptual queries. When enabled, before embedding the user's query, Obsilo asks the LLM to write a short 2-3 sentence note excerpt that would answer the query. That hypothetical excerpt is then embedded instead of the raw query — giving the embedding model a much richer signal to match against.</p>
+      <p><strong>Trade-off:</strong> HyDE costs one extra LLM call per search. It's off by default but can improve results noticeably for complex, conceptual questions. Enable it in Settings → Semantic Index → HyDE.</p>
+
+      <h2 id="setup">Setting Up the Index</h2>
+
+      <h3 id="enable">Step 1: Enable Semantic Index</h3>
+      <p>Go to Settings → Obsilo Agent → <strong>Semantic Index</strong> and toggle "Enable Semantic Index" on.</p>
+
+      <h3 id="choose-model">Step 2: Choose an Embedding Model</h3>
+      <p>Go to Settings → Providers → <strong>Embeddings</strong> and select an embedding model.</p>
+
+      <table>
+        <thead><tr><th>Model</th><th>Type</th><th>Quality</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td><code>Xenova/all-MiniLM-L6-v2</code></td><td>Local (ONNX)</td><td>Good</td><td>Default. 384 dimensions. No API key needed. ~23MB download on first use.</td></tr>
+          <tr><td><code>Xenova/bge-small-en-v1.5</code></td><td>Local (ONNX)</td><td>Better</td><td>Small but strong. Good for English-heavy vaults.</td></tr>
+          <tr><td><code>Xenova/multilingual-e5-small</code></td><td>Local (ONNX)</td><td>Good</td><td>Multilingual support. Use if your vault contains multiple languages.</td></tr>
+          <tr><td>text-embedding-3-small</td><td>OpenAI API</td><td>Excellent</td><td>Requires OpenAI API key. 1536 dimensions. Higher quality, cloud-dependent.</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout callout-warning">
+        <strong>Changing the embedding model invalidates the index.</strong>
+        If you switch models, rebuild the index from scratch — vectors from different models are not compatible.
+      </div>
+
+      <h3 id="build">Step 3: Build the Index</h3>
+      <p>Click <strong>Build Index</strong> in Settings → Semantic Index. The first build takes a few minutes for a large vault. Progress is shown in the settings panel.</p>
+      <p>The index is stored at:</p>
+      <ul>
+        <li><strong>Obsidian sync (default):</strong> <code>.obsidian/plugins/obsidian-agent/semantic-index/</code></li>
+        <li><strong>Local only:</strong> <code>.obsidian-agent/semantic-index/</code></li>
+      </ul>
+      <p>Subsequent rebuilds are <strong>incremental</strong> — only files changed since the last build are re-indexed.</p>
+
+      <h2 id="auto-indexing">Auto-Indexing</h2>
+      <p>Configure when the index is rebuilt automatically:</p>
+      <table>
+        <thead><tr><th>Setting</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>startup</code></td><td>Rebuild when Obsidian opens (incremental — only changed files)</td></tr>
+          <tr><td><code>mode-switch</code></td><td>Rebuild when switching to a mode that uses semantic_search</td></tr>
+          <tr><td><code>never</code></td><td>Only build manually (default)</td></tr>
+        </tbody>
+      </table>
+      <p>There's also <strong>Auto-index on change</strong> — when enabled, files are re-indexed as you edit them. This keeps the index fully up to date but adds background CPU work. Use with caution on large vaults with local embedding models, as it can cause UI lag.</p>
+
+      <h2 id="configuration">Configuration</h2>
+
+      <table>
+        <thead><tr><th>Setting</th><th>Default</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>Chunk Size</td><td>2000 chars</td><td>Target size for note chunks. Smaller = more precise, but more vectors. Changing this requires a full rebuild.</td></tr>
+          <tr><td>Batch Size</td><td>20 files</td><td>Files committed per disk flush during indexing. Higher = faster, but more memory.</td></tr>
+          <tr><td>Excluded Folders</td><td>—</td><td>Comma-separated folder paths to skip during indexing (e.g., Templates, Archive)</td></tr>
+          <tr><td>Index PDFs</td><td>off</td><td>Extract and index text from PDF files using pdfjs. Useful if you store PDFs in your vault.</td></tr>
+          <tr><td>HyDE</td><td>off</td><td>Generate hypothetical document before embedding query. Improves recall, costs 1 extra LLM call.</td></tr>
+          <tr><td>Storage Location</td><td>obsidian-sync</td><td>Where to store the index. "obsidian-sync" syncs via Obsidian Sync; "local" keeps it device-only.</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="using-search">Using Semantic Search</h2>
+      <p>The agent uses <code>semantic_search</code> automatically when you ask questions. You can also use it with filters:</p>
+
+      <h3>Basic Search</h3>
+      <p><em>"Find my notes about meeting planning and agenda creation"</em></p>
+
+      <h3>Filtered Search</h3>
+      <p><em>"Find notes about machine learning from the past month tagged with #research"</em></p>
+      <p>This maps to: <code>semantic_search(query, folder, tags, since)</code></p>
+
+      <h3>The RAG Pattern</h3>
+      <p>When the agent runs <code>semantic_search</code>, it receives excerpts with the most relevant content already extracted. The agent is instructed to synthesize answers directly from these excerpts — <em>not</em> to call <code>read_file</code> on each result. This keeps the context window manageable and responses fast.</p>
+
+      <div class="callout callout-note">
+        <strong>Tip</strong>
+        If the agent seems unable to find notes it should know about, rebuild the index (Settings → Semantic Index → Build Index) to ensure recently added notes are included.
+      </div>
+
+      <div class="page-nav">
+        <a href="rules-skills-workflows.html" class="page-nav-item">
+          <span class="page-nav-label">Previous</span>
+          <span class="page-nav-title">← Rules, Skills &amp; Workflows</span>
+        </a>
+        <a href="tools.html" class="page-nav-item next">
+          <span class="page-nav-label">Next</span>
+          <span class="page-nav-title">Tools Reference →</span>
+        </a>
+      </div>
+    </article>
+  </main>
+</div>
+
+<footer class="footer">
+  <p>Obsilo Agent — Apache 2.0 License &nbsp;·&nbsp; <a href="https://github.com/yourusername/obsidian-agent">GitHub</a></p>
+</footer>
+</body>
+</html>

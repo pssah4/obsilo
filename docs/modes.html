@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Modes — Obsilo Agent Docs</title>
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <a href="index.html" class="logo"><div class="logo-icon">O</div>Obsilo Agent</a>
+  <div class="spacer"></div>
+  <nav class="header-links">
+    <a href="index.html">Home</a>
+    <a href="tools.html">Tools</a>
+    <a href="https://github.com/yourusername/obsidian-agent" class="github-btn">GitHub</a>
+  </nav>
+</header>
+
+<div class="docs-layout">
+  <aside class="docs-sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Get Started</div>
+      <nav class="sidebar-nav"><a href="getting-started.html">Getting Started</a></nav>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Using Obsilo</div>
+      <nav class="sidebar-nav">
+        <a href="chat-interface.html">Chat Interface</a>
+        <a href="modes.html" class="active">Modes</a>
+        <a href="permissions.html">Permissions &amp; Safety</a>
+      </nav>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Context &amp; Knowledge</div>
+      <nav class="sidebar-nav">
+        <a href="rules-skills-workflows.html">Rules, Skills &amp; Workflows</a>
+        <a href="semantic-search.html">Semantic Search</a>
+      </nav>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Reference</div>
+      <nav class="sidebar-nav">
+        <a href="tools.html">Tools Reference</a>
+        <a href="providers.html">Providers &amp; Models</a>
+        <a href="mcp-servers.html">MCP Servers</a>
+        <a href="checkpoints.html">Checkpoints</a>
+        <a href="settings-reference.html">Settings Reference</a>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="docs-main">
+    <article class="docs-content">
+      <div class="breadcrumb">
+        <a href="index.html">Docs</a> <span class="breadcrumb-sep">›</span>
+        Using Obsilo <span class="breadcrumb-sep">›</span>
+        Modes
+      </div>
+
+      <h1>Modes</h1>
+      <p>Modes define the agent's role, available tools, and behavior. Switch between modes to get the right assistant for each task.</p>
+
+      <h2 id="built-in-modes">Built-in Modes</h2>
+
+      <h3 id="ask-mode">Ask Mode</h3>
+      <p><strong>Ask</strong> is a conversational, read-only knowledge assistant. It can search your vault, synthesize information from notes, answer questions, and surface connections — but it cannot create, edit, move, or delete any files.</p>
+      <p><strong>Available tools:</strong> <code>read_file</code>, <code>list_files</code>, <code>search_files</code>, <code>get_frontmatter</code>, <code>search_by_tag</code>, <code>get_vault_stats</code>, <code>get_linked_notes</code>, <code>get_daily_note</code>, <code>open_note</code>, <code>semantic_search</code>, <code>query_base</code>, <code>ask_followup_question</code>, <code>attempt_completion</code>, <code>update_todo_list</code></p>
+      <p><strong>Best for:</strong> Questions about vault content, finding notes, synthesizing research, exploring connections, understanding what you've written.</p>
+
+      <h3 id="agent-mode">Agent Mode</h3>
+      <p><strong>Agent</strong> is a fully capable autonomous agent with access to all tools. It reads, writes, edits, searches, browses the web, spawns sub-agents, and uses MCP servers.</p>
+      <p><strong>Available tools:</strong> All tools (read, vault, edit, web, agent control, MCP)</p>
+      <p><strong>Best for:</strong> Creating notes, editing content, reorganizing vault structure, multi-step research tasks, web research + synthesis, complex workflows.</p>
+
+      <div class="callout callout-tip">
+        <strong>Which mode should I use?</strong>
+        Start with <strong>Ask</strong> for exploration and questions. Switch to <strong>Agent</strong> when you want the AI to take action — create files, edit content, or run complex workflows.
+      </div>
+
+      <h2 id="tool-groups">Tool Groups</h2>
+      <p>Each mode is configured with one or more <strong>tool groups</strong>. This controls which tools the agent has access to:</p>
+
+      <table>
+        <thead><tr><th>Group</th><th>Tools included</th></tr></thead>
+        <tbody>
+          <tr><td><code>read</code></td><td><code>read_file</code>, <code>list_files</code>, <code>search_files</code></td></tr>
+          <tr><td><code>vault</code></td><td><code>get_frontmatter</code>, <code>search_by_tag</code>, <code>get_vault_stats</code>, <code>get_linked_notes</code>, <code>get_daily_note</code>, <code>open_note</code>, <code>semantic_search</code>, <code>query_base</code></td></tr>
+          <tr><td><code>edit</code></td><td><code>write_file</code>, <code>edit_file</code>, <code>append_to_file</code>, <code>create_folder</code>, <code>delete_file</code>, <code>move_file</code>, <code>update_frontmatter</code>, <code>generate_canvas</code>, <code>create_base</code>, <code>update_base</code></td></tr>
+          <tr><td><code>web</code></td><td><code>web_fetch</code>, <code>web_search</code></td></tr>
+          <tr><td><code>agent</code></td><td><code>ask_followup_question</code>, <code>attempt_completion</code>, <code>update_todo_list</code>, <code>new_task</code></td></tr>
+          <tr><td><code>mcp</code></td><td><code>use_mcp_tool</code></td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="custom-modes">Custom Modes</h2>
+      <p>Create your own modes in Settings → Agent Behaviour → Modes. Custom modes can be:</p>
+      <ul>
+        <li><strong>Vault-scoped</strong> — stored in this vault's plugin settings, only available in this vault</li>
+        <li><strong>Global</strong> — stored at <code>~/.obsidian-agent/modes.json</code>, available in all vaults</li>
+      </ul>
+
+      <h3 id="create-mode">Creating a Custom Mode</h3>
+      <p>Click <strong>New Mode</strong> in the Modes settings tab. Configure:</p>
+      <table>
+        <thead><tr><th>Field</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Slug</strong></td><td>URL-safe identifier, e.g. <code>researcher</code> or <code>daily-writer</code></td></tr>
+          <tr><td><strong>Name</strong></td><td>Display name shown in the mode selector, e.g. "Researcher"</td></tr>
+          <tr><td><strong>Icon</strong></td><td>Lucide icon name, e.g. <code>search</code>, <code>pen</code>, <code>book</code></td></tr>
+          <tr><td><strong>Description</strong></td><td>Short description shown in the mode selector tooltip</td></tr>
+          <tr><td><strong>Role Definition</strong></td><td>Core system prompt for this mode — defines the agent's persona and behavior</td></tr>
+          <tr><td><strong>Custom Instructions</strong></td><td>User-editable additional instructions appended to the role definition</td></tr>
+          <tr><td><strong>Tool Groups</strong></td><td>Which tool categories are available in this mode</td></tr>
+          <tr><td><strong>Scope</strong></td><td>Vault (this vault only) or Global (all vaults)</td></tr>
+        </tbody>
+      </table>
+
+      <h3 id="mode-examples">Example Custom Modes</h3>
+
+      <h4>Researcher</h4>
+      <pre><code>Slug: researcher
+Tool Groups: read, vault, web, agent
+Role Definition:
+You are a research assistant focused on gathering and synthesizing
+information. Use semantic_search to find existing knowledge first,
+then use web_search and web_fetch to fill gaps with external information.
+Always cite your sources and cross-reference with existing vault notes.</code></pre>
+
+      <h4>Daily Writer</h4>
+      <pre><code>Slug: daily-writer
+Tool Groups: read, vault, edit, agent
+Role Definition:
+You are a writing assistant for daily journaling and reflection.
+Focus on: reading today's daily note, summarizing recent notes,
+drafting new entries. Write in a personal, reflective tone.
+Use get_daily_note first to understand the current context.</code></pre>
+
+      <h2 id="mode-overrides">Per-Mode Overrides</h2>
+
+      <h3 id="model-override">Model Override</h3>
+      <p>Each mode can use a different AI model. Set a model override in Settings → Modes → (edit mode) → Model. When set, this model is used whenever the mode is active, overriding the global default.</p>
+      <p><strong>Use case:</strong> Use a fast, cheap model (e.g., Claude Haiku or GPT-4o mini) for Ask mode, and a more capable model (e.g., Claude Sonnet) for Agent mode.</p>
+
+      <h3 id="tool-overrides">Tool Overrides</h3>
+      <p>Restrict a mode to a specific subset of tools within its tool groups. For example, give Agent mode all edit tools <em>except</em> <code>delete_file</code>. Configured in Settings → Modes → (edit mode) → Tool Overrides.</p>
+
+      <h3 id="mcp-whitelist">MCP Server Whitelist</h3>
+      <p>Limit which MCP servers a mode can access. Useful for restricting a sensitive mode from accessing powerful external tools. Set in Settings → Modes → (edit mode) → Allowed MCP Servers.</p>
+
+      <h3 id="forced-skills">Forced Skills</h3>
+      <p>Specify skills that are always injected into the system prompt for this mode, regardless of keyword matching. Useful for skills that should always be active in a mode (e.g., always inject a "meeting-notes" skill in a "meeting" mode).</p>
+
+      <h3 id="forced-workflow">Forced Workflow</h3>
+      <p>Attach a workflow that runs automatically for every message in this mode (unless the message starts with <code>/</code>). The workflow content is prepended as explicit instructions to each message.</p>
+
+      <h2 id="multi-agent">Multi-Agent Workflows</h2>
+      <p>In Agent mode, the <code>new_task</code> tool lets the agent spawn sub-agents. Sub-agents run with a fresh conversation context in the specified mode:</p>
+      <ul>
+        <li><code>new_task('ask', 'message')</code> — spawn a read-only sub-agent</li>
+        <li><code>new_task('agent', 'message')</code> — spawn a full-capability sub-agent</li>
+      </ul>
+      <p>Sub-agents cannot see the parent conversation — pass all necessary context in the task message.</p>
+
+      <table>
+        <thead><tr><th>Pattern</th><th>When to use</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Orchestrator-Worker</strong></td><td>Decompose a large task into independent subtasks, each handled by a worker sub-agent</td></tr>
+          <tr><td><strong>Prompt Chaining</strong></td><td>Sequential steps where each agent's output feeds the next (research → draft → review)</td></tr>
+          <tr><td><strong>Evaluator-Optimizer</strong></td><td>Generate content, evaluate it, then refine until it meets quality criteria</td></tr>
+          <tr><td><strong>Routing</strong></td><td>Route different subtasks to the appropriate mode (reads to Ask, writes to Agent)</td></tr>
+        </tbody>
+      </table>
+
+      <div class="page-nav">
+        <a href="chat-interface.html" class="page-nav-item">
+          <span class="page-nav-label">Previous</span>
+          <span class="page-nav-title">← Chat Interface</span>
+        </a>
+        <a href="permissions.html" class="page-nav-item next">
+          <span class="page-nav-label">Next</span>
+          <span class="page-nav-title">Permissions &amp; Safety →</span>
+        </a>
+      </div>
+    </article>
+  </main>
+</div>
+
+<footer class="footer">
+  <p>Obsilo Agent — Apache 2.0 License &nbsp;·&nbsp; <a href="https://github.com/yourusername/obsidian-agent">GitHub</a></p>
+</footer>
+</body>
+</html>

@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Settings Reference — Obsilo Agent Docs</title>
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <a href="index.html" class="logo"><div class="logo-icon">O</div>Obsilo Agent</a>
+  <div class="spacer"></div>
+  <nav class="header-links">
+    <a href="index.html">Home</a>
+    <a href="tools.html">Tools</a>
+    <a href="https://github.com/yourusername/obsidian-agent" class="github-btn">GitHub</a>
+  </nav>
+</header>
+
+<div class="docs-layout">
+  <aside class="docs-sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Get Started</div>
+      <nav class="sidebar-nav"><a href="getting-started.html">Getting Started</a></nav>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Using Obsilo</div>
+      <nav class="sidebar-nav">
+        <a href="chat-interface.html">Chat Interface</a>
+        <a href="modes.html">Modes</a>
+        <a href="permissions.html">Permissions &amp; Safety</a>
+      </nav>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Context &amp; Knowledge</div>
+      <nav class="sidebar-nav">
+        <a href="rules-skills-workflows.html">Rules, Skills &amp; Workflows</a>
+        <a href="semantic-search.html">Semantic Search</a>
+      </nav>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Reference</div>
+      <nav class="sidebar-nav">
+        <a href="tools.html">Tools Reference</a>
+        <a href="providers.html">Providers &amp; Models</a>
+        <a href="mcp-servers.html">MCP Servers</a>
+        <a href="checkpoints.html">Checkpoints</a>
+        <a href="settings-reference.html" class="active">Settings Reference</a>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="docs-main">
+    <article class="docs-content">
+      <div class="breadcrumb">
+        <a href="index.html">Docs</a> <span class="breadcrumb-sep">›</span>
+        Reference <span class="breadcrumb-sep">›</span>
+        Settings Reference
+      </div>
+
+      <h1>Settings Reference</h1>
+      <p>Complete reference for every setting in Obsilo Agent. Open via Obsidian Settings → Obsilo Agent.</p>
+
+      <!-- PROVIDERS -->
+      <h2 id="providers">Providers</h2>
+
+      <h3 id="models-tab">Models</h3>
+      <table>
+        <thead><tr><th>Setting</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>Active Models list</td><td>List of all configured models. Each entry shows provider, name, and enabled status.</td></tr>
+          <tr><td>Add Custom Model</td><td>Add a new model with any provider type. Set name, provider, API key, base URL, temperature, max tokens.</td></tr>
+          <tr><td>Global Custom Instructions</td><td>Text appended to the system prompt for ALL modes. Use for universal formatting rules, language preferences, etc.</td></tr>
+          <tr><td>Default Model</td><td>The model selected by default in new chats. Set by enabling and selecting a model.</td></tr>
+        </tbody>
+      </table>
+
+      <h3 id="embeddings-tab">Embeddings</h3>
+      <table>
+        <thead><tr><th>Setting</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>Embedding Model</td><td>Model used to generate vectors for semantic search. Changing this requires rebuilding the index.</td></tr>
+          <tr><td>Add Custom Embedding Model</td><td>Add a Xenova/transformers model by name or an API-based embedding model.</td></tr>
+        </tbody>
+      </table>
+
+      <!-- AGENT BEHAVIOUR -->
+      <h2 id="behaviour">Agent Behaviour</h2>
+
+      <h3 id="modes-tab">Modes</h3>
+      <table>
+        <thead><tr><th>Setting</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>Built-in modes</td><td>Ask and Agent modes are always present. Their role definitions can be viewed but not edited.</td></tr>
+          <tr><td>Custom Modes list</td><td>User-created modes (vault or global scope).</td></tr>
+          <tr><td>New Mode</td><td>Create a custom mode with slug, name, icon, description, role definition, custom instructions, tool groups, and scope.</td></tr>
+          <tr><td>Per-mode Model</td><td>Override the default model for a specific mode.</td></tr>
+          <tr><td>Per-mode Tools</td><td>Restrict available tools to a subset of the mode's tool groups.</td></tr>
+          <tr><td>Per-mode MCP Servers</td><td>Whitelist specific MCP servers for this mode.</td></tr>
+          <tr><td>Forced Skills</td><td>Skills always injected for this mode regardless of keyword matching.</td></tr>
+          <tr><td>Forced Workflow</td><td>Workflow applied to every message in this mode (unless message starts with /).</td></tr>
+        </tbody>
+      </table>
+
+      <h3 id="permissions-tab">Permissions</h3>
+      <table>
+        <thead><tr><th>Setting</th><th>Default</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>Enable Auto-Approval</td><td>Off</td><td>Master toggle. When off, every operation requires manual approval.</td></tr>
+          <tr><td>Show quick-toggle bar in chat</td><td>On</td><td>Display permission toggles at the top of the chat view.</td></tr>
+          <tr><td>Read operations</td><td>Auto-approved</td><td>read_file, list_files, search_files, and vault intelligence tools.</td></tr>
+          <tr><td>Note edits</td><td>Manual</td><td>write_file, edit_file, append_to_file, update_frontmatter.</td></tr>
+          <tr><td>Vault changes</td><td>Manual</td><td>create_folder, delete_file, move_file.</td></tr>
+          <tr><td>Web operations</td><td>Manual</td><td>web_fetch, web_search.</td></tr>
+          <tr><td>MCP tools</td><td>Manual</td><td>use_mcp_tool.</td></tr>
+          <tr><td>Mode switching</td><td>Manual</td><td>switch_mode.</td></tr>
+          <tr><td>Subtasks</td><td>Manual</td><td>new_task (spawn sub-agents).</td></tr>
+          <tr><td>Questions</td><td>Auto-approved</td><td>ask_followup_question (shows question card directly without approval step).</td></tr>
+          <tr><td>Todo updates</td><td>Auto-approved</td><td>update_todo_list.</td></tr>
+        </tbody>
+      </table>
+
+      <h3 id="loop-tab">Loop</h3>
+      <table>
+        <thead><tr><th>Setting</th><th>Default</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>Consecutive Mistake Limit</td><td>3</td><td>Stop the agent after N consecutive tool errors. 0 = disabled.</td></tr>
+          <tr><td>Rate Limit (ms)</td><td>0</td><td>Minimum milliseconds between API iterations. 0 = no limit. Use to avoid rate limit errors.</td></tr>
+          <tr><td>Context Condensing</td><td>Off</td><td>Automatically summarize conversation when estimated tokens exceed the threshold.</td></tr>
+          <tr><td>Condensing Threshold</td><td>80%</td><td>% of the model's context window at which to trigger condensing (50–95).</td></tr>
+          <tr><td>Power Steering Frequency</td><td>0</td><td>Inject a mode-role reminder every N iterations to keep the agent on task. 0 = disabled.</td></tr>
+        </tbody>
+      </table>
+
+      <h3 id="rules-tab">Rules</h3>
+      <table>
+        <thead><tr><th>Setting</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>Rules list</td><td>All .md and .txt files in .obsidian-agent/rules/. Toggle each on/off.</td></tr>
+          <tr><td>New Rule</td><td>Create a new rule file with an inline editor.</td></tr>
+          <tr><td>Edit / Delete</td><td>Manage existing rule files.</td></tr>
+        </tbody>
+      </table>
+
+      <h3 id="workflows-tab">Workflows</h3>
+      <table>
+        <thead><tr><th>Setting</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>Workflows list</td><td>All .md and .txt files in .obsidian-agent/workflows/. Toggle each on/off. Shows the slash command slug.</td></tr>
+          <tr><td>New Workflow</td><td>Create a new workflow file with an inline editor.</td></tr>
+          <tr><td>Edit / Delete</td><td>Manage existing workflow files.</td></tr>
+        </tbody>
+      </table>
+
+      <h3 id="skills-tab">Skills</h3>
+      <table>
+        <thead><tr><th>Setting</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>Skills list</td><td>All discovered SKILL.md files. Shows name, description (used for keyword matching), and match count.</td></tr>
+          <tr><td>New Skill</td><td>Create a new skill folder and SKILL.md file.</td></tr>
+          <tr><td>Edit Description</td><td>Update the keyword-matching description without editing the skill file directly.</td></tr>
+        </tbody>
+      </table>
+
+      <h3 id="prompts-tab">Prompts</h3>
+      <table>
+        <thead><tr><th>Setting</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>Custom Prompts list</td><td>All user-defined slash-command prompt templates.</td></tr>
+          <tr><td>Name</td><td>Display name for the prompt.</td></tr>
+          <tr><td>Slug</td><td>The /slug used to invoke the prompt.</td></tr>
+          <tr><td>Content</td><td>Prompt template text. Supports {{userInput}} and {{activeFile}} variables.</td></tr>
+          <tr><td>Enabled</td><td>Toggle: shown in autocomplete and functional when enabled.</td></tr>
+          <tr><td>Mode Restriction</td><td>Optional: only show this prompt in a specific mode.</td></tr>
+        </tbody>
+      </table>
+
+      <h3 id="mcp-tab">MCP</h3>
+      <table>
+        <thead><tr><th>Setting</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>MCP Servers list</td><td>All configured servers with name, type, and connection status.</td></tr>
+          <tr><td>Add Server</td><td>Add a new MCP server configuration.</td></tr>
+          <tr><td>Active Servers whitelist</td><td>Restrict which configured servers are globally active. Empty = all allowed.</td></tr>
+          <tr><td>Connect / Disconnect</td><td>Manually connect or disconnect a server.</td></tr>
+        </tbody>
+      </table>
+
+      <!-- VAULT -->
+      <h2 id="vault">Vault</h2>
+
+      <h3 id="semantic-index">Semantic Index</h3>
+      <table>
+        <thead><tr><th>Setting</th><th>Default</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>Enable Semantic Index</td><td>Off</td><td>Master toggle for semantic search. Must be on for semantic_search tool to work.</td></tr>
+          <tr><td>Auto-Index</td><td>never</td><td>When to automatically rebuild: "startup", "mode-switch", or "never".</td></tr>
+          <tr><td>Auto-Index on Change</td><td>Off</td><td>Re-index files as they change. Can cause UI lag with local models on large vaults.</td></tr>
+          <tr><td>Build Index</td><td>—</td><td>Button: start a full (incremental) index build now.</td></tr>
+          <tr><td>Chunk Size</td><td>2000</td><td>Target characters per chunk. Smaller = more precise. Changing requires full rebuild.</td></tr>
+          <tr><td>Batch Size</td><td>20</td><td>Files per disk commit during indexing.</td></tr>
+          <tr><td>Excluded Folders</td><td>—</td><td>Comma-separated folders to skip (e.g., "Templates, Archive").</td></tr>
+          <tr><td>Index PDFs</td><td>Off</td><td>Extract and index text from PDF files.</td></tr>
+          <tr><td>HyDE</td><td>Off</td><td>Generate hypothetical document before query. Costs 1 extra LLM call per search.</td></tr>
+          <tr><td>Storage Location</td><td>obsidian-sync</td><td>"obsidian-sync" = syncs with Obsidian Sync; "local" = device-only.</td></tr>
+        </tbody>
+      </table>
+
+      <h3 id="checkpoints-settings">Checkpoints</h3>
+      <table>
+        <thead><tr><th>Setting</th><th>Default</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>Enable Checkpoints</td><td>On</td><td>Take automatic snapshots before task write operations.</td></tr>
+          <tr><td>Checkpoint Timeout</td><td>30s</td><td>Max time to wait for a snapshot. If exceeded, task continues without checkpoint.</td></tr>
+          <tr><td>Auto-cleanup</td><td>On</td><td>Remove old checkpoints automatically.</td></tr>
+        </tbody>
+      </table>
+
+      <h3 id="chat-history-settings">Chat History</h3>
+      <table>
+        <thead><tr><th>Setting</th><th>Default</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>Chat History Folder</td><td>(empty)</td><td>Vault folder to save conversations to. Empty = disabled. Creates JSON files per conversation.</td></tr>
+        </tbody>
+      </table>
+
+      <h3 id="web-search-settings">Web Search</h3>
+      <table>
+        <thead><tr><th>Setting</th><th>Default</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>Enable Web Tools</td><td>Off</td><td>Enable web_fetch and web_search tools.</td></tr>
+          <tr><td>Search Provider</td><td>none</td><td>"brave", "tavily", or "none" (web_search disabled if none).</td></tr>
+          <tr><td>Brave API Key</td><td>—</td><td>API key for Brave Search.</td></tr>
+          <tr><td>Tavily API Key</td><td>—</td><td>API key for Tavily Search.</td></tr>
+        </tbody>
+      </table>
+
+      <!-- ADVANCED -->
+      <h2 id="advanced">Advanced</h2>
+
+      <h3 id="interface-tab">Interface</h3>
+      <table>
+        <thead><tr><th>Setting</th><th>Default</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>Sidebar Position</td><td>right</td><td>"left" or "right" — which side the Obsilo panel appears on.</td></tr>
+          <tr><td>Press Enter to send</td><td>On</td><td>When on, Enter sends the message and Shift+Enter inserts a newline. When off, Ctrl/Cmd+Enter sends.</td></tr>
+          <tr><td>Auto-add active file context</td><td>On</td><td>Automatically include the currently open note as context in every message.</td></tr>
+          <tr><td>Show welcome message</td><td>On</td><td>Show a welcome message when the sidebar first opens.</td></tr>
+          <tr><td>Include current time in context</td><td>On</td><td>Inject today's date and time into the system prompt.</td></tr>
+        </tbody>
+      </table>
+
+      <h3 id="logs-tab">Logs</h3>
+      <p>View the operation audit trail. Logs are JSONL files at <code>.obsidian/plugins/obsidian-agent/logs/YYYY-MM-DD.jsonl</code>. Select a date to view that day's log. Retained for 30 days.</p>
+
+      <h3 id="backup-tab">Backup</h3>
+      <p>Browse and restore from task checkpoints. Each entry shows the task, timestamp, and files changed. Use Preview to see a diff and Restore to revert those files.</p>
+
+      <h3 id="debug-tab">Debug</h3>
+      <table>
+        <thead><tr><th>Setting</th><th>Default</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>Debug Mode</td><td>Off</td><td>Enable verbose console logging for troubleshooting. Output visible in Obsidian developer tools (Ctrl+Shift+I).</td></tr>
+        </tbody>
+      </table>
+
+      <div class="page-nav">
+        <a href="checkpoints.html" class="page-nav-item">
+          <span class="page-nav-label">Previous</span>
+          <span class="page-nav-title">← Checkpoints</span>
+        </a>
+        <span></span>
+      </div>
+    </article>
+  </main>
+</div>
+
+<footer class="footer">
+  <p>Obsilo Agent — Apache 2.0 License &nbsp;·&nbsp; <a href="https://github.com/yourusername/obsidian-agent">GitHub</a></p>
+</footer>
+</body>
+</html>

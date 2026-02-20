@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tools Reference — Obsilo Agent Docs</title>
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <a href="index.html" class="logo"><div class="logo-icon">O</div>Obsilo Agent</a>
+  <div class="spacer"></div>
+  <nav class="header-links">
+    <a href="index.html">Home</a>
+    <a href="tools.html">Tools</a>
+    <a href="https://github.com/yourusername/obsidian-agent" class="github-btn">GitHub</a>
+  </nav>
+</header>
+
+<div class="docs-layout">
+  <aside class="docs-sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Get Started</div>
+      <nav class="sidebar-nav"><a href="getting-started.html">Getting Started</a></nav>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Using Obsilo</div>
+      <nav class="sidebar-nav">
+        <a href="chat-interface.html">Chat Interface</a>
+        <a href="modes.html">Modes</a>
+        <a href="permissions.html">Permissions &amp; Safety</a>
+      </nav>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Context &amp; Knowledge</div>
+      <nav class="sidebar-nav">
+        <a href="rules-skills-workflows.html">Rules, Skills &amp; Workflows</a>
+        <a href="semantic-search.html">Semantic Search</a>
+      </nav>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Reference</div>
+      <nav class="sidebar-nav">
+        <a href="tools.html" class="active">Tools Reference</a>
+        <a href="providers.html">Providers &amp; Models</a>
+        <a href="mcp-servers.html">MCP Servers</a>
+        <a href="checkpoints.html">Checkpoints</a>
+        <a href="settings-reference.html">Settings Reference</a>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="docs-main">
+    <article class="docs-content">
+      <div class="breadcrumb">
+        <a href="index.html">Docs</a> <span class="breadcrumb-sep">›</span>
+        Reference <span class="breadcrumb-sep">›</span>
+        Tools Reference
+      </div>
+
+      <h1>Tools Reference</h1>
+      <p>Complete reference for all 30+ tools available to Obsilo Agent. Tools are grouped by category, which maps to the tool group permission system.</p>
+
+      <!-- READ -->
+      <h2 id="read">Read Tools</h2>
+      <p>These tools are read-only and are in the <code>read</code> tool group. Auto-approved by default.</p>
+
+      <div class="tool-grid">
+        <div class="tool-card">
+          <span class="tool-group-badge badge-read">read</span>
+          <div class="tool-name">read_file</div>
+          <div class="tool-desc">Read the complete content of a file. Always call this before editing an existing file.</div>
+        </div>
+        <div class="tool-card">
+          <span class="tool-group-badge badge-read">read</span>
+          <div class="tool-name">list_files</div>
+          <div class="tool-desc">List files and folders in a directory. Use "/" for the vault root. Optional recursive parameter.</div>
+        </div>
+        <div class="tool-card">
+          <span class="tool-group-badge badge-read">read</span>
+          <div class="tool-name">search_files</div>
+          <div class="tool-desc">Full-text and regex search across files. Returns matching lines with file path and line number. Supports file_pattern glob filter.</div>
+        </div>
+      </div>
+
+      <h3>Parameters: read_file</h3>
+      <table>
+        <thead><tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>path</code></td><td>string</td><td>yes</td><td>Vault-relative path to the file (e.g., "Projects/plan.md")</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Parameters: list_files</h3>
+      <table>
+        <thead><tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>path</code></td><td>string</td><td>yes</td><td>Directory path. Use "/" for vault root</td></tr>
+          <tr><td><code>recursive</code></td><td>boolean</td><td>no</td><td>Include subdirectory contents (default: false)</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Parameters: search_files</h3>
+      <table>
+        <thead><tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>path</code></td><td>string</td><td>yes</td><td>Directory to search in</td></tr>
+          <tr><td><code>pattern</code></td><td>string</td><td>yes</td><td>Text or regex pattern to search for</td></tr>
+          <tr><td><code>file_pattern</code></td><td>string</td><td>no</td><td>Glob pattern to filter files (e.g., "*.md")</td></tr>
+        </tbody>
+      </table>
+
+      <!-- VAULT -->
+      <h2 id="vault">Vault Intelligence Tools</h2>
+      <p>These tools are read-only metadata and search operations. In the <code>vault</code> tool group. Auto-approved by default.</p>
+
+      <div class="tool-grid">
+        <div class="tool-card">
+          <span class="tool-group-badge badge-vault">vault</span>
+          <div class="tool-name">get_vault_stats</div>
+          <div class="tool-desc">Returns a vault overview: total notes, folder tree, top tags, recently modified files. No parameters needed.</div>
+        </div>
+        <div class="tool-card">
+          <span class="tool-group-badge badge-vault">vault</span>
+          <div class="tool-name">get_frontmatter</div>
+          <div class="tool-desc">Read all YAML frontmatter fields of a note (tags, aliases, dates, custom properties).</div>
+        </div>
+        <div class="tool-card">
+          <span class="tool-group-badge badge-vault">vault</span>
+          <div class="tool-name">search_by_tag</div>
+          <div class="tool-desc">Find all notes with given tags. Supports AND or OR matching. Tags with or without # both work.</div>
+        </div>
+        <div class="tool-card">
+          <span class="tool-group-badge badge-vault">vault</span>
+          <div class="tool-name">get_linked_notes</div>
+          <div class="tool-desc">Get forward links and backlinks for a note. Direction: "both" (default), "forward", or "backlinks".</div>
+        </div>
+        <div class="tool-card">
+          <span class="tool-group-badge badge-vault">vault</span>
+          <div class="tool-name">get_daily_note</div>
+          <div class="tool-desc">Read a daily note. offset=0 (today), -1 (yesterday), 1 (tomorrow). create=true creates it if missing.</div>
+        </div>
+        <div class="tool-card">
+          <span class="tool-group-badge badge-vault">vault</span>
+          <div class="tool-name">open_note</div>
+          <div class="tool-desc">Open a note in the Obsidian editor view. Use after creating or editing a note to bring it into focus.</div>
+        </div>
+        <div class="tool-card">
+          <span class="tool-group-badge badge-vault">vault</span>
+          <div class="tool-name">semantic_search</div>
+          <div class="tool-desc">Hybrid semantic + keyword search. Finds notes by meaning. Requires Semantic Index to be built. Supports folder, tag, and date filters.</div>
+        </div>
+        <div class="tool-card">
+          <span class="tool-group-badge badge-vault">vault</span>
+          <div class="tool-name">query_base</div>
+          <div class="tool-desc">Query an Obsidian Bases (.base) file. Returns the notes matching the view's filter conditions.</div>
+        </div>
+      </div>
+
+      <h3>Parameters: semantic_search</h3>
+      <table>
+        <thead><tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>query</code></td><td>string</td><td>yes</td><td>Natural language search query</td></tr>
+          <tr><td><code>top_k</code></td><td>number</td><td>no</td><td>Max results to return (default: 8, max: 20)</td></tr>
+          <tr><td><code>folder</code></td><td>string</td><td>no</td><td>Restrict results to notes in this folder (prefix match)</td></tr>
+          <tr><td><code>tags</code></td><td>string[]</td><td>no</td><td>Only return notes that have ANY of these tags</td></tr>
+          <tr><td><code>since</code></td><td>string</td><td>no</td><td>Only return notes modified on or after this date (ISO format: "2025-01-01")</td></tr>
+        </tbody>
+      </table>
+
+      <!-- EDIT -->
+      <h2 id="edit">Writing &amp; Editing Tools</h2>
+      <p>These tools modify vault files and require approval (or auto-approval). In the <code>edit</code> tool group.</p>
+
+      <div class="tool-grid">
+        <div class="tool-card">
+          <span class="tool-group-badge badge-edit">edit</span>
+          <div class="tool-name">write_file</div>
+          <div class="tool-desc">Create a new file or completely replace an existing file's content. Preferred for new notes or full rewrites.</div>
+        </div>
+        <div class="tool-card">
+          <span class="tool-group-badge badge-edit">edit</span>
+          <div class="tool-name">edit_file</div>
+          <div class="tool-desc">Replace a specific string in an existing file. Safer than write_file for targeted changes — preserves surrounding content.</div>
+        </div>
+        <div class="tool-card">
+          <span class="tool-group-badge badge-edit">edit</span>
+          <div class="tool-name">append_to_file</div>
+          <div class="tool-desc">Append content to the end of a file. Ideal for daily notes, logs, and additive entries. Optional separator before appended content.</div>
+        </div>
+        <div class="tool-card">
+          <span class="tool-group-badge badge-edit">edit</span>
+          <div class="tool-name">update_frontmatter</div>
+          <div class="tool-desc">Set or update YAML frontmatter fields. Preserves all existing fields. Creates frontmatter if none exists.</div>
+        </div>
+        <div class="tool-card">
+          <span class="tool-group-badge badge-edit">edit</span>
+          <div class="tool-name">create_folder</div>
+          <div class="tool-desc">Create a folder, including all parent folders in the path.</div>
+        </div>
+        <div class="tool-card">
+          <span class="tool-group-badge badge-edit">edit</span>
+          <div class="tool-name">delete_file</div>
+          <div class="tool-desc">Move a file or empty folder to the Obsidian trash (recoverable). Does not permanently delete.</div>
+        </div>
+        <div class="tool-card">
+          <span class="tool-group-badge badge-edit">edit</span>
+          <div class="tool-name">move_file</div>
+          <div class="tool-desc">Move or rename a file or folder. Updates wikilinks automatically via Obsidian's link resolver.</div>
+        </div>
+      </div>
+
+      <h3>Parameters: edit_file</h3>
+      <table>
+        <thead><tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>path</code></td><td>string</td><td>yes</td><td>Vault-relative file path</td></tr>
+          <tr><td><code>old_str</code></td><td>string</td><td>yes</td><td>Exact string to replace (including whitespace). Must match exactly.</td></tr>
+          <tr><td><code>new_str</code></td><td>string</td><td>yes</td><td>Replacement string</td></tr>
+          <tr><td><code>expected_replacements</code></td><td>number</td><td>no</td><td>If set, fails if the count of replacements doesn't match (safety check)</td></tr>
+        </tbody>
+      </table>
+
+      <!-- ADVANCED VAULT -->
+      <h2 id="advanced">Advanced Vault Tools</h2>
+
+      <div class="tool-grid">
+        <div class="tool-card">
+          <span class="tool-group-badge badge-edit">edit</span>
+          <div class="tool-name">generate_canvas</div>
+          <div class="tool-desc">Create an Obsidian Canvas (.canvas) file visualizing notes and their connections. Supports folder, tag, backlinks, and manual file list modes.</div>
+        </div>
+        <div class="tool-card">
+          <span class="tool-group-badge badge-edit">edit</span>
+          <div class="tool-name">create_base</div>
+          <div class="tool-desc">Create an Obsidian Bases (.base) database view file with configurable filters, columns, and sort order.</div>
+        </div>
+        <div class="tool-card">
+          <span class="tool-group-badge badge-edit">edit</span>
+          <div class="tool-name">update_base</div>
+          <div class="tool-desc">Add or replace a named view in an existing Bases file.</div>
+        </div>
+      </div>
+
+      <h3>Parameters: generate_canvas</h3>
+      <table>
+        <thead><tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>output_path</code></td><td>string</td><td>yes</td><td>Path for the output .canvas file</td></tr>
+          <tr><td><code>mode</code></td><td>string</td><td>yes</td><td>"folder" | "tag" | "backlinks" | "files"</td></tr>
+          <tr><td><code>source</code></td><td>string</td><td>no</td><td>For folder/tag mode: folder path or tag name</td></tr>
+          <tr><td><code>files</code></td><td>string[]</td><td>no</td><td>For files mode: explicit list of file paths</td></tr>
+          <tr><td><code>max_notes</code></td><td>number</td><td>no</td><td>Max notes to include (default: 20)</td></tr>
+          <tr><td><code>draw_edges</code></td><td>boolean</td><td>no</td><td>Draw edges for wikilink connections (default: true)</td></tr>
+        </tbody>
+      </table>
+
+      <!-- WEB -->
+      <h2 id="web">Web Tools</h2>
+      <p>Require Web Tools to be enabled in Settings → Web Search. In the <code>web</code> tool group.</p>
+
+      <div class="tool-grid">
+        <div class="tool-card">
+          <span class="tool-group-badge badge-web">web</span>
+          <div class="tool-name">web_fetch</div>
+          <div class="tool-desc">Fetch a URL and return its content as Markdown. Handles pagination via startIndex. Max 20,000 chars by default.</div>
+        </div>
+        <div class="tool-card">
+          <span class="tool-group-badge badge-web">web</span>
+          <div class="tool-name">web_search</div>
+          <div class="tool-desc">Search the web and return titles, URLs, and snippets. Requires Brave or Tavily API key. Follow up with web_fetch to read full pages.</div>
+        </div>
+      </div>
+
+      <!-- AGENT -->
+      <h2 id="agent">Agent Control Tools</h2>
+      <p>These tools control the agent loop. In the <code>agent</code> tool group.</p>
+
+      <div class="tool-grid">
+        <div class="tool-card">
+          <span class="tool-group-badge badge-agent">agent</span>
+          <div class="tool-name">ask_followup_question</div>
+          <div class="tool-desc">Ask the user a clarifying question with optional answer choices. Pauses the loop until the user responds.</div>
+        </div>
+        <div class="tool-card">
+          <span class="tool-group-badge badge-agent">agent</span>
+          <div class="tool-name">attempt_completion</div>
+          <div class="tool-desc">Signal that the task is complete. Call this AFTER streaming your full response as text. The result field is an internal log entry, not shown to the user.</div>
+        </div>
+        <div class="tool-card">
+          <span class="tool-group-badge badge-agent">agent</span>
+          <div class="tool-name">update_todo_list</div>
+          <div class="tool-desc">Publish a task plan as a visible checklist. Use only for tasks with 3+ distinct steps. Statuses: pending ([ ]), in-progress ([~]), done ([x]).</div>
+        </div>
+        <div class="tool-card">
+          <span class="tool-group-badge badge-agent">agent</span>
+          <div class="tool-name">switch_mode</div>
+          <div class="tool-desc">Switch the active mode mid-conversation. Requires user approval by default.</div>
+        </div>
+        <div class="tool-card">
+          <span class="tool-group-badge badge-agent">agent</span>
+          <div class="tool-name">new_task</div>
+          <div class="tool-desc">Spawn a sub-agent in a fresh context. Available in Agent mode only. Pass all necessary context in the message — the sub-agent cannot see this conversation.</div>
+        </div>
+      </div>
+
+      <h3>Parameters: new_task</h3>
+      <table>
+        <thead><tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>mode</code></td><td>string</td><td>yes</td><td>"agent" or "ask" (or any custom mode slug)</td></tr>
+          <tr><td><code>message</code></td><td>string</td><td>yes</td><td>Full task description with all necessary context</td></tr>
+        </tbody>
+      </table>
+
+      <!-- MCP -->
+      <h2 id="mcp">MCP Tool</h2>
+
+      <div class="tool-grid">
+        <div class="tool-card">
+          <span class="tool-group-badge badge-mcp">mcp</span>
+          <div class="tool-name">use_mcp_tool</div>
+          <div class="tool-desc">Call a tool on a configured MCP server. Tool names and descriptions are dynamically listed in the system prompt from connected servers.</div>
+        </div>
+      </div>
+
+      <h3>Parameters: use_mcp_tool</h3>
+      <table>
+        <thead><tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>server_name</code></td><td>string</td><td>yes</td><td>Name of the configured MCP server</td></tr>
+          <tr><td><code>tool_name</code></td><td>string</td><td>yes</td><td>Name of the tool to call on that server</td></tr>
+          <tr><td><code>arguments</code></td><td>object</td><td>yes</td><td>Tool arguments as key-value pairs (schema from server)</td></tr>
+        </tbody>
+      </table>
+
+      <div class="page-nav">
+        <a href="semantic-search.html" class="page-nav-item">
+          <span class="page-nav-label">Previous</span>
+          <span class="page-nav-title">← Semantic Search</span>
+        </a>
+        <a href="providers.html" class="page-nav-item next">
+          <span class="page-nav-label">Next</span>
+          <span class="page-nav-title">Providers &amp; Models →</span>
+        </a>
+      </div>
+    </article>
+  </main>
+</div>
+
+<footer class="footer">
+  <p>Obsilo Agent — Apache 2.0 License &nbsp;·&nbsp; <a href="https://github.com/yourusername/obsidian-agent">GitHub</a></p>
+</footer>
+</body>
+</html>

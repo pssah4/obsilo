@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Checkpoints — Obsilo Agent Docs</title>
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <a href="index.html" class="logo"><div class="logo-icon">O</div>Obsilo Agent</a>
+  <div class="spacer"></div>
+  <nav class="header-links">
+    <a href="index.html">Home</a>
+    <a href="tools.html">Tools</a>
+    <a href="https://github.com/yourusername/obsidian-agent" class="github-btn">GitHub</a>
+  </nav>
+</header>
+
+<div class="docs-layout">
+  <aside class="docs-sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Get Started</div>
+      <nav class="sidebar-nav"><a href="getting-started.html">Getting Started</a></nav>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Using Obsilo</div>
+      <nav class="sidebar-nav">
+        <a href="chat-interface.html">Chat Interface</a>
+        <a href="modes.html">Modes</a>
+        <a href="permissions.html">Permissions &amp; Safety</a>
+      </nav>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Context &amp; Knowledge</div>
+      <nav class="sidebar-nav">
+        <a href="rules-skills-workflows.html">Rules, Skills &amp; Workflows</a>
+        <a href="semantic-search.html">Semantic Search</a>
+      </nav>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Reference</div>
+      <nav class="sidebar-nav">
+        <a href="tools.html">Tools Reference</a>
+        <a href="providers.html">Providers &amp; Models</a>
+        <a href="mcp-servers.html">MCP Servers</a>
+        <a href="checkpoints.html" class="active">Checkpoints</a>
+        <a href="settings-reference.html">Settings Reference</a>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="docs-main">
+    <article class="docs-content">
+      <div class="breadcrumb">
+        <a href="index.html">Docs</a> <span class="breadcrumb-sep">›</span>
+        Reference <span class="breadcrumb-sep">›</span>
+        Checkpoints
+      </div>
+
+      <h1>Checkpoints</h1>
+      <p>Checkpoints give you a safety net for every agent task. Before the first write operation in a task, Obsilo automatically takes a snapshot of all tracked files. If something goes wrong, you can restore to that snapshot with one click.</p>
+
+      <h2 id="how-it-works">How It Works</h2>
+      <p>Obsilo maintains a <strong>shadow git repository</strong> at:</p>
+      <pre><code>.obsidian/plugins/obsidian-agent/checkpoints/</code></pre>
+      <p>This is separate from your vault's own git history (if you use git for your vault). It uses <strong>isomorphic-git</strong> — a pure JavaScript git implementation that requires no native git binary.</p>
+
+      <h3>Checkpoint Lifecycle</h3>
+      <ol class="steps">
+        <li>
+          <strong>Task starts</strong> — you send a message and the agent begins working
+        </li>
+        <li>
+          <strong>First write detected</strong> — before executing the first <code>write_file</code>, <code>edit_file</code>, <code>delete_file</code>, or similar operation, Obsilo takes a snapshot of all currently-tracked files
+        </li>
+        <li>
+          <strong>Task completes</strong> — the checkpoint is retained and listed in Settings → Backup
+        </li>
+        <li>
+          <strong>Auto-cleanup</strong> (if enabled) — old checkpoints beyond the retention limit are removed
+        </li>
+      </ol>
+
+      <h2 id="what-is-tracked">What Gets Tracked</h2>
+      <p>The shadow repo tracks all files that the agent has read or written in previous tasks. On the first snapshot, it also includes all files in the vault root (excluding ignored paths). This means:</p>
+      <ul>
+        <li>Any file the agent has touched can be restored</li>
+        <li>Files in <code>.obsidian-agentignore</code> are not tracked</li>
+        <li>The checkpoint doesn't restore files to a vault-wide snapshot — it restores <em>only the files changed in that task</em></li>
+      </ul>
+
+      <h2 id="restoring">Restoring from a Checkpoint</h2>
+      <ol class="steps">
+        <li>Go to Settings → Advanced → <strong>Backup</strong></li>
+        <li>You'll see a list of checkpoints, ordered by date, with the task that created them</li>
+        <li>Click <strong>Preview</strong> on a checkpoint to see a diff of what changed</li>
+        <li>Click <strong>Restore</strong> to revert the files changed in that task back to their pre-task state</li>
+      </ol>
+
+      <div class="callout callout-warning">
+        <strong>Restore only affects changed files</strong>
+        Restoring a checkpoint reverts <em>only the files that were modified in that specific task</em> — not the entire vault. Files created by the task are moved to trash; files edited are restored to their pre-edit content.
+      </div>
+
+      <h2 id="configuration">Configuration</h2>
+      <p>In Settings → Vault → <strong>Checkpoints</strong>:</p>
+
+      <table>
+        <thead><tr><th>Setting</th><th>Default</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>Enable Checkpoints</td><td>On</td><td>Master toggle. When off, no snapshots are taken and restore is unavailable.</td></tr>
+          <tr><td>Checkpoint Timeout</td><td>30 seconds</td><td>Maximum time to wait for a snapshot to complete. If exceeded, the task continues without a checkpoint.</td></tr>
+          <tr><td>Auto-cleanup</td><td>On</td><td>Automatically remove old checkpoints to save disk space.</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="vs-vault-git">Checkpoints vs. Your Vault's Git</h2>
+      <p>If you already use git for your vault, you might wonder why Obsilo has its own checkpoint system. The reasons:</p>
+      <ul>
+        <li><strong>Non-invasive</strong>: Checkpoints don't pollute your vault's git history with agent commits</li>
+        <li><strong>No git required</strong>: Works even if you don't use git for your vault at all</li>
+        <li><strong>Automatic</strong>: Happens without any user action — no need to remember to commit before each agent task</li>
+        <li><strong>Scoped</strong>: Restores only the files a specific task touched, not the whole vault</li>
+        <li><strong>Task-linked</strong>: Each checkpoint is linked to the conversation that created it, making it easy to understand what changed and why</li>
+      </ul>
+
+      <h2 id="disk-usage">Disk Usage</h2>
+      <p>The shadow repo uses standard git compression. For most vaults, each checkpoint adds a few kilobytes. With auto-cleanup enabled, old checkpoints are pruned automatically. You can also manually clear checkpoints from Settings → Backup.</p>
+
+      <div class="page-nav">
+        <a href="mcp-servers.html" class="page-nav-item">
+          <span class="page-nav-label">Previous</span>
+          <span class="page-nav-title">← MCP Servers</span>
+        </a>
+        <a href="settings-reference.html" class="page-nav-item next">
+          <span class="page-nav-label">Next</span>
+          <span class="page-nav-title">Settings Reference →</span>
+        </a>
+      </div>
+    </article>
+  </main>
+</div>
+
+<footer class="footer">
+  <p>Obsilo Agent — Apache 2.0 License &nbsp;·&nbsp; <a href="https://github.com/yourusername/obsidian-agent">GitHub</a></p>
+</footer>
+</body>
+</html>

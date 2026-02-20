@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MCP Servers — Obsilo Agent Docs</title>
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <a href="index.html" class="logo"><div class="logo-icon">O</div>Obsilo Agent</a>
+  <div class="spacer"></div>
+  <nav class="header-links">
+    <a href="index.html">Home</a>
+    <a href="tools.html">Tools</a>
+    <a href="https://github.com/yourusername/obsidian-agent" class="github-btn">GitHub</a>
+  </nav>
+</header>
+
+<div class="docs-layout">
+  <aside class="docs-sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Get Started</div>
+      <nav class="sidebar-nav"><a href="getting-started.html">Getting Started</a></nav>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Using Obsilo</div>
+      <nav class="sidebar-nav">
+        <a href="chat-interface.html">Chat Interface</a>
+        <a href="modes.html">Modes</a>
+        <a href="permissions.html">Permissions &amp; Safety</a>
+      </nav>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Context &amp; Knowledge</div>
+      <nav class="sidebar-nav">
+        <a href="rules-skills-workflows.html">Rules, Skills &amp; Workflows</a>
+        <a href="semantic-search.html">Semantic Search</a>
+      </nav>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Reference</div>
+      <nav class="sidebar-nav">
+        <a href="tools.html">Tools Reference</a>
+        <a href="providers.html">Providers &amp; Models</a>
+        <a href="mcp-servers.html" class="active">MCP Servers</a>
+        <a href="checkpoints.html">Checkpoints</a>
+        <a href="settings-reference.html">Settings Reference</a>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="docs-main">
+    <article class="docs-content">
+      <div class="breadcrumb">
+        <a href="index.html">Docs</a> <span class="breadcrumb-sep">›</span>
+        Reference <span class="breadcrumb-sep">›</span>
+        MCP Servers
+      </div>
+
+      <h1>MCP Servers</h1>
+      <p>The Model Context Protocol (MCP) lets you connect external tools and data sources to Obsilo Agent. MCP servers expose tools that the agent can call just like built-in tools.</p>
+
+      <h2 id="what-is-mcp">What is MCP?</h2>
+      <p>MCP is an open protocol for connecting AI models to external tools and resources. An MCP server is a small program that exposes a set of tools (with JSON schemas) and executes them when called. Obsilo connects to MCP servers and makes their tools available to the agent via the <code>use_mcp_tool</code> tool.</p>
+      <p>Examples of what MCP servers can provide:</p>
+      <ul>
+        <li>Calendar and task management (Google Calendar, Todoist)</li>
+        <li>Code execution and analysis</li>
+        <li>Database access</li>
+        <li>File system operations outside the vault</li>
+        <li>External API integrations (GitHub, Slack, Notion)</li>
+        <li>Custom automation scripts</li>
+      </ul>
+
+      <h2 id="transports">Supported Transports</h2>
+      <table>
+        <thead><tr><th>Transport</th><th>How it works</th><th>Use case</th></tr></thead>
+        <tbody>
+          <tr><td><strong>stdio</strong></td><td>Obsilo launches a local process and communicates via stdin/stdout</td><td>Local tools, scripts, CLI programs</td></tr>
+          <tr><td><strong>SSE</strong></td><td>Connects to a remote server via Server-Sent Events (HTTP GET)</td><td>Remote services, hosted tools</td></tr>
+          <tr><td><strong>streamable-http</strong></td><td>Bidirectional HTTP streaming</td><td>Modern remote MCP servers</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="adding-server">Adding an MCP Server</h2>
+      <p>Go to Settings → Agent Behaviour → <strong>MCP</strong> and click <strong>Add Server</strong>. Fill in the server configuration:</p>
+
+      <h3>stdio Server (Local Process)</h3>
+      <pre><code>{
+  "type": "stdio",
+  "command": "npx",
+  "args": ["-y", "@modelcontextprotocol/server-filesystem", "/Users/me/Documents"],
+  "env": {
+    "MY_SECRET": "value"
+  },
+  "timeout": 30000,
+  "alwaysAllow": ["read_file", "list_directory"]
+}</code></pre>
+
+      <h3>SSE Server (Remote)</h3>
+      <pre><code>{
+  "type": "sse",
+  "url": "https://my-mcp-server.example.com/sse",
+  "headers": {
+    "Authorization": "Bearer my-token"
+  },
+  "timeout": 30000
+}</code></pre>
+
+      <h3>Streamable HTTP Server</h3>
+      <pre><code>{
+  "type": "streamable-http",
+  "url": "https://my-mcp-server.example.com/mcp",
+  "headers": {
+    "Authorization": "Bearer my-token"
+  }
+}</code></pre>
+
+      <h2 id="configuration-fields">Configuration Fields</h2>
+      <table>
+        <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>type</code></td><td>string</td><td>Transport: "stdio", "sse", or "streamable-http"</td></tr>
+          <tr><td><code>command</code></td><td>string</td><td>(stdio only) The command to run (e.g., "node", "npx", "python")</td></tr>
+          <tr><td><code>args</code></td><td>string[]</td><td>(stdio only) Command arguments</td></tr>
+          <tr><td><code>env</code></td><td>object</td><td>(stdio only) Environment variables injected into the process</td></tr>
+          <tr><td><code>url</code></td><td>string</td><td>(sse/http) Server URL</td></tr>
+          <tr><td><code>headers</code></td><td>object</td><td>(sse/http) HTTP headers (e.g., Authorization)</td></tr>
+          <tr><td><code>timeout</code></td><td>number</td><td>Connection timeout in ms (default: 30000)</td></tr>
+          <tr><td><code>alwaysAllow</code></td><td>string[]</td><td>Tool names on this server that never require user approval</td></tr>
+          <tr><td><code>disabled</code></td><td>boolean</td><td>Temporarily disable this server without removing it</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="popular-servers">Popular MCP Servers</h2>
+
+      <h3>Filesystem</h3>
+      <p>Access files outside the vault:</p>
+      <pre><code>name: "filesystem"
+type: stdio
+command: npx
+args: ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/allow"]</code></pre>
+
+      <h3>Fetch (Web)</h3>
+      <p>Enhanced web fetching with cookie support:</p>
+      <pre><code>name: "fetch"
+type: stdio
+command: npx
+args: ["-y", "@modelcontextprotocol/server-fetch"]</code></pre>
+
+      <h3>GitHub</h3>
+      <p>Access GitHub repositories, issues, and PRs:</p>
+      <pre><code>name: "github"
+type: stdio
+command: npx
+args: ["-y", "@modelcontextprotocol/server-github"]
+env:
+  GITHUB_PERSONAL_ACCESS_TOKEN: "ghp_..."</code></pre>
+
+      <h3>Sqlite</h3>
+      <p>Query and update SQLite databases:</p>
+      <pre><code>name: "sqlite"
+type: stdio
+command: npx
+args: ["-y", "@modelcontextprotocol/server-sqlite", "--db-path", "/path/to/db.sqlite"]</code></pre>
+
+      <h2 id="tool-discovery">Tool Discovery</h2>
+      <p>When Obsilo connects to an MCP server, it automatically queries the server's tool list. All discovered tools are then listed in the agent's system prompt so the agent knows they exist and how to use them. Tools appear as:</p>
+      <pre><code>Connected servers and their tools:
+  - filesystem: read_file — Read complete contents of a file
+  - filesystem: list_directory — List files in a directory
+  - github: create_issue — Create a GitHub issue</code></pre>
+
+      <h2 id="whitelisting">Per-Mode Server Whitelisting</h2>
+      <p>You can restrict which MCP servers are available in specific modes:</p>
+      <ol>
+        <li>Go to Settings → Modes → (edit a mode) → Allowed MCP Servers</li>
+        <li>Select which servers this mode can use</li>
+        <li>If none are selected, all configured servers are allowed</li>
+      </ol>
+      <p>This lets you give a research mode access to a web-search MCP server while restricting other modes from it.</p>
+
+      <h2 id="always-allow">Always-Allow Lists</h2>
+      <p>The <code>alwaysAllow</code> field on a server config lists tool names that never require approval. For example, if you always trust reads from a filesystem server:</p>
+      <pre><code>"alwaysAllow": ["read_file", "list_directory"]</code></pre>
+      <p>All other tools from that server still follow normal approval rules.</p>
+
+      <h2 id="security">Security Considerations</h2>
+      <div class="callout callout-warning">
+        <strong>MCP servers run with system permissions</strong>
+        stdio MCP servers run as local processes with the same permissions as Obsidian. Only connect servers you trust. The MCP tool requires approval by default — enable auto-approval only for trusted servers.
+      </div>
+      <ul>
+        <li>Review what each server's tools can do before enabling auto-approval</li>
+        <li>Use <code>env</code> to pass API keys rather than embedding them in command args</li>
+        <li>Use per-mode whitelisting to limit which modes can access powerful tools</li>
+      </ul>
+
+      <div class="page-nav">
+        <a href="providers.html" class="page-nav-item">
+          <span class="page-nav-label">Previous</span>
+          <span class="page-nav-title">← Providers &amp; Models</span>
+        </a>
+        <a href="checkpoints.html" class="page-nav-item next">
+          <span class="page-nav-label">Next</span>
+          <span class="page-nav-title">Checkpoints →</span>
+        </a>
+      </div>
+    </article>
+  </main>
+</div>
+
+<footer class="footer">
+  <p>Obsilo Agent — Apache 2.0 License &nbsp;·&nbsp; <a href="https://github.com/yourusername/obsidian-agent">GitHub</a></p>
+</footer>
+</body>
+</html>

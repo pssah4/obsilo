@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rules, Skills &amp; Workflows — Obsilo Agent Docs</title>
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <a href="index.html" class="logo"><div class="logo-icon">O</div>Obsilo Agent</a>
+  <div class="spacer"></div>
+  <nav class="header-links">
+    <a href="index.html">Home</a>
+    <a href="tools.html">Tools</a>
+    <a href="https://github.com/yourusername/obsidian-agent" class="github-btn">GitHub</a>
+  </nav>
+</header>
+
+<div class="docs-layout">
+  <aside class="docs-sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Get Started</div>
+      <nav class="sidebar-nav"><a href="getting-started.html">Getting Started</a></nav>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Using Obsilo</div>
+      <nav class="sidebar-nav">
+        <a href="chat-interface.html">Chat Interface</a>
+        <a href="modes.html">Modes</a>
+        <a href="permissions.html">Permissions &amp; Safety</a>
+      </nav>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Context &amp; Knowledge</div>
+      <nav class="sidebar-nav">
+        <a href="rules-skills-workflows.html" class="active">Rules, Skills &amp; Workflows</a>
+        <a href="semantic-search.html">Semantic Search</a>
+      </nav>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Reference</div>
+      <nav class="sidebar-nav">
+        <a href="tools.html">Tools Reference</a>
+        <a href="providers.html">Providers &amp; Models</a>
+        <a href="mcp-servers.html">MCP Servers</a>
+        <a href="checkpoints.html">Checkpoints</a>
+        <a href="settings-reference.html">Settings Reference</a>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="docs-main">
+    <article class="docs-content">
+      <div class="breadcrumb">
+        <a href="index.html">Docs</a> <span class="breadcrumb-sep">›</span>
+        Context &amp; Knowledge <span class="breadcrumb-sep">›</span>
+        Rules, Skills &amp; Workflows
+      </div>
+
+      <h1>Rules, Skills &amp; Workflows</h1>
+      <p>Obsilo has three mechanisms for injecting custom behavior into the agent — each suited to different use cases. Together they let you tailor the agent to your vault, workflow, and personal style.</p>
+
+      <table>
+        <thead><tr><th>Mechanism</th><th>When it applies</th><th>Best for</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Rules</strong></td><td>Always (every message)</td><td>Permanent conventions the agent must always follow</td></tr>
+          <tr><td><strong>Skills</strong></td><td>When keywords match user message</td><td>Context-specific instructions for particular task types</td></tr>
+          <tr><td><strong>Workflows</strong></td><td>When user types <code>/workflow-name</code></td><td>Step-by-step procedures invoked on demand</td></tr>
+          <tr><td><strong>Custom Prompts</strong></td><td>When user types <code>/prompt-slug</code></td><td>Message templates with dynamic variables</td></tr>
+        </tbody>
+      </table>
+
+      <hr>
+
+      <!-- RULES -->
+      <h2 id="rules">Rules</h2>
+      <p>Rules are Markdown files that are always injected into the agent's system prompt as a <code>RULES</code> section. The agent must follow them in every response.</p>
+
+      <h3 id="rules-location">Location</h3>
+      <pre><code>&lt;vault&gt;/.obsidian-agent/rules/</code></pre>
+      <p>Any <code>.md</code> or <code>.txt</code> file in this folder is treated as a rule file.</p>
+
+      <h3 id="rules-example">Example Rules</h3>
+      <p>Create <code>.obsidian-agent/rules/formatting.md</code>:</p>
+      <pre><code>## Formatting Conventions
+
+- Always use ISO 8601 dates (YYYY-MM-DD) in frontmatter, not natural language dates
+- Use [[wikilinks]] for internal note references, not markdown links
+- Every new note must have at least: title, tags, and created date in frontmatter
+- Headers: ## for main sections, ### for subsections — never use # (reserved for note title)
+- Tag style: lowercase, hyphenated — use #machine-learning not #MachineLearning</code></pre>
+
+      <p>Create <code>.obsidian-agent/rules/language.md</code>:</p>
+      <pre><code>Always respond in German. When creating note content, use German unless the
+existing note content is in another language.</code></pre>
+
+      <h3 id="rules-management">Managing Rules</h3>
+      <p>Go to Settings → Agent Behaviour → <strong>Rules</strong>:</p>
+      <ul>
+        <li>Create new rule files with the inline editor</li>
+        <li>Toggle individual rules on/off (disabled rules are not injected)</li>
+        <li>Edit existing rule files</li>
+        <li>Delete rule files</li>
+      </ul>
+      <p>New rules are <strong>enabled by default</strong>. Disable them without deleting by toggling them off.</p>
+
+      <div class="callout callout-note">
+        <strong>Size limit</strong>
+        Each rule file is capped at 50,000 characters to prevent unintentionally large system prompts.
+      </div>
+
+      <hr>
+
+      <!-- SKILLS -->
+      <h2 id="skills">Skills</h2>
+      <p>Skills are modular instruction sets that the agent can apply for specific task types. Unlike rules (which are always active), skills are <strong>automatically matched</strong> to each message by keyword overlap.</p>
+
+      <h3 id="skills-location">Location</h3>
+      <pre><code>&lt;vault&gt;/.obsidian-agent/skills/
+  meeting-notes/
+    SKILL.md
+  literature-review/
+    SKILL.md
+  project-planning/
+    SKILL.md</code></pre>
+      <p>Each skill is a <strong>folder</strong> containing a <code>SKILL.md</code> file.</p>
+
+      <h3 id="skills-format">SKILL.md Format</h3>
+      <pre><code>---
+name: meeting-notes
+description: taking meeting notes, capturing action items, agenda, attendees, follow-up
+---
+
+When writing meeting notes, follow this structure:
+
+## Standard Meeting Note Template
+
+Use these sections:
+- **## Attendees** — list all participants
+- **## Agenda** — planned topics
+- **## Notes** — what was discussed
+- **## Decisions** — explicit decisions made
+- **## Action Items** — format: `- [ ] @person: task (due: YYYY-MM-DD)`
+
+Always link to related projects with [[wikilinks]].
+Create a separate action item note if there are 5+ action items.</code></pre>
+
+      <p>The <strong>frontmatter</strong> is required:</p>
+      <ul>
+        <li><code>name</code> — short identifier (lowercase, hyphens)</li>
+        <li><code>description</code> — words here are used for keyword matching against the user's message</li>
+      </ul>
+
+      <h3 id="skills-matching">Keyword Matching</h3>
+      <p>Before each message, Obsilo checks if any skill's description words overlap with words in the user message (3+ character words, case-insensitive). Matching skills are inlined into the system prompt as an <code>&lt;available_skills&gt;</code> block.</p>
+      <p>For example, if the user writes <em>"Write meeting notes for today's planning call"</em>, the <code>meeting-notes</code> skill (description: "taking meeting notes, capturing action items, agenda...") matches on "meeting", "notes", "planning".</p>
+
+      <h3 id="forced-skills">Forced Skills</h3>
+      <p>In Settings → Modes → (edit mode) → Forced Skills, you can specify skills that are always injected for a specific mode — regardless of keyword matching. Useful when a mode should always apply a particular style or set of conventions.</p>
+
+      <h3 id="skills-management">Managing Skills</h3>
+      <p>Go to Settings → Agent Behaviour → <strong>Skills</strong> to view, edit, and manage your skills. You can also create skill files directly in your vault.</p>
+
+      <hr>
+
+      <!-- WORKFLOWS -->
+      <h2 id="workflows">Workflows</h2>
+      <p>Workflows are step-by-step instruction templates stored as Markdown files. They are invoked with a slash command typed at the start of a message.</p>
+
+      <h3 id="workflows-location">Location</h3>
+      <pre><code>&lt;vault&gt;/.obsidian-agent/workflows/</code></pre>
+
+      <h3 id="workflows-format">Workflow Format</h3>
+      <p>A workflow is just a plain Markdown file. The filename (without extension) becomes the slash command slug.</p>
+      <p>File: <code>.obsidian-agent/workflows/daily-review.md</code></p>
+      <pre><code>Review today's daily note and provide a structured end-of-day summary:
+
+1. Read today's daily note using get_daily_note
+2. List all open tasks (unchecked checkboxes)
+3. List all completed tasks
+4. Identify any notes that were mentioned or created today
+5. Summarize the key themes or topics from today
+6. Suggest 3 priorities for tomorrow based on open items
+
+Format the output as a structured Markdown report.</code></pre>
+
+      <h3 id="workflows-usage">Using Workflows</h3>
+      <p>Type the slash command at the start of a message:</p>
+      <pre><code>/daily-review
+/daily-review Focus especially on the project meeting notes
+/literature-review Find connections to my existing notes on the topic</code></pre>
+      <p>The workflow content is prepended to the message as explicit instructions. Any text after the slash command is appended after the workflow instructions.</p>
+
+      <h3 id="forced-workflow">Forced Workflow (Per Mode)</h3>
+      <p>In Settings → Modes → (edit mode) → Forced Workflow, you can attach a workflow that automatically applies to <em>every</em> message in that mode (unless the message itself starts with <code>/</code>). This is useful for modes with a very specific operating procedure.</p>
+
+      <h3 id="workflows-management">Managing Workflows</h3>
+      <p>Go to Settings → Agent Behaviour → <strong>Workflows</strong> to create, edit, and toggle workflows. Disabled workflows don't appear in autocomplete and aren't applied even if typed.</p>
+
+      <hr>
+
+      <!-- CUSTOM PROMPTS -->
+      <h2 id="custom-prompts">Custom Prompts</h2>
+      <p>Custom prompts are slash-command templates with variable substitution. Unlike workflows (which are fixed instruction sets), custom prompts can include dynamic content from the current context.</p>
+
+      <h3 id="prompts-variables">Variables</h3>
+      <table>
+        <thead><tr><th>Variable</th><th>Value</th></tr></thead>
+        <tbody>
+          <tr><td><code>{{userInput}}</code></td><td>The text the user typed after the slash command</td></tr>
+          <tr><td><code>{{activeFile}}</code></td><td>The path of the currently open file in Obsidian</td></tr>
+        </tbody>
+      </table>
+
+      <h3 id="prompts-example">Example</h3>
+      <p>Prompt: <em>"Summarize Note"</em>, slug: <code>summarize</code></p>
+      <pre><code>Please create a concise summary of {{activeFile}}.
+
+{{userInput}}
+
+Format as:
+- 3-5 bullet points of key insights
+- 1 sentence "bottom line"
+- Suggested tags based on the content</code></pre>
+
+      <p>Usage: <code>/summarize Focus on the methodology section</code></p>
+
+      <h3 id="prompts-management">Managing Prompts</h3>
+      <p>Go to Settings → Agent Behaviour → <strong>Prompts</strong>. Create, edit, enable/disable, and delete prompts. You can optionally restrict a prompt to a specific mode (it only shows in autocomplete and works in that mode).</p>
+
+      <div class="page-nav">
+        <a href="permissions.html" class="page-nav-item">
+          <span class="page-nav-label">Previous</span>
+          <span class="page-nav-title">← Permissions &amp; Safety</span>
+        </a>
+        <a href="semantic-search.html" class="page-nav-item next">
+          <span class="page-nav-label">Next</span>
+          <span class="page-nav-title">Semantic Search →</span>
+        </a>
+      </div>
+    </article>
+  </main>
+</div>
+
+<footer class="footer">
+  <p>Obsilo Agent — Apache 2.0 License &nbsp;·&nbsp; <a href="https://github.com/yourusername/obsidian-agent">GitHub</a></p>
+</footer>
+</body>
+</html>

@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Getting Started — Obsilo Agent Docs</title>
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <a href="index.html" class="logo">
+    <div class="logo-icon">O</div>
+    Obsilo Agent
+  </a>
+  <div class="spacer"></div>
+  <nav class="header-links">
+    <a href="index.html">Home</a>
+    <a href="tools.html">Tools</a>
+    <a href="https://github.com/yourusername/obsidian-agent" class="github-btn">GitHub</a>
+  </nav>
+</header>
+
+<div class="docs-layout">
+  <aside class="docs-sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Get Started</div>
+      <nav class="sidebar-nav">
+        <a href="getting-started.html" class="active">Getting Started</a>
+      </nav>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Using Obsilo</div>
+      <nav class="sidebar-nav">
+        <a href="chat-interface.html">Chat Interface</a>
+        <a href="modes.html">Modes</a>
+        <a href="permissions.html">Permissions &amp; Safety</a>
+      </nav>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Context &amp; Knowledge</div>
+      <nav class="sidebar-nav">
+        <a href="rules-skills-workflows.html">Rules, Skills &amp; Workflows</a>
+        <a href="semantic-search.html">Semantic Search</a>
+      </nav>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Reference</div>
+      <nav class="sidebar-nav">
+        <a href="tools.html">Tools Reference</a>
+        <a href="providers.html">Providers &amp; Models</a>
+        <a href="mcp-servers.html">MCP Servers</a>
+        <a href="checkpoints.html">Checkpoints</a>
+        <a href="settings-reference.html">Settings Reference</a>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="docs-main">
+    <article class="docs-content">
+      <div class="breadcrumb">
+        <a href="index.html">Docs</a>
+        <span class="breadcrumb-sep">›</span>
+        Getting Started
+      </div>
+
+      <h1>Getting Started</h1>
+      <p>Install Obsilo Agent, connect your first AI model, and run your first task in under 5 minutes.</p>
+
+      <h2 id="requirements">Requirements</h2>
+      <table>
+        <tbody>
+          <tr><td><strong>Obsidian</strong></td><td>Version 1.4.0 or later</td></tr>
+          <tr><td><strong>Platform</strong></td><td>Desktop only (macOS, Windows, Linux). Not available on mobile.</td></tr>
+          <tr><td><strong>Node.js</strong></td><td>18 or later (for building from source)</td></tr>
+          <tr><td><strong>API Key</strong></td><td>Anthropic, OpenAI, OpenRouter, or a running Ollama instance</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="installation">Installation</h2>
+
+      <h3 id="manual">Manual Installation (from source)</h3>
+      <ol class="steps">
+        <li>
+          <strong>Clone the repository</strong>
+          <pre><code>git clone https://github.com/yourusername/obsidian-agent.git
+cd obsidian-agent</code></pre>
+        </li>
+        <li>
+          <strong>Install dependencies and build</strong>
+          <pre><code>npm install
+npm run build</code></pre>
+          This produces <code>main.js</code> in the project root.
+        </li>
+        <li>
+          <strong>Copy to your vault</strong>
+          <p>Create the plugin directory and copy the three required files:</p>
+          <pre><code>mkdir -p "/path/to/your-vault/.obsidian/plugins/obsidian-agent"
+cp main.js styles.css manifest.json \
+   "/path/to/your-vault/.obsidian/plugins/obsidian-agent/"</code></pre>
+        </li>
+        <li>
+          <strong>Enable in Obsidian</strong>
+          <p>Open Obsidian → Settings → Community Plugins → scroll to "Obsilo Agent" → toggle it on.</p>
+          <div class="callout callout-note">
+            <strong>Note</strong>
+            If you don't see the plugin, make sure "Safe Mode" is turned off in Community Plugins settings.
+          </div>
+        </li>
+      </ol>
+
+      <h3 id="dev-mode">Development Mode (with auto-reload)</h3>
+      <p>For active development, run the watcher which rebuilds and hot-deploys on every file save:</p>
+      <pre><code>npm run dev</code></pre>
+      <p>Set the target vault path in <code>esbuild.config.mjs</code> (the <code>VAULT_PLUGIN_DIR</code> constant) to auto-deploy on every build.</p>
+
+      <h2 id="first-setup">First Setup</h2>
+
+      <h3 id="add-model">1. Add an AI Model</h3>
+      <p>Open Obsidian Settings → Obsilo Agent → <strong>Providers → Models</strong>.</p>
+      <p>You'll see pre-configured built-in models. Click <strong>Edit</strong> on any model to add your API key and enable it:</p>
+      <table>
+        <thead><tr><th>Provider</th><th>Where to get key</th><th>Recommended model</th></tr></thead>
+        <tbody>
+          <tr><td>Anthropic</td><td><a href="https://console.anthropic.com">console.anthropic.com</a></td><td>Claude Sonnet 4.5</td></tr>
+          <tr><td>OpenAI</td><td><a href="https://platform.openai.com">platform.openai.com</a></td><td>GPT-4o</td></tr>
+          <tr><td>OpenRouter</td><td><a href="https://openrouter.ai">openrouter.ai</a></td><td>Llama 3.2 3B (free tier)</td></tr>
+          <tr><td>Ollama</td><td>Run locally: <code>ollama serve</code></td><td>llama3.2 or qwen2.5:7b</td></tr>
+        </tbody>
+      </table>
+      <p>After entering the key, click <strong>Test Connection</strong> to verify it works. Then enable the model to make it available in the chat.</p>
+
+      <h3 id="open-sidebar">2. Open the Sidebar</h3>
+      <p>Click the Obsilo Agent icon in the Obsidian ribbon (left or right edge of the window). If you don't see it, use the Command Palette (<kbd>Ctrl/Cmd+P</kbd>) and search for "Open Agent Sidebar".</p>
+      <p>The sidebar defaults to the right panel. You can move it to the left in Settings → Interface → Sidebar Position.</p>
+
+      <h3 id="first-task">3. Your First Task</h3>
+      <p>The sidebar opens in <strong>Ask mode</strong> by default — a read-only assistant that can answer questions about your vault.</p>
+      <p>Try these starter queries:</p>
+      <ul>
+        <li><em>"What are my most recently modified notes?"</em></li>
+        <li><em>"Find all notes tagged with #project"</em></li>
+        <li><em>"What do I know about [any topic in your vault]?"</em></li>
+      </ul>
+      <p>Switch to <strong>Agent mode</strong> (click the mode selector in the chat header) to create, edit, or organize notes:</p>
+      <ul>
+        <li><em>"Create a weekly review template with sections for goals, accomplishments, and next steps"</em></li>
+        <li><em>"Add a 'status' frontmatter field to all notes in my Projects folder"</em></li>
+      </ul>
+
+      <h2 id="semantic-search-setup">4. Set Up Semantic Search (Optional but Recommended)</h2>
+      <p>Semantic search lets the agent find notes by meaning rather than just keywords. It runs entirely locally — no cloud service needed.</p>
+      <ol class="steps">
+        <li>Go to Settings → Obsilo Agent → <strong>Semantic Index</strong></li>
+        <li>Toggle "Enable Semantic Index" on</li>
+        <li>Choose an embedding model. The default <code>Xenova/all-MiniLM-L6-v2</code> runs locally and requires no API key</li>
+        <li>Click <strong>Build Index</strong> and wait for indexing to complete (the first build may take a few minutes)</li>
+      </ol>
+      <p>Once built, the <code>semantic_search</code> tool is available to the agent in all modes.</p>
+
+      <h2 id="next-steps">Next Steps</h2>
+      <div class="docs-grid" style="margin-top: 1rem;">
+        <a href="chat-interface.html" class="docs-card">
+          <div class="docs-card-title">Chat Interface</div>
+          <div class="docs-card-desc">Learn about the sidebar UI, attachments, autocomplete, and activity log.</div>
+        </a>
+        <a href="modes.html" class="docs-card">
+          <div class="docs-card-title">Modes</div>
+          <div class="docs-card-desc">Understand built-in modes and create your own custom agent personas.</div>
+        </a>
+        <a href="rules-skills-workflows.html" class="docs-card">
+          <div class="docs-card-title">Rules, Skills &amp; Workflows</div>
+          <div class="docs-card-desc">Customize how the agent behaves with permanent instructions and templates.</div>
+        </a>
+        <a href="permissions.html" class="docs-card">
+          <div class="docs-card-title">Permissions</div>
+          <div class="docs-card-desc">Configure which operations need your approval and which are auto-approved.</div>
+        </a>
+      </div>
+
+      <div class="page-nav">
+        <span></span>
+        <a href="chat-interface.html" class="page-nav-item next">
+          <span class="page-nav-label">Next</span>
+          <span class="page-nav-title">Chat Interface →</span>
+        </a>
+      </div>
+    </article>
+  </main>
+</div>
+
+<footer class="footer">
+  <p>Obsilo Agent — Apache 2.0 License &nbsp;·&nbsp; <a href="https://github.com/yourusername/obsidian-agent">GitHub</a></p>
+</footer>
+</body>
+</html>
