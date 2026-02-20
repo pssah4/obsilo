@@ -25,7 +25,7 @@ import type { IgnoreService } from '../governance/IgnoreService';
 import type { OperationLogger } from '../governance/OperationLogger';
 
 /** Tool group classification for auto-approval checks */
-type ToolGroup = 'read' | 'note-edit' | 'vault-change' | 'web' | 'agent' | 'mcp';
+type ToolGroup = 'read' | 'note-edit' | 'vault-change' | 'web' | 'agent' | 'mode' | 'subtask' | 'mcp';
 
 const TOOL_GROUPS: Record<string, ToolGroup> = {
     // Read-only vault tools
@@ -56,10 +56,12 @@ const TOOL_GROUPS: Record<string, ToolGroup> = {
     // Agent control (always auto-approved)
     ask_followup_question: 'agent',
     attempt_completion: 'agent',
-    switch_mode: 'agent',
-    new_task: 'agent',
     update_todo_list: 'agent',
     open_note: 'agent',
+    // Mode switching (respects autoApproval.mode)
+    switch_mode: 'mode',
+    // Subtask spawning (respects autoApproval.subtasks)
+    new_task: 'subtask',
     // MCP
     use_mcp_tool: 'mcp',
 };
@@ -126,9 +128,9 @@ export class ToolExecutionPipeline {
                 return this.errorResult(toolCall.id, validation.reason ?? 'Operation denied');
             }
 
-            // 3. Auto-approve or request approval for write/web/mcp operations
+            // 3. Auto-approve or request approval for write/web/mcp/mode/subtask operations
             const toolGroup = TOOL_GROUPS[toolCall.name];
-            if (tool.isWriteOperation || toolGroup === 'web' || toolGroup === 'mcp') {
+            if (tool.isWriteOperation || toolGroup === 'web' || toolGroup === 'mcp' || toolGroup === 'mode' || toolGroup === 'subtask') {
                 const decision = await this.checkApproval(toolCall, extensions);
                 if (decision === 'rejected') {
                     return this.errorResult(toolCall.id, 'Operation denied by user');
@@ -234,15 +236,18 @@ export class ToolExecutionPipeline {
         const cfg = this.plugin.settings.autoApproval;
         const group = TOOL_GROUPS[toolCall.name] ?? 'note-edit';
 
-        // Agent tools (question, todo, completion, mode) are always auto-approved
+        // Agent tools (question, todo, completion, open_note) are always auto-approved
         if (group === 'agent') return 'auto';
 
         // Check if auto-approved by settings
         if (cfg.enabled) {
+            if (group === 'read' && cfg.read) return 'auto';
             if (group === 'note-edit' && cfg.noteEdits) return 'auto';
             if (group === 'vault-change' && cfg.vaultChanges) return 'auto';
             if (group === 'web' && cfg.web) return 'auto';
             if (group === 'mcp' && cfg.mcp) return 'auto';
+            if (group === 'mode' && cfg.mode) return 'auto';
+            if (group === 'subtask' && cfg.subtasks) return 'auto';
         }
 
         // No auto-approve config AND no approval callback — fail-closed.

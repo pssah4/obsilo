@@ -1,4 +1,4 @@
-import { App, Notice, Setting, setIcon } from 'obsidian';
+import { App, Notice, Setting, setIcon, TFolder, AbstractInputSuggest } from 'obsidian';
 import type ObsidianAgentPlugin from '../../main';
 import { ModelConfigModal } from './ModelConfigModal';
 import { addInfoButton } from './utils';
@@ -11,6 +11,8 @@ export class EmbeddingsTab {
     constructor(private plugin: ObsidianAgentPlugin, private app: App, private rerender: () => void) {}
 
     build(containerEl: HTMLElement): void {
+        containerEl.createEl('h3', { cls: 'agent-settings-section', text: 'Embedding Models' });
+
         const desc = containerEl.createDiv('model-table-desc');
         desc.setText('Embedding models power semantic search across your vault. Select exactly one model as the active index.');
 
@@ -62,49 +64,9 @@ export class EmbeddingsTab {
             text: `Builds a local vector index of all notes for semantic_search. ${embModelDesc}`,
         });
 
-        const statusEl = containerEl.createDiv('agent-semantic-status');
         const getIdx = () => (this.plugin as any).semanticIndex;
-
-        const refreshStatus = () => {
-            statusEl.empty();
-            if (!this.plugin.settings.enableSemanticIndex) {
-                statusEl.setText('Semantic index is disabled.');
-                return;
-            }
-            const idx = getIdx();
-            if (!idx) {
-                statusEl.setText('Not initialized. Toggle off/on to reload.');
-                return;
-            }
-            if (idx.building) {
-                const p = idx.progressIndexed ?? idx.docCount;
-                const t = idx.progressTotal ?? '?';
-                statusEl.setText(`Building… (${p} / ${t} files)`);
-                return;
-            }
-            if (idx.isIndexed) {
-                statusEl.setText(`Ready: ${idx.docCount} notes · Built: ${(idx.lastBuiltAt as Date).toLocaleString()}`);
-            } else {
-                statusEl.setText('Not built yet. Click "Build Index" to start.');
-            }
-        };
-        refreshStatus();
-
-        // Poll every second so status stays current (e.g. when build was started
-        // from the sidebar menu, not from this tab).
-        const pollInterval = window.setInterval(refreshStatus, 1000);
-        // Clean up when the container is removed from DOM (tab switch / close)
-        const observer = new MutationObserver((mutations) => {
-            for (const m of mutations) {
-                for (const node of Array.from(m.removedNodes)) {
-                    if (node === containerEl || (node as HTMLElement).contains?.(containerEl)) {
-                        window.clearInterval(pollInterval);
-                        observer.disconnect();
-                    }
-                }
-            }
-        });
-        if (containerEl.parentElement) observer.observe(containerEl.parentElement, { childList: true });
+        // statusEl is created later inside the "Build index" setting — declared here for scope
+        let statusEl: HTMLElement;
 
         const semanticEnableSetting = new Setting(containerEl)
             .setName('Enable semantic index')
@@ -142,10 +104,51 @@ export class EmbeddingsTab {
                 }),
             );
 
-        new Setting(containerEl)
+        const buildSetting = new Setting(containerEl)
             .setName('Build index')
-            .setDesc('Index new and modified notes. Already-indexed notes are skipped. Use "Force Rebuild" to reindex everything from scratch.')
-            .addButton((btn) => {
+            .setDesc('Index new and modified notes. Already-indexed notes are skipped. Use "Force Rebuild" to reindex everything from scratch.');
+        statusEl = buildSetting.descEl.createDiv('agent-semantic-status');
+
+        const refreshStatus = () => {
+            statusEl.empty();
+            if (!this.plugin.settings.enableSemanticIndex) {
+                statusEl.setText('Semantic index is disabled.');
+                return;
+            }
+            const idx = getIdx();
+            if (!idx) {
+                statusEl.setText('Not initialized. Toggle off/on to reload.');
+                return;
+            }
+            if (idx.building) {
+                const p = idx.progressIndexed ?? idx.docCount;
+                const t = idx.progressTotal ?? '?';
+                statusEl.setText(`Building… (${p} / ${t} files)`);
+                return;
+            }
+            if (idx.isIndexed) {
+                statusEl.setText(`Ready: ${idx.docCount} notes · Built: ${(idx.lastBuiltAt as Date).toLocaleString()}`);
+            } else {
+                statusEl.setText('Not built yet. Click "Build Index" to start.');
+            }
+        };
+        refreshStatus();
+
+        // Poll every second so status stays current
+        const pollInterval = window.setInterval(refreshStatus, 1000);
+        const observer = new MutationObserver((mutations) => {
+            for (const m of mutations) {
+                for (const node of Array.from(m.removedNodes)) {
+                    if (node === containerEl || (node as HTMLElement).contains?.(containerEl)) {
+                        window.clearInterval(pollInterval);
+                        observer.disconnect();
+                    }
+                }
+            }
+        });
+        if (containerEl.parentElement) observer.observe(containerEl.parentElement, { childList: true });
+
+        buildSetting.addButton((btn) => {
                 btn.setButtonText('Build Index').onClick(async () => {
                     const idx = getIdx();
                     if (!idx) { new Notice('Enable semantic index first.'); return; }
@@ -264,8 +267,12 @@ export class EmbeddingsTab {
         );
 
         const autoIndexOnChangeSetting = new Setting(containerEl)
-            .setName('Auto-index on file changes')
+            .setName('Auto-index on file changes [BETA]')
             .setDesc('Re-index a note automatically when saved, created, renamed, or deleted. Keep OFF if using a local (Xenova) embedding model — runs on the main thread and slows Obsidian. Safe with an API embedding model (e.g. OpenAI text-embedding-3-small).');
+        autoIndexOnChangeSetting.descEl.createDiv({
+            cls: 'setting-risk-note',
+            text: 'Risk: This setting may slow down your vault performance or freeze Obsidian.',
+        });
         addInfoButton(autoIndexOnChangeSetting, this.app, 'Auto-Index on Change', 'When enabled, every file you edit is re-embedded 2 seconds after you stop typing. With a local Xenova model the embedding runs on the main JavaScript thread and will noticeably slow Obsidian. Only enable this if you have an API-based embedding model configured.');
         autoIndexOnChangeSetting.addToggle((t) =>
             t.setValue(this.plugin.settings.semanticAutoIndexOnChange ?? false).onChange(async (v) => {
@@ -294,17 +301,59 @@ export class EmbeddingsTab {
 
         const excludedSetting = new Setting(containerEl)
             .setName('Excluded folders')
-            .setDesc('Folders to skip when indexing. One folder path per line (e.g. Attachments, Templates, Archive).');
+            .setDesc('Folders to skip when indexing.');
         addInfoButton(excludedSetting, this.app, 'Excluded Folders', 'Use this to skip folders that contain files you do not want the agent to search through — for example, attachment folders full of images or PDFs, template folders, or private journals. Enter the folder path relative to your vault root, one per line.');
-        excludedSetting.addTextArea((t) =>
-            t.setValue((this.plugin.settings.semanticExcludedFolders ?? []).join('\n'))
-                .onChange(async (v) => {
-                    const folders = v.split('\n').map((s) => s.trim()).filter(Boolean);
-                    this.plugin.settings.semanticExcludedFolders = folders;
-                    getIdx()?.configure({ excludedFolders: folders });
+
+        const excludedFolders = this.plugin.settings.semanticExcludedFolders ?? [];
+
+        // Chip list as a separate row below the setting, full width
+        const excludedListEl = containerEl.createDiv('excluded-folder-list');
+        const renderExcludedList = () => {
+            excludedListEl.empty();
+            const current = this.plugin.settings.semanticExcludedFolders ?? [];
+            for (const folder of current) {
+                const chip = excludedListEl.createDiv('excluded-folder-chip');
+                chip.createSpan({ text: folder });
+                const removeBtn = chip.createSpan({ cls: 'excluded-folder-remove' });
+                setIcon(removeBtn, 'x');
+                removeBtn.addEventListener('click', async () => {
+                    this.plugin.settings.semanticExcludedFolders =
+                        (this.plugin.settings.semanticExcludedFolders ?? []).filter((f) => f !== folder);
+                    getIdx()?.configure({ excludedFolders: this.plugin.settings.semanticExcludedFolders });
                     await this.plugin.saveSettings();
-                }),
-        );
+                    renderExcludedList();
+                });
+            }
+        };
+        renderExcludedList();
+
+        const folderInput = excludedSetting.controlEl.createEl('input', {
+            cls: 'excluded-folder-input',
+            attr: { type: 'text', placeholder: 'Type / to browse folders' },
+        });
+
+        // Folder suggest dropdown
+        const suggest = new FolderInputSuggest(this.app, folderInput, excludedFolders);
+        suggest.onPick = async (folderPath: string) => {
+            if (!this.plugin.settings.semanticExcludedFolders) this.plugin.settings.semanticExcludedFolders = [];
+            if (!this.plugin.settings.semanticExcludedFolders.includes(folderPath)) {
+                this.plugin.settings.semanticExcludedFolders.push(folderPath);
+                getIdx()?.configure({ excludedFolders: this.plugin.settings.semanticExcludedFolders });
+                await this.plugin.saveSettings();
+                renderExcludedList();
+            }
+            folderInput.value = '';
+        };
+
+        folderInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const val = folderInput.value.trim();
+                if (val) {
+                    suggest.onPick(val);
+                }
+            }
+        });
 
         const storageSetting = new Setting(containerEl)
             .setName('Storage location')
@@ -389,4 +438,33 @@ export class EmbeddingsTab {
     // Web Search tab (under Providers)
     // ---------------------------------------------------------------------------
 
+}
+
+/** Suggest dropdown that lists vault folders, filtered by input text. */
+class FolderInputSuggest extends AbstractInputSuggest<string> {
+    private excluded: string[];
+    onPick: (folderPath: string) => void = () => {};
+
+    constructor(app: App, inputEl: HTMLInputElement, excluded: string[]) {
+        super(app, inputEl);
+        this.excluded = excluded;
+    }
+
+    getSuggestions(query: string): string[] {
+        const lower = query.toLowerCase().replace(/^\//, '');
+        return this.app.vault
+            .getAllFolders()
+            .map((f: TFolder) => f.path)
+            .filter((p: string) => !this.excluded.includes(p) && p.toLowerCase().includes(lower))
+            .sort();
+    }
+
+    renderSuggestion(value: string, el: HTMLElement): void {
+        el.setText(value);
+    }
+
+    selectSuggestion(value: string): void {
+        this.onPick(value);
+        this.close();
+    }
 }

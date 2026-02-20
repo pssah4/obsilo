@@ -57,7 +57,7 @@ export class AgentSettingsTab extends PluginSettingTab {
         const tabs: { id: TabId; label: string; icon: string }[] = [
             { id: 'providers',       label: 'Providers',       icon: 'plug'         },
             { id: 'agent-behaviour', label: 'Agent Behaviour', icon: 'users-round'  },
-            { id: 'vault',           label: 'Vault',           icon: 'hard-drive'   },
+            { id: 'vault',           label: 'Vault',           icon: 'server'       },
             { id: 'advanced',        label: 'Advanced',        icon: 'settings-2'   },
         ];
         tabs.forEach(({ id, label, icon }) => {
@@ -131,18 +131,20 @@ export class AgentSettingsTab extends PluginSettingTab {
         this.buildSubTabNav(
             container,
             [
-                { id: 'models',      label: 'Models',     icon: 'cpu'      },
-                { id: 'embeddings',  label: 'Embeddings', icon: 'database' },
-                { id: 'web-search',  label: 'Web Search', icon: 'globe'    },
+                { id: 'models',      label: 'Models'     },
+                { id: 'embeddings',  label: 'Embeddings' },
+                { id: 'web-search',  label: 'Web Search' },
+                { id: 'mcp-servers', label: 'MCP'        },
             ],
             this.activeProvidersSubTab,
             (id) => { this.activeProvidersSubTab = id; this.display(); },
         );
         const content = container.createDiv({ cls: 'agent-settings-subcontent' });
         const rerender = () => this.display();
-        if (this.activeProvidersSubTab === 'models')     new ModelsTab(this.plugin, this.app, rerender).build(content);
-        if (this.activeProvidersSubTab === 'embeddings') new EmbeddingsTab(this.plugin, this.app, rerender).build(content);
-        if (this.activeProvidersSubTab === 'web-search') new WebSearchTab(this.plugin, this.app, rerender).build(content);
+        if (this.activeProvidersSubTab === 'models')      new ModelsTab(this.plugin, this.app, rerender).build(content);
+        if (this.activeProvidersSubTab === 'embeddings')  new EmbeddingsTab(this.plugin, this.app, rerender).build(content);
+        if (this.activeProvidersSubTab === 'web-search')  new WebSearchTab(this.plugin, this.app, rerender).build(content);
+        if (this.activeProvidersSubTab === 'mcp-servers') new McpTab(this.plugin, this.app, rerender).build(content);
     }
 
     // ---------------------------------------------------------------------------
@@ -151,14 +153,13 @@ export class AgentSettingsTab extends PluginSettingTab {
 
     private buildAgentBehaviourTab(container: HTMLElement): void {
         const subTabs = [
-            { id: 'modes',       label: 'Modes',       icon: 'braces'         },
-            { id: 'permissions', label: 'Permissions', icon: 'shield-check'   },
-            { id: 'loop',        label: 'Loop',        icon: 'repeat-2'       },
-            { id: 'rules',       label: 'Rules',       icon: 'landmark'       },
-            { id: 'workflows',   label: 'Workflows',   icon: 'route'          },
-            { id: 'skills',      label: 'Skills',      icon: 'sparkles'       },
-            { id: 'prompts',     label: 'Prompts',     icon: 'message-square' },
-            { id: 'mcp-servers', label: 'MCP',         icon: 'unplug'         },
+            { id: 'modes',       label: 'Modes'       },
+            { id: 'permissions', label: 'Auto-Approve' },
+            { id: 'loop',        label: 'Loop'        },
+            { id: 'rules',       label: 'Rules'       },
+            { id: 'workflows',   label: 'Workflows'   },
+            { id: 'skills',      label: 'Skills'      },
+            { id: 'prompts',     label: 'Prompts'     },
         ];
         this.buildSubTabNav(container, subTabs, this.activeAgentSubTab,
             (id) => { this.activeAgentSubTab = id; this.display(); });
@@ -172,7 +173,6 @@ export class AgentSettingsTab extends PluginSettingTab {
         if (this.activeAgentSubTab === 'workflows')   new WorkflowsTab(this.plugin, this.app, rerender).build(content);
         if (this.activeAgentSubTab === 'skills')      new SkillsTab(this.plugin, this.app, rerender).build(content);
         if (this.activeAgentSubTab === 'prompts')     new PromptsTab(this.plugin, this.app, rerender).build(content);
-        if (this.activeAgentSubTab === 'mcp-servers') new McpTab(this.plugin, this.app, rerender).build(content);
     }
 
     // ---------------------------------------------------------------------------
@@ -183,10 +183,10 @@ export class AgentSettingsTab extends PluginSettingTab {
         this.buildSubTabNav(
             container,
             [
-                { id: 'interface', label: 'Interface', icon: 'layout-dashboard' },
-                { id: 'log',       label: 'Log',       icon: 'scroll-text'      },
-                { id: 'debug',     label: 'Debug',     icon: 'bug'              },
-                { id: 'backup',    label: 'Backup',    icon: 'archive'          },
+                { id: 'interface', label: 'Interface' },
+                { id: 'log',       label: 'Log'       },
+                { id: 'debug',     label: 'Debug'     },
+                { id: 'backup',    label: 'Backup'    },
             ],
             this.activeAdvancedSubTab,
             (id) => { this.activeAdvancedSubTab = id; this.display(); },

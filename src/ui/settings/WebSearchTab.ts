@@ -11,6 +11,8 @@ export class WebSearchTab {
             text: 'Configure web_fetch (read any URL) and web_search (Brave / Tavily). web_fetch works without an API key; web_search requires one.',
         });
 
+        containerEl.createEl('h3', { cls: 'agent-settings-section', text: 'General' });
+
         new Setting(containerEl)
             .setName('Enable web tools')
             .setDesc('Allow the agent to fetch web pages and run internet searches. Turn off to keep the agent working entirely within your vault.')

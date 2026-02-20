@@ -8,12 +8,14 @@ export class PermissionsTab {
     build(containerEl: HTMLElement): void {
         containerEl.createEl('p', {
             cls: 'agent-settings-desc',
-            text: 'Control which tool categories the agent can run without asking for your approval first.',
+            text: 'Modes define which tools the agent can use. Auto-approve controls whether the agent can run those tools immediately or must ask for your confirmation first. When a category is off, the agent pauses and shows an approval dialog before each action in that category.',
         });
+
+        containerEl.createEl('h3', { cls: 'agent-settings-section', text: 'General' });
 
         new Setting(containerEl)
             .setName('Enable auto-approve')
-            .setDesc('When on, the agent can perform approved actions without stopping to ask you each time.')
+            .setDesc('Master switch. When off, every tool call requires manual approval regardless of the category settings below.')
             .addToggle((t) =>
                 t.setValue(this.plugin.settings.autoApproval.enabled).onChange(async (v) => {
                     this.plugin.settings.autoApproval.enabled = v;
@@ -31,11 +33,11 @@ export class PermissionsTab {
                 }),
             );
 
-        containerEl.createEl('h3', { cls: 'agent-settings-section', text: 'Per-category' });
+        containerEl.createEl('h3', { cls: 'agent-settings-section', text: 'Per category' });
 
         new Setting(containerEl)
             .setName('Read operations')
-            .setDesc('Reading and searching notes. These operations never change your vault, so they are safe to always allow.')
+            .setDesc('Reading and searching notes. These operations never change your vault.')
             .addToggle((t) =>
                 t.setValue(this.plugin.settings.autoApproval.read).onChange(async (v) => {
                     this.plugin.settings.autoApproval.read = v;
@@ -45,7 +47,7 @@ export class PermissionsTab {
 
         new Setting(containerEl)
             .setName('Note edits')
-            .setDesc('Writing or modifying note content. When off, you approve each change before it is saved.')
+            .setDesc('Writing or modifying note content (write_file, edit_file, append_to_file). When off, you approve each change before it is saved.')
             .addToggle((t) =>
                 t.setValue(this.plugin.settings.autoApproval.noteEdits).onChange(async (v) => {
                     this.plugin.settings.autoApproval.noteEdits = v;
@@ -55,7 +57,7 @@ export class PermissionsTab {
 
         new Setting(containerEl)
             .setName('Vault structure changes')
-            .setDesc('Creating folders, moving files, or deleting notes. These structural changes are harder to undo.')
+            .setDesc('Creating folders, moving files, deleting notes, generating canvases, or creating bases. Harder to undo.')
             .addToggle((t) =>
                 t.setValue(this.plugin.settings.autoApproval.vaultChanges).onChange(async (v) => {
                     this.plugin.settings.autoApproval.vaultChanges = v;
@@ -85,7 +87,7 @@ export class PermissionsTab {
 
         new Setting(containerEl)
             .setName('Mode switching')
-            .setDesc('Let the agent switch between modes (e.g. from Librarian to Writer) on its own.')
+            .setDesc('Let the agent switch between modes (e.g. from Agent to a custom Researcher mode) without asking.')
             .addToggle((t) =>
                 t.setValue(this.plugin.settings.autoApproval.mode).onChange(async (v) => {
                     this.plugin.settings.autoApproval.mode = v;
@@ -95,7 +97,7 @@ export class PermissionsTab {
 
         new Setting(containerEl)
             .setName('Subtasks')
-            .setDesc('Allow the agent to spawn sub-agents to handle parts of a larger task independently.')
+            .setDesc('Allow the agent to spawn sub-agents (new_task) to handle parts of a larger task independently.')
             .addToggle((t) =>
                 t.setValue(this.plugin.settings.autoApproval.subtasks).onChange(async (v) => {
                     this.plugin.settings.autoApproval.subtasks = v;
