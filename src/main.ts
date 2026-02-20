@@ -317,7 +317,14 @@ export default class ObsidianAgentPlugin extends Plugin {
             this.settings.enableChatHistory = true;
         }
         this.settings.enableChatHistory = this.settings.enableChatHistory ?? true;
-        this.settings.memory = this.settings.memory ?? DEFAULT_SETTINGS.memory;
+        // Deep-merge memory settings so upgrading users get new fields with defaults
+        const memDefaults = DEFAULT_SETTINGS.memory;
+        this.settings.memory = this.settings.memory ?? memDefaults;
+        this.settings.memory.enabled = this.settings.memory.enabled ?? memDefaults.enabled;
+        this.settings.memory.autoExtractSessions = this.settings.memory.autoExtractSessions ?? memDefaults.autoExtractSessions;
+        this.settings.memory.autoUpdateLongTerm = this.settings.memory.autoUpdateLongTerm ?? memDefaults.autoUpdateLongTerm;
+        this.settings.memory.memoryModelKey = this.settings.memory.memoryModelKey ?? memDefaults.memoryModelKey;
+        this.settings.memory.extractionThreshold = this.settings.memory.extractionThreshold ?? memDefaults.extractionThreshold;
     }
 
     /** Return the currently active CustomModel, or null if none configured */

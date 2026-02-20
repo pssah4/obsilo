@@ -13,7 +13,6 @@ import { AutocompleteHandler } from './sidebar/AutocompleteHandler';
 import { VaultFilePicker } from './sidebar/VaultFilePicker';
 import { HistoryPanel } from './sidebar/HistoryPanel';
 import type { UiMessage } from '../core/history/ConversationStore';
-import { OnboardingService } from '../core/memory/OnboardingService';
 import { MemoryRetriever } from '../core/memory/MemoryRetriever';
 
 export const VIEW_TYPE_AGENT_SIDEBAR = 'obsidian-agent-sidebar';
@@ -1253,6 +1252,7 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
 
         // Load memory context for system prompt injection
         let memoryContext: string | undefined;
+        const isFirstMessage = this.conversationHistory.length === 0;
         if (this.plugin.settings.memory.enabled && this.plugin.memoryService) {
             try {
                 const parts: string[] = [];
@@ -1262,20 +1262,24 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
                 const ctx = this.plugin.memoryService.buildMemoryContext(files);
                 if (ctx) parts.push(ctx);
 
-                // Onboarding detection — inject instructions if profile is empty
-                const onboarding = new OnboardingService(this.plugin.memoryService);
-                const onboardingPrompt = await onboarding.getOnboardingPrompt();
-                if (onboardingPrompt) parts.push(onboardingPrompt);
+                // Note: Onboarding detection is handled in Settings UI only (MemoryTab).
+                // We intentionally do NOT inject onboarding prompts into the system prompt
+                // because they confuse smaller models and override normal conversation behavior.
 
-                // Session retrieval — inject relevant past sessions on first message
-                if (this.conversationHistory.length === 0 && userMessageText.trim()) {
-                    const retriever = new MemoryRetriever(
-                        this.plugin.app.vault,
-                        this.plugin.memoryService,
-                        () => this.plugin.semanticIndex,
-                    );
-                    const sessionContext = await retriever.retrieveSessionContext(userMessageText);
-                    if (sessionContext) parts.push(sessionContext);
+                // Session retrieval — only on first message, using raw user text
+                // (not userMessageText which includes <context> and <vault_context> blocks).
+                // Skipped entirely when no sessions exist to avoid a wasted embedding API call.
+                if (isFirstMessage && text.trim()) {
+                    const stats = await this.plugin.memoryService.getStats();
+                    if (stats.sessionCount > 0) {
+                        const retriever = new MemoryRetriever(
+                            this.plugin.app.vault,
+                            this.plugin.memoryService,
+                            () => this.plugin.semanticIndex,
+                        );
+                        const sessionContext = await retriever.retrieveSessionContext(text);
+                        if (sessionContext) parts.push(sessionContext);
+                    }
                 }
 
                 if (parts.length > 0) memoryContext = parts.join('\n\n');

@@ -445,8 +445,9 @@ export class AgentTask {
                 // Break loop if attempt_completion was signaled
                 if (completionResult !== null) {
                     this.taskCallbacks.onAttemptCompletion?.();
-                    // Pass the completion result text to the UI so it gets rendered.
-                    // Without this, attempt_completion results are stored but never shown.
+                    // Some models (especially smaller ones) put their actual response
+                    // in the result field instead of streaming text first.
+                    // Render it as fallback so the user doesn't see an empty response.
                     const resultText = completionResult as string;
                     if (resultText.trim()) {
                         this.taskCallbacks.onText?.(resultText);
