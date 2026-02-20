@@ -142,6 +142,7 @@ const EXPLICIT_INSTRUCTIONS_NOTE = `If the user's message contains <explicit_ins
  * @param rulesContent - Combined content of all enabled rule files (Sprint 3.2).
  * @param skillsSection - XML block listing relevant skills for this message (Sprint 3.4).
  * @param allowedMcpServers - Per-mode MCP server whitelist. Undefined/empty = all servers shown.
+ * @param memoryContext - Pre-built memory context string (user profile, projects, patterns).
  */
 export function buildSystemPromptForMode(
     mode: ModeConfig,
@@ -152,6 +153,7 @@ export function buildSystemPromptForMode(
     skillsSection?: string,
     mcpClient?: McpClient,
     allowedMcpServers?: string[],
+    memoryContext?: string,
 ): string {
     // Date/time header — placed at the very top so the model always uses the correct date.
     // Uses the Mac system clock via new Date(). Locale is fixed to en-US so the LLM
@@ -172,7 +174,19 @@ export function buildSystemPromptForMode(
             `IMPORTANT: Always use the date above (${isoDate}) for any notes, frontmatter dates, or timestamps you create. ` +
             `Do not infer or guess a different date.\n\n====\n\n`;
     }
-    const sections: string[] = [`${dateHeader}${VAULT_CONTEXT}`, '====', '', 'TOOLS', '', 'You have access to these tools. Use them proactively — do not guess at file contents or vault structure.', ''];
+    const sections: string[] = [`${dateHeader}${VAULT_CONTEXT}`];
+
+    // Memory context — inject after vault context, before tools
+    if (memoryContext?.trim()) {
+        sections.push('');
+        sections.push('====');
+        sections.push('');
+        sections.push('USER MEMORY');
+        sections.push('');
+        sections.push(memoryContext.trim());
+    }
+
+    sections.push('====', '', 'TOOLS', '', 'You have access to these tools. Use them proactively — do not guess at file contents or vault structure.', '');
 
     // Add tool sections for this mode's groups
     const groupOrder: ToolGroup[] = ['read', 'vault', 'edit', 'web', 'agent', 'mcp'];

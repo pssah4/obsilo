@@ -13,6 +13,11 @@ import { SkillsManager } from './core/context/SkillsManager';
 import { GitCheckpointService } from './core/checkpoints/GitCheckpointService';
 import { SemanticIndexService } from './core/semantic/SemanticIndexService';
 import { ChatHistoryService } from './core/ChatHistoryService';
+import { ConversationStore } from './core/history/ConversationStore';
+import { MemoryService } from './core/memory/MemoryService';
+import { ExtractionQueue } from './core/memory/ExtractionQueue';
+import { SessionExtractor } from './core/memory/SessionExtractor';
+import { LongTermExtractor } from './core/memory/LongTermExtractor';
 import { McpClient } from './core/mcp/McpClient';
 import { buildApiHandler } from './api/index';
 import type { ApiHandler } from './api/types';
@@ -48,6 +53,9 @@ export default class ObsidianAgentPlugin extends Plugin {
     private autoIndexDebounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
     private warmupFired = false;
     chatHistoryService: ChatHistoryService | null = null;
+    conversationStore: ConversationStore | null = null;
+    memoryService: MemoryService | null = null;
+    extractionQueue: ExtractionQueue | null = null;
     mcpClient: McpClient;
 
     /**
@@ -165,9 +173,59 @@ export default class ObsidianAgentPlugin extends Plugin {
             }));
         }
 
-        // Chat history service (only when folder is configured)
+        // Chat history service (legacy — only when folder is configured)
         if (this.settings.chatHistoryFolder) {
             this.chatHistoryService = new ChatHistoryService(this.app.vault, this.settings.chatHistoryFolder);
+        }
+
+        // Conversation store (new persistent history)
+        if (this.settings.enableChatHistory) {
+            this.conversationStore = new ConversationStore(this.app.vault, pluginDir);
+            await this.conversationStore.initialize().catch((e) =>
+                console.warn('[Plugin] ConversationStore init failed (non-fatal):', e)
+            );
+        }
+
+        // Memory service + extraction queue
+        if (this.settings.memory.enabled) {
+            this.memoryService = new MemoryService(this.app.vault, pluginDir);
+            await this.memoryService.initialize().catch((e) =>
+                console.warn('[Plugin] MemoryService init failed (non-fatal):', e)
+            );
+            this.extractionQueue = new ExtractionQueue(this.app.vault, pluginDir);
+            await this.extractionQueue.load().catch((e) =>
+                console.warn('[Plugin] ExtractionQueue load failed (non-fatal):', e)
+            );
+
+            // Wire SessionExtractor as the queue processor
+            const sessionExtractor = new SessionExtractor(
+                this.app.vault,
+                this.memoryService,
+                () => this.getMemoryModel(),
+                () => this.settings.memory.autoUpdateLongTerm,
+                this.extractionQueue,
+                () => this.semanticIndex,
+            );
+            const longTermExtractor = new LongTermExtractor(
+                this.app.vault,
+                this.memoryService,
+                () => this.getMemoryModel(),
+            );
+            this.extractionQueue.setProcessor(async (item) => {
+                if (item.type === 'session') {
+                    await sessionExtractor.process(item);
+                } else if (item.type === 'long-term') {
+                    await longTermExtractor.process(item);
+                }
+            });
+
+            // Process any pending extractions from a previous session
+            if (!this.extractionQueue.isEmpty()) {
+                console.log(`[Plugin] Processing ${this.extractionQueue.size()} pending extractions from previous session`);
+                this.extractionQueue.processQueue().catch((e) =>
+                    console.warn('[Plugin] Queue processing failed (non-fatal):', e)
+                );
+            }
         }
 
         // LLM provider (null if no API key configured)
@@ -254,11 +312,24 @@ export default class ObsidianAgentPlugin extends Plugin {
         ap.noteEdits = ap.noteEdits ?? false;
         ap.vaultChanges = ap.vaultChanges ?? false;
         ap.skills = ap.skills ?? false;
+        // Migrate: chatHistoryFolder → enableChatHistory
+        if (this.settings.chatHistoryFolder && this.settings.enableChatHistory === undefined) {
+            this.settings.enableChatHistory = true;
+        }
+        this.settings.enableChatHistory = this.settings.enableChatHistory ?? true;
+        this.settings.memory = this.settings.memory ?? DEFAULT_SETTINGS.memory;
     }
 
     /** Return the currently active CustomModel, or null if none configured */
     getActiveModel(): CustomModel | null {
         const key = this.settings.activeModelKey;
+        if (!key) return null;
+        return this.settings.activeModels.find((m) => getModelKey(m) === key) ?? null;
+    }
+
+    /** Return the memory extraction CustomModel, or null if none configured */
+    getMemoryModel(): CustomModel | null {
+        const key = this.settings.memory.memoryModelKey;
         if (!key) return null;
         return this.settings.activeModels.find((m) => getModelKey(m) === key) ?? null;
     }

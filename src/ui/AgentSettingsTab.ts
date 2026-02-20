@@ -18,6 +18,7 @@ import { InterfaceTab }   from './settings/InterfaceTab';
 import { LogTab }         from './settings/LogTab';
 import { DebugTab }       from './settings/DebugTab';
 import { BackupTab }      from './settings/BackupTab';
+import { MemoryTab }      from './settings/MemoryTab';
 
 // Re-export for backward compatibility (used in main.ts and other places)
 export { ModelConfigModal } from './settings/ModelConfigModal';
@@ -156,6 +157,7 @@ export class AgentSettingsTab extends PluginSettingTab {
             { id: 'modes',       label: 'Modes'       },
             { id: 'permissions', label: 'Auto-Approve' },
             { id: 'loop',        label: 'Loop'        },
+            { id: 'memory',      label: 'Memory'      },
             { id: 'rules',       label: 'Rules'       },
             { id: 'workflows',   label: 'Workflows'   },
             { id: 'skills',      label: 'Skills'      },
@@ -169,6 +171,7 @@ export class AgentSettingsTab extends PluginSettingTab {
         if (this.activeAgentSubTab === 'modes')       new ModesTab(this.plugin, this.app, rerender, ms).build(content);
         if (this.activeAgentSubTab === 'permissions') new PermissionsTab(this.plugin, this.app, rerender).build(content);
         if (this.activeAgentSubTab === 'loop')        new LoopTab(this.plugin, this.app, rerender).build(content);
+        if (this.activeAgentSubTab === 'memory')      new MemoryTab(this.plugin, this.app, rerender).build(content);
         if (this.activeAgentSubTab === 'rules')       new RulesTab(this.plugin, this.app, rerender).build(content);
         if (this.activeAgentSubTab === 'workflows')   new WorkflowsTab(this.plugin, this.app, rerender).build(content);
         if (this.activeAgentSubTab === 'skills')      new SkillsTab(this.plugin, this.app, rerender).build(content);

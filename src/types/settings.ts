@@ -297,6 +297,23 @@ export interface AdvancedApiSettings {
 }
 
 // ---------------------------------------------------------------------------
+// Memory Settings
+// ---------------------------------------------------------------------------
+
+export interface MemorySettings {
+    /** Master toggle — when false, no memory extraction happens */
+    enabled: boolean;
+    /** Automatically extract session summaries when a conversation ends */
+    autoExtractSessions: boolean;
+    /** Promote durable facts from session summaries to long-term memory files */
+    autoUpdateLongTerm: boolean;
+    /** Model key for extraction LLM calls (picks from activeModels[]) */
+    memoryModelKey: string;
+    /** Minimum total messages (user + assistant) before extraction triggers */
+    extractionThreshold: number;
+}
+
+// ---------------------------------------------------------------------------
 // Main plugin settings
 // ---------------------------------------------------------------------------
 
@@ -380,12 +397,18 @@ export interface ObsidianAgentSettings {
     // Web Tools (Phase 1.1)
     webTools: WebToolsSettings;
 
+    // Chat History & Memory
+    /** Enable persistent chat history (conversations saved in plugin directory) */
+    enableChatHistory: boolean;
+    /** Memory system settings (session extraction, long-term memory, etc.) */
+    memory: MemorySettings;
+    /** @deprecated — migrated to enableChatHistory. Kept for migration. */
+    chatHistoryFolder: string;
+
     // UI
     sidebarPosition: 'left' | 'right';
     showWelcomeMessage: boolean;
     autoAddActiveFileContext: boolean;
-    /** Vault folder for saved chat history JSON files. Empty string = disabled. */
-    chatHistoryFolder: string;
     /** Press Enter to send (Shift+Enter for newline). When false, Ctrl/Cmd+Enter sends. */
     sendWithEnter: boolean;
     /** Inject current date and time into the system prompt */
@@ -487,10 +510,19 @@ export const DEFAULT_SETTINGS: ObsidianAgentSettings = {
         tavilyApiKey: '',
     },
 
+    enableChatHistory: true,
+    memory: {
+        enabled: true,
+        autoExtractSessions: true,
+        autoUpdateLongTerm: true,
+        memoryModelKey: '',
+        extractionThreshold: 6,
+    },
+    chatHistoryFolder: '',
+
     sidebarPosition: 'right',
     showWelcomeMessage: true,
     autoAddActiveFileContext: true,
-    chatHistoryFolder: '',
     sendWithEnter: true,
     includeCurrentTimeInContext: true,
     rulesToggles: {},
