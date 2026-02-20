@@ -529,9 +529,60 @@ h2[id], h3[id] { scroll-margin-top: calc(var(--header-h) + 1rem); }
   text-align: center;
   color: var(--text-dim);
   font-size: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
 }
 .footer a { color: var(--text-muted); }
 .footer a:hover { color: var(--text); }
+.footer-bmc a { display: inline-block; }
+.bmc-btn { height: 40px; width: auto; display: block; }
+.footer-links {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.footer-sep { color: var(--text-dim); }
+.footer-credits { margin: 0; color: var(--text-dim); }
+
+/* ── Imprint page ── */
+.imprint-layout {
+  padding-top: calc(var(--header-h) + 3rem);
+  padding-bottom: 4rem;
+  min-height: 100vh;
+}
+.imprint-inner {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+.imprint-inner h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 2rem;
+}
+.imprint-inner h2 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-top: 2rem;
+  margin-bottom: 0.5rem;
+}
+.imprint-inner p {
+  color: var(--text-muted);
+  line-height: 1.7;
+  margin-bottom: 0.75rem;
+}
+.imprint-inner hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 2rem 0;
+}
+.imprint-inner a { color: var(--accent-light); }
 
 /* ── Responsive ── */
 @media (max-width: 768px) {

@@ -1,5 +1,7 @@
 # Obsilo Agent
 
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-support-yellow?style=flat&logo=buy-me-a-coffee)](https://buymeacoffee.com/sebastianhanke)
+
 **Agentic AI layer for Obsidian — Kilo Code for knowledge work**
 
 Obsilo Agent transforms your Obsidian vault into an AI-driven knowledge operating system. An autonomous agent lives in your sidebar and can read, write, search, and connect notes on your behalf — with approval-based safety, local checkpoints, and a rich extension system.
