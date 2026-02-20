@@ -27,18 +27,18 @@ export class AttemptCompletionTool extends BaseTool<'attempt_completion'> {
         return {
             name: 'attempt_completion',
             description:
-                'Signal that the task loop should end. ' +
-                'Call this ONLY after you have already written your complete answer as streamed text. ' +
-                'The result field is a brief internal log entry — it is NOT shown to the user as the answer. ' +
-                'Never put your response inside result. Always stream the answer first, then call this.',
+                'End the task loop after a multi-step tool workflow. ' +
+                'Only call this AFTER you used tools (read_file, edit_file, etc.) and wrote a text summary. ' +
+                'For simple text responses, greetings, or questions — do NOT call this tool. ' +
+                'Just respond with text and the loop ends automatically.',
             input_schema: {
                 type: 'object',
                 properties: {
                     result: {
                         type: 'string',
                         description:
-                            'A brief internal log entry only (e.g. "Answered X" or "Created file Y"). ' +
-                            'Do NOT put the actual answer here — stream the answer as text before calling this tool.',
+                            'Brief internal log entry (e.g. "Created summary note" or "Edited 3 files"). ' +
+                            'This is never shown to the user.',
                     },
                 },
                 required: ['result'],

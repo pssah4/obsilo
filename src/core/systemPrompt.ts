@@ -72,7 +72,7 @@ const TOOL_SECTIONS: Record<ToolGroup, string> = {
     agent: `**Agent Control:**
 - update_todo_list(todos): Publish your task plan as a visible checklist. Use ONLY for complex tasks with 3+ distinct steps. For simple tasks, execute directly — no plan needed. Format: one item per line with - [ ] (pending), - [~] (in progress), - [x] (done).
 - ask_followup_question(question, options?): Ask the user a clarifying question when the request is ambiguous. Provide optional answer choices. Use sparingly — only when genuinely needed.
-- attempt_completion(result): Signal that the task loop should end. Call this ONLY AFTER you have already written your complete answer or response as streaming text. The result field is a short internal log entry — it is NOT shown as the response.
+- attempt_completion(result): End the task loop after a multi-step tool workflow. Only use this after tool calls — never for simple text responses. The result is a brief internal log entry (e.g. "Created summary note"), not the user-facing answer.
 - new_task(mode, message): Spawn a sub-agent in the specified mode ("agent" or "ask"). The sub-agent runs with a fresh conversation and returns its result. Use for agentic workflows: prompt chaining, orchestrator-worker, evaluator-optimizer, or routing. Only available in Agent mode.`,
 
     mcp: `**MCP Tools:**
@@ -84,12 +84,12 @@ const TOOL_SECTIONS: Record<ToolGroup, string> = {
 // ---------------------------------------------------------------------------
 
 const TOOL_RULES = `Tool usage rules:
-1. RESPOND DIRECTLY when you already have enough information. For conversational questions, general knowledge, or tasks where the vault context block already tells you what you need, answer immediately — no tools required.
+1. RESPOND DIRECTLY when you already have enough information. For conversational questions, greetings, general knowledge, or tasks where the vault context block already tells you what you need — just write your answer as text. Do NOT call any tools. The conversation loop ends automatically when you produce text without tool calls.
 2. READ BEFORE EDITING. Always use read_file before edit_file or write_file on an existing file.
 3. PREFER edit_file OVER write_file for changes to existing files — it's safer and more precise.
 4. USE EXACT STRINGS. The old_str in edit_file must exactly match the file content (whitespace, newlines included). Include surrounding context to make it unique.
 5. COMPLETE FILES. write_file replaces the entire file — always include the full content.
-6. ALWAYS stream your full answer as text FIRST, then call attempt_completion as a done-signal. The result field in attempt_completion is a brief meta-log only — it is never shown to the user as the answer.
+6. attempt_completion is ONLY for multi-step tasks that used tools. After your final tool call, write a summary as text, then call attempt_completion with a brief internal log. For simple questions and conversations: never call attempt_completion — just respond with text.
 7. USE ask_followup_question only when truly needed — don't ask for information you can find yourself.
 8. USE update_todo_list ONLY for complex tasks with 3 or more distinct steps. For simple tasks (single file edit, answering a question, one lookup), skip the plan and act directly.`;
 
@@ -114,7 +114,7 @@ const RESPONSE_FORMAT = `====
 
 RESPONSE FORMAT
 
-- CRITICAL: Write your complete answer as text first. Only then call attempt_completion as a signal to end the loop. The attempt_completion.result field is an internal log — the user sees your streamed text, not that field.
+- Your streamed text IS the response the user sees. Write your answer directly — do not put it inside a tool call.
 - Be concise. Lead with the answer or result, not preamble.
 - Use Markdown formatting — the chat renders it properly.
 - When you read or write a file, briefly mention what you did (e.g., "I read **projects/plan.md** and found...").
