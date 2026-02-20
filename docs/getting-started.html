@@ -65,6 +65,11 @@
       <h1>Getting Started</h1>
       <p>Install Obsilo Agent, connect your first AI model, and run your first task in under 5 minutes.</p>
 
+      <div class="callout callout-tip">
+        <strong>What you'll be able to do</strong>
+        Ask questions about your vault, create and edit notes with AI assistance, research topics on the web and save the results, organize notes in bulk — all from a sidebar inside Obsidian, with a diff preview and approval step before anything changes.
+      </div>
+
       <h2 id="requirements">Requirements</h2>
       <table>
         <tbody>
@@ -76,6 +81,25 @@
       </table>
 
       <h2 id="installation">Installation</h2>
+
+      <h3 id="brat">Install via BRAT (Recommended)</h3>
+      <p><a href="https://github.com/TfTHacker/obsidian42-brat" target="_blank" rel="noopener noreferrer">BRAT</a> (Beta Reviewers Auto-update Tool) lets you install Obsilo Agent directly from GitHub without building from source, and keeps it up to date automatically.</p>
+      <ol class="steps">
+        <li>
+          <strong>Install BRAT</strong>
+          <p>In Obsidian: Settings → Community Plugins → Browse → search for "BRAT" → Install and Enable.</p>
+        </li>
+        <li>
+          <strong>Add Obsilo Agent</strong>
+          <p>Open BRAT settings → <strong>Add Beta Plugin</strong> → paste:</p>
+          <pre><code>pssah4/obsilo-public</code></pre>
+          <p>Click <strong>Add Plugin</strong>. BRAT downloads and installs the latest release.</p>
+        </li>
+        <li>
+          <strong>Enable the plugin</strong>
+          <p>Go to Settings → Community Plugins → scroll to "Obsilo Agent" → toggle on.</p>
+        </li>
+      </ol>
 
       <h3 id="manual">Manual Installation (from source)</h3>
       <ol class="steps">
@@ -107,10 +131,10 @@ cp main.js styles.css manifest.json \
         </li>
       </ol>
 
-      <h3 id="dev-mode">Development Mode (with auto-reload)</h3>
-      <p>For active development, run the watcher which rebuilds and hot-deploys on every file save:</p>
-      <pre><code>npm run dev</code></pre>
-      <p>Set the target vault path in <code>esbuild.config.mjs</code> (the <code>VAULT_PLUGIN_DIR</code> constant) to auto-deploy on every build.</p>
+      <div class="callout callout-note">
+        <strong>Development mode</strong>
+        Run <code>npm run dev</code> to watch for changes and hot-deploy on every save. Set the target vault path in <code>esbuild.config.mjs</code> (<code>VAULT_PLUGIN_DIR</code>) to auto-deploy on each build.
+      </div>
 
       <h2 id="first-setup">First Setup</h2>
 
@@ -133,17 +157,17 @@ cp main.js styles.css manifest.json \
       <p>The sidebar defaults to the right panel. You can move it to the left in Settings → Interface → Sidebar Position.</p>
 
       <h3 id="first-task">3. Your First Task</h3>
-      <p>The sidebar opens in <strong>Ask mode</strong> by default — a read-only assistant that can answer questions about your vault.</p>
-      <p>Try these starter queries:</p>
+      <p>The sidebar opens in <strong>Ask mode</strong> by default — a read-only assistant that answers questions about your vault without touching any files. Try:</p>
       <ul>
         <li><em>"What are my most recently modified notes?"</em></li>
         <li><em>"Find all notes tagged with #project"</em></li>
         <li><em>"What do I know about [any topic in your vault]?"</em></li>
       </ul>
-      <p>Switch to <strong>Agent mode</strong> (click the mode selector in the chat header) to create, edit, or organize notes:</p>
+      <p>Switch to <strong>Agent mode</strong> using the mode selector in the chat header when you want to create, edit, or reorganize. The agent will show you a diff and ask for your approval before changing any file. Try:</p>
       <ul>
         <li><em>"Create a weekly review template with sections for goals, accomplishments, and next steps"</em></li>
         <li><em>"Add a 'status' frontmatter field to all notes in my Projects folder"</em></li>
+        <li><em>"Research [topic] on the web and save a summary note to my Research folder"</em></li>
       </ul>
 
       <h2 id="semantic-search-setup">4. Set Up Semantic Search (Optional but Recommended)</h2>

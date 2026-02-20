@@ -584,6 +584,37 @@ h2[id], h3[id] { scroll-margin-top: calc(var(--header-h) + 1rem); }
 }
 .imprint-inner a { color: var(--accent-light); }
 
+/* ── Homepage: use-cases section ── */
+.use-cases-section { border-top: 1px solid var(--border); }
+.use-cases-section .section-title { font-size: clamp(1.4rem, 3vw, 1.9rem); }
+.use-cases-section .landing-feature h3 { margin-top: 0; font-size: 1.05rem; }
+.use-cases-section .landing-feature p { margin-bottom: 0; }
+
+/* ── Homepage: privacy/local-first section ── */
+.privacy-section {
+  background: var(--bg-2);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.privacy-row {
+  max-width: 620px;
+  margin: 0 auto;
+  text-align: center;
+  padding: 0 1.5rem;
+}
+.privacy-title {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: #f1f5f9;
+  margin: 0 0 0.75rem;
+}
+.privacy-desc {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  margin: 0;
+  line-height: 1.7;
+}
+
 /* ── Responsive ── */
 @media (max-width: 768px) {
   .docs-sidebar { display: none; }
