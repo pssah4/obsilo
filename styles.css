@@ -1425,6 +1425,71 @@
     margin-bottom: 2px;
 }
 
+/* ── Agent steps block ──────────────────────────────────────────────────── */
+/* All tool calls for one turn are grouped under a single collapsible block. */
+/* A thin left border replaces the old individual card borders.               */
+.agent-steps-block {
+    border-left: 2px solid var(--background-modifier-border);
+    padding-left: 8px;
+    margin: 2px 0 4px;
+}
+
+/* Hide the native disclosure triangle */
+.agent-steps-block > summary {
+    list-style: none;
+}
+.agent-steps-block > summary::-webkit-details-marker {
+    display: none;
+}
+
+/* Summary line: icon + label, single row */
+.agent-steps-summary {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 2px 0;
+    cursor: pointer;
+    user-select: none;
+    color: var(--text-muted);
+    font-size: 11px;
+}
+.agent-steps-summary:hover {
+    color: var(--text-normal);
+}
+
+/* Spinning loader icon inside summary */
+.steps-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+}
+.steps-icon svg {
+    width: 12px;
+    height: 12px;
+}
+
+/* Label text */
+.steps-label {
+    font-family: var(--font-monospace);
+    font-size: 11px;
+}
+
+/* Body: individual tool call <details> elements */
+.agent-steps-body {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    padding-top: 3px;
+}
+
+/* Individual tool entries inside the block are slightly more compact */
+.agent-steps-body .tool-call-details {
+    margin: 0;
+}
+
 /* ── Auto-approve bar ─────────────────────────────────────────────────── */
 /* Auto-approve bar removed — approval managed in Settings */
 

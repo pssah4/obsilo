@@ -443,6 +443,12 @@ export class AgentTask {
                 // Break loop if attempt_completion was signaled
                 if (completionResult !== null) {
                     this.taskCallbacks.onAttemptCompletion?.();
+                    // Pass the completion result text to the UI so it gets rendered.
+                    // Without this, attempt_completion results are stored but never shown.
+                    const resultText = completionResult as string;
+                    if (resultText.trim()) {
+                        this.taskCallbacks.onText?.(resultText);
+                    }
                     break;
                 }
             }

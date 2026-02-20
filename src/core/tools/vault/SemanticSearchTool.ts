@@ -193,12 +193,16 @@ export class SemanticSearchTool extends BaseTool<'semantic_search'> {
                 `Hybrid search results for: "${query}"${activeFilters ? ` [${activeFilters}]` : ''}`,
                 `(${results.length} results — ${kwCount} via keyword/hybrid${hydeNote}. Synthesize answer directly — do not call read_file)\n`,
             ];
+            // Truncate each excerpt to 500 chars to keep total context manageable.
+            // The agent can call read_file for the full content if needed.
+            const MAX_EXCERPT = 500;
+            const truncate = (s: string) => s.length > MAX_EXCERPT ? s.slice(0, MAX_EXCERPT) + '…' : s;
             for (let i = 0; i < results.length; i++) {
                 const r = results[i];
                 const wikilink = toWikilink(r.path);
                 const label = r.method === 'hybrid' ? 'semantic+keyword' : r.method;
                 lines.push(`${i + 1}. ${wikilink} — \`${r.path}\` (${label})`);
-                lines.push(r.excerpt);
+                lines.push(truncate(r.excerpt));
                 lines.push('');
             }
 
@@ -225,7 +229,7 @@ export class SemanticSearchTool extends BaseTool<'semantic_search'> {
                     const chunks: string[] = await semanticIndex.getChunksByPath(linkedFile.path);
                     if (chunks.length === 0) continue;
                     linkedLines.push(`${shownLinked.size}. ${toWikilink(linkedFile.path)} — \`${linkedFile.path}\` (linked from ${toWikilink(r.path)})`);
-                    linkedLines.push(chunks[0]);
+                    linkedLines.push(truncate(chunks[0]));
                     linkedLines.push('');
                 }
             }

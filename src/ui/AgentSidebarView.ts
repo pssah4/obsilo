@@ -703,6 +703,42 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
         // For groupable tools the values are item divs; for others they are details elements.
         const toolElsByName = new Map<string, HTMLElement[]>();
 
+        // ── Agent steps block ─────────────────────────────────────────────────
+        // All tool calls are wrapped in a single collapsible block with a thin
+        // left border instead of individual boxes. Collapsed by default; the
+        // summary line shows a live-updating action count + final status.
+        let stepsBlockEl: HTMLDetailsElement | null = null;
+        let stepsBodyEl: HTMLElement | null = null;
+        let stepsSummaryIconEl: HTMLElement | null = null;
+        let stepsSummaryLabelEl: HTMLElement | null = null;
+        let stepsTotal = 0;
+        let stepsCompleted = 0;
+        let stepsHasError = false;
+
+        const ensureStepsBlock = () => {
+            if (stepsBlockEl) return;
+            stepsBlockEl = toolsEl.createEl('details', { cls: 'agent-steps-block' });
+            const summaryEl = stepsBlockEl.createEl('summary', { cls: 'agent-steps-summary' });
+            stepsSummaryIconEl = summaryEl.createSpan('steps-icon');
+            setIcon(stepsSummaryIconEl, 'loader');
+            stepsSummaryLabelEl = summaryEl.createSpan('steps-label');
+            stepsSummaryLabelEl.setText('Working…');
+            stepsBodyEl = stepsBlockEl.createDiv('agent-steps-body');
+        };
+
+        const updateStepsSummary = (allDone: boolean) => {
+            if (!stepsSummaryLabelEl || !stepsSummaryIconEl) return;
+            const n = stepsTotal;
+            const label = n === 1 ? '1 Aktion' : `${n} Aktionen`;
+            if (allDone) {
+                stepsSummaryLabelEl.setText(label);
+                setIcon(stepsSummaryIconEl, stepsHasError ? 'x' : 'check');
+                stepsSummaryIconEl.removeClass('steps-icon-spinning');
+            } else {
+                stepsSummaryLabelEl.setText(label);
+            }
+        };
+
         // Tools that are safe to group visually — consecutive same-type calls collapse into one row.
         // Write tools are intentionally excluded so each destructive action stays visible individually.
         const GROUPABLE_TOOLS = new Set([
@@ -727,8 +763,12 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
                 loadingRemoved = true;
                 contentEl.querySelector('.message-loading')?.remove();
             }
-            // Also remove any "analyzing" row between iterations
-            toolsEl.querySelector('.tool-computing-row')?.remove();
+            // Also remove any "analyzing" row between iterations (lives inside stepsBodyEl)
+            (stepsBodyEl ?? toolsEl).querySelector('.tool-computing-row')?.remove();
+            if (stepsSummaryLabelEl && stepsTotal > 0) {
+                const n = stepsTotal;
+                stepsSummaryLabelEl.setText(n === 1 ? '1 Aktion' : `${n} Aktionen`);
+            }
         };
 
         const taskId = `task-${Date.now()}`;
@@ -740,12 +780,16 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
             this.plugin.toolRegistry,
             {
                 onIterationStart: (iteration) => {
+                    // Show the steps block immediately so the user can expand it from the start.
+                    ensureStepsBlock();
                     if (iteration > 0) {
-                        // Between tool-execution and the next LLM call — show a brief "Analyzing…" pulse
-                        toolsEl.querySelector('.tool-computing-row')?.remove();
-                        const row = toolsEl.createDiv('tool-computing-row');
+                        // Between iterations — add "Analyzing…" row inside stepsBodyEl (visible when expanded)
+                        // and update the summary label so collapsed users also see the state.
+                        (stepsBodyEl ?? toolsEl).querySelector('.tool-computing-row')?.remove();
+                        const row = (stepsBodyEl ?? toolsEl).createDiv('tool-computing-row');
                         setIcon(row.createSpan('tool-computing-icon'), 'loader');
                         row.createSpan('tool-computing-text').setText('Analyzing results…');
+                        if (stepsSummaryLabelEl) stepsSummaryLabelEl.setText('Analyzing…');
                         scheduleScroll();
                     }
                 },
@@ -810,8 +854,15 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
                         }
                     }
 
+                    // Ensure the outer steps block exists and track this tool call
+                    ensureStepsBlock();
+                    stepsTotal++;
+                    updateStepsSummary(false);
+
                     const brief = this.getToolBriefParam(input);
                     const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    // Tool calls render into the steps block body, not directly into toolsEl
+                    const renderTarget = stepsBodyEl!;
 
                     if (GROUPABLE_TOOLS.has(name)) {
                         // ── Grouped tool ──────────────────────────────────────────────
@@ -821,8 +872,8 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
                         }
 
                         if (!activeToolGroup) {
-                            // Create new group container
-                            const details = toolsEl.createEl('details', { cls: 'tool-call-details' });
+                            // Create new group container inside the steps block
+                            const details = renderTarget.createEl('details', { cls: 'tool-call-details' });
                             const summary = details.createEl('summary', { cls: 'tool-call-summary' });
                             setIcon(summary.createSpan('tool-icon'), this.getToolIcon(name));
                             const nameEl = summary.createSpan('tool-name');
@@ -830,14 +881,11 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
                             summary.createSpan('tool-time').setText(time);
                             const statusEl = summary.createSpan({ cls: 'tool-status tool-running' });
                             const bodyEl = details.createDiv('tool-group-body');
-                            details.open = true;
                             activeToolGroup = { name, detailsEl: details, nameEl, statusEl, bodyEl, count: 1 };
                         } else {
-                            // Group already exists from a previous iteration — reopen it and
-                            // reset status to "running" so the user sees the new work arriving.
+                            // Group already exists — update count and reset status
                             activeToolGroup.count++;
                             activeToolGroup.nameEl.setText(this.formatGroupedLabel(name, activeToolGroup.count));
-                            activeToolGroup.detailsEl.open = true;
                             activeToolGroup.statusEl.removeClass('tool-done', 'tool-error');
                             activeToolGroup.statusEl.addClass('tool-running');
                             activeToolGroup.statusEl.setText('');
@@ -857,7 +905,7 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
                         // Any non-groupable tool breaks the active group
                         activeToolGroup = null;
 
-                        const details = toolsEl.createEl('details', { cls: 'tool-call-details' });
+                        const details = renderTarget.createEl('details', { cls: 'tool-call-details' });
                         const summary = details.createEl('summary', { cls: 'tool-call-summary' });
                         setIcon(summary.createSpan('tool-icon'), this.getToolIcon(name));
                         summary.createSpan('tool-name').setText(this.formatToolLabel(name));
@@ -954,6 +1002,11 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
                         }
                         details.open = isError;
                     }
+                    // Track step completion and update outer block summary
+                    stepsCompleted++;
+                    if (isError) stepsHasError = true;
+                    updateStepsSummary(stepsCompleted === stepsTotal);
+
                     // Update activity badge in plan box (only if a plan is active).
                     // Use closest('.assistant-message') so the lookup works both before
                     // and after the DOM-move (toolsEl.parentElement changes on move).
@@ -1013,11 +1066,32 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
                     scheduleScroll();
                 },
                 onComplete: () => {
+                    // Always clear the loading spinner — covers cases where no text was streamed.
+                    removeLoading();
                     // Auto-complete todos on natural task end (mirrors onAttemptCompletion)
                     if (lastTodoItems.length > 0) {
                         const allDone = lastTodoItems.map((i) => ({ ...i, status: 'done' as const }));
                         this.renderTodoBox(toolsEl, allDone);
                     }
+                    // Finalize the steps block: remove any trailing "Analyzing…" row,
+                    // ensure the summary shows the final count + status icon, and
+                    // remove open state from individual tool-call details so the block
+                    // is tidy when the user expands it.
+                    if (stepsBlockEl) {
+                        if (stepsTotal === 0) {
+                            // No tools were called — remove the empty block so it doesn't clutter the UI.
+                            stepsBlockEl.remove();
+                            stepsBlockEl = null;
+                        } else {
+                            stepsBodyEl?.querySelector('.tool-computing-row')?.remove();
+                            updateStepsSummary(true);
+                            // Collapse individual tool <details> that were left open during streaming
+                            stepsBodyEl?.querySelectorAll('details.tool-call-details').forEach((d) => {
+                                (d as HTMLDetailsElement).open = false;
+                            });
+                        }
+                    }
+
                     // Refresh mode button — ensures it always reflects the final active mode
                     // even after an agent-initiated switch_mode call during this task.
                     this.updateModeButton();
@@ -1027,6 +1101,11 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
                     if (accumulatedText) {
                         contentEl.empty();
                         MarkdownRenderer.render(this.app, accumulatedText, contentEl, '', this);
+                    } else if (hasTools) {
+                        // Tools ran but the model returned no text — show a neutral placeholder
+                        // so the user doesn't stare at an empty message bubble.
+                        contentEl.empty();
+                        contentEl.createEl('p', { cls: 'message-empty-response', text: '(Keine Antwort vom Agenten)' });
                     }
                     // Show timestamp in footer even without token usage
                     if (footerEl.style.display === 'none') {

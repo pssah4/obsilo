@@ -93,10 +93,8 @@ export class SemanticIndexService {
     private autoUpdateQueue = new Set<string>();
     private autoIndexRunning = false;
 
-    // pdf-parse circuit breaker: if the module fails to load (known bundler issue
-    // where pdf-parse reads test files at import time), stop retrying for this session.
+    // pdfjs-dist circuit breaker: set to true on first fatal import/parse error.
     private pdfParseUnavailable = false;
-    private pdfParseFn: ((buf: Buffer) => Promise<{ text: string; numpages: number }>) | null = null;
 
     /** Number of unique files indexed (updated live during build). */
     docCount = 0;
@@ -417,9 +415,9 @@ export class SemanticIndexService {
                 await this.updateFile(path).catch((e) =>
                     console.warn(`[SemanticIndex] Auto-update failed for ${path}:`, e)
                 );
-                // Yield to the event loop between files so Obsidian's UI can
-                // process user interactions and paint frames.
-                await new Promise<void>((r) => setTimeout(r, 0));
+                // Pause between files so the Electron renderer can process user
+                // input, paint frames, and run GC without freezing the UI.
+                await this.sleep(2000);
             }
         }
         this.autoIndexRunning = false;
@@ -671,7 +669,7 @@ export class SemanticIndexService {
     private async embedXenova(text: string): Promise<number[]> {
         // Yield to the event loop before WASM inference so Obsidian can process
         // pending UI events (paint, keyboard, etc.) before the CPU-heavy part.
-        await new Promise<void>((r) => setTimeout(r, 0));
+        await this.sleep(50);
         const output = await this.pipeline(text, { pooling: 'mean', normalize: true });
         return Array.from(output.data as Float32Array);
     }
@@ -757,40 +755,52 @@ export class SemanticIndexService {
     }
 
     /**
-     * Extract plain text from a PDF using pdf-parse (no web worker required).
-     * Returns empty string if the PDF is encrypted, image-only, or unreadable.
-     * Circuit breaker: if pdf-parse fails to import (known bundler issue where it
-     * reads test files at import time), the flag is set and subsequent calls return
-     * immediately without retrying the broken import.
+     * Extract plain text from a PDF using pdfjs-dist (browser-compatible, no test-file issue).
+     * Runs without a web worker (fake-worker mode) so it works in Obsidian's bundled environment.
+     * Returns empty string for encrypted, image-only, or unreadable PDFs.
      */
     private async extractPdfText(filePath: string): Promise<string> {
-        // Circuit breaker: pdf-parse module is broken in this environment
         if (this.pdfParseUnavailable) return '';
 
         try {
-            // Lazy-load and cache the pdf-parse function
-            if (!this.pdfParseFn) {
-                const mod = await import('pdf-parse' as any) as any;
-                this.pdfParseFn = mod.default ?? mod;
+            // Dynamically import pdfjs-dist to avoid bundling its worker at startup.
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const pdfjsLib: any = await import('pdfjs-dist');
+
+            // Disable the web worker — pdfjs falls back to in-process (fake-worker) mode,
+            // which works correctly in Obsidian's Electron renderer without a separate worker URL.
+            if (pdfjsLib.GlobalWorkerOptions) {
+                pdfjsLib.GlobalWorkerOptions.workerSrc = '';
             }
 
             const basePath = (this.vault.adapter as any).getBasePath?.() ?? '';
             const absPath = path.join(basePath, filePath);
-            const buffer = await fs.promises.readFile(absPath);
-            const result = await this.pdfParseFn!(buffer as unknown as Buffer);
-            return result.text ?? '';
+            const data = new Uint8Array(await fs.promises.readFile(absPath));
+
+            const loadingTask = pdfjsLib.getDocument({ data, useWorkerFetch: false });
+            const pdf = await loadingTask.promise;
+
+            const parts: string[] = [];
+            for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+                const page = await pdf.getPage(pageNum);
+                const content = await page.getTextContent();
+                const pageText = content.items
+                    .map((item: any) => ('str' in item ? item.str : ''))
+                    .join(' ')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+                if (pageText) parts.push(pageText);
+            }
+            return parts.join('\n\n');
         } catch (e: any) {
             const msg = String(e?.message ?? '');
-            // If pdf-parse itself is broken (test file ENOENT or worker error),
-            // trip the circuit breaker so we don't retry on every PDF.
-            if (msg.includes('test/data') || msg.includes('PDFJS.workerSrc') || msg.includes('ENOENT')) {
-                console.warn('[SemanticIndex] pdf-parse unavailable (bundler issue) — PDF indexing disabled for this session.');
-                this.pdfParseUnavailable = true;
+            if (msg.includes('PasswordException') || msg.includes('InvalidPDFException')) {
+                // Expected for encrypted or corrupt PDFs — don't log noise
                 return '';
             }
-            if (!msg.includes('PasswordException')) {
-                console.warn(`[SemanticIndex] PDF extraction failed for "${filePath}":`, msg);
-            }
+            // Unexpected error — log once, trip circuit breaker for remaining files
+            console.warn('[SemanticIndex] PDF extraction unavailable:', msg);
+            this.pdfParseUnavailable = true;
             return '';
         }
     }
