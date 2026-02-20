@@ -48,6 +48,19 @@
 | `[x]` | McpClient (stdio transport, command validation, timeout) | `src/core/mcp/McpClient.ts` |
 | `[x]` | use_mcp_tool (LLM-callable wrapper) | `src/core/tools/mcp/UseMcpToolTool.ts` |
 
+### Core: Memory & Chat History
+| Status | Feature | Datei |
+|--------|---------|-------|
+| `[x]` | ConversationStore (index.json + per-conversation JSON, in-memory index) | `src/core/history/ConversationStore.ts` |
+| `[x]` | HistoryPanel (sliding overlay, date grouping, search, restore) | `src/ui/sidebar/HistoryPanel.ts` |
+| `[x]` | MemoryService (read/write memory files, buildMemoryContext for system prompt) | `src/core/memory/MemoryService.ts` |
+| `[x]` | ExtractionQueue (persistent FIFO, survives restarts, background processing) | `src/core/memory/ExtractionQueue.ts` |
+| `[x]` | SessionExtractor (LLM-based session summary via memoryModelKey) | `src/core/memory/SessionExtractor.ts` |
+| `[x]` | LongTermExtractor (promote facts from sessions to long-term files) | `src/core/memory/LongTermExtractor.ts` |
+| `[x]` | OnboardingService (first-contact detection, profile bootstrapping) | `src/core/memory/OnboardingService.ts` |
+| `[x]` | MemoryRetriever (cross-session context via semantic search) | `src/core/memory/MemoryRetriever.ts` |
+| `[x]` | Event Separation (hasStreamedText flag, completion result as fallback only) | `src/core/AgentTask.ts` |
+
 ### Core: Semantic Index
 | Status | Feature | Datei |
 |--------|---------|-------|
@@ -126,7 +139,7 @@
 | `[x]` | VaultFilePicker (Live-Suche, Multi-Select via @) | `src/ui/sidebar/VaultFilePicker.ts` |
 | `[x]` | ToolPickerPopover (Session-Overrides für Tools / Skills / Workflows) | `src/ui/sidebar/ToolPickerPopover.ts` |
 | `[x]` | AttachmentHandler (Datei-Anhänge als Kontext in der Chat-Eingabe) | `src/ui/sidebar/AttachmentHandler.ts` |
-| `[x]` | Chat History (Gespräche als JSON im Vault speichern + wiederladen) | `src/core/ChatHistoryService.ts`, `src/ui/ChatHistoryModal.ts` |
+| `[x]` | Chat History (ConversationStore, HistoryPanel, restore + continue) | `src/core/history/ConversationStore.ts`, `src/ui/sidebar/HistoryPanel.ts` |
 | `[x]` | Notifications (System-Notification bei Task-Abschluss) | `src/main.ts` |
 | `[x]` | Log-Viewer in Settings | `src/ui/settings/LogTab.ts` |
 
@@ -145,7 +158,8 @@
 | `[x]` | Loop Tab (Error-Limit, Rate-Limit, Context Condensing, Power Steering) | `src/ui/settings/LoopTab.ts` |
 | `[x]` | Interface Tab (Auto-add active note, Welcome-Message) | `src/ui/settings/InterfaceTab.ts` |
 | `[x]` | Embeddings Tab (Semantic Index Konfiguration) | `src/ui/settings/EmbeddingsTab.ts` |
-| `[x]` | Vault Tab (Vault-Pfade, Chat History Ordner) | `src/ui/settings/VaultTab.ts` |
+| `[x]` | Vault Tab (Vault-Pfade) | `src/ui/settings/VaultTab.ts` |
+| `[x]` | Memory Tab (Memory-Toggles, Model, Threshold, Reset) | `src/ui/settings/MemoryTab.ts` |
 | `[x]` | Backup Tab (Export / Import Settings als JSON) | `src/ui/settings/BackupTab.ts` |
 | `[x]` | Debug Tab (Debug Mode Toggle) | `src/ui/settings/DebugTab.ts` |
 | `[x]` | Log Tab (JSONL Audit-Log-Viewer) | `src/ui/settings/LogTab.ts` |

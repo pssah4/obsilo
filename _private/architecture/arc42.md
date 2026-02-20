@@ -109,7 +109,7 @@ Obsidian Agent ist ein Obsidian-Plugin, das einen vollständigen KI-Agenten dire
       ┌──────▼──────┐ ┌──────▼──────┐ ┌────▼─────────────┐
       │   UI Layer  │ │ Core Engine │ │  Service Layer   │
       │  (sidebar,  │ │ (AgentTask) │ │ (infra + tools)  │
-      │   modals)   │ │             │ │ ChatHistoryService│
+      │   modals)   │ │             │ │ Memory, History   │
       └─────────────┘ └─────────────┘ └──────────────────┘
 ```
 
@@ -123,8 +123,8 @@ Obsidian Agent ist ein Obsidian-Plugin, das einen vollständigen KI-Agenten dire
 | `ToolPickerPopover` | Session-Overrides für Tools / Skills / Workflows |
 | `AttachmentHandler` | Datei-Anhänge als Kontext in der Chat-Eingabe |
 | `ApproveEditModal` | Line-by-line Diff-View vor Edit-Approval |
-| `ChatHistoryModal` | Gespeicherte Gespräche laden |
-| `AgentSettingsTab` | Settings-Router (15 Tabs) |
+| `HistoryPanel` | Sliding overlay mit gruppierten Gesprächen, Suche, Restore |
+| `AgentSettingsTab` | Settings-Router (16 Tabs, inkl. Memory) |
 
 ### 5.2 Ebene 2: Core Engine
 
@@ -135,7 +135,8 @@ AgentTask.run()
   │     ├── ModeService.getToolDefinitions()
   │     ├── RulesLoader (vault + global rules)
   │     ├── SkillsManager (per-mode skills)
-  │     └── WorkflowLoader (slash-commands)
+  │     ├── WorkflowLoader (slash-commands)
+  │     └── MemoryService.buildMemoryContext() (user profile, projects, patterns)
   │
   ├── API call (Anthropic/OpenAI stream)
   │
@@ -256,6 +257,9 @@ Nutzer-Gerät:
         ├── isomorphic-git     → .obsidian/plugins/obsidian-agent/checkpoints/
         ├── ONNX Runtime       → In-Memory (Xenova Transformers)
         ├── Audit Logs         → .obsidian/plugins/obsidian-agent/logs/
+        ├── Chat History       → .obsidian/plugins/obsidian-agent/history/
+        ├── Memory Files       → .obsidian/plugins/obsidian-agent/memory/
+        ├── Extraction Queue   → .obsidian/plugins/obsidian-agent/pending-extractions.json
         └── MCP subprocesses   → stdio (lokal)
 ```
 
@@ -287,16 +291,82 @@ Nutzer-Gerät:
 - **Context Condensing** — wenn Kontext-Schätzung den `condensingThreshold` überschreitet: erste + letzte 4 Nachrichten behalten, Rest via LLM-Komprimierung.
 - **Power Steering** — alle `powerSteeringFrequency` Iterationen wird der Mode-Reminder erneut injiziert.
 
-### 8.4 Chat History
+### 8.4 Chat History & Memory System
 
-Gespräche werden über `ChatHistoryService` als JSON-Dateien in einem konfigurierbaren Vault-Ordner gespeichert. Jede Konversation enthält `id`, `title` (erster User-Satz, 60 Zeichen), `savedAt`, und die vollständige `messages`-Liste. Über `ChatHistoryModal` kann der Nutzer gespeicherte Gespräche durchsuchen und in die aktive Session laden.
+Persistentes Memory-System mit drei Säulen: Chat History, Short/Long-Term Memory, Onboarding. Alle Daten liegen im Plugin-Verzeichnis (`.obsidian/plugins/obsidian-agent/`). Feature-Spec: `FEATURE-memory-personalization.md`. ADR: [ADR-007](ADR-007-event-separation.md).
+
+#### Storage Layout
 
 ```
-ChatHistoryService
-  ├── save(messages) → {folder}/{id}.json (Vault)
-  ├── list()         → SavedConversation[]
-  └── load(id)       → HistoryMessage[]
+.obsidian/plugins/obsidian-agent/
+├── history/                     # Chat History
+│   ├── index.json               # ConversationMeta[] (id, title, created, updated, messageCount, tokens)
+│   └── {id}.json                # ConversationData (meta + messages + uiMessages)
+├── memory/                      # Long-Term Memory
+│   ├── user-profile.md          # Identity, communication, agent behavior
+│   ├── projects.md              # Active projects, goals
+│   ├── patterns.md              # Behavioral patterns, refinements
+│   ├── knowledge.md             # Domain knowledge (on-demand)
+│   └── sessions/                # Session summaries (one per conversation)
+│       └── {id}.md              # YAML frontmatter + summary
+├── pending-extractions.json     # Persistent extraction queue
+└── semantic-index/              # (existing) Vectra index (+ session source filter)
 ```
+
+#### ConversationStore (`src/core/history/ConversationStore.ts`)
+
+```
+ConversationStore
+  ├── initialize()       → ensure dir, load/create index
+  ├── create(mode,model) → new conversation
+  ├── save(id,msgs,ui)   → write full conversation
+  ├── updateMeta(id,patch) → title, tokens
+  ├── load(id)           → full ConversationData
+  ├── list()             → in-memory index (no disk I/O)
+  └── delete(id) / deleteAll()
+```
+
+#### Memory Extraction Pipeline
+
+```
+Conversation End (>= extractionThreshold messages)
+  │
+  ├── 1. Build minimal transcript (~8000 chars)
+  ├── 2. Enqueue PendingExtraction { type: 'session' }
+  │
+  └── ExtractionQueue (background, one-at-a-time)
+        ├── SessionExtractor → LLM call (memoryModelKey) → sessions/{id}.md
+        │     └── if autoUpdateLongTerm → enqueue { type: 'long-term' }
+        └── LongTermExtractor → LLM call → update user-profile/projects/patterns
+```
+
+#### Memory Context Injection (System Prompt)
+
+At session start, `MemoryService.buildMemoryContext()` injects:
+1. **User Profile** (~200 tokens) — always
+2. **Project Memory** (~300 tokens) — always
+3. **Pattern Memory** (~200 tokens) — always
+4. **Relevant Session Summaries** (~500 tokens) — via `MemoryRetriever` semantic search on first user message
+
+Total budget: ~1200 tokens. Knowledge memory is retrieved on demand via `semantic_search`.
+
+#### Event Separation (ADR-007)
+
+`attempt_completion` result is an internal signal, not user-facing text. `AgentTask` tracks `hasStreamedText` — completion result only rendered as fallback when no text was streamed. System prompt rules ensure attempt_completion is only called after multi-step tool workflows.
+
+#### Key Files
+
+| File | Purpose |
+|------|---------|
+| `src/core/history/ConversationStore.ts` | Conversation persistence |
+| `src/ui/sidebar/HistoryPanel.ts` | History UI overlay |
+| `src/core/memory/MemoryService.ts` | Memory file I/O + context builder |
+| `src/core/memory/ExtractionQueue.ts` | Persistent FIFO queue |
+| `src/core/memory/SessionExtractor.ts` | LLM-based session summary |
+| `src/core/memory/LongTermExtractor.ts` | Promote facts to long-term |
+| `src/core/memory/OnboardingService.ts` | First-contact detection |
+| `src/core/memory/MemoryRetriever.ts` | Cross-session context retrieval |
+| `src/ui/settings/MemoryTab.ts` | Memory settings UI |
 
 ### 8.5 Session-Overrides (ToolPickerPopover)
 
@@ -331,6 +401,7 @@ Siehe einzelne ADRs in `_private/architecture/`:
 | [ADR-004](ADR-004-mode-based-tool-filtering.md) | Mode-basierte Tool-Filterung statt globaler Whitelist |
 | [ADR-005](ADR-005-fail-closed-approval.md) | Fail-Closed Approval (kein Callback = ablehnen) |
 | [ADR-006](ADR-006-sliding-window-repetition.md) | Sliding Window für Tool-Repetition-Erkennung |
+| [ADR-007](ADR-007-event-separation.md) | Event Separation — Completion-Signale getrennt von Text-Output |
 
 ---
 
@@ -377,6 +448,12 @@ Siehe einzelne ADRs in `_private/architecture/`:
 | **Shadow-Repo** | Separates isomorphic-git-Repository in `.obsidian/plugins/obsidian-agent/checkpoints/` |
 | **Fail-Closed** | Sicherheits-Default: Fehlt die Approval-Callback-Funktion, wird die Aktion abgelehnt |
 | **ApproveEditModal** | Modal mit line-by-line Diff-View, das vor `edit_file`-Operationen angezeigt wird |
-| **ChatHistoryService** | Speichert/lädt Konversationen als JSON-Dateien im Vault |
+| **ConversationStore** | Persistiert Konversationen (index.json + per-conversation JSON) im Plugin-Verzeichnis |
+| **MemoryService** | Liest/schreibt Memory-Dateien (user-profile, projects, patterns, knowledge) und baut den Memory-Kontext für den System Prompt |
+| **ExtractionQueue** | Persistente FIFO-Queue für asynchrone Memory-Extraktion. Überlebt Obsidian-Neustarts |
+| **SessionExtractor** | LLM-basierte Session-Zusammenfassung (verwendet memoryModelKey) |
+| **LongTermExtractor** | Promoviert Fakten aus Session-Summaries in die Long-Term-Memory-Dateien |
+| **MemoryRetriever** | Semantische Suche über Session-Summaries für Cross-Session-Kontext |
+| **Event Separation** | Architekturmuster: Completion-Signale (attempt_completion) getrennt von Text-Output. hasStreamedText-Flag steuert Fallback-Rendering (ADR-007) |
 | **ToolPickerPopover** | UI-Element für session-lokale Overrides von Tools, Skills und Workflows |
 | **Session-Override** | RAM-only Überschreibung von Mode-Einstellungen für die aktuelle Chat-Session |

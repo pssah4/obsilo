@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Memory &amp; Chat History — Obsilo Agent Docs</title>
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <a href="index.html" class="logo"><img src="assets/OBSILO_LOGOFULL_lila_schriftweiss.png" alt="Obsilo" class="logo-img"></a>
+  <div class="spacer"></div>
+  <nav class="header-links">
+    <a href="index.html">Home</a>
+    <a href="https://github.com/pssah4/obsilo-public" class="github-btn">GitHub</a>
+  </nav>
+</header>
+
+<div class="docs-layout">
+  <aside class="docs-sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Get Started</div>
+      <nav class="sidebar-nav"><a href="getting-started.html">Getting Started</a></nav>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Using Obsilo</div>
+      <nav class="sidebar-nav">
+        <a href="chat-interface.html">Chat Interface</a>
+        <a href="memory.html" class="active">Memory &amp; Chat History</a>
+        <a href="modes.html">Modes</a>
+        <a href="permissions.html">Permissions &amp; Safety</a>
+      </nav>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Context &amp; Knowledge</div>
+      <nav class="sidebar-nav">
+        <a href="rules-skills-workflows.html">Rules, Skills &amp; Workflows</a>
+        <a href="semantic-search.html">Semantic Search</a>
+      </nav>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Reference</div>
+      <nav class="sidebar-nav">
+        <a href="tools.html">Tools Reference</a>
+        <a href="providers.html">Providers &amp; Models</a>
+        <a href="mcp-servers.html">MCP Servers</a>
+        <a href="checkpoints.html">Checkpoints</a>
+        <a href="settings-reference.html">Settings Reference</a>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="docs-main">
+    <article class="docs-content">
+      <div class="breadcrumb">
+        <a href="index.html">Docs</a> <span class="breadcrumb-sep">&rsaquo;</span>
+        Using Obsilo <span class="breadcrumb-sep">&rsaquo;</span>
+        Memory &amp; Chat History
+      </div>
+
+      <h1>Memory &amp; Chat History</h1>
+      <p>Obsilo remembers your conversations and learns your preferences over time. Chat history stores every conversation for browsing and restore. The memory system automatically extracts knowledge from your conversations and personalizes the agent across sessions.</p>
+
+      <div class="callout callout-tip">
+        <strong>Privacy first</strong>
+        All memory data is stored locally in your plugin directory. Memory extraction uses a dedicated model you choose (ideally a small, cheap model like Haiku). No data leaves your machine except for the LLM API calls you configure.
+      </div>
+
+      <h2 id="chat-history">Chat History</h2>
+      <p>Chat history is enabled by default. Every conversation is saved automatically as a JSON file inside the plugin directory (<code>.obsidian/plugins/obsidian-agent/history/</code>).</p>
+
+      <h3 id="history-panel">History Panel</h3>
+      <p>Click the <strong>history icon</strong> in the sidebar header (left of the New Chat button) to open the history panel. It slides in from the left and shows your conversations grouped by date:</p>
+      <ul>
+        <li><strong>Today</strong> / <strong>Yesterday</strong> / <strong>This Week</strong> / <strong>Older</strong></li>
+        <li>Each entry shows the conversation title, date, and message count</li>
+        <li>Use the text filter at the top to search through titles</li>
+        <li>Hover over an entry to reveal the delete button</li>
+      </ul>
+
+      <h3 id="restore">Restoring a Conversation</h3>
+      <p>Click any conversation in the history panel to restore it. The full message history is loaded back into the sidebar — including assistant messages, tool calls, and the internal conversation state. You can continue the conversation exactly where you left off.</p>
+
+      <h3 id="auto-title">Auto-Titling</h3>
+      <p>After the first assistant response, Obsilo generates a short title (3-8 words) for the conversation using the active model. This title appears in the history panel and helps you find conversations later.</p>
+
+      <h2 id="memory-system">Memory System</h2>
+      <p>The memory system has two layers:</p>
+      <ul>
+        <li><strong>Session memory</strong> — a summary of each conversation, stored as a Markdown file</li>
+        <li><strong>Long-term memory</strong> — your profile, active projects, and behavioral patterns, distilled from session summaries</li>
+      </ul>
+
+      <h3 id="how-it-works">How It Works</h3>
+      <ol>
+        <li><strong>You have a conversation</strong> with the agent as usual</li>
+        <li><strong>When the conversation ends</strong> (new chat or close), if it had enough messages (configurable, default: 6), a background extraction job is queued</li>
+        <li><strong>The extraction model</strong> (a separate, cheap model you configure) processes the queue:
+          <ul>
+            <li>First, it creates a <strong>session summary</strong> (key topics, decisions, preferences observed)</li>
+            <li>Then, it checks if any <strong>new facts</strong> should be promoted to long-term memory (your profile, projects, or patterns)</li>
+          </ul>
+        </li>
+        <li><strong>Next time you start a conversation</strong>, the agent has your profile, projects, and patterns in its system prompt — plus relevant session summaries retrieved via semantic search</li>
+      </ol>
+
+      <div class="callout callout-note">
+        <strong>Zero impact on chat speed</strong>
+        Memory extraction runs entirely in the background after the conversation ends. It never blocks or slows down your active conversation. If Obsidian closes before extraction finishes, the queue is processed on next startup.
+      </div>
+
+      <h3 id="memory-files">Memory Files</h3>
+      <p>Memory is stored as editable Markdown files in <code>.obsidian/plugins/obsidian-agent/memory/</code>:</p>
+      <table>
+        <thead><tr><th>File</th><th>Contains</th><th>Loaded into context</th></tr></thead>
+        <tbody>
+          <tr><td><code>user-profile.md</code></td><td>Your name, language, communication style, agent preferences</td><td>Always (system prompt)</td></tr>
+          <tr><td><code>projects.md</code></td><td>Active projects, goals, tech stack</td><td>Always (system prompt)</td></tr>
+          <tr><td><code>patterns.md</code></td><td>Behavioral patterns, common refinements, workflow habits</td><td>Always (system prompt)</td></tr>
+          <tr><td><code>knowledge.md</code></td><td>Domain expertise, specialized knowledge</td><td>On demand (semantic search)</td></tr>
+          <tr><td><code>sessions/*.md</code></td><td>Per-conversation summaries with YAML frontmatter</td><td>On demand (semantic search)</td></tr>
+        </tbody>
+      </table>
+      <p>You can edit these files directly — they are plain Markdown. Changes take effect on the next conversation.</p>
+
+      <h3 id="session-context">Session Context Retrieval</h3>
+      <p>When you start a new conversation, Obsilo uses your first message to semantically search past session summaries. The top 3 most relevant summaries are injected into the system prompt as context. This means the agent can reference previous conversations when relevant — without you having to remind it.</p>
+
+      <h2 id="onboarding">Onboarding</h2>
+      <p>The first time you use Obsilo (when no user profile exists), the agent starts an onboarding conversation. It naturally asks about your name, language preference, vault usage, and communication style. The answers are extracted into your user profile after the conversation ends.</p>
+      <p>You can re-run onboarding at any time from Settings → Memory → Re-run Onboarding.</p>
+
+      <h2 id="settings">Settings</h2>
+      <p>All memory settings are under Settings → Agent Behaviour → <strong>Memory</strong>:</p>
+      <table>
+        <thead><tr><th>Setting</th><th>Default</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>Enable memory</td><td>On</td><td>Master toggle for the memory system</td></tr>
+          <tr><td>Auto-extract sessions</td><td>On</td><td>Automatically create session summaries when conversations end</td></tr>
+          <tr><td>Auto-update long-term</td><td>On</td><td>Promote new facts from sessions to long-term memory files</td></tr>
+          <tr><td>Memory model</td><td>(none)</td><td>Dropdown to pick the model for extraction. Choose a small, fast model (e.g., Haiku) for cost efficiency</td></tr>
+          <tr><td>Extraction threshold</td><td>6</td><td>Minimum message count before a conversation triggers extraction (slider: 2-20)</td></tr>
+          <tr><td>View memory files</td><td>-</td><td>Opens the memory directory in Obsidian</td></tr>
+          <tr><td>Reset all memory</td><td>-</td><td>Deletes all memory files (with confirmation)</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout callout-tip">
+        <strong>Tip</strong>
+        You must select a memory model before extraction works. If no model is selected, conversations are saved to history but no memory extraction runs.
+      </div>
+
+      <div class="page-nav">
+        <a href="chat-interface.html" class="page-nav-item">
+          <span class="page-nav-label">Previous</span>
+          <span class="page-nav-title">&larr; Chat Interface</span>
+        </a>
+        <a href="modes.html" class="page-nav-item next">
+          <span class="page-nav-label">Next</span>
+          <span class="page-nav-title">Modes &rarr;</span>
+        </a>
+      </div>
+    </article>
+  </main>
+</div>
+
+<footer class="footer">
+  <div class="footer-bmc">
+    <a href="https://buymeacoffee.com/sebastianhanke" target="_blank" rel="noopener noreferrer">
+      <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" class="bmc-btn">
+    </a>
+  </div>
+  <div class="footer-links">
+    <a href="https://www.linkedin.com/in/sebastianhanke/" target="_blank" rel="noopener noreferrer">About me</a>
+    <span class="footer-sep">&middot;</span>
+    <a href="imprint.html">Imprint</a>
+    <span class="footer-sep">&middot;</span>
+    <a href="https://github.com/pssah4/obsilo-public">GitHub</a>
+  </div>
+  <p class="footer-credits">Obsilo Agent &mdash; Apache 2.0 &nbsp;&middot;&nbsp; Inspired by <a href="https://kilo.ai">Kilo Code</a></p>
+</footer>
+</body>
+</html>

@@ -1,8 +1,9 @@
 # FEATURE: Memory, Chat History & Personalization
 
-**Status:** In Progress (Phase 1)
+**Status:** Complete (All Phases)
 **Epic:** Cross-Session Awareness
 **Sources:** CrewAI Memory, OpenClaw Memory, Claude Code Session Memory, ChatGPT Memory, Mem0
+**ADR:** [ADR-007 — Event Separation](../../_private/architecture/ADR-007-event-separation.md)
 
 ## Summary
 
@@ -312,34 +313,54 @@ The existing Vectra index handles session summaries alongside vault notes:
 
 ## Implementation Phases
 
-### Phase 1: Chat History + UI
+### Phase 1: Chat History + UI ✓
 - ConversationStore (persistence layer with in-memory index)
 - History panel UI (button + sliding overlay)
 - Auto-title generation
 - Load/restore previous conversation (full messages + continue)
 - Settings migration from old `chatHistoryFolder`
 
-### Phase 2: Memory Foundation
+### Phase 2: Memory Foundation ✓
 - MemoryService (read/write memory files, build context for system prompt)
 - ExtractionQueue (persistent FIFO, survives restarts)
 - Memory settings (model, threshold, toggles)
 - System prompt injection of memory context
 
-### Phase 3: Session Memory Extraction
+### Phase 3: Session Memory Extraction ✓
 - SessionExtractor (LLM-based session summary)
 - Queue-based background processing
 - Threshold-gated extraction trigger
 
-### Phase 4: Long-Term Memory Extraction
+### Phase 4: Long-Term Memory Extraction ✓
 - LongTermExtractor (promote facts from sessions to long-term files)
 - Deduplication and update logic
 - Pattern detection across sessions
 
-### Phase 5: Onboarding + Retrieval Integration
+### Phase 5: Onboarding + Retrieval Integration ✓
 - First-contact detection + onboarding conversation
 - Vectra extension (source metadata + filter)
 - Cross-session context injection at session start
 - Memory-aware system prompt construction
+
+---
+
+## Post-Implementation Fix: Event Separation (ADR-007)
+
+After initial deployment, a critical regression was identified: the `attempt_completion` tool result was always rendered as user-visible text via `onText()`. This caused:
+- Models like GPT-5-mini showed only meta-log text ("Greeted user — available to help")
+- Sonnet/Gemini appended internal log entries to correct responses
+
+### Root Causes
+1. **attempt_completion result always rendered** — `AgentTask.ts` unconditionally called `onText()` for the completion result
+2. **System prompt contradiction** — Rule 1 said "no tools for Q&A" while Rule 6 said "ALWAYS call attempt_completion"
+3. **Natural loop end already works** — `toolUses.length === 0` breaks the loop, making attempt_completion unnecessary for simple responses
+
+### Structural Fix: Event Separation Pattern
+Inspired by OpenClaw (discrete event types) and Kilo Code (tool-owned completion UI):
+
+- **AgentTask.ts**: `hasStreamedText` flag tracks whether the model produced text; completion result only rendered as fallback when no text was streamed
+- **systemPrompt.ts**: Rule 1 strengthened (no tools for Q&A), Rule 6 clarified (attempt_completion only for multi-step tool workflows)
+- **AttemptCompletionTool.ts**: Description makes it clear it's only for tool workflows, result is an internal log entry
 
 ---
 
@@ -352,3 +373,19 @@ The existing Vectra index handles session summaries alongside vault notes:
 - Total memory budget in system prompt: ~1200 tokens
 - Files stored inside the plugin directory (syncs with Obsidian Sync if configured)
 - No additional dependencies required (uses existing LLM API + Vectra index)
+- Onboarding is handled via Settings UI only (not via system prompt injection — see ADR-007)
+- Session retrieval only runs on first message when sessions exist
+
+## Implemented Files
+
+| File | Purpose |
+|------|---------|
+| `src/core/history/ConversationStore.ts` | Conversation persistence (index.json + per-conversation JSON) |
+| `src/ui/sidebar/HistoryPanel.ts` | Sliding overlay panel with grouped conversation list |
+| `src/core/memory/MemoryService.ts` | Read/write memory files, build context for system prompt |
+| `src/core/memory/ExtractionQueue.ts` | Persistent FIFO queue for background extraction |
+| `src/core/memory/SessionExtractor.ts` | LLM-based session summary extraction |
+| `src/core/memory/LongTermExtractor.ts` | Promote facts from sessions to long-term files |
+| `src/core/memory/OnboardingService.ts` | First-contact detection, profile bootstrapping |
+| `src/core/memory/MemoryRetriever.ts` | Cross-session context via semantic search |
+| `src/ui/settings/MemoryTab.ts` | Settings sub-tab for memory configuration |
