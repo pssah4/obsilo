@@ -108,9 +108,23 @@ Obsidian Agent ist ein Obsidian-Plugin, das einen vollständigen KI-Agenten dire
              │               │               │
       ┌──────▼──────┐ ┌──────▼──────┐ ┌────▼─────────────┐
       │   UI Layer  │ │ Core Engine │ │  Service Layer   │
-      │  (sidebar)  │ │ (AgentTask) │ │ (infra + tools)  │
+      │  (sidebar,  │ │ (AgentTask) │ │ (infra + tools)  │
+      │   modals)   │ │             │ │ ChatHistoryService│
       └─────────────┘ └─────────────┘ └──────────────────┘
 ```
+
+**UI Layer — Komponenten:**
+
+| Komponente | Zuständigkeit |
+|------------|--------------|
+| `AgentSidebarView` | Chat-UI, Mode-Selector, Streaming, Approval-Cards, Todo-Box, Undo-Bar |
+| `AutocompleteHandler` | `/`-Workflows, `@`-Dateien Autocomplete |
+| `VaultFilePicker` | Live-Suche und Multi-Select für Datei-Anhänge |
+| `ToolPickerPopover` | Session-Overrides für Tools / Skills / Workflows |
+| `AttachmentHandler` | Datei-Anhänge als Kontext in der Chat-Eingabe |
+| `ApproveEditModal` | Line-by-line Diff-View vor Edit-Approval |
+| `ChatHistoryModal` | Gespeicherte Gespräche laden |
+| `AgentSettingsTab` | Settings-Router (15 Tabs) |
 
 ### 5.2 Ebene 2: Core Engine
 
@@ -130,6 +144,7 @@ AgentTask.run()
   │     └── ToolExecutionPipeline.executeTool()
   │           ├── 1. IgnoreService.validate()
   │           ├── 2. checkApproval() [fail-closed]
+  │           │     └── ApproveEditModal (Diff-View für edit_file)
   │           ├── 3. GitCheckpointService.snapshot()
   │           ├── 4. tool.execute()
   │           └── 5. OperationLogger.log()
@@ -272,18 +287,33 @@ Nutzer-Gerät:
 - **Context Condensing** — wenn Kontext-Schätzung den `condensingThreshold` überschreitet: erste + letzte 4 Nachrichten behalten, Rest via LLM-Komprimierung.
 - **Power Steering** — alle `powerSteeringFrequency` Iterationen wird der Mode-Reminder erneut injiziert.
 
-### 8.4 Tool-Parallelisierung
+### 8.4 Chat History
+
+Gespräche werden über `ChatHistoryService` als JSON-Dateien in einem konfigurierbaren Vault-Ordner gespeichert. Jede Konversation enthält `id`, `title` (erster User-Satz, 60 Zeichen), `savedAt`, und die vollständige `messages`-Liste. Über `ChatHistoryModal` kann der Nutzer gespeicherte Gespräche durchsuchen und in die aktive Session laden.
+
+```
+ChatHistoryService
+  ├── save(messages) → {folder}/{id}.json (Vault)
+  ├── list()         → SavedConversation[]
+  └── load(id)       → HistoryMessage[]
+```
+
+### 8.5 Session-Overrides (ToolPickerPopover)
+
+Der `ToolPickerPopover` erlaubt es dem Nutzer, für die aktuelle Session (RAM only, kein Persist) gezielt Tool-Gruppen, Skills und Workflows zu erzwingen — unabhängig von den Mode-Einstellungen. Die drei Override-Maps (`sessionToolOverrides`, `sessionForcedSkills`, `sessionForcedWorkflow`) werden beim nächsten `handleSendMessage()` ausgelesen.
+
+### 8.6 Tool-Parallelisierung
 
 Tools in `PARALLEL_SAFE` werden via `Promise.all()` parallel ausgeführt. Safe: alle Read-Tools (`read_file`, `list_files`, `search_files`, `get_frontmatter`, `get_linked_notes`, `search_by_tag`, `web_fetch`, `web_search`). Write-Tools immer sequenziell.
 
-### 8.5 Einheitliche Fehler-/Ergebnisformatierung
+### 8.7 Einheitliche Fehler-/Ergebnisformatierung
 
 Alle Tools erben von `BaseTool` und nutzen:
 - `this.formatSuccess(message)` → `"✓ message"`
 - `this.formatError(error)` → `"<error>message</error>"`
 - `this.formatContent(content, meta)` → Content mit optionalem Metadaten-Header
 
-### 8.6 Diff-Stats
+### 8.8 Diff-Stats
 
 Write-Tools (`write_file`, `edit_file`) emittieren `<diff_stats added="N" removed="N"/>` im Tool-Result. Die UI parst diesen Tag und rendert das Badge.
 
@@ -291,7 +321,7 @@ Write-Tools (`write_file`, `edit_file`) emittieren `<diff_stats added="N" remove
 
 ## 9. Architekturentscheidungen
 
-Siehe einzelne ADRs in `_private/docs/architecture/`:
+Siehe einzelne ADRs in `_private/architecture/`:
 
 | ADR | Entscheidung |
 |-----|-------------|
@@ -346,3 +376,7 @@ Siehe einzelne ADRs in `_private/docs/architecture/`:
 | **RRF** | Reciprocal Rank Fusion — Zusammenführung von Semantic- und Keyword-Rankings |
 | **Shadow-Repo** | Separates isomorphic-git-Repository in `.obsidian/plugins/obsidian-agent/checkpoints/` |
 | **Fail-Closed** | Sicherheits-Default: Fehlt die Approval-Callback-Funktion, wird die Aktion abgelehnt |
+| **ApproveEditModal** | Modal mit line-by-line Diff-View, das vor `edit_file`-Operationen angezeigt wird |
+| **ChatHistoryService** | Speichert/lädt Konversationen als JSON-Dateien im Vault |
+| **ToolPickerPopover** | UI-Element für session-lokale Overrides von Tools, Skills und Workflows |
+| **Session-Override** | RAM-only Überschreibung von Mode-Einstellungen für die aktuelle Chat-Session |

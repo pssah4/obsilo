@@ -1,7 +1,7 @@
 # Obsidian Agent — Backlog
 
 > Status: `[x]` fertig · `[~]` in Arbeit · `[ ]` offen · `[-]` zurückgestellt
-> Letzte Aktualisierung: 2026-02-20
+> Letzte Aktualisierung: 2026-02-20 (Vollständigkeits-Audit)
 
 ---
 
@@ -115,29 +115,40 @@
 |--------|---------|-------|
 | `[x]` | AgentSidebarView (Chat-UI, Mode-Selector, Input) | `src/ui/AgentSidebarView.ts` |
 | `[x]` | Approval Cards (inline Allow / Enable Always / Deny) | `src/ui/AgentSidebarView.ts` |
+| `[x]` | ApproveEditModal (Diff-View mit line-by-line Kontext vor Edit-Approval) | `src/ui/ApproveEditModal.ts` |
 | `[x]` | Todo-Box (live update, auto-complete on attempt_completion) | `src/ui/AgentSidebarView.ts` |
 | `[x]` | Undo-Bar (nach Write-Ops) | `src/ui/AgentSidebarView.ts` |
 | `[x]` | Thinking-Blöcke (collapsible, Spinner während Reasoning) | `src/ui/AgentSidebarView.ts` |
 | `[x]` | Tool I/O Cards (expandierbar, auto-expand/collapse) | `src/ui/AgentSidebarView.ts` |
 | `[x]` | Token-Usage Footer (input/output, akkumuliert) | `src/ui/AgentSidebarView.ts` |
 | `[x]` | Diff-Stats Badge (+N / -N) | `src/ui/AgentSidebarView.ts` |
-| `[x]` | Chat Autocomplete (/ Workflows, @ Dateien, VaultFilePicker) | `src/ui/AgentSidebarView.ts` |
+| `[x]` | Chat Autocomplete (/ Workflows, @ Dateien, VaultFilePicker) | `src/ui/sidebar/AutocompleteHandler.ts` |
+| `[x]` | VaultFilePicker (Live-Suche, Multi-Select via @) | `src/ui/sidebar/VaultFilePicker.ts` |
+| `[x]` | ToolPickerPopover (Session-Overrides für Tools / Skills / Workflows) | `src/ui/sidebar/ToolPickerPopover.ts` |
+| `[x]` | AttachmentHandler (Datei-Anhänge als Kontext in der Chat-Eingabe) | `src/ui/sidebar/AttachmentHandler.ts` |
+| `[x]` | Chat History (Gespräche als JSON im Vault speichern + wiederladen) | `src/core/ChatHistoryService.ts`, `src/ui/ChatHistoryModal.ts` |
 | `[x]` | Notifications (System-Notification bei Task-Abschluss) | `src/main.ts` |
-| `[x]` | Log-Viewer in Settings (About-Tab) | `src/ui/settings/` |
+| `[x]` | Log-Viewer in Settings | `src/ui/settings/LogTab.ts` |
 
 ### Settings UI
 | Status | Feature | Datei |
 |--------|---------|-------|
-| `[x]` | Provider/Model Config Tab | `src/ui/settings/` |
-| `[x]` | Modes Editor Tab | `src/ui/settings/` |
-| `[x]` | Rules Tab | `src/ui/settings/` |
-| `[x]` | Skills Tab | `src/ui/settings/` |
-| `[x]` | Workflows Tab | `src/ui/settings/` |
-| `[x]` | Web Tools Tab | `src/ui/settings/WebSearchTab.ts` |
-| `[x]` | MCP Tab | `src/ui/settings/` |
-| `[x]` | Behaviour Tab (Auto-Approve, Checkpoints) | `src/ui/settings/` |
-| `[x]` | Embeddings Tab | `src/ui/settings/EmbeddingsTab.ts` |
-| `[x]` | Vault Tab (Semantic Index settings) | `src/ui/settings/VaultTab.ts` |
+| `[x]` | Models Tab (Provider, API-Key, Custom Models, per-model Temperatur) | `src/ui/settings/ModelsTab.ts` |
+| `[x]` | Modes Tab (CRUD Custom Modes, per-mode Model + MCP-Whitelist) | `src/ui/settings/ModesTab.ts` |
+| `[x]` | Prompts Tab (Custom Prompt Templates mit `{{userInput}}` / `{{activeFile}}`) | `src/ui/settings/PromptsTab.ts` |
+| `[x]` | Rules Tab | `src/ui/settings/RulesTab.ts` |
+| `[x]` | Skills Tab | `src/ui/settings/SkillsTab.ts` |
+| `[x]` | Workflows Tab | `src/ui/settings/WorkflowsTab.ts` |
+| `[x]` | Web Search Tab (Brave / Tavily API-Key) | `src/ui/settings/WebSearchTab.ts` |
+| `[x]` | MCP Tab (Server-Config, stdio commands) | `src/ui/settings/McpTab.ts` |
+| `[x]` | Permissions Tab (Auto-Approve per Tool-Kategorie) | `src/ui/settings/PermissionsTab.ts` |
+| `[x]` | Loop Tab (Error-Limit, Rate-Limit, Context Condensing, Power Steering) | `src/ui/settings/LoopTab.ts` |
+| `[x]` | Interface Tab (Auto-add active note, Welcome-Message) | `src/ui/settings/InterfaceTab.ts` |
+| `[x]` | Embeddings Tab (Semantic Index Konfiguration) | `src/ui/settings/EmbeddingsTab.ts` |
+| `[x]` | Vault Tab (Vault-Pfade, Chat History Ordner) | `src/ui/settings/VaultTab.ts` |
+| `[x]` | Backup Tab (Export / Import Settings als JSON) | `src/ui/settings/BackupTab.ts` |
+| `[x]` | Debug Tab (Debug Mode Toggle) | `src/ui/settings/DebugTab.ts` |
+| `[x]` | Log Tab (JSONL Audit-Log-Viewer) | `src/ui/settings/LogTab.ts` |
 
 ---
 
@@ -146,8 +157,7 @@
 | Priorität | Feature | Spec | Notiz |
 |-----------|---------|------|-------|
 | Mittel | Mode Export/Import (JSON) | — | Fehlte in Settings-Tab |
-| Niedrig | Task-Persistenz (History über Sessions) | — | Komplexes Feature |
-| Niedrig | Export/Import/Reset Settings | — | Settings-Management |
+| Niedrig | Settings Reset (Factory Reset) | — | BackupTab hat Export/Import, nur Reset fehlt |
 | Niedrig | Custom Tools (`.ts` Dateien laden) | — | Experimental |
 | Niedrig | Speech-to-Text (Whisper) | — | Zurückgestellt |
 | Geplant | **Obsilo Gateway** (LLM-Relay, OpenRouter, Stripe) | `FEATURE-obsilo-gateway.md` | Post-Stabilisierung, Monetarisierung |
