@@ -206,7 +206,7 @@ Templates/
 
 ## Documentation
 
-Full documentation: **[https://yourusername.github.io/obsidian-agent](https://yourusername.github.io/obsidian-agent)**
+Full documentation: **[https://pssah4.github.io/obsilo-public](https://pssah4.github.io/obsilo-public)**
 
 - [Getting Started](docs/getting-started.html)
 - [Chat Interface](docs/chat-interface.html)
