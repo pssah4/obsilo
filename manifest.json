@@ -5,6 +5,6 @@
   "minAppVersion": "1.4.0",
   "description": "Agentic operating layer for Obsidian with approval-based vault operations, MCP support, and local checkpoints",
   "author": "Sebastian Hanke",
-  "authorUrl": "https://github.com/yourusername/obsidian-agent",
+  "authorUrl": "https://github.com/pssah4/obsilo-public",
   "isDesktopOnly": true
 }

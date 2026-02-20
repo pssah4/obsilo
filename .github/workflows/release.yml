@@ -1,0 +1,56 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version number (e.g. 1.0.0 — must match manifest.json)'
+        required: true
+        default: '1.0.0'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build plugin
+        run: node esbuild.config.mjs production
+
+      - name: Verify build output
+        run: |
+          ls -lh main.js manifest.json styles.css
+          echo "manifest version: $(jq -r .version manifest.json)"
+
+      - name: Create GitHub Release with assets
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ inputs.version }}
+          name: v${{ inputs.version }}
+          body: |
+            ## Obsilo Agent v${{ inputs.version }}
+
+            Install via [BRAT](https://github.com/TfTHacker/obsidian42-brat):
+            1. Install BRAT from Community Plugins
+            2. BRAT → Add Beta Plugin → `https://github.com/pssah4/obsilo-public`
+
+            Or install manually: download `main.js`, `manifest.json`, `styles.css` and place them in `.obsidian/plugins/obsidian-agent/`.
+          files: |
+            main.js
+            manifest.json
+            styles.css
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
