@@ -141,6 +141,9 @@ export class AgentTask {
         let totalOutputTokens = 0;
         // attempt_completion signal
         let completionResult: string | null = null;
+        // Track whether the model streamed any text across all iterations.
+        // Used to decide if the completion result should be rendered as fallback.
+        let hasStreamedText = false;
         // switch_mode signal (checked at end of each iteration)
         let pendingModeSwitch: string | null = null;
         // Phase B: consecutive error tracking
@@ -281,6 +284,7 @@ export class AgentTask {
                     if (chunk.type === 'thinking') {
                         this.taskCallbacks.onThinking?.(chunk.text);
                     } else if (chunk.type === 'text') {
+                        hasStreamedText = true;
                         textParts.push(chunk.text);
                         this.taskCallbacks.onText(chunk.text);
                     } else if (chunk.type === 'tool_use') {
@@ -442,15 +446,18 @@ export class AgentTask {
                     }
                 }
 
-                // Break loop if attempt_completion was signaled
+                // Break loop if attempt_completion was signaled.
+                // The result field is an internal log entry — NEVER render it
+                // when the model already streamed its answer as text (which is
+                // the intended flow). Only render as last-resort fallback for
+                // models that skip text streaming entirely (e.g. GPT-5-mini).
                 if (completionResult !== null) {
                     this.taskCallbacks.onAttemptCompletion?.();
-                    // Some models (especially smaller ones) put their actual response
-                    // in the result field instead of streaming text first.
-                    // Render it as fallback so the user doesn't see an empty response.
-                    const resultText = completionResult as string;
-                    if (resultText.trim()) {
-                        this.taskCallbacks.onText?.(resultText);
+                    if (!hasStreamedText) {
+                        const resultText = completionResult as string;
+                        if (resultText.trim()) {
+                            this.taskCallbacks.onText?.(resultText);
+                        }
                     }
                     break;
                 }
