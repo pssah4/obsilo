@@ -143,14 +143,14 @@
 
 ## Geplant / Backlog
 
-| Priorität | Feature | Notiz |
-|-----------|---------|-------|
-| Mittel | Mode Export/Import (JSON) | Fehlte in Settings-Tab |
-| Niedrig | Task-Persistenz (History über Sessions) | Komplexes Feature |
-| Niedrig | Export/Import/Reset Settings | Settings-Management |
-| Niedrig | Custom Tools (`.ts` Dateien laden) | Experimental |
-| Niedrig | Speech-to-Text (Whisper) | Zurückgestellt |
-| Geplant | **Obsilo Gateway** (LLM-Relay, OpenRouter, Stripe) | Spec: `_private/docs/OBSILO_GATEWAY.md` |
+| Priorität | Feature | Spec | Notiz |
+|-----------|---------|------|-------|
+| Mittel | Mode Export/Import (JSON) | — | Fehlte in Settings-Tab |
+| Niedrig | Task-Persistenz (History über Sessions) | — | Komplexes Feature |
+| Niedrig | Export/Import/Reset Settings | — | Settings-Management |
+| Niedrig | Custom Tools (`.ts` Dateien laden) | — | Experimental |
+| Niedrig | Speech-to-Text (Whisper) | — | Zurückgestellt |
+| Geplant | **Obsilo Gateway** (LLM-Relay, OpenRouter, Stripe) | `FEATURE-obsilo-gateway.md` | Post-Stabilisierung, Monetarisierung |
 
 ---
 

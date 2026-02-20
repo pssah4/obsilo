@@ -1,23 +1,28 @@
 # Obsidian Agent — Project Manifest
 
 ## What this project is
-Kilo Code clone reimplemented as an Obsidian plugin. See `_private/docs/architecture/arc42.md` for the full architecture.
+Kilo Code clone reimplemented as an Obsidian plugin. See `_private/architecture/arc42.md` for the full architecture.
 
 ---
 
 ## Documentation Structure (mandatory)
 
-### Private / Internal
-All internal documentation lives under `_private/` (gitignored, never published).
+### Workflow: BA → RE → Architecture → Implementation
 
-| Path | Content |
-|------|---------|
-| `_private/requirements/features/` | One `FEATURE-*.md` per feature — implemented and planned. Source of truth for feature specs. |
-| `_private/docs/implementation/BACKLOG.md` | All features with current status. Updated whenever a feature changes. |
-| `_private/docs/implementation/ROADMAP.md` | Milestone and sprint overview. |
-| `_private/docs/architecture/arc42.md` | Comprehensive, always-current architecture document (arc42 format). |
-| `_private/docs/architecture/ADR-*.md` | Architecture Decision Records — one file per decision. |
-| `_private/docs/analysis/` | Analyses, ideations, session notes, design explorations. |
+```
+_private/
+├── analysis/          ← BA: Analysen, Ideations, historische Docs, Kontext-Research
+│   └── context/       ← BA Research & Produktkontext
+├── requirements/      ← RE: Feature-Specs und Epics
+│   ├── features/      ← FEATURE-*.md (ein File pro Feature, implementiert + geplant)
+│   └── epics/         ← EPIC-*.md
+├── architecture/      ← Architect: arc42 + ADRs
+│   ├── arc42.md       ← Immer aktuelles Architektur-Dokument
+│   └── ADR-*.md       ← Architecture Decision Records
+├── implementation/    ← Implementation Tracking
+│   └── BACKLOG.md     ← Alle Features mit Status (Source of Truth)
+└── scripts/           ← Operative Skripte und Prozess-Dokumentation
+```
 
 ### Public (GitHub Pages)
 | Path | Content |
@@ -33,17 +38,15 @@ All documentation belongs in one of the paths above.
 
 ## Documentation Maintenance Rules (mandatory for Claude)
 
-1. **New feature implemented** → Create or update `_private/requirements/features/FEATURE-{name}.md` AND update `_private/docs/implementation/BACKLOG.md` AND update the relevant page in `docs/` if it is user-facing.
+1. **New feature implemented** → Create or update `_private/requirements/features/FEATURE-{name}.md` AND update `_private/implementation/BACKLOG.md` AND update the relevant page in `docs/` if it is user-facing.
 
 2. **Feature changed or extended** → Update the feature file, BACKLOG.md status, and docs page.
 
-3. **Architecture decision made** → Create a new `_private/docs/architecture/ADR-{NNN}-{slug}.md` and update `_private/docs/architecture/arc42.md` to reflect the current state.
+3. **Architecture decision made** → Create a new `_private/architecture/ADR-{NNN}-{slug}.md` and update `_private/architecture/arc42.md` to reflect the current state.
 
-4. **Sprint completed or milestone reached** → Update `_private/docs/implementation/ROADMAP.md`.
+4. **Analysis or ideation from session** → Save in `_private/analysis/`.
 
-5. **Analysis or ideation** → Save in `_private/docs/analysis/`.
-
-6. **Before publishing** → Run `bash _private/scripts/publish.sh`. Private files are gitignored and excluded automatically.
+5. **Before publishing** → Merge `dev → test → main` via PR. GitHub Actions syncs `main` to `obsilo-public` automatically (without CLAUDE.md).
 
 ---
 

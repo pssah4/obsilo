@@ -1,6 +1,7 @@
-# Obsilo Gateway — Feature Specification
+# FEATURE: Obsilo Gateway
 
-**Status:** Planned (post-stabilization)
+**Status:** Planned — nicht implementiert
+**Priorität:** Nach Agent-Stabilisierung (Monetarisierung)
 **Goal:** Managed LLM relay service that allows Obsilo users to access AI models without their own API keys, monetized via credit packs.
 
 ---
