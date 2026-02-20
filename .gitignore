@@ -73,3 +73,6 @@ temp/
 .kilocode
 .claude
 forked-kilocode/
+
+# Private / internal files — never publish
+_private/
