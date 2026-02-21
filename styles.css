@@ -1085,8 +1085,123 @@
 .mc-action-del:hover { color: var(--color-red); }
 .mc-action-btn svg { width: 13px; height: 13px; }
 
-.model-table-footer { margin-top: 4px; margin-bottom: 24px; }
+.model-table-footer { margin-top: 4px; margin-bottom: 24px; display: flex; gap: 6px; align-items: center; }
 .model-add-btn { font-size: 12px; padding: 4px 10px; }
+.model-import-btn {
+    font-size: 12px;
+    padding: 4px 10px;
+    background: var(--background-secondary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    color: var(--text-normal);
+    cursor: pointer;
+}
+.model-import-btn:hover { background: var(--background-modifier-hover); }
+
+/* ── Code Import Modal ─────────────────────────────────────────────────── */
+
+.code-import-modal { max-width: 560px; }
+.cim-title { margin: 0 0 8px; font-size: 14px; }
+.cim-instructions { font-size: 12px; color: var(--text-muted); margin-bottom: 10px; line-height: 1.5; }
+
+.cim-textarea {
+    width: 100%;
+    min-height: 200px;
+    font-family: var(--font-monospace);
+    font-size: 12px;
+    line-height: 1.5;
+    padding: 10px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--background-secondary);
+    color: var(--text-normal);
+    resize: vertical;
+    box-sizing: border-box;
+    tab-size: 4;
+}
+.cim-textarea:focus { outline: none; border-color: var(--color-accent); }
+.cim-textarea::placeholder { color: var(--text-faint); font-size: 11px; }
+
+.cim-parse-row { display: flex; justify-content: flex-end; margin: 6px 0; }
+.cim-parse-btn {
+    font-size: 12px;
+    padding: 4px 10px;
+    background: var(--background-secondary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    color: var(--text-normal);
+    cursor: pointer;
+}
+.cim-parse-btn:hover { background: var(--background-modifier-hover); }
+
+.cim-preview-box {
+    background: var(--background-secondary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 5px;
+    padding: 10px 12px;
+    font-size: 12px;
+    margin-bottom: 8px;
+}
+
+.cim-preview-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+
+.cim-format-tag {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: 500;
+    background: var(--background-modifier-border);
+    color: var(--text-muted);
+    text-transform: capitalize;
+}
+
+.cim-provider-sel {
+    font-size: 12px;
+    padding: 2px 6px;
+    background: var(--background-modifier-form-field);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    color: var(--text-normal);
+}
+
+.cim-preview-field { display: flex; gap: 8px; align-items: baseline; margin-bottom: 4px; }
+.cim-field-label { color: var(--text-muted); font-size: 11px; min-width: 80px; flex-shrink: 0; }
+.cim-field-value { color: var(--text-normal); font-family: var(--font-monospace); font-size: 11px; word-break: break-all; }
+
+.cim-models-section { margin-top: 8px; border-top: 1px solid var(--background-modifier-border); padding-top: 8px; }
+.cim-models-header { font-size: 11px; font-weight: 500; color: var(--text-muted); margin-bottom: 6px; }
+.cim-models-list { display: flex; flex-direction: column; gap: 3px; }
+
+.cim-model-item { display: flex; align-items: center; gap: 6px; font-size: 12px; padding: 2px 4px; border-radius: 3px; }
+.cim-model-icon { display: flex; align-items: center; flex-shrink: 0; }
+.cim-model-icon svg { width: 12px; height: 12px; }
+.cim-ok { color: var(--color-green); }
+.cim-warn { color: var(--color-yellow); }
+.cim-model-name { font-family: var(--font-monospace); color: var(--text-normal); }
+.cim-model-dup { font-size: 10px; color: var(--text-faint); font-style: italic; }
+
+.cim-warnings { margin-bottom: 8px; }
+.cim-warning-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--color-yellow); padding: 3px 0; }
+.cim-warning-icon { display: flex; align-items: center; flex-shrink: 0; }
+.cim-warning-icon svg { width: 12px; height: 12px; }
+
+.cim-apikey-row { margin-bottom: 10px; }
+.cim-apikey-label { font-size: 12px; color: var(--text-muted); margin-bottom: 2px; }
+.cim-apikey-desc { font-size: 10px; color: var(--text-faint); margin-bottom: 4px; }
+.cim-apikey-input {
+    width: 100%;
+    padding: 4px 8px;
+    background: var(--background-modifier-form-field);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    color: var(--text-normal);
+    font-size: 12px;
+    box-sizing: border-box;
+}
+
+.cim-actions { display: flex; gap: 6px; justify-content: flex-end; padding-top: 10px; border-top: 1px solid var(--background-modifier-border); }
+.cim-import-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .model-table-empty {
     padding: 20px 12px;
     color: var(--text-muted);

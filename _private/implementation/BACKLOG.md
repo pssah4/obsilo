@@ -1,7 +1,7 @@
 # Obsidian Agent — Backlog
 
 > Status: `[x]` fertig · `[~]` in Arbeit · `[ ]` offen · `[-]` zurückgestellt
-> Letzte Aktualisierung: 2026-02-21 (System Prompt Modularisierung)
+> Letzte Aktualisierung: 2026-02-21 (Code Import Models)
 
 ---
 
@@ -150,6 +150,7 @@
 | Status | Feature | Datei |
 |--------|---------|-------|
 | `[x]` | Models Tab (Provider, API-Key, Custom Models, per-model Temperatur) | `src/ui/settings/ModelsTab.ts` |
+| `[x]` | Code Import (Paste API-Snippet, auto-extract Provider/URL/Models) | `src/ui/settings/CodeImportModal.ts`, `src/core/config/CodeConfigParser.ts` |
 | `[x]` | Modes Tab (CRUD Custom Modes, per-mode Model + MCP-Whitelist) | `src/ui/settings/ModesTab.ts` |
 | `[x]` | Prompts Tab (Custom Prompt Templates mit `{{userInput}}` / `{{activeFile}}`) | `src/ui/settings/PromptsTab.ts` |
 | `[x]` | Rules Tab | `src/ui/settings/RulesTab.ts` |
