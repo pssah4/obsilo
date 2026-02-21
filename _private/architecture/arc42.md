@@ -131,7 +131,13 @@ Obsidian Agent ist ein Obsidian-Plugin, das einen vollständigen KI-Agenten dire
 ```
 AgentTask.run()
   │
-  ├── buildSystemPrompt()  ← systemPrompt.ts
+  ├── buildSystemPromptForMode()  ← systemPrompt.ts (orchestrator)
+  │     ├── Modular sections (src/core/prompts/sections/)
+  │     │     ├── dateTime, vaultContext, capabilities, objective
+  │     │     ├── tools (← toolMetadata.ts single source of truth)
+  │     │     ├── toolRules, toolDecisionGuidelines
+  │     │     ├── responseFormat, explicitInstructions, securityBoundary
+  │     │     └── modeDefinition, customInstructions, skills, rules
   │     ├── ModeService.getToolDefinitions()
   │     ├── RulesLoader (vault + global rules)
   │     ├── SkillsManager (per-mode skills)
@@ -287,7 +293,7 @@ Nutzer-Gerät:
 
 ### 8.3 Context Management
 
-- **System Prompt** wird pro Task einmalig aufgebaut (nicht pro Iteration).
+- **System Prompt** wird pro Task einmalig aufgebaut (nicht pro Iteration). Modulare Architektur: 15 Sections als Pure Functions in `src/core/prompts/sections/`, orchestriert von `buildSystemPromptForMode()`. Tool-Beschreibungen kommen aus der zentralen `toolMetadata.ts` (Single Source of Truth fuer Prompt und UI). Feature-Specs: `FEATURE-modular-system-prompt.md`, `FEATURE-tool-metadata-registry.md`. ADR: [ADR-008](ADR-008-modular-prompt-sections.md).
 - **Context Condensing** — wenn Kontext-Schätzung den `condensingThreshold` überschreitet: erste + letzte 4 Nachrichten behalten, Rest via LLM-Komprimierung.
 - **Power Steering** — alle `powerSteeringFrequency` Iterationen wird der Mode-Reminder erneut injiziert.
 
@@ -402,6 +408,7 @@ Siehe einzelne ADRs in `_private/architecture/`:
 | [ADR-005](ADR-005-fail-closed-approval.md) | Fail-Closed Approval (kein Callback = ablehnen) |
 | [ADR-006](ADR-006-sliding-window-repetition.md) | Sliding Window für Tool-Repetition-Erkennung |
 | [ADR-007](ADR-007-event-separation.md) | Event Separation — Completion-Signale getrennt von Text-Output |
+| [ADR-008](ADR-008-modular-prompt-sections.md) | Modulare Prompt-Sections & zentrale Tool-Metadata-Registry |
 
 ---
 

@@ -1,7 +1,7 @@
 # Obsidian Agent — Backlog
 
 > Status: `[x]` fertig · `[~]` in Arbeit · `[ ]` offen · `[-]` zurückgestellt
-> Letzte Aktualisierung: 2026-02-20 (Vollständigkeits-Audit)
+> Letzte Aktualisierung: 2026-02-21 (System Prompt Modularisierung)
 
 ---
 
@@ -29,7 +29,10 @@
 |--------|---------|-------|
 | `[x]` | Built-in Modes (ask, agent) | `src/core/modes/builtinModes.ts` |
 | `[x]` | Custom Modes (CRUD, per-mode model override, MCP whitelist) | `src/core/modes/ModeService.ts` |
-| `[x]` | System Prompt Builder | `src/core/systemPrompt.ts` |
+| `[x]` | System Prompt Builder (modular sections architecture) | `src/core/systemPrompt.ts`, `src/core/prompts/sections/` |
+| `[x]` | Objective Section (task decomposition strategy) | `src/core/prompts/sections/objective.ts` |
+| `[x]` | Capabilities Section (high-level agent abilities) | `src/core/prompts/sections/capabilities.ts` |
+| `[x]` | Tool Metadata Registry (single source of truth for prompt + UI) | `src/core/tools/toolMetadata.ts` |
 | `[x]` | Rules (vault + global, RulesLoader) | `src/core/context/RulesLoader.ts` |
 | `[x]` | Skills (auto-inject per mode, SkillsManager) | `src/core/context/SkillsManager.ts` |
 | `[x]` | Workflows / Slash-Commands (WorkflowLoader) | `src/core/context/WorkflowLoader.ts` |
