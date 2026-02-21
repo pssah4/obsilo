@@ -66,8 +66,8 @@ export class ToolPickerPopover {
             web: 'Web Access', agent: 'Agent Control', mcp: 'MCP Tools',
         };
         const GROUP_ICONS: Record<string, string> = {
-            read: 'file-search', vault: 'layers', edit: 'file-edit',
-            web: 'globe', agent: 'cpu', mcp: 'plug-2',
+            read: 'file-text', vault: 'brain', edit: 'file-pen',
+            web: 'globe', agent: 'list-checks', mcp: 'plug-2',
         };
         const TOOL_LABELS: Record<string, string> = {
             read_file: 'Read File', list_files: 'List Files', search_files: 'Search Files',
@@ -157,14 +157,17 @@ export class ToolPickerPopover {
 
         // Create a sub-category row inside Built-In
         const makeSubCat = (
-            parent: HTMLElement, label: string, _iconName: string,
+            parent: HTMLElement, label: string, iconName: string,
         ): { subRow: HTMLElement; subBody: HTMLElement; subGroupCb: HTMLInputElement } => {
-            const subRow = parent.createDiv('tp-subcat-row is-open');
+            const subRow = parent.createDiv('tp-subcat-row');
             subRow.createSpan('tp-subcat-arrow').setText('▸');
+            const subIconEl = subRow.createSpan('tp-subcat-icon');
+            setIcon(subIconEl, iconName);
             subRow.createSpan({ cls: 'tp-subcat-label', text: label });
             const subGroupCb = subRow.createEl('input', { type: 'checkbox' }) as HTMLInputElement;
             subGroupCb.className = 'tp-cat-group-cb';
             const subBody = parent.createDiv('tp-subcat-body');
+            subBody.style.display = 'none';
             subRow.addEventListener('click', (e) => {
                 if ((e.target as HTMLElement).tagName === 'INPUT') return;
                 const open = subRow.classList.toggle('is-open');
@@ -173,9 +176,9 @@ export class ToolPickerPopover {
             return { subRow, subBody, subGroupCb };
         };
 
-        // Create an item row with checkbox, icon, name, description
+        // Create an item row with checkbox, name, description
         const makeItemRow = (
-            parent: HTMLElement, label: string, desc: string, iconName: string,
+            parent: HTMLElement, label: string, desc: string, _iconName: string,
             checked: boolean, indentCls = 'tp-item-row',
         ): HTMLInputElement => {
             const row = parent.createDiv(indentCls);
@@ -184,8 +187,6 @@ export class ToolPickerPopover {
             allItemRows.push(row);
             const cb = row.createEl('input', { type: 'checkbox' }) as HTMLInputElement;
             cb.checked = checked;
-            const iconEl = row.createSpan('tp-item-icon');
-            setIcon(iconEl, iconName);
             row.createSpan({ cls: 'tp-item-name', text: label });
             if (desc) row.createSpan({ cls: 'tp-item-desc', text: desc });
             return cb;
