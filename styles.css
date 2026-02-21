@@ -2167,10 +2167,138 @@
 .message-actions {
     display: flex;
     gap: 1px;
+    align-items: center;
     opacity: 1;
     margin-top: 6px;
     padding: 0 2px;
     justify-content: flex-end;
+}
+
+/* ── Perplexity-style inline citations ──────────────────────────────── */
+
+/* Inline citation badge [1], [2] */
+.source-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    font-weight: 600;
+    min-width: 15px;
+    height: 15px;
+    padding: 0 3px;
+    border-radius: 8px;
+    background: var(--background-modifier-border);
+    color: var(--text-muted);
+    cursor: pointer;
+    vertical-align: super;
+    margin: 0 1px;
+    line-height: 1;
+    transition: background 0.15s, color 0.15s;
+}
+
+.source-badge:hover {
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+}
+
+/* Sources indicator next to action buttons */
+.sources-indicator {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    color: var(--text-faint);
+    cursor: pointer;
+    margin-right: auto;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: color 0.1s, background 0.1s;
+}
+
+.sources-indicator:hover {
+    color: var(--text-muted);
+    background: var(--background-modifier-hover);
+}
+
+.sources-indicator-icon {
+    display: flex;
+    align-items: center;
+}
+
+.sources-indicator-icon svg {
+    width: 12px;
+    height: 12px;
+}
+
+/* Source popup (single source or panel) */
+.source-popup {
+    position: fixed;
+    z-index: 1000;
+    background: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    max-width: 320px;
+    min-width: 180px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.source-popup-title {
+    font-weight: 600;
+    color: var(--text-accent);
+    cursor: pointer;
+    margin-bottom: 2px;
+}
+
+.source-popup-title:hover {
+    text-decoration: underline;
+}
+
+.source-popup-context {
+    color: var(--text-muted);
+    font-size: 11px;
+}
+
+/* Sources panel (all sources list) */
+.sources-panel {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.source-panel-row {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    padding: 4px 0;
+    flex-wrap: wrap;
+}
+
+.source-panel-row:not(:last-child) {
+    border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.source-panel-row .source-badge {
+    flex-shrink: 0;
+    vertical-align: baseline;
+}
+
+.source-panel-title {
+    font-weight: 600;
+    color: var(--text-accent);
+    cursor: pointer;
+}
+
+.source-panel-title:hover {
+    text-decoration: underline;
+}
+
+.source-panel-context {
+    width: 100%;
+    color: var(--text-muted);
+    font-size: 11px;
+    padding-left: 21px;
 }
 
 .message-action-btn {

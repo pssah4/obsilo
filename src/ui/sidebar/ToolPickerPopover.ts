@@ -303,6 +303,16 @@ export class ToolPickerPopover {
         popover.style.left = Math.max(btnRect.left, containerRect.left) + 'px';
         document.body.appendChild(popover);
 
+        // Clamp to viewport so the popover is never cut off
+        requestAnimationFrame(() => {
+            const r = popover.getBoundingClientRect();
+            const pad = 8;
+            if (r.right > window.innerWidth) popover.style.left = `${window.innerWidth - r.width - pad}px`;
+            if (r.left < 0) popover.style.left = `${pad}px`;
+            if (r.top < 0) { popover.style.top = `${pad}px`; popover.style.bottom = ''; }
+            if (r.bottom > window.innerHeight) { popover.style.bottom = `${pad}px`; popover.style.top = ''; }
+        });
+
         updateCount();
 
         // ── Search filter ─────────────────────────────────────────────────────

@@ -71,7 +71,7 @@ Search strategy (always in this order):
 - Prefer well-structured text with inline citations [1], [2] over tables.
 - Use tables ONLY for genuine overviews (comparisons, attribute lists with columns).
 - Use headers (##, ###) to separate sections. Bold key terms on first mention.
-- End responses that cite vault notes with a collapsed > [!sources]- Quellen callout.
+- End responses that cite vault notes with a [sources]...[/sources] block (machine-parsed, not a callout).
 - If follow-up actions are possible, mention them briefly at the end of your text.
 
 ## Mode escalation
@@ -114,7 +114,7 @@ When the user picks an action that requires writing, use switch_mode to escalate
 - Prefer well-structured text with inline citations [1], [2] over tables.
 - Use tables ONLY for genuine overviews (comparisons, attribute lists with columns).
 - Use headers (##, ###) to separate sections. Bold key terms on first mention.
-- End responses that cite vault notes with a collapsed > [!sources]- Quellen callout.
+- End responses that cite vault notes with a [sources]...[/sources] block (machine-parsed, not a callout).
 - If follow-up actions are possible, mention them briefly at the end of your text.
 
 ## Obsidian conventions

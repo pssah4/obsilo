@@ -1142,9 +1142,17 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
                     // Replace the raw streaming text with the properly formatted Markdown.
                     // This fires exactly once — giving us instant streaming + clean final output.
                     streamingPara = null;
+                    // Parse [sources]...[/sources] block before rendering
+                    let renderText = accumulatedText;
+                    let parsedSources: { num: number; note: string; context: string }[] = [];
                     if (accumulatedText) {
+                        const parsed = this.parseSources(accumulatedText);
+                        renderText = parsed.cleanText;
+                        parsedSources = parsed.sources;
+                    }
+                    if (renderText) {
                         contentEl.empty();
-                        MarkdownRenderer.render(this.app, accumulatedText, contentEl, '', this);
+                        MarkdownRenderer.render(this.app, renderText, contentEl, '', this);
                     } else if (hasTools) {
                         // Tools ran but the model returned no text — show a neutral placeholder
                         // so the user doesn't stare at an empty message bubble.
@@ -1159,8 +1167,10 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
                     }
                     // Make internal links in the response clickable
                     this.wireInternalLinks(contentEl);
-                    // Add response action bar
-                    this.addResponseActions(messageEl, accumulatedText);
+                    // Convert inline [N] to clickable citation badges
+                    this.wireCitationBadges(contentEl, parsedSources);
+                    // Add response action bar (with sources indicator)
+                    this.addResponseActions(messageEl, accumulatedText, parsedSources);
                     messageEl.removeClass('message-streaming');
                     this.currentAbortController = null;
                     this.setRunningState(false);
@@ -1725,11 +1735,234 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
         });
     }
 
+    // -------------------------------------------------------------------------
+    // Perplexity-style inline citations
+    // -------------------------------------------------------------------------
+
+    /**
+     * Parse and extract [sources]...[/sources] block from the model's response.
+     * Returns cleaned text (without the block) and an array of parsed sources.
+     */
+    private parseSources(text: string): { cleanText: string; sources: { num: number; note: string; context: string }[] } {
+        const match = text.match(/\[sources\]\s*\n?([\s\S]*?)\[\/sources\]/);
+        if (!match) return { cleanText: text, sources: [] };
+
+        const cleanText = text.replace(/\[sources\]\s*\n?[\s\S]*?\[\/sources\]/, '').trimEnd();
+        const sources: { num: number; note: string; context: string }[] = [];
+
+        for (const line of match[1].split('\n')) {
+            const lineMatch = line.trim().match(/^(\d+)\.\s+(.+?)(?:\s+[—\-]+\s+(.+))?$/);
+            if (lineMatch) {
+                sources.push({
+                    num: parseInt(lineMatch[1]),
+                    note: lineMatch[2].trim(),
+                    context: lineMatch[3]?.trim() ?? '',
+                });
+            }
+        }
+
+        return { cleanText, sources };
+    }
+
+    /**
+     * Convert inline [N] references in rendered HTML to clickable citation badges.
+     * Only converts numbers that match a parsed source.
+     */
+    private wireCitationBadges(contentEl: HTMLElement, sources: { num: number; note: string; context: string }[]): void {
+        if (sources.length === 0) return;
+
+        const sourceNums = new Set(sources.map(s => s.num));
+        const walker = document.createTreeWalker(contentEl, NodeFilter.SHOW_TEXT);
+        const replacements: { node: Text; text: string }[] = [];
+
+        while (walker.nextNode()) {
+            const textNode = walker.currentNode as Text;
+            // Skip text inside code blocks
+            if (textNode.parentElement?.closest('code, pre')) continue;
+            const text = textNode.textContent ?? '';
+            if (/\[\d+\]/.test(text)) {
+                replacements.push({ node: textNode, text });
+            }
+        }
+
+        for (const { node, text } of replacements) {
+            const fragment = document.createDocumentFragment();
+            let lastIndex = 0;
+            let replaced = false;
+
+            for (const m of text.matchAll(/\[(\d+)\]/g)) {
+                const num = parseInt(m[1]);
+                if (!sourceNums.has(num)) continue;
+
+                const source = sources.find(s => s.num === num)!;
+
+                // Text before this match
+                if (m.index! > lastIndex) {
+                    fragment.appendChild(document.createTextNode(text.slice(lastIndex, m.index)));
+                }
+
+                // Citation badge
+                const badge = document.createElement('span');
+                badge.className = 'source-badge';
+                badge.textContent = String(num);
+                badge.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.showSourcePopup(badge, source);
+                });
+                fragment.appendChild(badge);
+
+                lastIndex = m.index! + m[0].length;
+                replaced = true;
+            }
+
+            if (replaced) {
+                // Remaining text after last match
+                if (lastIndex < text.length) {
+                    fragment.appendChild(document.createTextNode(text.slice(lastIndex)));
+                }
+                node.parentNode?.replaceChild(fragment, node);
+            }
+        }
+    }
+
+    /**
+     * Clamp a fixed-position popup to the visible viewport.
+     * Call after appending to document.body so dimensions are known.
+     */
+    private clampPopupToViewport(popup: HTMLElement): void {
+        requestAnimationFrame(() => {
+            const r = popup.getBoundingClientRect();
+            const pad = 8;
+            if (r.right > window.innerWidth) {
+                popup.style.left = `${window.innerWidth - r.width - pad}px`;
+            }
+            if (r.left < 0) {
+                popup.style.left = `${pad}px`;
+            }
+            if (r.bottom > window.innerHeight) {
+                popup.style.top = `${window.innerHeight - r.height - pad}px`;
+                popup.style.bottom = '';
+            }
+            if (r.top < 0) {
+                popup.style.top = `${pad}px`;
+                popup.style.bottom = '';
+            }
+        });
+    }
+
+    /**
+     * Attach a click-outside close handler to a popup.
+     */
+    private attachPopupCloseHandler(popup: HTMLElement, anchor: HTMLElement): void {
+        const close = (e: MouseEvent) => {
+            if (!popup.contains(e.target as Node) && e.target !== anchor) {
+                popup.remove();
+                document.removeEventListener('click', close);
+            }
+        };
+        setTimeout(() => document.addEventListener('click', close), 10);
+    }
+
+    /**
+     * Show a popup card for a single source (badge click).
+     */
+    private showSourcePopup(anchor: HTMLElement, source: { num: number; note: string; context: string }): void {
+        document.querySelectorAll('.source-popup').forEach(el => el.remove());
+
+        const popup = document.createElement('div');
+        popup.className = 'source-popup';
+
+        const titleEl = document.createElement('div');
+        titleEl.className = 'source-popup-title';
+        const noteName = source.note.replace(/^\[\[|\]\]$/g, '');
+        titleEl.textContent = noteName;
+        titleEl.addEventListener('click', () => {
+            this.app.workspace.openLinkText(noteName, '', false);
+            popup.remove();
+        });
+        popup.appendChild(titleEl);
+
+        if (source.context) {
+            const ctxEl = document.createElement('div');
+            ctxEl.className = 'source-popup-context';
+            ctxEl.textContent = source.context;
+            popup.appendChild(ctxEl);
+        }
+
+        const rect = anchor.getBoundingClientRect();
+        popup.style.top = `${rect.bottom + 4}px`;
+        popup.style.left = `${Math.max(4, rect.left - 40)}px`;
+
+        document.body.appendChild(popup);
+        this.clampPopupToViewport(popup);
+        this.attachPopupCloseHandler(popup, anchor);
+    }
+
+    /**
+     * Show a panel listing all sources (sources indicator click).
+     */
+    private showSourcesPanel(anchor: HTMLElement, sources: { num: number; note: string; context: string }[]): void {
+        document.querySelectorAll('.source-popup').forEach(el => el.remove());
+
+        const popup = document.createElement('div');
+        popup.className = 'source-popup sources-panel';
+
+        for (const source of sources) {
+            const row = document.createElement('div');
+            row.className = 'source-panel-row';
+
+            const numEl = document.createElement('span');
+            numEl.className = 'source-badge';
+            numEl.textContent = String(source.num);
+            row.appendChild(numEl);
+
+            const titleEl = document.createElement('span');
+            titleEl.className = 'source-panel-title';
+            const noteName = source.note.replace(/^\[\[|\]\]$/g, '');
+            titleEl.textContent = noteName;
+            titleEl.addEventListener('click', () => {
+                this.app.workspace.openLinkText(noteName, '', false);
+                popup.remove();
+            });
+            row.appendChild(titleEl);
+
+            if (source.context) {
+                const ctxEl = document.createElement('div');
+                ctxEl.className = 'source-panel-context';
+                ctxEl.textContent = source.context;
+                row.appendChild(ctxEl);
+            }
+
+            popup.appendChild(row);
+        }
+
+        const rect = anchor.getBoundingClientRect();
+        popup.style.bottom = `${window.innerHeight - rect.top + 4}px`;
+        popup.style.left = `${rect.left}px`;
+
+        document.body.appendChild(popup);
+        this.clampPopupToViewport(popup);
+        this.attachPopupCloseHandler(popup, anchor);
+    }
+
     /**
      * Add the response action icon bar below a completed assistant message.
      */
-    private addResponseActions(messageEl: HTMLElement, responseText: string): void {
+    private addResponseActions(messageEl: HTMLElement, responseText: string, sources?: { num: number; note: string; context: string }[]): void {
         const bar = messageEl.createDiv('message-actions');
+
+        // Sources indicator (left-aligned, before action buttons)
+        if (sources && sources.length > 0) {
+            const indicator = bar.createEl('span', { cls: 'sources-indicator' });
+            const iconEl = indicator.createSpan('sources-indicator-icon');
+            setIcon(iconEl, 'book-open');
+            indicator.createSpan({ text: `${sources.length} Quellen` });
+            indicator.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.showSourcesPanel(indicator, sources);
+            });
+        }
 
         const makeBtn = (icon: string, tooltip: string, onClick: () => void) => {
             const btn = bar.createEl('button', { cls: 'message-action-btn', attr: { 'aria-label': tooltip } });
