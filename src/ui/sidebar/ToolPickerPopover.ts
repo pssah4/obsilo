@@ -1,6 +1,7 @@
 import { setIcon } from 'obsidian';
 import type ObsidianAgentPlugin from '../../main';
 import type { ModeService } from '../../core/modes/ModeService';
+import { TOOL_METADATA, GROUP_META, getToolsForGroup } from '../../core/tools/toolMetadata';
 
 /**
  * ToolPickerPopover — manages the "pocket-knife" tool/skill/workflow picker.
@@ -49,72 +50,25 @@ export class ToolPickerPopover {
         // ── Scroll container ─────────────────────────────────────────────────
         const scrollEl = popover.createDiv('tool-picker-scroll');
 
-        // ── Data tables ──────────────────────────────────────────────────────
-        const GROUP_TOOLS: Record<string, string[]> = {
-            read:  ['read_file', 'list_files', 'search_files'],
-            vault: ['get_vault_stats', 'get_frontmatter', 'search_by_tag', 'get_linked_notes',
-                    'get_daily_note', 'open_note', 'semantic_search', 'query_base'],
-            edit:  ['write_file', 'edit_file', 'append_to_file', 'create_folder',
-                    'delete_file', 'move_file', 'update_frontmatter',
-                    'generate_canvas', 'create_base', 'update_base'],
-            web:   ['web_fetch', 'web_search'],
-            agent: ['ask_followup_question', 'attempt_completion', 'update_todo_list', 'new_task'],
-            mcp:   ['use_mcp_tool'],
-        };
-        const GROUP_LABELS: Record<string, string> = {
-            read: 'Read Files', vault: 'Vault Intelligence', edit: 'Edit Files',
-            web: 'Web Access', agent: 'Agent Control', mcp: 'MCP Tools',
-        };
-        const GROUP_ICONS: Record<string, string> = {
-            read: 'file-text', vault: 'brain', edit: 'file-pen',
-            web: 'globe', agent: 'list-checks', mcp: 'plug-2',
-        };
-        const TOOL_LABELS: Record<string, string> = {
-            read_file: 'Read File', list_files: 'List Files', search_files: 'Search Files',
-            get_vault_stats: 'Vault Stats', get_frontmatter: 'Frontmatter',
-            search_by_tag: 'Search by Tag', get_linked_notes: 'Linked Notes',
-            get_daily_note: 'Daily Note', open_note: 'Open Note',
-            semantic_search: 'Semantic Search', query_base: 'Query Base',
-            write_file: 'Write File', edit_file: 'Edit File', append_to_file: 'Append',
-            create_folder: 'Create Folder', delete_file: 'Delete File', move_file: 'Move File',
-            update_frontmatter: 'Update Frontmatter', generate_canvas: 'Canvas',
-            create_base: 'Create Base', update_base: 'Update Base',
-            web_fetch: 'Fetch URL', web_search: 'Web Search',
-            ask_followup_question: 'Ask User', attempt_completion: 'Complete Task',
-            update_todo_list: 'Update Plan', new_task: 'Sub-agent',
-            use_mcp_tool: 'MCP Tool',
-        };
-        const TOOL_ICONS: Record<string, string> = {
-            read_file: 'file-text', list_files: 'folder-open', search_files: 'search',
-            get_vault_stats: 'bar-chart-2', get_frontmatter: 'tag',
-            search_by_tag: 'hash', get_linked_notes: 'link',
-            get_daily_note: 'calendar', open_note: 'external-link',
-            semantic_search: 'brain', query_base: 'database',
-            write_file: 'file-plus', edit_file: 'file-pen', append_to_file: 'plus-circle',
-            create_folder: 'folder-plus', delete_file: 'trash-2', move_file: 'move',
-            update_frontmatter: 'tag', generate_canvas: 'layout-dashboard',
-            create_base: 'table-2', update_base: 'table-properties',
-            web_fetch: 'globe', web_search: 'search',
-            ask_followup_question: 'message-circle', attempt_completion: 'check-circle',
-            update_todo_list: 'list-checks', new_task: 'git-fork',
-            use_mcp_tool: 'plug-2',
-        };
-        const TOOL_DESCS: Record<string, string> = {
-            read_file: 'Read file content', list_files: 'List directory',
-            search_files: 'Search by regex', get_vault_stats: 'Overview & stats',
-            get_frontmatter: 'Read YAML metadata', search_by_tag: 'Find by tags',
-            get_linked_notes: 'Forward/back links', get_daily_note: 'Today\'s note',
-            open_note: 'Open in editor', semantic_search: 'Search by meaning',
-            query_base: 'Query Bases filter', write_file: 'Create or overwrite',
-            edit_file: 'Targeted edit', append_to_file: 'Add to end',
-            create_folder: 'New folder', delete_file: 'Move to trash',
-            move_file: 'Move or rename', update_frontmatter: 'Set YAML fields',
-            generate_canvas: 'Visual map', create_base: 'New database view',
-            update_base: 'Edit Bases view', web_fetch: 'Fetch URL as text',
-            web_search: 'Search the web', ask_followup_question: 'Ask user a question',
-            attempt_completion: 'Signal done', update_todo_list: 'Publish task plan',
-            new_task: 'Spawn sub-agent', use_mcp_tool: 'Call MCP server',
-        };
+        // ── Data from central tool metadata (single source of truth) ────────
+        const GROUP_TOOLS: Record<string, string[]> = {};
+        for (const [group] of Object.entries(GROUP_META)) {
+            GROUP_TOOLS[group] = getToolsForGroup(group as any).map(([name]) => name);
+        }
+        const GROUP_LABELS: Record<string, string> = {};
+        const GROUP_ICONS: Record<string, string> = {};
+        for (const [group, meta] of Object.entries(GROUP_META)) {
+            GROUP_LABELS[group] = meta.label;
+            GROUP_ICONS[group] = meta.icon;
+        }
+        const TOOL_LABELS: Record<string, string> = {};
+        const TOOL_ICONS: Record<string, string> = {};
+        const TOOL_DESCS: Record<string, string> = {};
+        for (const [name, meta] of Object.entries(TOOL_METADATA)) {
+            TOOL_LABELS[name] = meta.label;
+            TOOL_ICONS[name] = meta.icon;
+            TOOL_DESCS[name] = meta.description;
+        }
 
         // Current effective tools (session → settings → defaults)
         const effectiveTools = new Set(
