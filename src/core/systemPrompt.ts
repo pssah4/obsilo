@@ -11,13 +11,14 @@
  *   4. Tools (filtered by mode)
  *   5. Tool rules
  *   6. Tool decision guidelines
- *   7. Response format
- *   8. Explicit instructions
- *   9. Security boundary
- *  10. Mode role definition
- *  11. Custom instructions
- *  12. Skills
- *  13. Rules
+ *   7. Objective (task decomposition)
+ *   8. Response format
+ *   9. Explicit instructions
+ *  10. Security boundary
+ *  11. Mode role definition
+ *  12. Custom instructions
+ *  13. Skills
+ *  14. Rules
  *
  * Adapted from Kilo Code's src/core/prompts/system.ts — modularized for Obsidian.
  */
@@ -32,6 +33,7 @@ import {
     getToolsSection,
     getToolRulesSection,
     getToolDecisionGuidelinesSection,
+    getObjectiveSection,
     getResponseFormatSection,
     getExplicitInstructionsSection,
     getSecurityBoundarySection,
@@ -83,26 +85,30 @@ export function buildSystemPromptForMode(
         getToolDecisionGuidelinesSection(),
         '',
 
-        // 7. Response format
+        // 7. Objective (task decomposition)
+        getObjectiveSection(),
+        '',
+
+        // 8. Response format
         getResponseFormatSection(),
         '',
 
-        // 8. Explicit instructions
+        // 9. Explicit instructions
         getExplicitInstructionsSection(),
 
-        // 9. Security boundary
+        // 10. Security boundary
         getSecurityBoundarySection(),
 
-        // 10. Mode role definition
+        // 11. Mode role definition
         getModeDefinitionSection(mode),
 
-        // 11. Custom instructions (conditional)
+        // 12. Custom instructions (conditional)
         getCustomInstructionsSection(globalCustomInstructions, mode.customInstructions),
 
-        // 12. Skills (conditional)
+        // 13. Skills (conditional)
         getSkillsSection(skillsSection),
 
-        // 13. Rules (conditional)
+        // 14. Rules (conditional)
         getRulesSection(rulesContent),
     ];
 
