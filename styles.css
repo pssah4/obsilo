@@ -1101,7 +1101,19 @@
 /* ── Code Import Modal ─────────────────────────────────────────────────── */
 
 .code-import-modal { max-width: 560px; }
-.cim-title { margin: 0 0 8px; font-size: 14px; }
+.cim-title-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.cim-title { margin: 0; font-size: 14px; }
+.cim-experimental-tag {
+    display: inline-block;
+    padding: 1px 7px;
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: 500;
+    background: var(--color-yellow);
+    color: var(--background-primary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
 .cim-instructions { font-size: 12px; color: var(--text-muted); margin-bottom: 10px; line-height: 1.5; }
 
 .cim-textarea {
@@ -1180,6 +1192,7 @@
 .cim-warn { color: var(--color-yellow); }
 .cim-model-name { font-family: var(--font-monospace); color: var(--text-normal); }
 .cim-model-dup { font-size: 10px; color: var(--text-faint); font-style: italic; }
+.cim-model-note { display: block; font-size: 10px; color: var(--text-muted); margin-left: 22px; margin-top: 1px; }
 
 .cim-warnings { margin-bottom: 8px; }
 .cim-warning-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--color-yellow); padding: 3px 0; }
@@ -1199,6 +1212,38 @@
     font-size: 12px;
     box-sizing: border-box;
 }
+
+/* Temperature row */
+.cim-temp-row { margin-bottom: 10px; }
+.cim-temp-label { font-size: 12px; color: var(--text-muted); margin-bottom: 2px; }
+.cim-temp-desc { font-size: 10px; color: var(--text-faint); margin-bottom: 4px; }
+.cim-temp-desc.cim-temp-fixed { color: var(--color-yellow); }
+.cim-temp-input {
+    width: 80px;
+    padding: 4px 8px;
+    background: var(--background-modifier-form-field);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    color: var(--text-normal);
+    font-size: 12px;
+}
+.cim-temp-input:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* Test Connection row */
+.cim-test-row { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+.cim-test-btn {
+    flex-shrink: 0;
+    font-size: 12px;
+    padding: 4px 12px;
+}
+.cim-test-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.cim-test-result { display: none; font-size: 11px; align-items: center; gap: 4px; flex: 1; min-width: 0; }
+.cim-test-result.cim-test-ok { display: flex; color: var(--color-green); }
+.cim-test-result.cim-test-fail { display: block; color: var(--color-red); }
+.cim-test-icon { display: inline-flex; align-items: center; flex-shrink: 0; }
+.cim-test-icon svg { width: 14px; height: 14px; }
+.cim-test-hint { font-size: 10px; color: var(--color-yellow); margin-top: 4px; }
+.cim-test-detail { font-size: 10px; color: var(--text-muted); margin-top: 4px; word-break: break-word; }
 
 .cim-actions { display: flex; gap: 6px; justify-content: flex-end; padding-top: 10px; border-top: 1px solid var(--background-modifier-border); }
 .cim-import-btn:disabled { opacity: 0.5; cursor: not-allowed; }

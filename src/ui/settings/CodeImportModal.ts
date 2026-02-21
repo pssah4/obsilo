@@ -1,18 +1,20 @@
 /**
  * CodeImportModal — Paste API code snippets to auto-create model configurations.
  *
- * Opens a modal with:
+ * [Experimental] Opens a modal with:
  *   - Large monospace textarea for pasting code
  *   - Auto-parse with preview (provider, base URL, API version, model names)
+ *   - Temperature input with model-aware defaults
  *   - API key input field
+ *   - Test Connection button to validate settings before import
  *   - Import button to create CustomModel entries in bulk
  */
 
 import { App, Modal, Notice, setIcon } from 'obsidian';
 import type { CustomModel, ProviderType } from '../../types/settings';
-import { getModelKey } from '../../types/settings';
-import { parseCodeSnippet, type ParsedCodeConfig } from '../../core/config/CodeConfigParser';
+import { parseCodeSnippet, getModelDefaults, type ParsedCodeConfig } from '../../core/config/CodeConfigParser';
 import { PROVIDER_LABELS, PROVIDER_COLORS } from './constants';
+import { testModelConnection } from './testModelConnection';
 
 const PROVIDER_OPTIONS: ProviderType[] = [
     'anthropic', 'openai', 'azure', 'ollama', 'lmstudio', 'openrouter', 'custom',
@@ -24,11 +26,17 @@ export class CodeImportModal extends Modal {
 
     private parsed: ParsedCodeConfig | null = null;
     private apiKeyInput = '';
+    private temperatureInput: number | undefined = undefined;
+    private temperatureManuallySet = false;
     private providerOverride: ProviderType | null = null;
 
     private previewEl: HTMLElement | null = null;
     private warningsEl: HTMLElement | null = null;
     private importBtn: HTMLButtonElement | null = null;
+    private testResultEl: HTMLElement | null = null;
+    private testBtn: HTMLButtonElement | null = null;
+    private tempInputEl: HTMLInputElement | null = null;
+    private tempNoteEl: HTMLElement | null = null;
 
     constructor(
         app: App,
@@ -55,8 +63,10 @@ export class CodeImportModal extends Modal {
         contentEl.empty();
         contentEl.addClass('code-import-modal');
 
-        // Title
-        contentEl.createEl('h3', { text: 'Import Models from Code', cls: 'cim-title' });
+        // Title with experimental tag
+        const titleRow = contentEl.createDiv('cim-title-row');
+        titleRow.createEl('h3', { text: 'Import Models from Code', cls: 'cim-title' });
+        titleRow.createSpan({ cls: 'cim-experimental-tag', text: 'Experimental' });
 
         // Instructions
         contentEl.createDiv({
@@ -133,6 +143,34 @@ export class CodeImportModal extends Modal {
             this.apiKeyInput = akInput.value.trim();
         });
 
+        // Temperature input
+        const tempRow = contentEl.createDiv('cim-temp-row');
+        tempRow.createDiv({ cls: 'cim-temp-label', text: 'Temperature' });
+        this.tempNoteEl = tempRow.createDiv({ cls: 'cim-temp-desc' });
+        this.tempNoteEl.setText('Default for agent behavior. Will be auto-adjusted per model if needed.');
+        this.tempInputEl = tempRow.createEl('input', {
+            cls: 'cim-temp-input',
+            attr: { type: 'number', step: '0.1', min: '0', max: '2', value: '0.2' },
+        }) as HTMLInputElement;
+        this.temperatureInput = 0.2;
+        this.tempInputEl.addEventListener('input', () => {
+            const val = parseFloat(this.tempInputEl!.value);
+            if (!isNaN(val) && val >= 0 && val <= 2) {
+                this.temperatureInput = val;
+                this.temperatureManuallySet = true;
+            }
+        });
+
+        // Test Connection section
+        const testRow = contentEl.createDiv('cim-test-row');
+        this.testBtn = testRow.createEl('button', {
+            cls: 'cim-test-btn',
+            text: 'Test Connection',
+        }) as HTMLButtonElement;
+        this.testBtn.disabled = true;
+        this.testBtn.addEventListener('click', () => this.runTestConnection());
+        this.testResultEl = testRow.createDiv('cim-test-result');
+
         // Actions bar
         const actions = contentEl.createDiv('cim-actions');
         const cancelBtn = actions.createEl('button', { text: 'Cancel' });
@@ -151,6 +189,8 @@ export class CodeImportModal extends Modal {
     private runParse(code: string): void {
         this.parsed = parseCodeSnippet(code);
         this.providerOverride = null;
+        this.temperatureManuallySet = false;
+        this.updateTemperatureDefaults();
         this.renderPreview();
     }
 
@@ -167,6 +207,43 @@ export class CodeImportModal extends Modal {
         if (this.importBtn) {
             this.importBtn.disabled = true;
             this.importBtn.setText('Import');
+        }
+        if (this.testBtn) this.testBtn.disabled = true;
+        if (this.testResultEl) {
+            this.testResultEl.empty();
+            this.testResultEl.style.display = 'none';
+        }
+    }
+
+    private updateTemperatureDefaults(): void {
+        if (!this.parsed || this.temperatureManuallySet) return;
+        const provider = this.parsed.provider ?? this.providerOverride;
+        const models = this.parsed.modelNames;
+        if (!provider || models.length === 0) return;
+
+        const firstModel = models[0];
+        const defaults = getModelDefaults(firstModel, provider);
+
+        if (defaults.temperatureFixed && defaults.temperature !== undefined) {
+            this.temperatureInput = defaults.temperature;
+            if (this.tempInputEl) {
+                this.tempInputEl.value = String(defaults.temperature);
+                this.tempInputEl.disabled = true;
+            }
+            if (this.tempNoteEl) {
+                this.tempNoteEl.setText(defaults.note ?? `Fixed at ${defaults.temperature} by the API.`);
+                this.tempNoteEl.addClass('cim-temp-fixed');
+            }
+        } else {
+            this.temperatureInput = 0.2;
+            if (this.tempInputEl) {
+                this.tempInputEl.value = '0.2';
+                this.tempInputEl.disabled = false;
+            }
+            if (this.tempNoteEl) {
+                this.tempNoteEl.setText('Default for agent behavior. Will be auto-adjusted per model if needed.');
+                this.tempNoteEl.removeClass('cim-temp-fixed');
+            }
         }
     }
 
@@ -207,6 +284,8 @@ export class CodeImportModal extends Modal {
             }
             sel.addEventListener('change', () => {
                 this.providerOverride = (sel.value || null) as ProviderType | null;
+                this.temperatureManuallySet = false;
+                this.updateTemperatureDefaults();
                 this.renderModelList(box);
                 this.updateImportButton();
             });
@@ -243,12 +322,12 @@ export class CodeImportModal extends Modal {
         this.updateImportButton();
     }
 
+    // ── Model list ────────────────────────────────────────────────────────
+
     private renderModelList(box: HTMLElement): void {
         if (!this.parsed) return;
 
-        // Remove existing model section if re-rendering
-        const existing = box.querySelector('.cim-models-section');
-        if (existing) existing.remove();
+        box.querySelector('.cim-models-section')?.remove();
 
         if (this.parsed.modelNames.length === 0) return;
 
@@ -275,6 +354,14 @@ export class CodeImportModal extends Modal {
             if (isDuplicate) {
                 item.createSpan({ cls: 'cim-model-dup', text: '(already exists)' });
             }
+
+            // Show model-specific constraint notes
+            if (effectiveProvider) {
+                const defaults = getModelDefaults(name, effectiveProvider);
+                if (defaults.note) {
+                    item.createSpan({ cls: 'cim-model-note', text: defaults.note });
+                }
+            }
         }
     }
 
@@ -288,8 +375,96 @@ export class CodeImportModal extends Modal {
             this.importBtn.setText(`Import ${count} Model${count > 1 ? 's' : ''}`);
         } else {
             this.importBtn.disabled = true;
-            this.importBtn.setText(count === 0 ? 'No models found' : 'Select a provider');
+            if (!hasProvider) {
+                this.importBtn.setText('Select a provider');
+            } else {
+                this.importBtn.setText('No models found');
+            }
         }
+
+        // Enable test button when we have at least one model + provider
+        if (this.testBtn) {
+            this.testBtn.disabled = !(count > 0 && hasProvider);
+        }
+    }
+
+    // ── Test Connection ───────────────────────────────────────────────────
+
+    private async runTestConnection(): Promise<void> {
+        if (!this.parsed || !this.testBtn || !this.testResultEl) return;
+
+        const provider = this.parsed.provider ?? this.providerOverride;
+        const models = this.parsed.modelNames;
+        if (!provider || models.length === 0) return;
+
+        // Build a temporary CustomModel from the first model name
+        const firstName = models[0];
+        const defaults = getModelDefaults(firstName, provider);
+        const testModel: CustomModel = {
+            name: firstName,
+            provider,
+            displayName: firstName,
+            apiKey: this.apiKeyInput || this.parsed.apiKey || undefined,
+            baseUrl: this.parsed.baseUrl || undefined,
+            apiVersion: this.parsed.apiVersion || undefined,
+            enabled: true,
+            isBuiltIn: false,
+            maxTokens: defaults.maxTokens,
+            temperature: defaults.temperatureFixed
+                ? defaults.temperature
+                : this.temperatureInput,
+        };
+
+        // UI: show loading state
+        this.testBtn.disabled = true;
+        this.testBtn.setText('Testing...');
+        this.testResultEl.empty();
+        this.testResultEl.style.display = '';
+        this.testResultEl.className = 'cim-test-result';
+
+        try {
+            const result = await testModelConnection(testModel);
+
+            this.testResultEl.empty();
+            const resultIcon = this.testResultEl.createSpan('cim-test-icon');
+
+            if (result.ok) {
+                setIcon(resultIcon, 'check');
+                this.testResultEl.addClass('cim-test-ok');
+                this.testResultEl.createSpan({ text: result.message });
+            } else {
+                setIcon(resultIcon, 'x');
+                this.testResultEl.addClass('cim-test-fail');
+                this.testResultEl.createSpan({ text: result.message });
+
+                // Check if the error is about temperature — provide actionable hint
+                const detail = result.detail ?? '';
+                if (detail.includes('temperature') && detail.includes('unsupported')) {
+                    const hint = this.testResultEl.createDiv('cim-test-hint');
+                    hint.setText('Hint: This model may require a fixed temperature. Try setting temperature to 1.0 above.');
+
+                    // Auto-fix: set temperature to 1.0
+                    if (this.tempInputEl) {
+                        this.tempInputEl.value = '1.0';
+                        this.tempInputEl.disabled = false;
+                        this.temperatureInput = 1.0;
+                        this.temperatureManuallySet = true;
+                    }
+                } else if (detail) {
+                    const detailEl = this.testResultEl.createDiv('cim-test-detail');
+                    detailEl.setText(detail.length > 200 ? detail.substring(0, 200) + '...' : detail);
+                }
+            }
+        } catch (err: any) {
+            this.testResultEl.empty();
+            const resultIcon = this.testResultEl.createSpan('cim-test-icon');
+            setIcon(resultIcon, 'x');
+            this.testResultEl.addClass('cim-test-fail');
+            this.testResultEl.createSpan({ text: err?.message ?? 'Connection test failed' });
+        }
+
+        this.testBtn.disabled = false;
+        this.testBtn.setText('Test Connection');
     }
 
     // ── Import ────────────────────────────────────────────────────────────
@@ -303,17 +478,30 @@ export class CodeImportModal extends Modal {
             return;
         }
 
-        const models: CustomModel[] = this.parsed.modelNames.map((name) => ({
-            name,
-            provider,
-            displayName: name,
-            apiKey: this.apiKeyInput || this.parsed!.apiKey || undefined,
-            baseUrl: this.parsed!.baseUrl || undefined,
-            apiVersion: this.parsed!.apiVersion || undefined,
-            enabled: true,
-            isBuiltIn: false,
-            maxTokens: 8192,
-        }));
+        const modelNames = this.parsed.modelNames;
+        if (modelNames.length === 0) {
+            new Notice('No models found.');
+            return;
+        }
+
+        const models: CustomModel[] = modelNames.map((name) => {
+            const defaults = getModelDefaults(name, provider);
+            const temperature = defaults.temperatureFixed
+                ? defaults.temperature
+                : this.temperatureInput;
+            return {
+                name,
+                provider,
+                displayName: name,
+                apiKey: this.apiKeyInput || this.parsed!.apiKey || undefined,
+                baseUrl: this.parsed!.baseUrl || undefined,
+                apiVersion: this.parsed!.apiVersion || undefined,
+                enabled: true,
+                isBuiltIn: false,
+                maxTokens: defaults.maxTokens,
+                temperature,
+            };
+        });
 
         this.onImport(models);
         this.close();

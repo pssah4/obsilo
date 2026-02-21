@@ -44,6 +44,11 @@ A code parser that extracts configuration from pasted snippets and creates multi
 - [x] **Duplicate detection**: Models already in `activeModels` shown with warning, skipped on import
 - [x] **Auto-parse**: Debounced (500ms) on textarea input for instant feedback
 - [x] Parser never throws — partial results returned with warnings
+- [x] **Model-aware defaults**: `getModelDefaults()` detects API constraints (e.g., o-series temperature=1.0)
+- [x] **Temperature input**: Editable in modal, auto-adjusted per model, disabled when fixed by API
+- [x] **Test Connection**: Validates settings before import, auto-fixes temperature on error
+- [x] **Fetch Available Models**: When no models in snippet, queries API for available models with multi-select
+- [x] **Azure model discovery**: `fetchProviderModels` extended with Azure `/openai/models` endpoint support
 
 ## Technical Design
 
@@ -73,6 +78,7 @@ Supports:
 - Base URL normalization (strip trailing slash, Azure path truncation)
 - Model name deduplication (Set-based, preserves order)
 - Graceful partial matching (warnings, never errors)
+- **Model-aware defaults**: `getModelDefaults(name, provider)` detects API constraints per model (e.g., o-series reasoning models enforce `temperature=1.0`, `maxTokens=16384`). Defaults are applied during import and shown as notes in the preview.
 
 ### Modal Design
 

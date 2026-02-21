@@ -103,12 +103,17 @@ function detectProviderJS(code: string): ProviderType | undefined {
 }
 
 function detectProviderCurl(code: string): ProviderType | undefined {
-    if (/api-key\s*:/i.test(code)) return 'azure';
-    if (/openai\.azure\.com/i.test(code)) return 'azure';
-    if (/azure/i.test(code) && /openai/i.test(code)) return 'azure';
+    // URL-path-based detection (most specific — enterprise gateways, Bedrock proxies)
+    if (/\/anthropic\/model\//i.test(code) || /anthropic\.claude/i.test(code)) return 'anthropic';
     if (/api\.anthropic\.com/i.test(code)) return 'anthropic';
+    // Azure-specific domain or URL path patterns
+    if (/openai\.azure\.com/i.test(code)) return 'azure';
+    if (/\/openai\/deployments\//i.test(code)) return 'azure';
     if (/api\.openai\.com/i.test(code)) return 'openai';
     if (/openrouter\.ai/i.test(code)) return 'openrouter';
+    // Header-based fallback — api-key header alone is NOT enough for Azure
+    // (enterprise gateways also use api-key headers). Require Azure-specific URL pattern.
+    if (/api-key\s*:/i.test(code) && /azure/i.test(code)) return 'azure';
     return undefined;
 }
 
@@ -124,6 +129,12 @@ function normalizeBaseUrl(url: string, provider?: ProviderType): string {
         const idx = result.indexOf('/openai');
         if (idx !== -1) result = result.substring(0, idx + '/openai'.length);
     }
+
+    // Bedrock-style gateways: /anthropic/model/{id}/converse → strip to gateway root
+    result = result.replace(
+        /\/(anthropic|bedrock|openai)\/model\/[^/]+\/(converse|invoke)(\/.*)?$/,
+        '',
+    );
 
     // Strip known API path suffixes (for curl URLs)
     result = result.replace(
@@ -214,16 +225,22 @@ function extractJavaScript(code: string, r: ParsedCodeConfig): void {
 function extractCurl(code: string, r: ParsedCodeConfig): void {
     r.provider = detectProviderCurl(code);
 
-    // URL — first http(s) URL in the command
-    const urlMatch = code.match(/https?:\/\/[^\s"'\\]+/);
-    if (urlMatch) {
-        // Strip query params for base URL extraction
-        let url = urlMatch[0].replace(/\?.*$/, '');
-        r.baseUrl = normalizeBaseUrl(url, r.provider);
+    // Collect ALL URLs from the snippet (multiple curl commands)
+    const allUrls = [...code.matchAll(/https?:\/\/[^\s"'\\]+/g)].map((m) => m[0]);
 
-        // Extract api-version from query string
-        const qsMatch = urlMatch[0].match(/[?&]api-version=([^&\s"']+)/);
-        if (qsMatch) r.apiVersion = qsMatch[1];
+    if (allUrls.length > 0) {
+        // Use first URL for base URL extraction
+        const firstUrl = allUrls[0].replace(/\?.*$/, '');
+        r.baseUrl = normalizeBaseUrl(firstUrl, r.provider);
+
+        // Extract api-version from any URL's query string
+        for (const url of allUrls) {
+            const qsMatch = url.match(/[?&]api-version=([^&\s"']+)/);
+            if (qsMatch) {
+                r.apiVersion = qsMatch[1];
+                break;
+            }
+        }
     }
 
     // API key from headers
@@ -238,9 +255,76 @@ function extractCurl(code: string, r: ParsedCodeConfig): void {
         }
     }
 
-    // Models from JSON body
-    const modelMatches = [...code.matchAll(/["']model["']\s*:\s*["']([^"']+)["']/g)];
-    r.modelNames = collectModels(modelMatches.map((m) => m[1]));
+    // Models — collect from multiple sources
+    const modelCandidates: string[] = [];
+
+    // 1. From JSON body: "model": "..."
+    const bodyMatches = [...code.matchAll(/["']model["']\s*:\s*["']([^"']+)["']/g)];
+    for (const m of bodyMatches) modelCandidates.push(m[1]);
+
+    // 2. From URL paths: /model/{id}/converse or /model/{id}/invoke (Bedrock-style gateways)
+    for (const url of allUrls) {
+        const pathMatch = url.match(/\/model\/([^/\s"'?]+)\//);
+        if (pathMatch) modelCandidates.push(pathMatch[1]);
+    }
+
+    // 3. From Azure deployment URLs: /deployments/{name}/
+    for (const url of allUrls) {
+        const deplMatch = url.match(/\/deployments\/([^/\s"'?]+)\//);
+        if (deplMatch) modelCandidates.push(deplMatch[1]);
+    }
+
+    r.modelNames = collectModels(modelCandidates);
+}
+
+// ---------------------------------------------------------------------------
+// Model-aware defaults
+// ---------------------------------------------------------------------------
+
+export interface ModelDefaults {
+    /** Recommended temperature, or undefined to use provider default */
+    temperature?: number;
+    /** Whether temperature is fixed by the API (cannot be changed) */
+    temperatureFixed: boolean;
+    /** Recommended maxTokens */
+    maxTokens: number;
+    /** Human-readable note about this model's constraints */
+    note?: string;
+}
+
+/**
+ * Return model-aware defaults based on model name and provider.
+ * Detects constraints like o-series fixed temperature, Anthropic max 1.0, etc.
+ */
+export function getModelDefaults(modelName: string, provider: ProviderType): ModelDefaults {
+    const name = modelName.toLowerCase();
+
+    // o-series reasoning models (o1, o2, o3, o4, o1-mini, o3-mini, o4-mini, etc.)
+    // These enforce temperature=1 API-side and reject any other value.
+    if (/^o[1-9]/.test(name)) {
+        return {
+            temperature: 1.0,
+            temperatureFixed: true,
+            maxTokens: 16384,
+            note: 'Reasoning model: temperature fixed at 1.0 by the API.',
+        };
+    }
+
+    // Anthropic models: max temperature is 1.0
+    if (provider === 'anthropic') {
+        return {
+            temperature: undefined,
+            temperatureFixed: false,
+            maxTokens: 8192,
+        };
+    }
+
+    // Default for all other models
+    return {
+        temperature: undefined,
+        temperatureFixed: false,
+        maxTokens: 8192,
+    };
 }
 
 // ---------------------------------------------------------------------------
