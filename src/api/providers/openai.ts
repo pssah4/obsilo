@@ -159,13 +159,21 @@ export class OpenAiProvider implements ApiHandler {
             body.stream_options = { include_usage: true };
         }
 
-        // o-series models (o1, o2, o3, o4, o1-mini, o3-mini, o4-mini, etc.) enforce temperature=1
-        // API-side and reject any other value. For all other models, pass temperature if explicitly
-        // configured — including 0 for deterministic mode.
+        // Temperature handling — three cases:
+        // 1. o-series (o1, o3, o4-mini, etc.) enforce temperature=1 API-side → omit entirely
+        // 2. Explicitly configured temperature → always respect it
+        // 3. No explicit config → use 0.2 default for deterministic agent behavior,
+        //    EXCEPT for Azure where deployment names are opaque (may hide o-series models)
         const isOSeries = /^o[1-9]/.test(this.config.model);
-        if (!isOSeries) {
-            body.temperature = this.config.temperature ?? 0.2;
+        if (isOSeries) {
+            // o-series: never send temperature (API enforces 1.0)
+        } else if (this.config.temperature !== undefined) {
+            body.temperature = this.config.temperature;
+        } else if (this.config.type !== 'azure') {
+            body.temperature = 0.2;
         }
+        // Azure without explicit temperature: omit to avoid conflicts with
+        // opaque deployment names that may map to o-series models
 
         if (openAiTools && openAiTools.length > 0) {
             body.tools = openAiTools;

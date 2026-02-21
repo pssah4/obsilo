@@ -1,6 +1,7 @@
 import { App, Notice, Setting, setIcon } from 'obsidian';
 import type ObsidianAgentPlugin from '../../main';
 import { ModelConfigModal } from './ModelConfigModal';
+import { CodeImportModal } from './CodeImportModal';
 import type { CustomModel } from '../../types/settings';
 import { getModelKey } from '../../types/settings';
 import { PROVIDER_LABELS, PROVIDER_COLORS } from './constants';
@@ -40,6 +41,35 @@ export class ModelsTab {
                 this.plugin.settings.activeModels.push(newModel);
                 await this.plugin.saveSettings();
                 this.rerender();
+            }).open();
+        });
+
+        // Import from Code button
+        const importBtn = footer.createEl('button', { cls: 'model-import-btn', text: 'Import from Code' });
+        importBtn.addEventListener('click', () => {
+            const existingKeys = new Set(
+                this.plugin.settings.activeModels.map((m) => getModelKey(m)),
+            );
+            new CodeImportModal(this.app, existingKeys, async (newModels) => {
+                let imported = 0;
+                let skipped = 0;
+                for (const model of newModels) {
+                    const k = getModelKey(model);
+                    if (this.plugin.settings.activeModels.some((m) => getModelKey(m) === k)) {
+                        skipped++;
+                        continue;
+                    }
+                    this.plugin.settings.activeModels.push(model);
+                    imported++;
+                }
+                if (imported > 0) {
+                    await this.plugin.saveSettings();
+                    this.rerender();
+                }
+                const parts: string[] = [];
+                if (imported > 0) parts.push(`Imported ${imported} model${imported > 1 ? 's' : ''}`);
+                if (skipped > 0) parts.push(`${skipped} skipped (duplicate)`);
+                if (parts.length > 0) new Notice(parts.join('. ') + '.');
             }).open();
         });
     }

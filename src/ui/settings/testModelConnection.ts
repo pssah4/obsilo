@@ -176,10 +176,49 @@ async function fetchProviderModels(
     provider: ProviderType,
     apiKey: string,
     baseUrl?: string,
+    apiVersion?: string,
 ): Promise<{ id: string; label: string }[]> {
     // Helper: Obsidian's requestUrl throws on 4xx/5xx — use throw:false to always get response
     const req = (url: string, headers: Record<string, string> = {}) =>
         requestUrl({ url, method: 'GET', headers, throw: false });
+
+    if (provider === 'azure') {
+        if (!baseUrl) throw new Error('Base URL required for Azure');
+        if (!apiKey) throw new Error('API key required for Azure');
+        // Parser normalizes Azure URLs to end with /openai — strip it to get the endpoint root
+        const endpoint = baseUrl.replace(/\/+$/, '').replace(/\/openai$/i, '');
+        const ver = apiVersion ?? '2024-10-21';
+        const headers = { 'api-key': apiKey };
+
+        // Try /openai/deployments first — returns actual deployment names the user can call
+        const deplRes = await req(`${endpoint}/openai/deployments?api-version=${ver}`, headers);
+        if (deplRes.status === 200) {
+            const deplData = deplRes.json;
+            const deployments: any[] = deplData.data ?? deplData.value ?? [];
+            if (deployments.length > 0) {
+                return deployments
+                    .map((d: any) => {
+                        const id: string = d.id ?? d.model ?? '';
+                        const model: string = d.model ?? d.id ?? '';
+                        const label = id !== model ? `${id} (${model})` : id;
+                        return { id, label };
+                    })
+                    .filter((m) => m.id)
+                    .sort((a, b) => a.id.localeCompare(b.id));
+            }
+        }
+
+        // Fallback: /openai/models — lists base models available in the region
+        const modRes = await req(`${endpoint}/openai/models?api-version=${ver}`, headers);
+        if (modRes.status === 401) throw new Error('Invalid API key (401 Unauthorized)');
+        if (modRes.status !== 200) throw new Error(`HTTP ${modRes.status} — Could not list models or deployments`);
+        const modData = modRes.json;
+        const models: any[] = modData.data ?? modData.value ?? [];
+        return models
+            .map((m: any) => ({ id: (m.id ?? m.model) as string, label: (m.id ?? m.model) as string }))
+            .filter((m) => m.id)
+            .sort((a, b) => a.id.localeCompare(b.id));
+    }
 
     if (provider === 'anthropic') {
         if (!apiKey) throw new Error('API key required for Anthropic');
