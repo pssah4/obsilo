@@ -3121,6 +3121,21 @@
     transform: rotate(90deg);
 }
 
+.tp-subcat-icon {
+    width: 14px;
+    height: 14px;
+    color: var(--text-muted);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.tp-subcat-icon svg {
+    width: 14px;
+    height: 14px;
+}
+
 .tp-subcat-label {
     font-size: 12px;
     color: var(--text-normal);
@@ -3136,35 +3151,27 @@
     display: flex;
     align-items: center;
     gap: 7px;
-    padding: 3px 10px 3px 36px;
+    padding: 3px 10px 3px 48px;
 }
 
-/* Deeper indent for items under top-level categories (MCP/Skills/Workflows) */
+/* Items under top-level categories (MCP/Skills/Workflows) —
+   same indent as tool items under Built-In sub-categories */
 .tp-item-indent-cat {
     display: flex;
     align-items: center;
     gap: 7px;
-    padding: 3px 10px 3px 28px;
+    padding: 3px 10px 3px 48px;
+}
+
+.tp-item-row input[type="checkbox"],
+.tp-item-indent-cat input[type="checkbox"] {
+    order: 99;
+    margin-left: auto;
 }
 
 .tp-item-row:hover,
 .tp-item-indent-cat:hover {
     background: var(--background-modifier-hover);
-}
-
-.tp-item-icon {
-    width: 13px;
-    height: 13px;
-    color: var(--text-muted);
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.tp-item-icon svg {
-    width: 13px;
-    height: 13px;
 }
 
 .tp-item-name {
@@ -3372,7 +3379,7 @@
     background: var(--background-secondary);
 }
 
-/* Sub-category label: bold (icons removed, rely on label weight) */
+/* Sub-category label: bold */
 .tp-subcat-label {
     font-weight: 600;
 }
