@@ -8,6 +8,7 @@ export { getMemorySection } from './memory';
 export { getToolsSection } from './tools';
 export { getToolRulesSection } from './toolRules';
 export { getToolDecisionGuidelinesSection } from './toolDecisionGuidelines';
+export { getObjectiveSection } from './objective';
 export { getResponseFormatSection } from './responseFormat';
 export { getExplicitInstructionsSection } from './explicitInstructions';
 export { getSecurityBoundarySection } from './securityBoundary';
