@@ -4,6 +4,7 @@
 
 export { getDateTimeSection } from './dateTime';
 export { getVaultContextSection } from './vaultContext';
+export { getCapabilitiesSection } from './capabilities';
 export { getMemorySection } from './memory';
 export { getToolsSection } from './tools';
 export { getToolRulesSection } from './toolRules';

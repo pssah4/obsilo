@@ -7,18 +7,19 @@
  * Section order:
  *   1. Date/Time header
  *   2. Vault context
- *   3. User memory
- *   4. Tools (filtered by mode)
- *   5. Tool rules
- *   6. Tool decision guidelines
- *   7. Objective (task decomposition)
- *   8. Response format
- *   9. Explicit instructions
- *  10. Security boundary
- *  11. Mode role definition
- *  12. Custom instructions
- *  13. Skills
- *  14. Rules
+ *   3. Capabilities
+ *   4. User memory
+ *   5. Tools (filtered by mode)
+ *   6. Tool rules
+ *   7. Tool decision guidelines
+ *   8. Objective (task decomposition)
+ *   9. Response format
+ *  10. Explicit instructions
+ *  11. Security boundary
+ *  12. Mode role definition
+ *  13. Custom instructions
+ *  14. Skills
+ *  15. Rules
  *
  * Adapted from Kilo Code's src/core/prompts/system.ts — modularized for Obsidian.
  */
@@ -29,6 +30,7 @@ import type { McpClient } from './mcp/McpClient';
 import {
     getDateTimeSection,
     getVaultContextSection,
+    getCapabilitiesSection,
     getMemorySection,
     getToolsSection,
     getToolRulesSection,
@@ -71,44 +73,47 @@ export function buildSystemPromptForMode(
         // 1. Date/time + 2. Vault context (combined at top)
         getDateTimeSection(includeTime) + getVaultContextSection(),
 
-        // 3. User memory (conditional)
+        // 3. Capabilities (high-level summary)
+        getCapabilitiesSection(),
+
+        // 4. User memory (conditional)
         getMemorySection(memoryContext),
 
-        // 4. Tools (filtered by mode)
+        // 5. Tools (filtered by mode)
         getToolsSection(mode.toolGroups, mcpClient, allowedMcpServers),
 
-        // 5. Tool rules
+        // 6. Tool rules
         getToolRulesSection(),
         '',
 
-        // 6. Tool decision guidelines
+        // 7. Tool decision guidelines
         getToolDecisionGuidelinesSection(),
         '',
 
-        // 7. Objective (task decomposition)
+        // 8. Objective (task decomposition)
         getObjectiveSection(),
         '',
 
-        // 8. Response format
+        // 9. Response format
         getResponseFormatSection(),
         '',
 
-        // 9. Explicit instructions
+        // 10. Explicit instructions
         getExplicitInstructionsSection(),
 
-        // 10. Security boundary
+        // 11. Security boundary
         getSecurityBoundarySection(),
 
-        // 11. Mode role definition
+        // 12. Mode role definition
         getModeDefinitionSection(mode),
 
-        // 12. Custom instructions (conditional)
+        // 13. Custom instructions (conditional)
         getCustomInstructionsSection(globalCustomInstructions, mode.customInstructions),
 
-        // 13. Skills (conditional)
+        // 14. Skills (conditional)
         getSkillsSection(skillsSection),
 
-        // 14. Rules (conditional)
+        // 15. Rules (conditional)
         getRulesSection(rulesContent),
     ];
 
