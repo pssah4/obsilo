@@ -536,7 +536,7 @@ export class ModesTab {
                         await this.plugin.saveSettings();
                     }
                     if (this.plugin.settings.currentMode === slug) {
-                        this.plugin.settings.currentMode = 'librarian';
+                        this.plugin.settings.currentMode = 'ask';
                         await this.plugin.saveSettings();
                     }
                     this.rerender();

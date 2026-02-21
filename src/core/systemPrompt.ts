@@ -127,7 +127,6 @@ export function buildSystemPromptForMode(
  */
 export function buildSystemPrompt(mode: string): string {
     const modeConfig = BUILT_IN_MODES.find((m) => m.slug === mode)
-        ?? BUILT_IN_MODES.find((m) => m.slug === 'librarian')
         ?? BUILT_IN_MODES[0];
     return buildSystemPromptForMode(modeConfig, BUILT_IN_MODES);
 }

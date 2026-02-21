@@ -86,6 +86,7 @@ export class GitCheckpointService {
      * Returns a CheckpointInfo with the commit OID.
      */
     async snapshot(taskId: string, filePaths: string[]): Promise<CheckpointInfo> {
+        console.log(`[Checkpoints] snapshot() called: taskId=${taskId} files=${filePaths.join(', ')} initialized=${this.initialized}`);
         await this.ensureInit();
         const fs = this.getFs();
         const vaultRoot = (this.vault.adapter as any).basePath as string;

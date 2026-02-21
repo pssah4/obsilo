@@ -70,6 +70,8 @@ export class AgentTask {
      * Helps the model stay on task during very long agentic loops.
      */
     private powerSteeringFrequency: number;
+    /** Maximum iterations per message (prevents runaway loops). */
+    private maxIterations: number;
 
     constructor(
         api: ApiHandler,
@@ -81,6 +83,7 @@ export class AgentTask {
         condensingEnabled = false,
         condensingThreshold = 80,
         powerSteeringFrequency = 0,
+        maxIterations = 25,
     ) {
         this.api = api;
         this.toolRegistry = toolRegistry;
@@ -91,6 +94,7 @@ export class AgentTask {
         this.condensingEnabled = condensingEnabled;
         this.condensingThreshold = condensingThreshold;
         this.powerSteeringFrequency = powerSteeringFrequency;
+        this.maxIterations = maxIterations;
     }
 
     /**
@@ -135,7 +139,7 @@ export class AgentTask {
         // Add user message to the shared history
         history.push({ role: 'user', content: userMessage });
 
-        const MAX_ITERATIONS = 10; // Prevent runaway loops
+        const MAX_ITERATIONS = this.maxIterations;
         // Feature 6: Accumulate token usage across all iterations
         let totalInputTokens = 0;
         let totalOutputTokens = 0;
@@ -198,7 +202,7 @@ export class AgentTask {
                 this.consecutiveMistakeLimit,
                 this.rateLimitMs,
                 // Subtasks don't condense or power-steer (keep child loops lean)
-                false, 80, 0,
+                false, 80, 0, this.maxIterations,
             );
 
             await childTask.run(
@@ -331,6 +335,7 @@ export class AgentTask {
                     'read_file', 'list_files', 'search_files', 'get_frontmatter',
                     'get_linked_notes', 'search_by_tag', 'get_vault_stats', 'get_daily_note',
                     'web_fetch', 'web_search',
+                    'semantic_search', 'query_base', 'open_note',
                 ]);
 
                 const validToolUses = toolUses.filter(
@@ -608,7 +613,6 @@ export class AgentTask {
         // Fallback: use builtinModes directly
         const { BUILT_IN_MODES } = require('./modes/builtinModes');
         return BUILT_IN_MODES.find((m: ModeConfig) => m.slug === mode)
-            ?? BUILT_IN_MODES.find((m: ModeConfig) => m.slug === 'librarian')
             ?? BUILT_IN_MODES[0];
     }
 }

@@ -28,10 +28,10 @@ export class AskFollowupQuestionTool extends BaseTool<'ask_followup_question'> {
         return {
             name: 'ask_followup_question',
             description:
-                'Ask the user a clarifying question when you need more information to complete the task. ' +
-                'Use this when the request is ambiguous or when you need a decision from the user. ' +
-                'Do NOT use this if you already have enough information — proceed directly with the task. ' +
-                'Optionally provide a list of options for the user to choose from.',
+                'Ask the user a question when you genuinely need a decision to proceed. ' +
+                'Use ONLY when the request is ambiguous and you cannot determine the right approach yourself. ' +
+                'Do NOT use this to offer follow-up suggestions or next steps — just write those as text. ' +
+                'Do NOT use this if you already have enough information to answer — proceed directly.',
             input_schema: {
                 type: 'object',
                 properties: {

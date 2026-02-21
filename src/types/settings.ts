@@ -294,6 +294,8 @@ export interface AdvancedApiSettings {
     condensingThreshold: number;
     /** Inject a mode-role reminder every N iterations to keep the model on track (0 = disabled) */
     powerSteeringFrequency: number;
+    /** Maximum iterations per message before the agent stops (5–50, default 25) */
+    maxIterations: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -484,6 +486,7 @@ export const DEFAULT_SETTINGS: ObsidianAgentSettings = {
         condensingEnabled: false,
         condensingThreshold: 80,
         powerSteeringFrequency: 0,
+        maxIterations: 25,
     },
 
     enableSemanticIndex: false,

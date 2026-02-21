@@ -90,6 +90,20 @@ export class LoopTab {
                         }
                     }),
             );
+
+        new Setting(containerEl)
+            .setName('Max iterations per message')
+            .setDesc('Maximum number of tool-call rounds the agent can take for a single message. Higher values allow more complex tasks. Default: 25.')
+            .addSlider((s) =>
+                s
+                    .setLimits(5, 50, 5)
+                    .setValue(this.plugin.settings.advancedApi.maxIterations ?? 25)
+                    .setDynamicTooltip()
+                    .onChange(async (v) => {
+                        this.plugin.settings.advancedApi.maxIterations = v;
+                        await this.plugin.saveSettings();
+                    }),
+            );
     }
 
 }

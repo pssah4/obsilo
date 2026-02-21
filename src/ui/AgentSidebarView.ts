@@ -1206,6 +1206,7 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
             this.plugin.settings.advancedApi.condensingEnabled ?? false,
             this.plugin.settings.advancedApi.condensingThreshold ?? 80,
             this.plugin.settings.advancedApi.powerSteeringFrequency ?? 0,
+            this.plugin.settings.advancedApi.maxIterations ?? 25,
         );
 
         // Load enabled rules for this task (Sprint 3.2)
@@ -1922,6 +1923,7 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
             const groupLabels: Record<string, string> = {
                 'note-edit': 'note edits', 'vault-change': 'vault changes',
                 web: 'web', mcp: 'MCP', read: 'read',
+                mode: 'mode switching', subtask: 'sub-agents',
             };
 
             // Compact inline row — appears within the tool call area
@@ -1996,7 +1998,7 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
         });
     }
 
-    private getToolGroup(toolName: string): 'note-edit' | 'vault-change' | 'web' | 'mcp' | 'read' {
+    private getToolGroup(toolName: string): 'note-edit' | 'vault-change' | 'web' | 'mcp' | 'read' | 'mode' | 'subtask' {
         const webTools = ['web_fetch', 'web_search'];
         const mcpTools = ['use_mcp_tool'];
         const readTools = ['read_file', 'list_files', 'search_files', 'get_frontmatter', 'get_linked_notes', 'get_vault_stats', 'search_by_tag', 'get_daily_note', 'query_base'];
@@ -2005,15 +2007,19 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
         if (mcpTools.includes(toolName)) return 'mcp';
         if (readTools.includes(toolName)) return 'read';
         if (vaultChangeTools.includes(toolName)) return 'vault-change';
+        if (toolName === 'switch_mode') return 'mode';
+        if (toolName === 'new_task') return 'subtask';
         return 'note-edit'; // write_file, edit_file, append_to_file, update_frontmatter
     }
 
     /** Map a tool group to the corresponding permission key in autoApproval config */
-    private groupToPermKey(group: string): 'noteEdits' | 'vaultChanges' | 'web' | 'mcp' | null {
+    private groupToPermKey(group: string): 'noteEdits' | 'vaultChanges' | 'web' | 'mcp' | 'mode' | 'subtasks' | null {
         if (group === 'note-edit') return 'noteEdits';
         if (group === 'vault-change') return 'vaultChanges';
         if (group === 'web') return 'web';
         if (group === 'mcp') return 'mcp';
+        if (group === 'mode') return 'mode';
+        if (group === 'subtask') return 'subtasks';
         return null;
     }
 
@@ -2031,8 +2037,10 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
         undoBtn.addEventListener('click', async () => {
             (undoBtn as HTMLButtonElement).disabled = true;
             undoBtn.setText('Restoring…');
+            console.log(`[Undo] Attempting restore for taskId=${taskId} hasService=${!!this.plugin.checkpointService}`);
             try {
                 const result = await this.plugin.checkpointService?.restoreLatestForTask(taskId);
+                console.log('[Undo] Restore result:', result);
                 bar.empty();
                 if (result && result.restored.length > 0) {
                     bar.createSpan('undo-success').setText(

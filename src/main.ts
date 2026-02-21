@@ -285,7 +285,7 @@ export default class ObsidianAgentPlugin extends Plugin {
         this.settings.activeModels = this.settings.activeModels ?? [];
         this.settings.webTools = this.settings.webTools ?? DEFAULT_SETTINGS.webTools;
         // Migrate old mode slugs to new built-in mode slugs (Phase 3.1)
-        const OLD_MODE_MAP: Record<string, string> = { ask: 'librarian', code: 'writer' };
+        const OLD_MODE_MAP: Record<string, string> = { librarian: 'ask', writer: 'agent', orchestrator: 'agent', researcher: 'ask', curator: 'agent', architect: 'agent' };
         if (OLD_MODE_MAP[this.settings.currentMode]) {
             this.settings.currentMode = OLD_MODE_MAP[this.settings.currentMode];
         }

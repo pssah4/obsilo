@@ -142,10 +142,12 @@ export class ToolExecutionPipeline {
             //    capture the true pre-task state even when the agent touches many files.
             if (tool.isWriteOperation && (this.plugin.settings.enableCheckpoints ?? true)) {
                 const path: string | undefined = toolCall.input?.path;
+                console.log(`[Pipeline] Checkpoint check: tool=${toolCall.name} path=${path} taskId=${this.taskId} hasService=${!!this.plugin.checkpointService} alreadySnapshotted=${this.snapshotedPaths.has(path ?? '')}`);
                 if (path && !this.snapshotedPaths.has(path)) {
                     try {
                         await this.plugin.checkpointService?.snapshot(this.taskId, [path]);
                         this.snapshotedPaths.add(path); // mark only after successful snapshot
+                        console.log(`[Pipeline] Checkpoint snapshot created for ${path} (task ${this.taskId})`);
                     } catch (e) {
                         console.warn('[Pipeline] Checkpoint snapshot failed (non-fatal):', e);
                     }
