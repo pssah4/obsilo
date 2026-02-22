@@ -82,6 +82,8 @@ export interface ContextExtensions {
     switchMode?: (slug: string) => void;
     /** Spawn a child task (called by new_task tool) */
     spawnSubtask?: (mode: string, message: string) => Promise<string>;
+    /** Notify UI about a new checkpoint after a write operation */
+    onCheckpoint?: (checkpoint: import('../checkpoints/GitCheckpointService').CheckpointInfo) => void;
 }
 
 export class ToolExecutionPipeline {
@@ -89,8 +91,6 @@ export class ToolExecutionPipeline {
     private toolRegistry: ToolRegistry;
     private taskId: string;
     private mode: string;
-    /** Paths already snapshotted for this task — each file is captured once before its first write */
-    private snapshotedPaths = new Set<string>();
 
     constructor(
         plugin: ObsidianAgentPlugin,
@@ -138,18 +138,19 @@ export class ToolExecutionPipeline {
             }
 
             // 4. Checkpoint before each write — snapshot the file BEFORE it is modified.
-            //    Each vault path is snapshotted at most once per task so we always
-            //    capture the true pre-task state even when the agent touches many files.
+            //    Every write gets its own checkpoint for granular restore (Kilo Code pattern).
             if (tool.isWriteOperation && (this.plugin.settings.enableCheckpoints ?? true)) {
                 const path: string | undefined = toolCall.input?.path;
-                console.log(`[Pipeline] Checkpoint check: tool=${toolCall.name} path=${path} taskId=${this.taskId} hasService=${!!this.plugin.checkpointService} alreadySnapshotted=${this.snapshotedPaths.has(path ?? '')}`);
-                if (path && !this.snapshotedPaths.has(path)) {
+                if (path) {
                     try {
-                        await this.plugin.checkpointService?.snapshot(this.taskId, [path]);
-                        this.snapshotedPaths.add(path); // mark only after successful snapshot
-                        console.log(`[Pipeline] Checkpoint snapshot created for ${path} (task ${this.taskId})`);
+                        const cp = await this.plugin.checkpointService?.snapshot(
+                            this.taskId, [path], toolCall.name
+                        );
+                        if (cp && cp.commitOid !== 'empty' && extensions?.onCheckpoint) {
+                            extensions.onCheckpoint(cp);
+                        }
                     } catch (e) {
-                        console.warn('[Pipeline] Checkpoint snapshot failed (non-fatal):', e);
+                        console.warn('[Pipeline] Checkpoint failed (non-fatal):', e);
                     }
                 }
             }

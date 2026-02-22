@@ -2030,7 +2030,77 @@
 
 .approval-deny-small:hover { color: var(--color-red); }
 
-/* ── Undo bar ────────────────────────────────────────────────────────── */
+/* ── Checkpoint markers (Kilo Code pattern) ──────────────────────────── */
+.checkpoint-marker {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 0;
+    margin: 4px 0;
+    font-size: 11px;
+    color: var(--text-faint);
+    opacity: 0.5;
+    transition: opacity 0.15s;
+}
+
+.checkpoint-marker:hover {
+    opacity: 1;
+}
+
+.checkpoint-marker::before,
+.checkpoint-marker::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(to right, transparent, var(--background-modifier-border));
+}
+
+.checkpoint-marker::after {
+    background: linear-gradient(to left, transparent, var(--background-modifier-border));
+}
+
+.checkpoint-icon {
+    display: flex;
+    align-items: center;
+}
+
+.checkpoint-icon svg {
+    width: 12px;
+    height: 12px;
+}
+
+.checkpoint-label {
+    white-space: nowrap;
+    font-size: 10px;
+}
+
+.checkpoint-restore-btn {
+    padding: 1px 6px;
+    font-size: 10px;
+    background: transparent;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 3px;
+    color: var(--text-faint);
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+
+.checkpoint-marker:hover .checkpoint-restore-btn {
+    opacity: 1;
+}
+
+.checkpoint-restore-btn:hover {
+    border-color: var(--interactive-accent);
+    color: var(--interactive-accent);
+}
+
+.checkpoint-restored {
+    color: var(--color-green);
+    border-color: var(--color-green);
+}
+
+/* ── Undo bar (fallback) ─────────────────────────────────────────────── */
 .undo-bar {
     display: flex;
     align-items: center;

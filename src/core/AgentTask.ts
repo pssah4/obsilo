@@ -48,6 +48,8 @@ export interface AgentTaskCallbacks {
     onModeSwitch?: (newModeSlug: string) => void;
     /** Called when the conversation history was condensed (context summarized) */
     onContextCondensed?: () => void;
+    /** Called when a checkpoint is saved before a write tool */
+    onCheckpoint?: (checkpoint: import('./checkpoints/GitCheckpointService').CheckpointInfo) => void;
     /** Called when an unrecoverable error occurs */
     onError: (error: Error) => void;
 }
@@ -373,6 +375,7 @@ export class AgentTask {
                         spawnSubtask,
                         onApprovalRequired: this.taskCallbacks.onApprovalRequired,
                         updateTodos: this.taskCallbacks.onTodoUpdate,
+                        onCheckpoint: this.taskCallbacks.onCheckpoint,
                     });
                 };
 

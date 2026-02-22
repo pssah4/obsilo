@@ -817,6 +817,7 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
 
         const taskId = `task-${Date.now()}`;
         let taskWriteCount = 0;
+        let hasRenderedCheckpoints = false;
         let lastTodoItems: import('../core/tools/agent/UpdateTodoListTool').TodoItem[] = [];
 
         const task = new AgentTask(
@@ -1094,6 +1095,11 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
                         );
                     }
                 },
+                onCheckpoint: (checkpoint) => {
+                    this.renderCheckpointMarker(toolsEl, checkpoint);
+                    hasRenderedCheckpoints = true;
+                    scheduleScroll();
+                },
                 onQuestion: (question, options, resolve) => {
                     this.showQuestionCard(question, options, resolve);
                 },
@@ -1202,7 +1208,7 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
                     this.currentAbortController = null;
                     this.setRunningState(false);
                     scheduleScroll();
-                    if (taskWriteCount > 0 && (this.plugin.settings.enableCheckpoints ?? true)) {
+                    if (taskWriteCount > 0 && (this.plugin.settings.enableCheckpoints ?? true) && !hasRenderedCheckpoints) {
                         this.showUndoBar(taskId, taskWriteCount);
                     }
                     // Notify when sidebar is not the active (focused) view
@@ -2356,7 +2362,59 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
     }
 
     // -------------------------------------------------------------------------
-    // Undo bar
+    // Checkpoint markers (Kilo Code pattern: CheckpointSaved.tsx)
+    // -------------------------------------------------------------------------
+
+    private renderCheckpointMarker(
+        container: HTMLElement,
+        checkpoint: import('../core/checkpoints/GitCheckpointService').CheckpointInfo,
+    ): void {
+        const marker = container.createDiv('checkpoint-marker');
+
+        const iconEl = marker.createSpan('checkpoint-icon');
+        setIcon(iconEl, 'git-commit-vertical');
+
+        const label = marker.createSpan('checkpoint-label');
+        const files = checkpoint.filesChanged.map((f) => f.split('/').pop()).join(', ');
+        const time = new Date(checkpoint.timestamp).toLocaleTimeString('de-DE', {
+            hour: '2-digit',
+            minute: '2-digit',
+        });
+        label.setText(`Checkpoint · ${files} · ${time}`);
+
+        const restoreBtn = marker.createEl('button', {
+            cls: 'checkpoint-restore-btn',
+            text: 'Restore',
+        });
+        restoreBtn.addEventListener('click', async () => {
+            restoreBtn.setText('Restoring...');
+            (restoreBtn as HTMLButtonElement).disabled = true;
+            try {
+                const result = await this.plugin.checkpointService?.restore(checkpoint);
+                if (result && result.restored.length > 0) {
+                    restoreBtn.setText(`Restored ${result.restored.length} file(s)`);
+                    restoreBtn.addClass('checkpoint-restored');
+                    // Inject restore notice into conversation history so the agent
+                    // knows vault state changed (prevents stale "file exists" assumptions)
+                    const restoredFiles = result.restored.join(', ');
+                    const deletedNote = checkpoint.newFiles?.length
+                        ? ` Deleted (newly created): ${checkpoint.newFiles.join(', ')}.`
+                        : '';
+                    this.conversationHistory.push({
+                        role: 'user',
+                        content: `[System] Checkpoint restored. Files affected: ${restoredFiles}.${deletedNote} The vault state has changed — do not assume previous file operations are still valid.`,
+                    });
+                } else {
+                    restoreBtn.setText('Nothing to restore');
+                }
+            } catch {
+                restoreBtn.setText('Failed');
+            }
+        });
+    }
+
+    // -------------------------------------------------------------------------
+    // Undo bar (fallback when no checkpoint markers rendered)
     // -------------------------------------------------------------------------
 
     private showUndoBar(taskId: string, writeCount: number): void {

@@ -21,6 +21,9 @@ export interface CheckpointInfo {
     commitOid: string;
     timestamp: string;
     filesChanged: string[];
+    toolName?: string;
+    /** Files that didn't exist before this checkpoint (restore = delete) */
+    newFiles?: string[];
 }
 
 export interface RestoreResult {
@@ -37,6 +40,8 @@ export class GitCheckpointService {
     private initialized = false;
     private timeoutMs: number;
     private autoCleanup: boolean;
+    /** In-memory checkpoint tracking per task (Kilo Code pattern: _checkpoints[]) */
+    private taskCheckpoints = new Map<string, CheckpointInfo[]>();
 
     constructor(vault: Vault, pluginDir: string, timeoutSeconds = 30, autoCleanup = true) {
         this.vault = vault;
@@ -85,17 +90,25 @@ export class GitCheckpointService {
      * Create a snapshot of the specified files before a task modifies them.
      * Returns a CheckpointInfo with the commit OID.
      */
-    async snapshot(taskId: string, filePaths: string[]): Promise<CheckpointInfo> {
-        console.log(`[Checkpoints] snapshot() called: taskId=${taskId} files=${filePaths.join(', ')} initialized=${this.initialized}`);
+    async snapshot(taskId: string, filePaths: string[], toolName?: string): Promise<CheckpointInfo> {
+        console.log(`[Checkpoints] snapshot() called: taskId=${taskId} tool=${toolName} files=${filePaths.join(', ')} initialized=${this.initialized}`);
         await this.ensureInit();
         const fs = this.getFs();
         const vaultRoot = (this.vault.adapter as any).basePath as string;
 
         const staged: string[] = [];
+        const newFiles: string[] = [];
         for (const vaultRelPath of filePaths) {
             try {
-                const absPath = `${vaultRoot}/${vaultRelPath}`;
-                const repoRelative = vaultRelPath; // store under same relative path
+                const repoRelative = vaultRelPath;
+
+                // Check if file exists before reading (write_file may create new files)
+                const exists = await this.vault.adapter.exists(vaultRelPath);
+                if (!exists) {
+                    // New file — track for restore (restore = delete)
+                    newFiles.push(vaultRelPath);
+                    continue;
+                }
 
                 // Read file content from vault
                 const content = await this.withTimeout(
@@ -117,30 +130,43 @@ export class GitCheckpointService {
             }
         }
 
-        if (staged.length === 0) {
-            // Nothing to commit — return a dummy checkpoint
+        // For new files only (no existing files to commit): create a marker checkpoint
+        if (staged.length === 0 && newFiles.length === 0) {
             return {
                 taskId,
                 commitOid: 'empty',
                 timestamp: new Date().toISOString(),
                 filesChanged: [],
+                toolName,
             };
         }
 
-        const commitOid = await git.commit({
-            fs,
-            dir: this.repoPath,
-            author: { name: 'obsidian-agent', email: 'agent@obsidian.local' },
-            message: `checkpoint:${taskId}\n\nFiles: ${staged.join(', ')}`,
-        });
+        let commitOid = 'none';
+        if (staged.length > 0) {
+            commitOid = await git.commit({
+                fs,
+                dir: this.repoPath,
+                author: { name: 'obsidian-agent', email: 'agent@obsidian.local' },
+                message: `checkpoint:${taskId}\n\nFiles: ${staged.join(', ')}`,
+            });
+        }
 
-        console.log(`[Checkpoints] Snapshot created for task ${taskId}: ${commitOid.substring(0, 8)}`);
-        return {
+        const info: CheckpointInfo = {
             taskId,
             commitOid,
             timestamp: new Date().toISOString(),
             filesChanged: staged,
+            toolName,
+            newFiles: newFiles.length > 0 ? newFiles : undefined,
         };
+
+        // Register in-memory (Kilo Code pattern: _checkpoints.push(toHash))
+        const list = this.taskCheckpoints.get(taskId) ?? [];
+        list.push(info);
+        this.taskCheckpoints.set(taskId, list);
+
+        console.log(`[Checkpoints] Snapshot created for task ${taskId}: ${commitOid.substring(0, 8)} (${list.length} checkpoints total)`);
+        return info;
     }
 
     /**
@@ -156,31 +182,48 @@ export class GitCheckpointService {
         const restored: string[] = [];
         const errors: string[] = [];
 
-        for (const vaultRelPath of checkpoint.filesChanged) {
-            try {
-                // Read file content from shadow repo at that commit
-                const { blob } = await git.readBlob({
-                    fs,
-                    dir: this.repoPath,
-                    oid: checkpoint.commitOid,
-                    filepath: vaultRelPath,
-                });
-                const content = new TextDecoder().decode(blob);
+        // Restore existing files from shadow repo
+        if (checkpoint.commitOid !== 'none') {
+            for (const vaultRelPath of checkpoint.filesChanged) {
+                try {
+                    const { blob } = await git.readBlob({
+                        fs,
+                        dir: this.repoPath,
+                        oid: checkpoint.commitOid,
+                        filepath: vaultRelPath,
+                    });
+                    const content = new TextDecoder().decode(blob);
 
-                // Write back to vault
-                const existingFile = this.vault.getAbstractFileByPath(vaultRelPath);
-                if (existingFile) {
-                    const { TFile } = await import('obsidian');
-                    if (existingFile instanceof TFile) {
-                        await this.vault.modify(existingFile, content);
+                    const existingFile = this.vault.getAbstractFileByPath(vaultRelPath);
+                    if (existingFile) {
+                        const { TFile } = await import('obsidian');
+                        if (existingFile instanceof TFile) {
+                            await this.vault.modify(existingFile, content);
+                        }
+                    } else {
+                        await this.vault.adapter.write(vaultRelPath, content);
                     }
-                } else {
-                    await this.vault.adapter.write(vaultRelPath, content);
+                    restored.push(vaultRelPath);
+                } catch (e) {
+                    const msg = e instanceof Error ? e.message : String(e);
+                    errors.push(`${vaultRelPath}: ${msg}`);
                 }
-                restored.push(vaultRelPath);
-            } catch (e) {
-                const msg = e instanceof Error ? e.message : String(e);
-                errors.push(`${vaultRelPath}: ${msg}`);
+            }
+        }
+
+        // Delete files that were newly created (undo = remove them)
+        if (checkpoint.newFiles) {
+            for (const vaultRelPath of checkpoint.newFiles) {
+                try {
+                    const file = this.vault.getAbstractFileByPath(vaultRelPath);
+                    if (file) {
+                        await this.vault.delete(file);
+                        restored.push(vaultRelPath);
+                    }
+                } catch (e) {
+                    const msg = e instanceof Error ? e.message : String(e);
+                    errors.push(`${vaultRelPath} (delete): ${msg}`);
+                }
             }
         }
 
@@ -227,32 +270,53 @@ export class GitCheckpointService {
     }
 
     /**
-     * Restore all files snapshotted for a given task.
+     * Return all in-memory checkpoints for a task.
+     */
+    getCheckpointsForTask(taskId: string): CheckpointInfo[] {
+        return this.taskCheckpoints.get(taskId) ?? [];
+    }
+
+    /**
+     * Restore files from a specific checkpoint (used by checkpoint markers).
+     */
+    async restoreToCheckpoint(checkpoint: CheckpointInfo): Promise<RestoreResult> {
+        return this.restore(checkpoint);
+    }
+
+    /**
+     * Restore all files snapshotted for a given task to the pre-task state.
      *
-     * Because the pipeline creates one commit per file (to snapshot each file
-     * before its first write), a single task may have N commits in the log.
-     * We collect ALL of them, then restore each file from its EARLIEST snapshot
-     * so we always recover the true pre-task state.
+     * Uses in-memory checkpoint map first (fast, no git log scanning).
+     * Falls back to git log without depth limit for post-restart recovery.
      */
     async restoreLatestForTask(taskId: string): Promise<RestoreResult> {
         await this.ensureInit();
+
+        // 1. Try in-memory (fast path — always works during active session)
+        const checkpoints = this.taskCheckpoints.get(taskId);
+        if (checkpoints && checkpoints.length > 0) {
+            // Restore from earliest checkpoint (pre-task state)
+            return this.restore(checkpoints[0]);
+        }
+
+        // 2. Fallback: git log WITHOUT depth limit (post-restart recovery)
         const fs = this.getFs();
         try {
-            const commits = await git.log({ fs, dir: this.repoPath, depth: 200 });
+            const commits = await git.log({ fs, dir: this.repoPath });
             const prefix = `checkpoint:${taskId}`;
             const matches = commits.filter((c) => c.commit.message.startsWith(prefix));
             if (matches.length === 0) {
                 return { restored: [], errors: [`No checkpoint found for task ${taskId}`] };
             }
 
-            // Collect each file → OID of its earliest snapshot (commits are newest-first,
+            // Collect each file -> OID of its earliest snapshot (commits are newest-first,
             // so we iterate in reverse to find the earliest per file).
             const fileToOid = new Map<string, string>();
             for (const match of [...matches].reverse()) {
                 const msgParts = match.commit.message.split('\n\nFiles: ');
                 const files = msgParts[1] ? msgParts[1].split(', ').map((f) => f.trim()) : [];
                 for (const f of files) {
-                    fileToOid.set(f, match.oid); // later reverse-iterations win = earliest
+                    fileToOid.set(f, match.oid);
                 }
             }
 
