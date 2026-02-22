@@ -62,8 +62,54 @@ export class VaultDNAScanner {
         // Full scan
         await this.fullScan();
 
+        // Delayed reclassification: some plugins register commands late.
+        // Re-check NONE-classified enabled plugins after 3s.
+        setTimeout(() => this.reclassifyNonePlugins(), 3000);
+
         // Start continuous sync polling
         this.startSync();
+    }
+
+    /**
+     * Re-check plugins that were classified as NONE during the initial scan.
+     * Some plugins register their commands after a delay — this pass catches them.
+     */
+    private async reclassifyNonePlugins(): Promise<void> {
+        if (!this.vaultDNA) return;
+        let changed = false;
+
+        for (const entry of this.vaultDNA.plugins) {
+            if (entry.classification !== 'NONE' || entry.status !== 'enabled') continue;
+
+            const newClass = this.classify(entry.id);
+            if (newClass === 'NONE') continue;
+
+            // Plugin now has commands — promote it
+            console.log(`[VaultDNA] Reclassified ${entry.id}: NONE -> ${newClass}`);
+            entry.classification = newClass;
+            entry.skillFile = `${entry.id}.skill.md`;
+            delete entry.reason;
+
+            const manifests: Record<string, any> = (this.app as any).plugins?.manifests ?? {};
+            const manifest = manifests[entry.id];
+            const newSkill: PluginSkillMeta = {
+                id: entry.id,
+                name: manifest?.name ?? entry.id,
+                source: 'vault-native',
+                classification: newClass,
+                enabled: true,
+                commands: this.getPluginCommands(entry.id),
+                description: manifest?.description ?? `Community plugin: ${manifest?.name ?? entry.id}`,
+            };
+            this.pluginSkills.push(newSkill);
+            await this.writeSkillFile(newSkill);
+            changed = true;
+        }
+
+        if (changed) {
+            await this.vault.adapter.write(this.dnaPath, JSON.stringify(this.vaultDNA, null, 2));
+            console.log(`[VaultDNA] Reclassification complete: ${this.pluginSkills.length} total skills`);
+        }
     }
 
     // ── Full Scan ────────────────────────────────────────────────────────
@@ -584,18 +630,44 @@ export class VaultDNAScanner {
 
     async handlePluginEnabled(pluginId: string): Promise<void> {
         if (!this.vaultDNA) return;
+
+        // Reclassify — commands are now available
+        const classification = this.classify(pluginId);
+
+        // Update DNA entry
         const entry = this.vaultDNA.plugins.find((p) => p.id === pluginId);
         if (entry) {
             entry.status = 'enabled';
-            entry.classification = this.classify(pluginId);
+            entry.classification = classification;
+            if (classification !== 'NONE') {
+                entry.skillFile = `${pluginId}.skill.md`;
+                delete entry.reason;
+            }
         }
 
-        // Update skill meta
+        // Find or create skill entry
         const skillIdx = this.pluginSkills.findIndex((s) => s.id === pluginId);
         if (skillIdx >= 0) {
+            // Existing skill — update
             this.pluginSkills[skillIdx].enabled = true;
             this.pluginSkills[skillIdx].commands = this.getPluginCommands(pluginId);
+            this.pluginSkills[skillIdx].classification = classification;
             await this.writeSkillFile(this.pluginSkills[skillIdx]);
+        } else if (classification !== 'NONE') {
+            // Was NONE during initial scan — promote to skill now that commands exist
+            const manifests: Record<string, any> = (this.app as any).plugins?.manifests ?? {};
+            const manifest = manifests[pluginId];
+            const newSkill: PluginSkillMeta = {
+                id: pluginId,
+                name: manifest?.name ?? pluginId,
+                source: 'vault-native',
+                classification,
+                enabled: true,
+                commands: this.getPluginCommands(pluginId),
+                description: manifest?.description ?? `Community plugin: ${manifest?.name ?? pluginId}`,
+            };
+            this.pluginSkills.push(newSkill);
+            await this.writeSkillFile(newSkill);
         }
 
         await this.vault.adapter.write(this.dnaPath, JSON.stringify(this.vaultDNA, null, 2));

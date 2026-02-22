@@ -100,11 +100,11 @@ export default class ObsidianAgentPlugin extends Plugin {
         await this.skillsManager.initialize();
 
         // VaultDNA: auto-discover plugins as skills (PAS-1)
+        // Create scanner/registry immediately so references exist,
+        // but defer the actual scan to onLayoutReady so all community
+        // plugins have registered their commands in app.commands.
         if (this.settings.vaultDNA.enabled) {
             this.vaultDNAScanner = new VaultDNAScanner(this.app, this.app.vault);
-            await this.vaultDNAScanner.initialize().catch((e) =>
-                console.warn('[Plugin] VaultDNA scanner init failed (non-fatal):', e)
-            );
             this.skillRegistry = new SkillRegistry(
                 this.vaultDNAScanner,
                 this.settings.vaultDNA.skillToggles,
@@ -112,6 +112,11 @@ export default class ObsidianAgentPlugin extends Plugin {
             this.capabilityGapResolver = new CapabilityGapResolver(
                 this.vaultDNAScanner,
             );
+            this.app.workspace.onLayoutReady(async () => {
+                await this.vaultDNAScanner!.initialize().catch((e) =>
+                    console.warn('[Plugin] VaultDNA scanner init failed (non-fatal):', e)
+                );
+            });
         }
 
         // Governance: persistent operation log + checkpoints
