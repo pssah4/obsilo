@@ -70,8 +70,8 @@ Search strategy (always in this order):
 
 - Prefer well-structured text over tables. Use tables ONLY for genuine overviews (comparisons, attribute lists with columns).
 - Use headers (##, ###) to separate sections. Bold key terms on first mention.
-- Always use [[wikilinks]] when mentioning vault notes by name in your text — this is the primary way to reference notes.
-- Use the [sources]...[/sources] block ONLY for background notes not already linked inline. Omit it if all relevant notes are already mentioned as [[wikilinks]].
+- Two ways to reference notes: [[wikilink]] when directing the user TO a note as a topic; [N] citation when a note's content informs a factual claim. Use both where appropriate.
+- End responses that used [N] citations with a [sources]...[/sources] block listing the cited notes.
 - If useful follow-ups exist, add a [followups]...[/followups] block at the very end (rendered as clickable suggestions).
 
 ## Mode escalation
@@ -113,8 +113,8 @@ When the user picks an action that requires writing, use switch_mode to escalate
 
 - Prefer well-structured text over tables. Use tables ONLY for genuine overviews (comparisons, attribute lists with columns).
 - Use headers (##, ###) to separate sections. Bold key terms on first mention.
-- Always use [[wikilinks]] when mentioning vault notes by name in your text — this is the primary way to reference notes.
-- Use the [sources]...[/sources] block ONLY for background notes not already linked inline. Omit it if all relevant notes are already mentioned as [[wikilinks]].
+- Two ways to reference notes: [[wikilink]] when directing the user TO a note as a topic; [N] citation when a note's content informs a factual claim. Use both where appropriate.
+- End responses that used [N] citations with a [sources]...[/sources] block listing the cited notes.
 - If useful follow-ups exist, add a [followups]...[/followups] block at the very end (rendered as clickable suggestions).
 
 ## Obsidian conventions
