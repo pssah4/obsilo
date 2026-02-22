@@ -3302,6 +3302,69 @@
 
 .approve-edit-reject { color: var(--color-red); }
 
+/* ── DiffReviewModal ─────────────────────────────────────────────────── */
+.diff-review-modal { min-width: 560px; max-width: 850px; }
+
+/* Hunk container */
+.diff-hunk {
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    margin: 6px 0;
+    overflow: hidden;
+}
+.diff-hunk-approved { border-color: var(--color-green); }
+.diff-hunk-rejected { border-color: var(--color-red); opacity: 0.5; }
+
+/* Hunk header with approve/reject buttons */
+.diff-hunk-header {
+    display: flex;
+    justify-content: flex-end;
+    gap: 4px;
+    padding: 2px 6px;
+    background: var(--background-secondary);
+    border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.diff-hunk-btn {
+    padding: 1px 8px;
+    font-size: 10px;
+    border-radius: 3px;
+    border: 1px solid var(--background-modifier-border);
+    background: transparent;
+    cursor: pointer;
+}
+.diff-hunk-accept:hover { border-color: var(--color-green); color: var(--color-green); }
+.diff-hunk-reject:hover { border-color: var(--color-red); color: var(--color-red); }
+
+/* Editable added lines */
+.diff-line-editable {
+    cursor: text;
+    border-bottom: 1px dashed var(--color-green);
+}
+.diff-line-editable:focus {
+    outline: none;
+    background: rgba(var(--color-green-rgb, 68,196,68), 0.08);
+}
+
+/* Checkpoint diff header */
+.checkpoint-diff-header {
+    font-size: var(--font-ui-small);
+    color: var(--text-muted);
+    margin-bottom: 12px;
+}
+
+/* Footer */
+.diff-review-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding-top: 12px;
+    border-top: 1px solid var(--background-modifier-border);
+    margin-top: 12px;
+}
+.diff-review-reject-all { color: var(--color-red); }
+.diff-review-accept-selected:disabled { opacity: 0.4; }
+
 /* ─── MCP Settings Tab ─────────────────────────────────────────── */
 
 .agent-mcp-add-btn { margin-bottom: 12px; }

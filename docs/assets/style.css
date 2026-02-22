@@ -411,7 +411,7 @@ h2[id], h3[id] { scroll-margin-top: calc(var(--header-h) + 1rem); }
 .hero-sub {
   font-size: clamp(1rem, 2.5vw, 1.2rem);
   color: var(--text-muted);
-  max-width: 600px;
+  max-width: 820px;
   margin-bottom: 2.5rem;
 }
 .hero-cta {
