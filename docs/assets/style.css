@@ -171,8 +171,39 @@ td code { font-size: 0.8rem; }
   padding: 0.35rem 0.75rem;
   font-size: 0.8rem;
   color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.github-icon {
+  fill: currentColor;
+  flex-shrink: 0;
+  vertical-align: middle;
 }
 .site-header .header-links .github-btn:hover { background: var(--bg-4); color: var(--text); }
+.site-header .header-links .bmc-header-btn {
+  height: 26px;
+  width: auto;
+  display: block;
+  border-radius: 4px;
+  vertical-align: middle;
+}
+.bmc-hero-btn {
+  height: 42px;
+  width: auto;
+  display: block;
+  border-radius: 6px;
+}
+.bmc-cta-link {
+  display: inline-flex;
+  align-items: center;
+}
+.bmc-cta-img {
+  height: 42px;
+  width: auto;
+  display: block;
+  border-radius: var(--radius);
+}
 
 /* ── Layout: docs page ── */
 .docs-layout {

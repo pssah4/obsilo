@@ -14,7 +14,7 @@
  */
 
 import git from 'isomorphic-git';
-import type { Vault } from 'obsidian';
+import { TFile, type Vault } from 'obsidian';
 
 export interface CheckpointInfo {
     taskId: string;
@@ -203,8 +203,7 @@ export class GitCheckpointService {
 
                     const existingFile = this.vault.getAbstractFileByPath(vaultRelPath);
                     if (existingFile) {
-                        const { TFile } = await import('obsidian');
-                        if (existingFile instanceof TFile) {
+                            if (existingFile instanceof TFile) {
                             await this.vault.modify(existingFile, content);
                             console.log(`[Checkpoints] ${vaultRelPath}: restored via vault.modify`);
                         }
@@ -344,8 +343,7 @@ export class GitCheckpointService {
                     const content = new TextDecoder().decode(blob);
                     const existingFile = this.vault.getAbstractFileByPath(vaultRelPath);
                     if (existingFile) {
-                        const { TFile } = await import('obsidian');
-                        if (existingFile instanceof TFile) {
+                            if (existingFile instanceof TFile) {
                             await this.vault.modify(existingFile, content);
                         }
                     } else {

@@ -2097,7 +2097,33 @@
 
 .checkpoint-restored {
     color: var(--color-green);
-    border-color: var(--color-green);
+    font-size: 10px;
+}
+
+/* Checkpoint restore options (expand on click) */
+.checkpoint-restore-options {
+    display: flex;
+    gap: 4px;
+    margin-left: auto;
+}
+
+.checkpoint-option-btn {
+    padding: 1px 8px;
+    font-size: 10px;
+    background: transparent;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 3px;
+    color: var(--text-muted);
+    cursor: pointer;
+    white-space: nowrap;
+}
+.checkpoint-option-btn:hover {
+    border-color: var(--interactive-accent);
+    color: var(--interactive-accent);
+}
+.checkpoint-option-delete:hover {
+    border-color: var(--color-red);
+    color: var(--color-red);
 }
 
 /* ── Undo bar (fallback) ─────────────────────────────────────────────── */
@@ -3278,6 +3304,31 @@
 
 .diff-line-content { white-space: pre-wrap; word-break: break-all; }
 
+/* Side-by-side diff rows */
+.diff-row {
+    display: flex;
+}
+
+.diff-side {
+    flex: 1;
+    display: flex;
+    gap: 4px;
+    padding: 1px 8px;
+    line-height: 1.5;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.diff-side-old { border-right: 1px solid var(--background-modifier-border); }
+
+.diff-side.diff-line-added   { background: rgba(var(--color-green-rgb, 68,196,68), 0.12); }
+.diff-side.diff-line-removed { background: rgba(var(--color-red-rgb, 240,60,60), 0.12); }
+
+.diff-side-empty {
+    background: var(--background-secondary);
+    min-height: 1.5em;
+}
+
 .diff-collapse-btn {
     display: block;
     width: 100%;
@@ -3303,7 +3354,7 @@
 .approve-edit-reject { color: var(--color-red); }
 
 /* ── DiffReviewModal ─────────────────────────────────────────────────── */
-.diff-review-modal { min-width: 560px; max-width: 850px; }
+.diff-review-modal { min-width: 700px; max-width: 95vw; }
 
 /* Semantic Group (replaces per-hunk containers) */
 .diff-semantic-group {

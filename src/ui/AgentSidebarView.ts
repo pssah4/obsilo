@@ -2342,48 +2342,132 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
         });
         label.setText(`Checkpoint · ${allFiles} · ${time}`);
 
-        // Diff button (opens DiffReviewModal in review mode)
-        if (checkpoint.filesChanged.length > 0) {
-            const diffBtn = marker.createEl('button', {
-                cls: 'checkpoint-restore-btn',
-                text: 'Diff',
-            });
-            diffBtn.addEventListener('click', () => this.showCheckpointDiff(checkpoint));
-        }
-
-        // Restore button
+        // Single restore button that expands into options
         const restoreBtn = marker.createEl('button', {
             cls: 'checkpoint-restore-btn',
-            text: 'Restore',
+            text: 'Restore Checkpoint',
         });
-        restoreBtn.addEventListener('click', async () => {
-            restoreBtn.setText('Restoring...');
-            (restoreBtn as HTMLButtonElement).disabled = true;
-            try {
-                const result = await this.plugin.checkpointService?.restore(checkpoint);
-                if (result && result.restored.length > 0) {
-                    restoreBtn.setText(`Restored ${result.restored.length} file(s)`);
-                    restoreBtn.addClass('checkpoint-restored');
-                    // Inject restore notice into conversation history so the agent
-                    // knows vault state changed (prevents stale "file exists" assumptions)
-                    const restoredFiles = result.restored.join(', ');
-                    const deletedNote = checkpoint.newFiles?.length
-                        ? ` Deleted (newly created): ${checkpoint.newFiles.join(', ')}.`
-                        : '';
-                    this.conversationHistory.push({
-                        role: 'user',
-                        content: `[System] Checkpoint restored. Files affected: ${restoredFiles}.${deletedNote} The vault state has changed — do not assume previous file operations are still valid.`,
-                    });
-                } else if (result && result.errors.length > 0) {
-                    restoreBtn.setText('Error');
-                    console.error('[Checkpoint Restore] Errors:', result.errors);
-                } else {
-                    restoreBtn.setText('Nothing to restore');
-                }
-            } catch {
-                restoreBtn.setText('Failed');
+        restoreBtn.addEventListener('click', () => {
+            restoreBtn.style.display = 'none';
+
+            const options = marker.createDiv('checkpoint-restore-options');
+
+            const keepBtn = options.createEl('button', {
+                cls: 'checkpoint-option-btn', text: 'Keep chat',
+            });
+            const deleteBtn = options.createEl('button', {
+                cls: 'checkpoint-option-btn checkpoint-option-delete', text: 'Delete chat from here',
+            });
+            const cancelBtn = options.createEl('button', {
+                cls: 'checkpoint-option-btn', text: 'Cancel',
+            });
+
+            cancelBtn.addEventListener('click', () => {
+                options.remove();
+                restoreBtn.style.display = '';
+            });
+
+            keepBtn.addEventListener('click', async () => {
+                await this.restoreCheckpoint(checkpoint, marker, options, false);
+            });
+
+            deleteBtn.addEventListener('click', async () => {
+                await this.restoreCheckpoint(checkpoint, marker, options, true);
+            });
+        });
+    }
+
+    /**
+     * Execute a checkpoint restore with either "keep chat" or "delete chat from here".
+     */
+    private async restoreCheckpoint(
+        checkpoint: import('../core/checkpoints/GitCheckpointService').CheckpointInfo,
+        marker: HTMLElement,
+        optionsEl: HTMLElement,
+        deleteChatFromHere: boolean,
+    ): Promise<void> {
+        optionsEl.querySelectorAll('button').forEach((b) => ((b as HTMLButtonElement).disabled = true));
+        optionsEl.empty();
+        optionsEl.setText('Restoring...');
+
+        try {
+            console.log('[Checkpoint] Restoring:', JSON.stringify(checkpoint, null, 2));
+            const result = await this.plugin.checkpointService?.restore(checkpoint);
+            console.log('[Checkpoint] Result:', JSON.stringify(result, null, 2));
+            if (!result || result.restored.length === 0) {
+                optionsEl.setText(result?.errors?.length ? 'Error' : 'Nothing to restore');
+                return;
             }
-        });
+
+            optionsEl.remove();
+            const successEl = marker.createSpan('checkpoint-restored');
+            successEl.setText(`Restored ${result.restored.length} file(s)`);
+
+            if (deleteChatFromHere) {
+                this.deleteChatFromCheckpoint(marker);
+            } else {
+                const restoredFiles = result.restored.join(', ');
+                const deletedNote = checkpoint.newFiles?.length
+                    ? ` Deleted: ${checkpoint.newFiles.join(', ')}.`
+                    : '';
+                this.conversationHistory.push({
+                    role: 'user',
+                    content: `[System] Checkpoint restored. Files: ${restoredFiles}.${deletedNote} Vault state changed.`,
+                });
+            }
+
+            this.saveCurrentConversation();
+        } catch (e) {
+            console.error('[Checkpoint] Restore failed:', e);
+            optionsEl.setText('Failed');
+        }
+    }
+
+    /**
+     * Remove the assistant message containing this checkpoint and all subsequent
+     * messages from the DOM, uiMessages, and conversationHistory.
+     */
+    private deleteChatFromCheckpoint(marker: HTMLElement): void {
+        if (!this.chatContainer) return;
+
+        const assistantMsg = marker.closest('.assistant-message') ?? marker.closest('.message');
+        if (!assistantMsg) return;
+
+        const allMessages = Array.from(this.chatContainer.querySelectorAll('.message'));
+        const idx = allMessages.indexOf(assistantMsg as Element);
+        if (idx < 0) return;
+
+        // Count assistant bubbles before this one (for array truncation)
+        const assistantBubblesBefore = allMessages
+            .slice(0, idx)
+            .filter((el) => el.classList.contains('assistant-message')).length;
+
+        // Remove messages from DOM (this one + all after)
+        for (let i = allMessages.length - 1; i >= idx; i--) {
+            allMessages[i].remove();
+        }
+
+        // Truncate uiMessages at the corresponding assistant index
+        const assistantIndices: number[] = [];
+        this.uiMessages.forEach((m, i) => { if (m.role === 'assistant') assistantIndices.push(i); });
+        const uiIdx = assistantIndices[assistantBubblesBefore];
+        if (uiIdx !== undefined) {
+            this.uiMessages.splice(uiIdx);
+        }
+
+        // Truncate conversationHistory at the corresponding assistant position
+        let assistantCount = 0;
+        for (let i = 0; i < this.conversationHistory.length; i++) {
+            if (this.conversationHistory[i].role === 'assistant') {
+                if (assistantCount === assistantBubblesBefore) {
+                    this.conversationHistory.splice(i);
+                    break;
+                }
+                assistantCount++;
+            }
+        }
+
+        this.saveCurrentConversation();
     }
 
     /**

@@ -345,7 +345,7 @@ export class DiffReviewModal extends Modal {
                 const before = contextBuffer.slice(0, CONTEXT_LINES);
                 const middle = contextBuffer.slice(CONTEXT_LINES, -CONTEXT_LINES);
                 const after = contextBuffer.slice(-CONTEXT_LINES);
-                for (const l of before) this.renderContextLine(container, l);
+                for (const l of before) this.renderContextRow(container, l);
                 const btn = container.createEl('button', {
                     cls: 'diff-collapse-btn',
                     text: `... ${middle.length} unchanged lines`,
@@ -354,12 +354,12 @@ export class DiffReviewModal extends Modal {
                 btn.addEventListener('click', () => {
                     btn.remove();
                     for (const l of captured) {
-                        this.renderContextLine(container, l);
+                        this.renderContextRow(container, l);
                     }
                 });
-                for (const l of after) this.renderContextLine(container, l);
+                for (const l of after) this.renderContextRow(container, l);
             } else {
-                for (const l of contextBuffer) this.renderContextLine(container, l);
+                for (const l of contextBuffer) this.renderContextRow(container, l);
             }
             contextBuffer = [];
         };
@@ -480,7 +480,7 @@ export class DiffReviewModal extends Modal {
         this.renderGroupDiffLines(body, group, file);
     }
 
-    /** Render diff lines for all hunks within a semantic group, with context between hunks */
+    /** Render diff lines for all hunks within a semantic group (side-by-side) */
     private renderGroupDiffLines(container: HTMLElement, group: SemanticGroup, file: FileDiffState): void {
         // Collect diff-line ranges for each hunk in the group
         const hunkRanges: Array<{ hunk: DiffHunk; startDi: number; endDi: number }> = [];
@@ -500,7 +500,6 @@ export class DiffReviewModal extends Modal {
                     }
                 }
             }
-            // Trailing hunk
             if (blockStart !== -1 && hunkIdx < file.hunks.length) {
                 if (group.hunkIds.includes(file.hunks[hunkIdx].id)) {
                     hunkRanges.push({ hunk: file.hunks[hunkIdx], startDi: blockStart, endDi: file.diffLines.length - 1 });
@@ -510,7 +509,6 @@ export class DiffReviewModal extends Modal {
 
         if (hunkRanges.length === 0) return;
 
-        // Render each hunk with inter-hunk context
         for (let hi = 0; hi < hunkRanges.length; hi++) {
             const range = hunkRanges[hi];
 
@@ -525,7 +523,7 @@ export class DiffReviewModal extends Modal {
                         const before = gapLines.slice(0, CONTEXT_LINES);
                         const middle = gapLines.slice(CONTEXT_LINES, -CONTEXT_LINES);
                         const after = gapLines.slice(-CONTEXT_LINES);
-                        for (const l of before) this.renderContextLine(container, l);
+                        for (const l of before) this.renderContextRow(container, l);
                         const btn = container.createEl('button', {
                             cls: 'diff-collapse-btn',
                             text: `... ${middle.length} unchanged lines`,
@@ -533,29 +531,57 @@ export class DiffReviewModal extends Modal {
                         const captured = middle;
                         btn.addEventListener('click', () => {
                             btn.remove();
-                            for (const l of captured) this.renderContextLine(container, l);
+                            for (const l of captured) this.renderContextRow(container, l);
                         });
-                        for (const l of after) this.renderContextLine(container, l);
+                        for (const l of after) this.renderContextRow(container, l);
                     } else {
-                        for (const l of gapLines) this.renderContextLine(container, l);
+                        for (const l of gapLines) this.renderContextRow(container, l);
                     }
                 }
             }
 
-            // Render the hunk's diff lines
+            // Side-by-side: pair removed (left) and added (right) lines
+            const leftLines: (DiffLine | null)[] = [];
+            const rightLines: (DiffLine | null)[] = [];
             for (const line of range.hunk.lines) {
-                const row = container.createDiv(`diff-line diff-line-${line.type}`);
-                const prefix = line.type === 'added' ? '+' : line.type === 'removed' ? '-' : ' ';
-                row.createSpan({ cls: 'diff-line-prefix', text: prefix });
-                row.createSpan({ cls: 'diff-line-content', text: line.content });
+                if (line.type === 'removed') leftLines.push(line);
+                else if (line.type === 'added') rightLines.push(line);
+            }
+
+            const rows = Math.max(leftLines.length, rightLines.length);
+            for (let r = 0; r < rows; r++) {
+                const row = container.createDiv('diff-row');
+                this.renderSide(row, leftLines[r] ?? null, 'old');
+                this.renderSide(row, rightLines[r] ?? null, 'new');
             }
         }
     }
 
-    private renderContextLine(container: HTMLElement, line: DiffLine): void {
-        const row = container.createDiv('diff-line diff-line-unchanged');
-        row.createSpan({ cls: 'diff-line-prefix', text: ' ' });
-        row.createSpan({ cls: 'diff-line-content', text: line.content });
+    /** Render one side (old/new) of a side-by-side diff row */
+    private renderSide(row: HTMLElement, line: DiffLine | null, side: 'old' | 'new'): void {
+        const sideEl = row.createDiv(`diff-side diff-side-${side}`);
+        if (!line) {
+            sideEl.addClass('diff-side-empty');
+            return;
+        }
+        const prefix = line.type === 'added' ? '+' : line.type === 'removed' ? '-' : ' ';
+        const cls = line.type === 'added' ? 'diff-line-added'
+            : line.type === 'removed' ? 'diff-line-removed'
+                : 'diff-line-unchanged';
+        sideEl.addClass(cls);
+        sideEl.createSpan({ cls: 'diff-line-prefix', text: prefix });
+        sideEl.createSpan({ cls: 'diff-line-content', text: line.content });
+    }
+
+    /** Render an unchanged context line as a side-by-side row (same text on both sides) */
+    private renderContextRow(container: HTMLElement, line: DiffLine): void {
+        const row = container.createDiv('diff-row');
+        const left = row.createDiv('diff-side diff-side-old diff-line-unchanged');
+        left.createSpan({ cls: 'diff-line-prefix', text: ' ' });
+        left.createSpan({ cls: 'diff-line-content', text: line.content });
+        const right = row.createDiv('diff-side diff-side-new diff-line-unchanged');
+        right.createSpan({ cls: 'diff-line-prefix', text: ' ' });
+        right.createSpan({ cls: 'diff-line-content', text: line.content });
     }
 
     // =========================================================================
