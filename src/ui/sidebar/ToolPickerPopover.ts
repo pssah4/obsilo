@@ -19,6 +19,7 @@ export class ToolPickerPopover {
 
     private popoverEl: HTMLElement | null = null;
     private closeHandler: ((e: MouseEvent) => void) | null = null;
+    private resizeHandler: (() => void) | null = null;
 
     constructor(
         private plugin: ObsidianAgentPlugin,
@@ -295,23 +296,30 @@ export class ToolPickerPopover {
             setTimeout(() => saveBtnText.setText('Save to Settings'), 1500);
         });
 
-        // ── Position (upward) ─────────────────────────────────────────────────
-        const btnRect = anchorBtn.getBoundingClientRect();
-        const containerRect = containerEl.getBoundingClientRect();
-        popover.style.position = 'fixed';
-        popover.style.bottom = (window.innerHeight - btnRect.top + 4) + 'px';
-        popover.style.left = Math.max(btnRect.left, containerRect.left) + 'px';
+        // ── Position (upward, re-anchors on resize) ─────────────────────────
+        const positionPopover = () => {
+            const br = anchorBtn.getBoundingClientRect();
+            const cr = containerEl.getBoundingClientRect();
+            popover.style.position = 'fixed';
+            popover.style.top = '';
+            popover.style.bottom = (window.innerHeight - br.top + 4) + 'px';
+            popover.style.left = Math.max(br.left, cr.left) + 'px';
+            // Clamp to viewport
+            requestAnimationFrame(() => {
+                const r = popover.getBoundingClientRect();
+                const pad = 8;
+                if (r.right > window.innerWidth) popover.style.left = `${window.innerWidth - r.width - pad}px`;
+                if (r.left < 0) popover.style.left = `${pad}px`;
+                if (r.top < 0) { popover.style.top = `${pad}px`; popover.style.bottom = ''; }
+                if (r.bottom > window.innerHeight) { popover.style.bottom = `${pad}px`; popover.style.top = ''; }
+            });
+        };
         document.body.appendChild(popover);
+        positionPopover();
 
-        // Clamp to viewport so the popover is never cut off
-        requestAnimationFrame(() => {
-            const r = popover.getBoundingClientRect();
-            const pad = 8;
-            if (r.right > window.innerWidth) popover.style.left = `${window.innerWidth - r.width - pad}px`;
-            if (r.left < 0) popover.style.left = `${pad}px`;
-            if (r.top < 0) { popover.style.top = `${pad}px`; popover.style.bottom = ''; }
-            if (r.bottom > window.innerHeight) { popover.style.bottom = `${pad}px`; popover.style.top = ''; }
-        });
+        // Re-position on window resize so the popover tracks its anchor
+        this.resizeHandler = positionPopover;
+        window.addEventListener('resize', this.resizeHandler);
 
         updateCount();
 
@@ -447,6 +455,10 @@ export class ToolPickerPopover {
         if (this.closeHandler) {
             document.removeEventListener('mousedown', this.closeHandler);
             this.closeHandler = null;
+        }
+        if (this.resizeHandler) {
+            window.removeEventListener('resize', this.resizeHandler);
+            this.resizeHandler = null;
         }
         this.popoverEl?.remove();
         this.popoverEl = null;

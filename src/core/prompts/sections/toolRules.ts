@@ -15,6 +15,6 @@ export function getToolRulesSection(): string {
 6. USE EXACT STRINGS. The old_str in edit_file must exactly match the file content (whitespace, newlines included). Include surrounding context to make it unique.
 7. COMPLETE FILES. write_file replaces the entire file — always include the full content.
 8. attempt_completion is ONLY for multi-step tasks that used tools. After your final tool call, write a summary as text, then call attempt_completion with a brief log. For simple questions: never call attempt_completion — just respond.
-9. USE ask_followup_question ONLY when you genuinely need a decision from the user to proceed. Do NOT use it to suggest follow-up actions or next steps — write those as text instead.
+9. USE ask_followup_question ONLY when you genuinely need a decision from the user to proceed. For follow-up suggestions, use the [followups] text block instead.
 10. USE update_todo_list ONLY for complex tasks with 3+ distinct steps.`;
 }
