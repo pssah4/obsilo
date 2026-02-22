@@ -9,7 +9,7 @@
  * ADR-103: Generates Stufe A skeletons only (no LLM, no network).
  */
 
-import type { App, Vault } from 'obsidian';
+import { type App, type Vault, requestUrl } from 'obsidian';
 import type { VaultDNA, VaultDNAEntry, PluginClassification, PluginSkillMeta, PluginSource } from './types';
 import { CORE_PLUGIN_DEFS, CORE_PLUGIN_IDS } from './CorePluginLibrary';
 
@@ -132,12 +132,18 @@ export class VaultDNAScanner {
             if (entry.skill) skills.push(entry.skill);
         }
 
-        // Phase 3: Write .skill.md files
+        // Phase 3: Fetch README docs (before writing skill files so docs ref is accurate)
+        await this.fetchAllReadmes().catch((e) =>
+            console.warn('[VaultDNA] README fetch during scan failed:', e),
+        );
+
+        // Phase 4: Write .skill.md files + core plugin docs
         for (const skill of skills) {
             await this.writeSkillFile(skill);
         }
+        await this.writeCorePluginReadmes();
 
-        // Phase 4: Persist vault-dna.json
+        // Phase 5: Persist vault-dna.json
         const archived = this.vaultDNA?.archived ?? [];
         this.vaultDNA = {
             scannedAt: new Date().toISOString(),
@@ -301,7 +307,7 @@ export class VaultDNAScanner {
     ];
 
     private static readonly MAX_VALUE_SIZE = 500;
-    private static readonly MAX_SETTINGS_OUTPUT = 3000;
+    private static readonly MAX_SETTINGS_OUTPUT = 8000;
     private static readonly MAX_NESTING_DEPTH = 3;
 
     /**
@@ -471,7 +477,7 @@ export class VaultDNAScanner {
             .join('\n');
 
         const body = coreDef
-            ? this.enrichCoreBody(coreDef.instructions, sanitized, setupHint, redactedCount)
+            ? this.enrichCoreBody(skill.id, coreDef.instructions, sanitized, setupHint, redactedCount)
             : this.generateSkeletonBody(skill, sanitized, setupHint, redactedCount);
 
         const content = [
@@ -527,6 +533,22 @@ export class VaultDNAScanner {
             }
         }
 
+        // Configuration File section
+        const configPath = skill.source === 'core'
+            ? `.obsidian/${skill.id}.json`
+            : `.obsidian/plugins/${skill.id}/data.json`;
+        lines.push('');
+        lines.push('## Configuration File');
+        lines.push('');
+        lines.push(`Settings path: \`${configPath}\``);
+        lines.push('');
+        lines.push('To configure this plugin programmatically:');
+        lines.push(`1. Read the config: read_file("${configPath}")`);
+        lines.push('2. Understand the settings structure and modify values as needed');
+        lines.push(`3. Write changes: write_file("${configPath}", updatedJSON)`);
+        lines.push('');
+        lines.push('Do NOT ask the user to open Settings UI. Modify data.json directly.');
+
         if (settingsBlock) {
             lines.push('');
             lines.push('## Current Configuration');
@@ -539,17 +561,34 @@ export class VaultDNAScanner {
             if (redactedCount > 0) {
                 lines.push(`(${redactedCount} sensitive field(s) redacted)`);
             }
+            lines.push('');
+            lines.push(`For full settings, read: \`${configPath}\``);
         }
 
+        // Documentation reference
+        lines.push('');
+        lines.push('## Documentation');
+        lines.push('');
+        lines.push(`For detailed plugin documentation (commands, options, dependencies):`);
+        lines.push(`read_file(".obsidian-agent/plugin-skills/${skill.id}.readme.md")`);
+
+        // Usage section
         lines.push('');
         lines.push('## Usage');
         lines.push('');
         if (skill.enabled) {
-            lines.push(`When the user asks for functionality related to ${skill.name}, use execute_command with the commands listed above.`);
-            lines.push('Do NOT substitute built-in tools -- always use this plugin\'s own commands.');
-            if (settingsBlock) {
-                lines.push('Use the configuration above to understand how the plugin is set up. Reference specific settings when helping the user.');
-            }
+            lines.push(`When the user asks for functionality related to ${skill.name}:`);
+            lines.push(`1. Read the plugin documentation (.readme.md) to understand capabilities and dependencies`);
+            lines.push(`2. Read the config file (${configPath}). If it does not exist, that is normal -- create it with the required settings`);
+            lines.push('3. Configure the plugin by writing data.json with the values needed for the task');
+            lines.push('4. Execute the appropriate command via execute_command');
+            lines.push('5. If the command opens a UI dialog, tell the user what to select');
+            lines.push('');
+            lines.push('CRITICAL RULES:');
+            lines.push('- ALWAYS use this plugin\'s own commands via execute_command. Do NOT substitute built-in tools.');
+            lines.push('- NEVER create fake output files. If the user asks for a PDF/DOCX/image export, use this plugin -- do NOT write content to a .pdf file yourself.');
+            lines.push('- If a dependency is missing (e.g. Pandoc), tell the user what to install.');
+            lines.push('IMPORTANT: After reading this file, ALWAYS take action or respond. Never end silently.');
         } else {
             lines.push(`This plugin is currently disabled. Use enable_plugin("${skill.id}") to activate it first.`);
             lines.push('After enabling, the plugin\'s commands will become available for execute_command.');
@@ -559,9 +598,11 @@ export class VaultDNAScanner {
     }
 
     /**
-     * Enrich a core plugin's existing hand-written instructions with settings data.
+     * Enrich a core plugin's existing hand-written instructions with
+     * configuration, settings, and usage sections (matching community format).
      */
     private enrichCoreBody(
+        skillId: string,
         originalInstructions: string,
         settingsBlock: string,
         setupHint: string | null,
@@ -576,6 +617,20 @@ export class VaultDNAScanner {
             parts.push(setupHint);
         }
 
+        // Configuration File section
+        const configPath = `.obsidian/${skillId}.json`;
+        parts.push('');
+        parts.push('## Configuration File');
+        parts.push('');
+        parts.push(`Settings path: \`${configPath}\``);
+        parts.push('');
+        parts.push('To configure this plugin programmatically:');
+        parts.push(`1. Read the config: read_file("${configPath}")`);
+        parts.push('2. Understand the settings structure and modify values as needed');
+        parts.push(`3. Write changes: write_file("${configPath}", updatedJSON)`);
+        parts.push('');
+        parts.push('Do NOT ask the user to open Settings UI. Modify config directly.');
+
         if (settingsBlock) {
             parts.push('');
             parts.push('## Current Configuration');
@@ -586,9 +641,63 @@ export class VaultDNAScanner {
             if (redactedCount > 0) {
                 parts.push(`(${redactedCount} sensitive field(s) redacted)`);
             }
+            parts.push('');
+            parts.push(`For full settings, read: \`${configPath}\``);
         }
 
+        // Documentation reference
+        parts.push('');
+        parts.push('## Documentation');
+        parts.push('');
+        parts.push(`For detailed documentation:`);
+        parts.push(`read_file(".obsidian-agent/plugin-skills/${skillId}.readme.md")`);
+
+        parts.push('');
+        parts.push('IMPORTANT: After reading this file, ALWAYS take action or respond. Never end silently.');
+
         return parts.join('\n');
+    }
+
+    /**
+     * Generate .readme.md for core plugins from CorePluginLibrary definitions.
+     * Core plugins have no GitHub repo, so we create docs from our static defs.
+     */
+    private async writeCorePluginReadmes(): Promise<void> {
+        for (const def of CORE_PLUGIN_DEFS) {
+            const readmePath = `${this.skillsDir}/${def.id}.readme.md`;
+            const configPath = `.obsidian/${def.id}.json`;
+
+            const lines: string[] = [
+                `# ${def.name}`,
+                '',
+                `${def.description}`,
+                '',
+                '## Overview',
+                '',
+                `${def.name} is an Obsidian core plugin. It is built into Obsidian and does not require separate installation.`,
+                '',
+                '## Commands',
+                '',
+            ];
+
+            for (const cmd of def.commands) {
+                lines.push(`- \`${cmd.id}\` -- ${cmd.name}`);
+            }
+
+            lines.push('');
+            lines.push('## Configuration');
+            lines.push('');
+            lines.push(`Settings are stored at \`${configPath}\`.`);
+            lines.push('');
+            lines.push(`To read: \`read_file("${configPath}")\``);
+            lines.push(`To write: \`write_file("${configPath}", updatedJSON)\``);
+            lines.push('');
+            lines.push('## Usage Notes');
+            lines.push('');
+            lines.push(def.instructions);
+
+            await this.vault.adapter.write(readmePath, lines.join('\n'));
+        }
     }
 
     // ── Continuous Sync (Polling) ────────────────────────────────────────
@@ -671,6 +780,12 @@ export class VaultDNAScanner {
         }
 
         await this.vault.adapter.write(this.dnaPath, JSON.stringify(this.vaultDNA, null, 2));
+
+        // Background: fetch README for newly enabled plugin
+        this.fetchPluginRegistry().then((registry) => {
+            const repo = registry.get(pluginId);
+            if (repo) this.fetchPluginReadme(pluginId, repo).catch(() => {});
+        }).catch(() => {});
     }
 
     async handlePluginDisabled(pluginId: string): Promise<void> {
@@ -709,5 +824,99 @@ export class VaultDNAScanner {
 
     destroy(): void {
         this.stopSync();
+    }
+
+    // ── README Fetch (Background) ────────────────────────────────────────
+
+    private static readonly README_MAX_LEN = 20000;
+    private static readonly README_CACHE_DAYS = 7;
+
+    /**
+     * Build a map of plugin ID → GitHub "owner/repo" from the official
+     * Obsidian community plugin registry. This is the only reliable
+     * source — manifest.authorUrl is freeform and usually just a profile link.
+     */
+    private async fetchPluginRegistry(): Promise<Map<string, string>> {
+        const map = new Map<string, string>();
+        try {
+            const response = await requestUrl({
+                url: 'https://raw.githubusercontent.com/obsidianmd/obsidian-releases/master/community-plugins.json',
+                method: 'GET',
+                throw: false,
+            });
+            if (response.status === 200) {
+                const entries: { id: string; repo: string }[] = JSON.parse(response.text);
+                for (const entry of entries) {
+                    if (entry.id && entry.repo) map.set(entry.id, entry.repo);
+                }
+                console.log(`[VaultDNA] Loaded plugin registry: ${map.size} entries`);
+            }
+        } catch (e) {
+            console.warn('[VaultDNA] Failed to fetch plugin registry:', e);
+        }
+        return map;
+    }
+
+    async fetchAllReadmes(force = false): Promise<void> {
+        const registry = await this.fetchPluginRegistry();
+        if (registry.size === 0) {
+            console.warn('[VaultDNA] Plugin registry empty — skipping README fetch');
+            return;
+        }
+
+        let fetched = 0;
+        let skipped = 0;
+
+        for (const skill of this.pluginSkills) {
+            if (skill.source === 'core') continue; // core plugins have built-in docs
+
+            const repo = registry.get(skill.id);
+            if (!repo) { skipped++; continue; }
+
+            const didFetch = await this.fetchPluginReadme(skill.id, repo, force);
+            if (didFetch) fetched++;
+
+            // Rate-limit: 1 request per second
+            await new Promise<void>((r) => setTimeout(r, 1000));
+        }
+
+        console.log(`[VaultDNA] README fetch complete: ${fetched} new/updated, ${skipped} skipped (not in registry)`);
+    }
+
+    async fetchPluginReadme(pluginId: string, repo: string, force = false): Promise<boolean> {
+        const readmePath = `${this.skillsDir}/${pluginId}.readme.md`;
+
+        // Cache check: skip if younger than 7 days (unless force)
+        if (!force) {
+            try {
+                const stat = await this.vault.adapter.stat(readmePath);
+                if (stat && (Date.now() - stat.mtime) < VaultDNAScanner.README_CACHE_DAYS * 24 * 60 * 60 * 1000) {
+                    return false;
+                }
+            } catch { /* file doesn't exist — continue */ }
+        }
+
+        const rawUrl = `https://raw.githubusercontent.com/${repo}/HEAD/README.md`;
+
+        try {
+            const response = await requestUrl({
+                url: rawUrl,
+                method: 'GET',
+                throw: false,
+            });
+
+            if (response.status === 200) {
+                const readme = response.text.length > VaultDNAScanner.README_MAX_LEN
+                    ? response.text.slice(0, VaultDNAScanner.README_MAX_LEN) + '\n\n...[truncated]'
+                    : response.text;
+                await this.vault.adapter.write(readmePath, readme);
+                console.log(`[VaultDNA] Fetched README: ${pluginId}`);
+                return true;
+            }
+            console.warn(`[VaultDNA] README not found for ${pluginId} (${response.status})`);
+        } catch (e) {
+            console.warn(`[VaultDNA] README fetch failed for ${pluginId}:`, e);
+        }
+        return false;
     }
 }

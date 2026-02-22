@@ -61,6 +61,12 @@ export class WriteFileTool extends BaseTool<'write_file'> {
                 throw new Error('Content parameter is required');
             }
 
+            // .obsidian/ paths are not in the vault index — use adapter directly
+            if (path.startsWith('.obsidian/') || path.startsWith('.obsidian-agent/')) {
+                await this.writeViaAdapter(path, content, callbacks);
+                return;
+            }
+
             // Check if file exists
             const existingFile = this.app.vault.getAbstractFileByPath(path);
 
@@ -100,6 +106,35 @@ export class WriteFileTool extends BaseTool<'write_file'> {
         } catch (error) {
             callbacks.pushToolResult(this.formatError(error));
             await callbacks.handleError('write_file', error);
+        }
+    }
+
+    /**
+     * Write via vault.adapter for paths outside the vault index (.obsidian/, .obsidian-agent/).
+     * These paths are not tracked by Obsidian's file index, so vault.getAbstractFileByPath()
+     * and vault.createFolder() don't work reliably for them.
+     */
+    private async writeViaAdapter(path: string, content: string, callbacks: ToolExecutionContext['callbacks']): Promise<void> {
+        const adapter = this.app.vault.adapter;
+        const existed = await adapter.exists(path);
+
+        // Ensure parent directory exists
+        const parentPath = path.substring(0, path.lastIndexOf('/'));
+        if (parentPath) {
+            const parentExists = await adapter.exists(parentPath);
+            if (!parentExists) {
+                await adapter.mkdir(parentPath);
+            }
+        }
+
+        await adapter.write(path, content);
+
+        if (existed) {
+            callbacks.pushToolResult(this.formatSuccess(`File updated: ${path} (${content.length} chars)`));
+            callbacks.log(`Successfully updated file: ${path}`);
+        } else {
+            callbacks.pushToolResult(this.formatSuccess(`File created: ${path} (${content.length} chars)`));
+            callbacks.log(`Successfully created file: ${path}`);
         }
     }
 

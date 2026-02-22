@@ -3148,15 +3148,126 @@
     border-radius: 6px;
 }
 
-.agent-rules-row.agent-skill-row-expanded {
-    flex-direction: column;
-    align-items: stretch;
+/* ── Plugin Skills compact table ── */
+.agent-skill-controls {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
 }
 
-.agent-skill-top-line {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+.agent-skill-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--font-ui-small);
+    margin-bottom: 16px;
+}
+
+.agent-skill-table thead th {
+    text-align: left;
+    padding: 4px 8px;
+    font-weight: 600;
+    color: var(--text-muted);
+    font-size: var(--font-ui-smaller);
+    border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.agent-skill-th-status { width: 16px; }
+.agent-skill-th-cmds { width: 70px; }
+.agent-skill-th-actions { width: 60px; }
+.agent-skill-th-toggle { width: 50px; text-align: center; }
+
+.agent-skill-table tbody tr {
+    border-bottom: 1px solid var(--background-modifier-border-hover);
+}
+
+.agent-skill-table tbody tr:hover {
+    background: var(--background-secondary);
+}
+
+.agent-skill-table tbody tr.agent-skill-disabled {
+    opacity: 0.5;
+}
+
+.agent-skill-table td {
+    padding: 3px 8px;
+    vertical-align: middle;
+}
+
+.agent-skill-status-cell {
+    width: 16px;
+    text-align: center;
+}
+
+.agent-skill-dot {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+}
+
+.agent-skill-dot-on {
+    background: var(--color-green);
+}
+
+.agent-skill-dot-off {
+    background: var(--text-faint);
+}
+
+.agent-skill-name-cell {
+    vertical-align: top;
+    padding-top: 5px;
+    padding-bottom: 5px;
+}
+
+.agent-skill-name {
+    font-weight: 500;
+}
+
+.agent-skill-desc {
+    font-size: var(--font-ui-smaller);
+    color: var(--text-muted);
+    line-height: 1.3;
+    margin-top: 1px;
+}
+
+.agent-skill-cmd-cell {
+    width: 70px;
+    text-align: center;
+    color: var(--text-muted);
+}
+
+.agent-skill-actions-cell {
+    width: 60px;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.agent-skill-action-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 2px 4px;
+    color: var(--text-muted);
+    border-radius: 4px;
+}
+
+.agent-skill-action-btn:hover {
+    color: var(--text-normal);
+    background: var(--background-modifier-hover);
+}
+
+.agent-skill-action-btn-faint {
+    opacity: 0.3;
+}
+
+.agent-skill-toggle-cell {
+    width: 50px;
+    text-align: center;
+}
+
+.agent-skill-toggle.checkbox-container {
+    transform: scale(0.75);
+    margin: 0 auto;
 }
 
 .agent-rules-label {

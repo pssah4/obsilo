@@ -1,19 +1,27 @@
-import { App, Notice, Setting, setIcon } from 'obsidian';
+import { App, Notice, setIcon } from 'obsidian';
 import type ObsidianAgentPlugin from '../../main';
 import { ContentEditorModal } from './ContentEditorModal';
 import type { PluginSkillMeta } from '../../core/skills/types';
 
 export class SkillsTab {
+    private readonly skillsDir = '.obsidian-agent/plugin-skills';
+
     constructor(private plugin: ObsidianAgentPlugin, private app: App, private rerender: () => void) {}
 
     build(containerEl: HTMLElement): void {
-        // ── Plugin Skills (PAS-1) ─────────────────────────────────────────
-        this.buildPluginSkillsSection(containerEl);
+        // -- Manual Skills (first) --
+        this.buildManualSkillsSection(containerEl);
 
-        // ── Separator ─────────────────────────────────────────────────────
+        // -- Separator --
         containerEl.createEl('hr');
 
-        // ── Manual Skills ─────────────────────────────────────────────────
+        // -- Obsidian Plugin Skills (PAS-1) --
+        this.buildPluginSkillsSection(containerEl);
+    }
+
+    // -- Manual Skills --
+
+    private buildManualSkillsSection(containerEl: HTMLElement): void {
         containerEl.createEl('h3', { text: 'Manual Skills' });
         containerEl.createEl('p', {
             cls: 'agent-settings-desc',
@@ -23,7 +31,7 @@ export class SkillsTab {
 
         const skillsManager = (this.plugin as any).skillsManager;
 
-        // ── Create new skill ──────────────────────────────────────────────
+        // -- Create new skill --
         const createRow = containerEl.createDiv({ cls: 'agent-rules-create-row' });
         const nameInput = createRow.createEl('input', {
             type: 'text', placeholder: 'Skill name (e.g. "daily-template")',
@@ -41,7 +49,6 @@ export class SkillsTab {
                 const file = fileInput.files?.[0];
                 if (!file || !skillsManager) return;
                 const content = await file.text();
-                // Extract name from frontmatter if present, otherwise use filename
                 let skillName = file.name.replace(/\.[^.]+$/, '');
                 const fmMatch = content.match(/^---[\s\S]*?^name:\s*(.+)$/m);
                 if (fmMatch) skillName = fmMatch[1].trim();
@@ -59,7 +66,7 @@ export class SkillsTab {
             fileInput.click();
         });
 
-        // ── Skill list ─────────────────────────────────────────────────────
+        // -- Skill list --
         const listEl = containerEl.createDiv({ cls: 'agent-rules-list' });
 
         const refreshList = async () => {
@@ -137,14 +144,14 @@ export class SkillsTab {
         refreshList();
     }
 
-    // ── Plugin Skills (PAS-1) ─────────────────────────────────────────────
+    // -- Obsidian Plugin Skills (PAS-1) --
 
     private buildPluginSkillsSection(containerEl: HTMLElement): void {
         const scanner = this.plugin.vaultDNAScanner;
         const registry = this.plugin.skillRegistry;
 
         if (!scanner || !registry) {
-            containerEl.createEl('h3', { text: 'Plugin Skills' });
+            containerEl.createEl('h3', { text: 'Obsidian Plugin Skills' });
             containerEl.createEl('p', {
                 cls: 'agent-settings-desc',
                 text: 'Plugin skills are disabled. Enable "VaultDNA" in the Advanced settings to auto-discover Obsidian plugins as agent skills.',
@@ -157,16 +164,16 @@ export class SkillsTab {
         const allSkills = scanner.getAllPluginSkills();
 
         // Header with stats
-        containerEl.createEl('h3', { text: 'Plugin Skills' });
+        containerEl.createEl('h3', { text: 'Obsidian Plugin Skills' });
         const statsEl = containerEl.createEl('p', { cls: 'agent-settings-desc' });
         statsEl.setText(
             `Auto-discovered from installed Obsidian plugins. ` +
             `Active: ${activeSkills.length} | Disabled: ${disabledSkills.length} | Total: ${allSkills.length}`,
         );
 
-        // Rescan button
-        const rescanRow = containerEl.createDiv({ cls: 'agent-rules-create-row' });
-        const rescanBtn = rescanRow.createEl('button', { text: 'Rescan Vault', cls: 'mod-cta' });
+        // Controls row
+        const controlsRow = containerEl.createDiv({ cls: 'agent-skill-controls' });
+        const rescanBtn = controlsRow.createEl('button', { text: 'Rescan Vault', cls: 'mod-cta' });
         rescanBtn.addEventListener('click', async () => {
             rescanBtn.disabled = true;
             rescanBtn.setText('Scanning...');
@@ -187,20 +194,31 @@ export class SkillsTab {
         // Core Skills section
         const coreSkills = allSkills.filter((s) => s.source === 'core');
         if (coreSkills.length > 0) {
-            containerEl.createEl('h4', { text: 'Core Plugins' });
-            this.buildSkillList(containerEl, coreSkills);
+            containerEl.createEl('h4', { text: `Core Plugin Skills (${coreSkills.length})` });
+            this.buildCompactSkillList(containerEl, coreSkills);
         }
 
         // Community Skills section
         const communitySkills = allSkills.filter((s) => s.source !== 'core');
         if (communitySkills.length > 0) {
-            containerEl.createEl('h4', { text: 'Community Plugins' });
-            this.buildSkillList(containerEl, communitySkills);
+            containerEl.createEl('h4', { text: `Community Plugin Skills (${communitySkills.length})` });
+            this.buildCompactSkillList(containerEl, communitySkills);
         }
     }
 
-    private buildSkillList(containerEl: HTMLElement, skills: PluginSkillMeta[]): void {
-        const listEl = containerEl.createDiv({ cls: 'agent-rules-list' });
+    private buildCompactSkillList(containerEl: HTMLElement, skills: PluginSkillMeta[]): void {
+        const table = containerEl.createEl('table', { cls: 'agent-skill-table' });
+
+        // Header
+        const thead = table.createEl('thead');
+        const hr = thead.createEl('tr');
+        hr.createEl('th', { text: '', cls: 'agent-skill-th-status' }); // installed dot
+        hr.createEl('th', { text: 'Plugin' });
+        hr.createEl('th', { text: 'Commands', cls: 'agent-skill-th-cmds' });
+        hr.createEl('th', { text: '', cls: 'agent-skill-th-actions' }); // view buttons
+        hr.createEl('th', { text: 'Agent', cls: 'agent-skill-th-toggle' }); // agent toggle
+
+        const tbody = table.createEl('tbody');
 
         // Sort: enabled first, then alphabetical
         const sorted = [...skills].sort((a, b) => {
@@ -209,57 +227,94 @@ export class SkillsTab {
         });
 
         for (const skill of sorted) {
-            const row = listEl.createDiv({ cls: 'agent-rules-row agent-skill-row-expanded' });
+            const tr = tbody.createEl('tr', {
+                cls: skill.enabled ? '' : 'agent-skill-disabled',
+            });
 
-            // Top line: status + name + meta + toggle
-            const topLine = row.createDiv({ cls: 'agent-skill-top-line' });
+            // Status dot (installed in Obsidian?)
+            const statusTd = tr.createEl('td', { cls: 'agent-skill-status-cell' });
+            const dot = statusTd.createSpan({ cls: 'agent-skill-dot' });
+            dot.addClass(skill.enabled ? 'agent-skill-dot-on' : 'agent-skill-dot-off');
+            dot.setAttribute('aria-label', skill.enabled ? 'Installed & enabled' : 'Disabled in Obsidian');
 
-            // Status indicator
-            const statusIcon = topLine.createSpan({ cls: 'agent-plugin-skill-status' });
-            statusIcon.style.display = 'inline-block';
-            statusIcon.style.width = '8px';
-            statusIcon.style.height = '8px';
-            statusIcon.style.borderRadius = '50%';
-            statusIcon.style.marginRight = '8px';
-            statusIcon.style.flexShrink = '0';
-            statusIcon.style.backgroundColor = skill.enabled
-                ? 'var(--color-green)' : 'var(--text-faint)';
-            statusIcon.title = skill.enabled ? 'Plugin enabled' : 'Plugin disabled';
-
-            // Label
-            const label = topLine.createSpan({ cls: 'agent-rules-label' });
-            label.createSpan({ text: skill.name });
-            const meta = `${skill.classification} | ${skill.commands.length} cmd${skill.commands.length !== 1 ? 's' : ''}`;
-            label.createSpan({ cls: 'agent-workflow-slug', text: meta });
-
-            // Agent toggle (only for enabled plugins)
-            if (skill.enabled) {
-                const actions = topLine.createDiv({ cls: 'agent-rules-actions' });
-                const isActive = this.plugin.settings.vaultDNA.skillToggles[skill.id] !== false;
-                const toggleBtn = actions.createEl('button', {
-                    text: isActive ? 'Active' : 'Off',
-                    cls: `agent-rules-edit-btn ${isActive ? '' : 'agent-toggle-off'}`,
-                });
-                toggleBtn.addEventListener('click', async () => {
-                    const current = this.plugin.settings.vaultDNA.skillToggles[skill.id] !== false;
-                    this.plugin.settings.vaultDNA.skillToggles[skill.id] = !current;
-                    this.plugin.skillRegistry?.updateToggles(this.plugin.settings.vaultDNA.skillToggles);
-                    await this.plugin.saveSettings();
-                    toggleBtn.setText(!current ? 'Active' : 'Off');
-                    toggleBtn.toggleClass('agent-toggle-off', current);
-                });
-            }
-
-            // Description line (below name)
+            // Name + description
+            const nameTd = tr.createEl('td', { cls: 'agent-skill-name-cell' });
+            nameTd.createDiv({ text: skill.name, cls: 'agent-skill-name' });
             if (skill.description) {
-                const descLine = row.createDiv({ cls: 'agent-skill-description' });
-                descLine.setText(skill.description);
-                descLine.style.fontSize = 'var(--font-ui-smaller)';
-                descLine.style.color = 'var(--text-muted)';
-                descLine.style.marginLeft = '16px';
-                descLine.style.marginTop = '2px';
-                descLine.style.lineHeight = '1.3';
+                nameTd.createDiv({ text: skill.description, cls: 'agent-skill-desc' });
             }
+
+            // Command count
+            tr.createEl('td', { text: String(skill.commands.length), cls: 'agent-skill-cmd-cell' });
+
+            // Actions (view buttons)
+            const actionsTd = tr.createEl('td', { cls: 'agent-skill-actions-cell' });
+
+            // View skill file
+            const viewBtn = actionsTd.createEl('button', {
+                cls: 'agent-skill-action-btn', attr: { 'aria-label': 'View skill file' },
+            });
+            setIcon(viewBtn, 'file-text');
+            viewBtn.addEventListener('click', () => this.openSkillFile(skill));
+
+            // View README (if exists)
+            const docsBtn = actionsTd.createEl('button', {
+                cls: 'agent-skill-action-btn', attr: { 'aria-label': 'View README' },
+            });
+            setIcon(docsBtn, 'book-open');
+            this.checkReadmeExists(skill.id).then((exists) => {
+                if (!exists) {
+                    docsBtn.addClass('agent-skill-action-btn-faint');
+                    docsBtn.setAttribute('aria-label', 'No README available');
+                }
+            });
+            docsBtn.addEventListener('click', () => this.openReadmeFile(skill));
+
+            // Toggle — for ALL plugins (controls whether agent may use this skill)
+            const toggleTd = tr.createEl('td', { cls: 'agent-skill-toggle-cell' });
+            const isActive = this.plugin.settings.vaultDNA.skillToggles[skill.id] !== false;
+            const toggleContainer = toggleTd.createDiv({
+                cls: `checkbox-container agent-skill-toggle${isActive ? ' is-enabled' : ''}`,
+            });
+            toggleContainer.addEventListener('click', async () => {
+                const current = this.plugin.settings.vaultDNA.skillToggles[skill.id] !== false;
+                this.plugin.settings.vaultDNA.skillToggles[skill.id] = !current;
+                this.plugin.skillRegistry?.updateToggles(this.plugin.settings.vaultDNA.skillToggles);
+                await this.plugin.saveSettings();
+                toggleContainer.toggleClass('is-enabled', !current);
+            });
+        }
+    }
+
+    private async openSkillFile(skill: PluginSkillMeta): Promise<void> {
+        const path = `${this.skillsDir}/${skill.id}.skill.md`;
+        try {
+            const content = await this.app.vault.adapter.read(path);
+            new ContentEditorModal(this.app, `Skill: ${skill.name}`, content, async (updated) => {
+                await this.app.vault.adapter.write(path, updated);
+            }).open();
+        } catch {
+            new Notice(`Skill file not found: ${skill.id}.skill.md`);
+        }
+    }
+
+    private async openReadmeFile(skill: PluginSkillMeta): Promise<void> {
+        const path = `${this.skillsDir}/${skill.id}.readme.md`;
+        try {
+            const content = await this.app.vault.adapter.read(path);
+            new ContentEditorModal(this.app, `README: ${skill.name}`, content, async (updated) => {
+                await this.app.vault.adapter.write(path, updated);
+            }).open();
+        } catch {
+            new Notice(`No README available for ${skill.name}. Run "Rescan Vault" to fetch READMEs.`);
+        }
+    }
+
+    private async checkReadmeExists(pluginId: string): Promise<boolean> {
+        try {
+            return await this.app.vault.adapter.exists(`${this.skillsDir}/${pluginId}.readme.md`);
+        } catch {
+            return false;
         }
     }
 }

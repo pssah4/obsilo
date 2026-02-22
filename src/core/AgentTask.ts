@@ -152,6 +152,8 @@ export class AgentTask {
         // Track whether the model streamed any text across all iterations.
         // Used to decide if the completion result should be rendered as fallback.
         let hasStreamedText = false;
+        // Safety net: retry once if tools ran but model produced no visible response
+        let hasRetriedEmpty = false;
         // switch_mode signal (checked at end of each iteration)
         let pendingModeSwitch: string | null = null;
         // Phase B: consecutive error tracking
@@ -323,6 +325,18 @@ export class AgentTask {
 
                 // If no tool calls, the LLM is done — run condensing on text-only turns
                 if (toolUses.length === 0) {
+                    // Safety net: if tools ran but model produced no visible response, retry once
+                    if (iteration > 0 && textParts.length === 0 && !hasRetriedEmpty) {
+                        hasRetriedEmpty = true;
+                        history.push({
+                            role: 'user',
+                            content: '[System] You executed tools but produced no visible response. '
+                                + 'You MUST respond to the user. Explain what you did, what happened, '
+                                + 'and suggest next steps. If a plugin command opens a dialog, '
+                                + 'tell the user what to do in the dialog.',
+                        });
+                        continue;
+                    }
                     if (iteration > 0 && this.condensingEnabled) {
                         const estimatedTokens = this.estimateTokens(history);
                         const contextWindow = this.getModelContextWindow();
