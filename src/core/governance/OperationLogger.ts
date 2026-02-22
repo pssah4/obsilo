@@ -16,6 +16,7 @@ export interface LogEntry {
     mode: string;
     tool: string;
     params: Record<string, any>;
+    result?: string;
     success: boolean;
     durationMs: number;
     error?: string;
@@ -25,7 +26,7 @@ export class OperationLogger {
     private vault: Vault;
     private logDir: string;
     private readonly MAX_LOG_DAYS = 30;
-    private currentLogPath: string | null = null;
+    private readonly MAX_RESULT_LEN = 2000;
 
 
     constructor(vault: Vault, pluginDir: string) {
@@ -91,7 +92,16 @@ export class OperationLogger {
         try {
             const today = this.getToday();
             const logPath = `${this.logDir}/${today}.jsonl`;
-            const sanitized = { ...entry, params: this.sanitizeParams(entry.tool, entry.params) };
+            const sanitizedResult = entry.result
+                ? (entry.result.length > this.MAX_RESULT_LEN
+                    ? entry.result.slice(0, this.MAX_RESULT_LEN) + '...[truncated]'
+                    : entry.result)
+                : undefined;
+            const sanitized = {
+                ...entry,
+                params: this.sanitizeParams(entry.tool, entry.params),
+                result: sanitizedResult,
+            };
             const line = JSON.stringify(sanitized) + '\n';
 
             const exists = await this.vault.adapter.exists(logPath);
@@ -142,6 +152,20 @@ export class OperationLogger {
                 .reverse();
         } catch {
             return [];
+        }
+    }
+
+    /**
+     * Read raw JSONL content for a specific date (for download).
+     */
+    async readRawLog(date: string): Promise<string | null> {
+        const logPath = `${this.logDir}/${date}.jsonl`;
+        try {
+            const exists = await this.vault.adapter.exists(logPath);
+            if (!exists) return null;
+            return await this.vault.adapter.read(logPath);
+        } catch {
+            return null;
         }
     }
 

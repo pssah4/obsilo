@@ -194,9 +194,8 @@ export class ToolExecutionPipeline {
 
             // 6. Persistent operation log
             const durationMs = Date.now() - startTime;
-            await this.logOperation(toolCall, !executionHadError, durationMs);
-
             const content = collectedContent.join('\n');
+            await this.logOperation(toolCall, !executionHadError, durationMs, undefined, content);
             return {
                 type: 'tool_result',
                 tool_use_id: toolCall.id,
@@ -207,7 +206,7 @@ export class ToolExecutionPipeline {
             const errorMessage = error instanceof Error ? error.message : String(error);
             console.error(`[Pipeline] Tool execution failed: ${toolCall.name}`, error);
             await callbacks.handleError(toolCall.name, error);
-            await this.logOperation(toolCall, false, Date.now() - startTime, errorMessage);
+            await this.logOperation(toolCall, false, Date.now() - startTime, errorMessage, undefined);
             return this.errorResult(toolCall.id, errorMessage);
         }
     }
@@ -283,6 +282,7 @@ export class ToolExecutionPipeline {
         success: boolean,
         durationMs: number,
         errorMessage?: string,
+        resultContent?: string,
     ): Promise<void> {
         const logger: OperationLogger | undefined = (this.plugin as any).operationLogger;
         if (logger) {
@@ -292,6 +292,7 @@ export class ToolExecutionPipeline {
                 mode: this.mode,
                 tool: toolCall.name,
                 params: toolCall.input,
+                result: resultContent,
                 success,
                 durationMs,
                 error: errorMessage,
