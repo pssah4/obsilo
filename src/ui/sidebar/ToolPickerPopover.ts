@@ -296,23 +296,38 @@ export class ToolPickerPopover {
             setTimeout(() => saveBtnText.setText('Save to Settings'), 1500);
         });
 
-        // ── Position (upward, re-anchors on resize) ─────────────────────────
+        // ── Position (clamped to container bounds) ──────────────────────────
         const positionPopover = () => {
             const br = anchorBtn.getBoundingClientRect();
             const cr = containerEl.getBoundingClientRect();
+            const pad = 8;
             popover.style.position = 'fixed';
-            popover.style.top = '';
-            popover.style.bottom = (window.innerHeight - br.top + 4) + 'px';
-            popover.style.left = Math.max(br.left, cr.left) + 'px';
-            // Clamp to viewport
-            requestAnimationFrame(() => {
-                const r = popover.getBoundingClientRect();
-                const pad = 8;
-                if (r.right > window.innerWidth) popover.style.left = `${window.innerWidth - r.width - pad}px`;
-                if (r.left < 0) popover.style.left = `${pad}px`;
-                if (r.top < 0) { popover.style.top = `${pad}px`; popover.style.bottom = ''; }
-                if (r.bottom > window.innerHeight) { popover.style.bottom = `${pad}px`; popover.style.top = ''; }
-            });
+
+            // Constrain width to container
+            const popWidth = Math.min(400, cr.width - pad * 2);
+            popover.style.width = `${popWidth}px`;
+            popover.style.minWidth = `${Math.min(320, popWidth)}px`;
+            popover.style.maxWidth = `${popWidth}px`;
+
+            // Prefer opening upward; fall back to downward
+            const spaceAbove = br.top - cr.top - pad;
+            const spaceBelow = cr.bottom - br.bottom - pad;
+
+            if (spaceAbove >= spaceBelow) {
+                popover.style.bottom = (window.innerHeight - br.top + 4) + 'px';
+                popover.style.top = '';
+                popover.style.maxHeight = `${Math.max(spaceAbove, 200)}px`;
+            } else {
+                popover.style.top = (br.bottom + 4) + 'px';
+                popover.style.bottom = '';
+                popover.style.maxHeight = `${Math.max(spaceBelow, 200)}px`;
+            }
+
+            // Horizontal: keep inside container
+            let left = Math.max(br.left, cr.left + pad);
+            if (left + popWidth > cr.right - pad) left = cr.right - pad - popWidth;
+            left = Math.max(left, cr.left + pad);
+            popover.style.left = `${left}px`;
         };
         document.body.appendChild(popover);
         positionPopover();
