@@ -22,7 +22,11 @@ export class CreateBaseTool extends BaseTool<'create_base'> {
             name: 'create_base',
             description:
                 'Create an Obsidian Bases file (.base) — a structured view over vault notes. ' +
-                'Bases filter and display notes by their frontmatter properties.',
+                'Bases filter and display notes by their frontmatter properties. ' +
+                'IMPORTANT: This is Obsidian\'s native Bases feature, NOT the "DB Folder" plugin. ' +
+                'If the user asks for a "DB Folder" table, do NOT use this tool — use the DB Folder plugin ' +
+                'via execute_command("dbfolder:create-new-database-folder") instead. ' +
+                'Only use create_base when the user explicitly asks for a Bases view or .base file.',
             input_schema: {
                 type: 'object',
                 properties: {

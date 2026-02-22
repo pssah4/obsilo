@@ -10,16 +10,17 @@
  *   3. Capabilities
  *   4. User memory
  *   5. Tools (filtered by mode)
- *   6. Tool rules
- *   7. Tool decision guidelines
- *   8. Objective (task decomposition)
- *   9. Response format
- *  10. Explicit instructions
- *  11. Security boundary
- *  12. Mode role definition
- *  13. Custom instructions
- *  14. Skills
- *  15. Rules
+ *   6. Plugin Skills (right after tools — agent sees plugins before deciding)
+ *   7. Tool rules
+ *   8. Tool decision guidelines
+ *   9. Objective (task decomposition)
+ *  10. Response format
+ *  11. Explicit instructions
+ *  12. Security boundary
+ *  13. Mode role definition
+ *  14. Custom instructions
+ *  15. Skills (manual)
+ *  16. Rules
  *
  * Adapted from Kilo Code's src/core/prompts/system.ts — modularized for Obsidian.
  */
@@ -85,41 +86,41 @@ export function buildSystemPromptForMode(
         // 5. Tools (filtered by mode)
         getToolsSection(mode.toolGroups, mcpClient, allowedMcpServers),
 
-        // 6. Tool rules
+        // 6. Plugin Skills — right after tools so agent sees plugins before planning
+        getPluginSkillsSection(pluginSkillsSection),
+
+        // 7. Tool rules
         getToolRulesSection(),
         '',
 
-        // 7. Tool decision guidelines
+        // 8. Tool decision guidelines
         getToolDecisionGuidelinesSection(),
         '',
 
-        // 8. Objective (task decomposition)
+        // 9. Objective (task decomposition)
         getObjectiveSection(),
         '',
 
-        // 9. Response format
+        // 10. Response format
         getResponseFormatSection(),
         '',
 
-        // 10. Explicit instructions
+        // 11. Explicit instructions
         getExplicitInstructionsSection(),
 
-        // 11. Security boundary
+        // 12. Security boundary
         getSecurityBoundarySection(),
 
-        // 12. Mode role definition
+        // 13. Mode role definition
         getModeDefinitionSection(mode),
 
-        // 13. Custom instructions (conditional)
+        // 14. Custom instructions (conditional)
         getCustomInstructionsSection(globalCustomInstructions, mode.customInstructions),
 
-        // 14a. Plugin Skills — VaultDNA auto-discovered (conditional)
-        getPluginSkillsSection(pluginSkillsSection),
-
-        // 14b. Skills (conditional)
+        // 15. Skills — manual (conditional)
         getSkillsSection(skillsSection),
 
-        // 15. Rules (conditional)
+        // 16. Rules (conditional)
         getRulesSection(rulesContent),
     ];
 

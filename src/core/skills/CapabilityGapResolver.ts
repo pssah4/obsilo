@@ -64,7 +64,8 @@ export class CapabilityGapResolver {
                 found: 'disabled-plugin',
                 pluginId: disabledMatch.id,
                 pluginName: disabledMatch.name,
-                message: `Plugin "${disabledMatch.name}" is installed but currently disabled. It may help with this task. Ask the user if they want to enable it in Obsidian Settings.`,
+                message: `Plugin "${disabledMatch.name}" (${disabledMatch.id}) is installed but currently disabled. ` +
+                    `Use enable_plugin("${disabledMatch.id}") to activate it, then read its .skill.md file to learn available commands.`,
             };
         }
 
@@ -76,7 +77,7 @@ export class CapabilityGapResolver {
                 found: 'archived',
                 pluginId: archivedMatch.id,
                 pluginName: archivedMatch.name,
-                message: `Plugin "${archivedMatch.name}" was previously installed but has been removed. The user could reinstall it via Obsidian Settings > Community Plugins.`,
+                message: `Plugin "${archivedMatch.name}" was previously installed but has been removed. The user can reinstall it via Obsidian Settings > Community Plugins > Browse.`,
             };
         }
 
@@ -89,7 +90,8 @@ export class CapabilityGapResolver {
 
     private findMatch(entries: VaultDNAEntry[], keywords: string[]): VaultDNAEntry | null {
         for (const entry of entries) {
-            const text = `${entry.id} ${entry.name}`.toLowerCase();
+            // Match against id, name, AND description for broader coverage
+            const text = `${entry.id} ${entry.name} ${entry.description ?? ''}`.toLowerCase();
             if (keywords.some((k) => text.includes(k))) return entry;
         }
         return null;

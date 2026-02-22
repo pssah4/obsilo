@@ -209,28 +209,32 @@ export class SkillsTab {
         });
 
         for (const skill of sorted) {
-            const row = listEl.createDiv({ cls: 'agent-rules-row' });
+            const row = listEl.createDiv({ cls: 'agent-rules-row agent-skill-row-expanded' });
+
+            // Top line: status + name + meta + toggle
+            const topLine = row.createDiv({ cls: 'agent-skill-top-line' });
 
             // Status indicator
-            const statusIcon = row.createSpan({ cls: 'agent-plugin-skill-status' });
+            const statusIcon = topLine.createSpan({ cls: 'agent-plugin-skill-status' });
             statusIcon.style.display = 'inline-block';
             statusIcon.style.width = '8px';
             statusIcon.style.height = '8px';
             statusIcon.style.borderRadius = '50%';
             statusIcon.style.marginRight = '8px';
+            statusIcon.style.flexShrink = '0';
             statusIcon.style.backgroundColor = skill.enabled
                 ? 'var(--color-green)' : 'var(--text-faint)';
             statusIcon.title = skill.enabled ? 'Plugin enabled' : 'Plugin disabled';
 
             // Label
-            const label = row.createSpan({ cls: 'agent-rules-label' });
+            const label = topLine.createSpan({ cls: 'agent-rules-label' });
             label.createSpan({ text: skill.name });
             const meta = `${skill.classification} | ${skill.commands.length} cmd${skill.commands.length !== 1 ? 's' : ''}`;
             label.createSpan({ cls: 'agent-workflow-slug', text: meta });
 
             // Agent toggle (only for enabled plugins)
             if (skill.enabled) {
-                const actions = row.createDiv({ cls: 'agent-rules-actions' });
+                const actions = topLine.createDiv({ cls: 'agent-rules-actions' });
                 const isActive = this.plugin.settings.vaultDNA.skillToggles[skill.id] !== false;
                 const toggleBtn = actions.createEl('button', {
                     text: isActive ? 'Active' : 'Off',
@@ -244,6 +248,17 @@ export class SkillsTab {
                     toggleBtn.setText(!current ? 'Active' : 'Off');
                     toggleBtn.toggleClass('agent-toggle-off', current);
                 });
+            }
+
+            // Description line (below name)
+            if (skill.description) {
+                const descLine = row.createDiv({ cls: 'agent-skill-description' });
+                descLine.setText(skill.description);
+                descLine.style.fontSize = 'var(--font-ui-smaller)';
+                descLine.style.color = 'var(--text-muted)';
+                descLine.style.marginLeft = '16px';
+                descLine.style.marginTop = '2px';
+                descLine.style.lineHeight = '1.3';
             }
         }
     }

@@ -21,6 +21,8 @@ export interface VaultDNAEntry {
     source: PluginSource;
     /** Reason for NONE classification */
     reason?: string;
+    /** Plugin description from manifest (used for gap-resolution matching) */
+    description?: string;
 }
 
 /** Persisted vault-dna.json structure */
@@ -41,4 +43,8 @@ export interface PluginSkillMeta {
     enabled: boolean;
     commands: { id: string; name: string }[];
     description: string;
+    /** Whether this plugin has a non-empty settings file (data.json) */
+    hasSettings?: boolean;
+    /** Whether the plugin appears to need setup/configuration */
+    needsSetup?: boolean;
 }

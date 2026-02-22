@@ -53,31 +53,44 @@ export class ReadFileTool extends BaseTool<'read_file'> {
                 throw new Error('Path parameter is required');
             }
 
-            // Get the file from vault
+            // Get the file from vault (indexed files)
             const file = this.app.vault.getAbstractFileByPath(path);
 
-            if (!file) {
-                callbacks.pushToolResult(
-                    this.formatError(new Error(`File not found: ${path}`))
-                );
-                return;
-            }
+            let content: string;
+            let filePath: string;
+            let basename: string;
+            let extension: string;
 
-            if (!(file instanceof TFile)) {
-                callbacks.pushToolResult(
-                    this.formatError(new Error(`Path is not a file: ${path}`))
-                );
-                return;
+            if (file && file instanceof TFile) {
+                // Standard path: file is in Obsidian's vault index
+                content = await this.app.vault.read(file);
+                filePath = file.path;
+                basename = file.basename;
+                extension = file.extension;
+            } else {
+                // Fallback: file might be in a hidden/dot folder (e.g. .obsidian-agent/)
+                // that Obsidian doesn't index. Use the adapter for direct filesystem access.
+                const exists = await this.app.vault.adapter.exists(path);
+                if (!exists) {
+                    callbacks.pushToolResult(
+                        this.formatError(new Error(`File not found: ${path}`)),
+                    );
+                    return;
+                }
+                content = await this.app.vault.adapter.read(path);
+                filePath = path;
+                const parts = path.split('/');
+                const filename = parts[parts.length - 1] ?? path;
+                const dotIdx = filename.lastIndexOf('.');
+                basename = dotIdx > 0 ? filename.substring(0, dotIdx) : filename;
+                extension = dotIdx > 0 ? filename.substring(dotIdx + 1) : '';
             }
-
-            // Read file content
-            const content = await this.app.vault.read(file);
 
             // Return formatted content
             const result = this.formatContent(content, {
-                path: file.path,
-                basename: file.basename,
-                extension: file.extension,
+                path: filePath,
+                basename,
+                extension,
             });
 
             callbacks.pushToolResult(result);

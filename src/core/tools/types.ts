@@ -47,7 +47,8 @@ export type ToolName =
     | 'use_mcp_tool'
     // Skill (PAS-1)
     | 'execute_command'
-    | 'resolve_capability_gap';
+    | 'resolve_capability_gap'
+    | 'enable_plugin';
 
 /**
  * Tool use request from LLM
