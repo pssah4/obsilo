@@ -3305,45 +3305,111 @@
 /* ── DiffReviewModal ─────────────────────────────────────────────────── */
 .diff-review-modal { min-width: 560px; max-width: 850px; }
 
-/* Hunk container */
-.diff-hunk {
+/* Semantic Group (replaces per-hunk containers) */
+.diff-semantic-group {
     border: 1px solid var(--background-modifier-border);
-    border-radius: 4px;
-    margin: 6px 0;
+    border-radius: 6px;
+    margin: 8px 0;
     overflow: hidden;
 }
-.diff-hunk-approved { border-color: var(--color-green); }
-.diff-hunk-rejected { border-color: var(--color-red); opacity: 0.5; }
+.diff-group-approved { border-color: var(--color-green); }
+.diff-group-rejected { border-color: var(--color-red); opacity: 0.5; }
 
-/* Hunk header with approve/reject buttons */
-.diff-hunk-header {
+/* Section Header */
+.diff-section-header {
     display: flex;
-    justify-content: flex-end;
-    gap: 4px;
-    padding: 2px 6px;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
     background: var(--background-secondary);
     border-bottom: 1px solid var(--background-modifier-border);
+    font-size: var(--font-ui-small);
+}
+.diff-section-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 600;
+    color: var(--text-normal);
+}
+.diff-section-icon {
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+    color: var(--text-muted);
+}
+.diff-section-stats {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+    font-size: var(--font-ui-smaller);
+}
+.diff-section-actions {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
 }
 
-.diff-hunk-btn {
-    padding: 1px 8px;
-    font-size: 10px;
+/* Section Buttons */
+.diff-section-btn {
+    padding: 2px 10px;
+    font-size: 11px;
     border-radius: 3px;
     border: 1px solid var(--background-modifier-border);
     background: transparent;
     cursor: pointer;
+    color: var(--text-muted);
 }
-.diff-hunk-accept:hover { border-color: var(--color-green); color: var(--color-green); }
-.diff-hunk-reject:hover { border-color: var(--color-red); color: var(--color-red); }
+.diff-section-keep:hover { border-color: var(--color-green); color: var(--color-green); }
+.diff-section-undo:hover { border-color: var(--color-red); color: var(--color-red); }
+.diff-section-edit:hover { border-color: var(--color-accent); color: var(--color-accent); }
 
-/* Editable added lines */
-.diff-line-editable {
-    cursor: text;
-    border-bottom: 1px dashed var(--color-green);
+/* Section body (diff lines) */
+.diff-section-body {
+    font-family: var(--font-monospace);
+    font-size: var(--font-ui-smaller);
 }
-.diff-line-editable:focus {
+
+/* Section Editor Textarea */
+.diff-section-editor {
+    padding: 8px 10px;
+    border-top: 1px solid var(--background-modifier-border);
+    background: var(--background-primary-alt);
+}
+.diff-section-editor-label {
+    font-size: var(--font-ui-smaller);
+    color: var(--text-muted);
+    margin-bottom: 6px;
+}
+.diff-section-textarea {
+    width: 100%;
+    min-height: 60px;
+    max-height: 300px;
+    font-family: var(--font-monospace);
+    font-size: var(--font-ui-smaller);
+    line-height: 1.5;
+    padding: 8px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    background: var(--background-primary);
+    color: var(--text-normal);
+    resize: vertical;
+    box-sizing: border-box;
+}
+.diff-section-textarea:focus {
     outline: none;
-    background: rgba(var(--color-green-rgb, 68,196,68), 0.08);
+    border-color: var(--color-accent);
+}
+.diff-section-editor-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 6px;
+    margin-top: 6px;
 }
 
 /* Checkpoint diff header */
