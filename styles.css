@@ -1931,47 +1931,47 @@
 }
 
 /* Followup suggestions (parsed from [followups] text block) */
-.followup-chips {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    margin-top: 10px;
+.followup-list {
+    margin-top: 12px;
+    border-top: 1px solid var(--background-modifier-border);
+    padding-top: 8px;
 }
 
 .followup-heading {
-    font-size: 11px;
+    font-size: 12px;
     color: var(--text-faint);
     font-weight: 400;
-    margin-bottom: 2px;
+    margin-bottom: 4px;
 }
 
-.followup-chip {
+.followup-item {
     display: block;
     width: 100%;
     box-sizing: border-box;
     text-align: left;
-    white-space: normal;
+    white-space: normal !important;
     word-wrap: break-word;
     overflow-wrap: break-word;
-    padding: 5px 10px;
+    height: auto !important;
+    min-height: 0;
+    max-width: 100%;
+    overflow: visible;
+    padding: 4px 0 4px 10px;
+    margin: 0;
     border: none;
-    border-radius: 4px;
-    background: rgba(var(--mono-rgb-100), 0.04);
+    border-left: 2px solid var(--background-modifier-border);
+    border-radius: 0;
+    background: transparent;
     color: var(--text-muted);
     font-size: 12px;
     cursor: pointer;
-    transition: background 0.15s, color 0.15s;
-    line-height: 1.4;
+    transition: border-color 0.15s, color 0.15s;
+    line-height: 1.45;
 }
 
-.followup-chip:hover {
-    background: rgba(var(--mono-rgb-100), 0.08);
+.followup-item:hover {
+    border-left-color: var(--interactive-accent);
     color: var(--text-normal);
-}
-
-.followup-chip .followup-note-ref {
-    font-weight: 500;
-    color: var(--text-muted);
 }
 
 .question-input-row {

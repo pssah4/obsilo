@@ -1146,12 +1146,14 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
                     let renderText = accumulatedText;
                     let parsedSources: { num: number; note: string; context: string }[] = [];
                     let parsedFollowups: string[] = [];
+                    let followupHeading = '';
                     if (accumulatedText) {
                         const srcParsed = this.parseSources(accumulatedText);
                         renderText = srcParsed.cleanText;
                         parsedSources = srcParsed.sources;
                         const fuParsed = this.parseFollowups(renderText);
                         renderText = fuParsed.cleanText;
+                        followupHeading = fuParsed.heading;
                         parsedFollowups = fuParsed.followups;
                     }
                     if (renderText) {
@@ -1177,21 +1179,18 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
                     this.addResponseActions(messageEl, accumulatedText, parsedSources);
                     // Render follow-up suggestions (parsed from [followups] block)
                     if (parsedFollowups.length > 0) {
-                        const chipBar = messageEl.createDiv('followup-chips');
-                        chipBar.createEl('div', { cls: 'followup-heading', text: 'Was moechtest du als naechstes tun?' });
+                        const followupList = messageEl.createDiv('followup-list');
+                        if (followupHeading) {
+                            followupList.createEl('div', { cls: 'followup-heading', text: followupHeading });
+                        }
                         for (const raw of parsedFollowups) {
                             // Clean [[wikilinks]] → display name only (no folder prefix)
                             const displayText = raw.replace(/\[\[([^\]]+)\]\]/g, (_m, link: string) => {
                                 const name = link.contains('|') ? link.split('|').pop()! : link;
                                 return name.contains('/') ? name.split('/').pop()! : name;
                             });
-                            const chip = chipBar.createEl('button', { cls: 'followup-chip' });
-                            // Render note references with subtle emphasis
-                            chip.innerHTML = displayText.replace(
-                                /([A-Z][\w\s-]+\.md)/g,
-                                '<span class="followup-note-ref">$1</span>'
-                            );
-                            chip.addEventListener('click', () => {
+                            const item = followupList.createEl('button', { cls: 'followup-item', text: displayText });
+                            item.addEventListener('click', () => {
                                 if (this.textarea) {
                                     this.textarea.value = displayText;
                                     this.handleSendMessage();
@@ -1796,16 +1795,17 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
      * Parse and extract [followups]...[/followups] block from the model's response.
      * Returns cleaned text and an array of follow-up action strings.
      */
-    private parseFollowups(text: string): { cleanText: string; followups: string[] } {
-        const match = text.match(/\[followups\]\s*\n?([\s\S]*?)\[\/followups\]/);
-        if (!match) return { cleanText: text, followups: [] };
+    private parseFollowups(text: string): { cleanText: string; heading: string; followups: string[] } {
+        const match = text.match(/\[followups(?:\s+heading="([^"]*)")?\]\s*\n?([\s\S]*?)\[\/followups\]/);
+        if (!match) return { cleanText: text, heading: '', followups: [] };
 
-        const cleanText = text.replace(/\[followups\]\s*\n?[\s\S]*?\[\/followups\]/, '').trimEnd();
-        const followups = match[1].split('\n')
+        const cleanText = text.replace(/\[followups(?:\s+heading="[^"]*")?\]\s*\n?[\s\S]*?\[\/followups\]/, '').trimEnd();
+        const heading = match[1] || '';
+        const followups = match[2].split('\n')
             .map(line => line.replace(/^[-*]\s*/, '').trim())
             .filter(line => line.length > 0);
 
-        return { cleanText, followups };
+        return { cleanText, heading, followups };
     }
 
     /**
