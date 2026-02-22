@@ -27,10 +27,9 @@ export class AttemptCompletionTool extends BaseTool<'attempt_completion'> {
         return {
             name: 'attempt_completion',
             description:
-                'End the task loop after a multi-step tool workflow. ' +
-                'Only call this AFTER you used tools (read_file, edit_file, etc.) and wrote a text summary. ' +
-                'For simple text responses, greetings, or questions — do NOT call this tool. ' +
-                'Just respond with text and the loop ends automatically.',
+                'End the task loop after a multi-step WRITE workflow (create/edit files). ' +
+                'Only call this AFTER you wrote the full answer as text. The result param is an internal log — never the answer. ' +
+                'For questions, searches, and read-only tasks: do NOT call this tool. Just write your answer and the loop ends automatically.',
             input_schema: {
                 type: 'object',
                 properties: {
