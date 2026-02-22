@@ -1645,6 +1645,23 @@
     border-radius: 12px 12px 4px 12px;
     padding: 6px 11px;
     font-size: 13px;
+    user-select: text;
+    -webkit-user-select: text;
+    cursor: text;
+}
+
+/* User message action bar (copy, edit) */
+.user-message-actions {
+    display: flex;
+    gap: 1px;
+    justify-content: flex-end;
+    opacity: 0;
+    margin-top: 2px;
+    transition: opacity 0.15s;
+}
+
+.user-message:hover .user-message-actions {
+    opacity: 1;
 }
 
 /* Assistant message: no heavy bubble */
