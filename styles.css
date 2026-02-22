@@ -2965,10 +2965,74 @@
 
 /* Backup section */
 
+.agent-backup-section {
+    margin-bottom: 24px;
+}
+
+.agent-backup-section h4 {
+    margin: 16px 0 8px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.agent-backup-category-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 12px;
+}
+
+.agent-backup-category-row {
+    display: flex;
+    align-items: center;
+}
+
+.agent-backup-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.agent-backup-label input[type="checkbox"] {
+    flex-shrink: 0;
+}
+
+.agent-backup-label-text {
+    display: inline;
+}
+
+.agent-backup-label-name {
+    font-weight: 500;
+}
+
+.agent-backup-label-desc {
+    color: var(--text-muted);
+}
+
+.agent-backup-label-stats {
+    color: var(--text-faint);
+    font-size: 12px;
+}
+
 .agent-backup-row {
     display: flex;
     gap: 8px;
     margin-top: 8px;
+}
+
+.agent-backup-import-info {
+    color: var(--text-muted);
+    font-size: 13px;
+    margin: 4px 0 8px;
+}
+
+.agent-backup-warning {
+    color: var(--text-error);
+    font-size: 12px;
+    margin: 8px 0 4px;
 }
 
 /* ── Operation Log ─────────────────────────────────────────────────── */
