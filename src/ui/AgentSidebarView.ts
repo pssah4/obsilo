@@ -1574,7 +1574,63 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
         if (text) {
             msgEl.createDiv('message-content').setText(text);
         }
+        // Action bar: copy + edit/resend
+        this.addUserMessageActions(msgEl, text);
         this.chatContainer.scrollTop = this.chatContainer.scrollHeight;
+    }
+
+    /** Add copy and edit+resend action buttons below a user message bubble. */
+    private addUserMessageActions(msgEl: HTMLElement, text: string): void {
+        const bar = msgEl.createDiv('user-message-actions');
+        const makeBtn = (icon: string, tooltip: string, onClick: () => void) => {
+            const btn = bar.createEl('button', { cls: 'message-action-btn', attr: { 'aria-label': tooltip } });
+            setIcon(btn, icon);
+            btn.title = tooltip;
+            btn.addEventListener('click', onClick);
+        };
+
+        // Copy message text
+        makeBtn('copy', 'Copy', () => {
+            navigator.clipboard.writeText(text);
+            new Notice('Copied.');
+        });
+
+        // Edit and resend: put text back in textarea, remove this message + all following
+        makeBtn('pencil', 'Edit & resend', () => {
+            if (!this.textarea || !this.chatContainer) return;
+            this.textarea.value = text;
+            this.autoResizeTextarea();
+            this.textarea.focus();
+            // Remove this message and everything after it
+            const allMessages = Array.from(this.chatContainer.querySelectorAll('.message'));
+            const idx = allMessages.indexOf(msgEl);
+            if (idx >= 0) {
+                for (let i = allMessages.length - 1; i >= idx; i--) {
+                    allMessages[i].remove();
+                }
+            }
+            // Also trim uiMessages and conversationHistory to match
+            const userMsgIndices: number[] = [];
+            this.uiMessages.forEach((m, i) => { if (m.role === 'user') userMsgIndices.push(i); });
+            // Count which user message this is in the DOM
+            const userBubblesBefore = allMessages.slice(0, idx).filter(el => el.classList.contains('user-message')).length;
+            const uiIdx = userMsgIndices[userBubblesBefore];
+            if (uiIdx !== undefined) {
+                this.uiMessages.splice(uiIdx);
+            }
+            if (this.conversationHistory.length > 0) {
+                let userCount = 0;
+                for (let i = 0; i < this.conversationHistory.length; i++) {
+                    if (this.conversationHistory[i].role === 'user') {
+                        if (userCount === userBubblesBefore) {
+                            this.conversationHistory.splice(i);
+                            break;
+                        }
+                        userCount++;
+                    }
+                }
+            }
+        });
     }
 
     private addAssistantMessage(markdown: string): void {
