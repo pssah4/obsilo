@@ -66,16 +66,22 @@ const TOOL_GROUPS: Record<string, ToolGroup> = {
     use_mcp_tool: 'mcp',
 };
 
+/** Result of an approval check — may include user-edited content */
+export interface ApprovalResult {
+    decision: 'auto' | 'approved' | 'rejected';
+    /** User-edited final content (only for note-edit approvals via DiffReviewModal) */
+    finalContent?: string;
+}
+
 /** Extra context injected by AgentTask for agent-control tools */
 export interface ContextExtensions {
     askQuestion?: (question: string, options?: string[]) => Promise<string>;
     signalCompletion?: (result: string) => void;
     /**
      * Request user approval for a tool call.
-     * Returns: 'auto' = already approved by settings, 'approved' = user clicked approve,
-     *          'rejected' = user denied or timed out
+     * Returns an ApprovalResult with decision and optional edited content.
      */
-    onApprovalRequired?: (toolName: string, input: Record<string, any>) => Promise<'auto' | 'approved' | 'rejected'>;
+    onApprovalRequired?: (toolName: string, input: Record<string, any>) => Promise<ApprovalResult>;
     /** Publish the current todo list to the UI */
     updateTodos?: (items: import('../tools/agent/UpdateTodoListTool').TodoItem[]) => void;
     /** Switch the active mode (called by switch_mode tool) */
@@ -131,8 +137,8 @@ export class ToolExecutionPipeline {
             // 3. Auto-approve or request approval for write/web/mcp/mode/subtask operations
             const toolGroup = TOOL_GROUPS[toolCall.name];
             if (tool.isWriteOperation || toolGroup === 'web' || toolGroup === 'mcp' || toolGroup === 'mode' || toolGroup === 'subtask') {
-                const decision = await this.checkApproval(toolCall, extensions);
-                if (decision === 'rejected') {
+                const approval = await this.checkApproval(toolCall, extensions);
+                if (approval.decision === 'rejected') {
                     return this.errorResult(toolCall.id, 'Operation denied by user');
                 }
             }
@@ -229,28 +235,27 @@ export class ToolExecutionPipeline {
 
     /**
      * Determine if this tool call needs approval and whether it's already granted.
-     * Returns 'auto' if settings allow without prompting, 'approved' if user approved,
-     * 'rejected' if denied.
+     * Returns an ApprovalResult with the decision and optional edited content.
      */
     private async checkApproval(
         toolCall: ToolUse,
         extensions?: ContextExtensions,
-    ): Promise<'auto' | 'approved' | 'rejected'> {
+    ): Promise<ApprovalResult> {
         const cfg = this.plugin.settings.autoApproval;
         const group = TOOL_GROUPS[toolCall.name] ?? 'note-edit';
 
         // Agent tools (question, todo, completion, open_note) are always auto-approved
-        if (group === 'agent') return 'auto';
+        if (group === 'agent') return { decision: 'auto' };
 
         // Check if auto-approved by settings
         if (cfg.enabled) {
-            if (group === 'read' && cfg.read) return 'auto';
-            if (group === 'note-edit' && cfg.noteEdits) return 'auto';
-            if (group === 'vault-change' && cfg.vaultChanges) return 'auto';
-            if (group === 'web' && cfg.web) return 'auto';
-            if (group === 'mcp' && cfg.mcp) return 'auto';
-            if (group === 'mode' && cfg.mode) return 'auto';
-            if (group === 'subtask' && cfg.subtasks) return 'auto';
+            if (group === 'read' && cfg.read) return { decision: 'auto' };
+            if (group === 'note-edit' && cfg.noteEdits) return { decision: 'auto' };
+            if (group === 'vault-change' && cfg.vaultChanges) return { decision: 'auto' };
+            if (group === 'web' && cfg.web) return { decision: 'auto' };
+            if (group === 'mcp' && cfg.mcp) return { decision: 'auto' };
+            if (group === 'mode' && cfg.mode) return { decision: 'auto' };
+            if (group === 'subtask' && cfg.subtasks) return { decision: 'auto' };
         }
 
         // No auto-approve config AND no approval callback — fail-closed.
@@ -258,7 +263,7 @@ export class ToolExecutionPipeline {
         // security risk. Deny by default to prevent unauthorized vault changes.
         if (!extensions?.onApprovalRequired) {
             console.warn(`[Pipeline] No approval callback for ${toolCall.name} — denying (fail-closed)`);
-            return 'rejected';
+            return { decision: 'rejected' };
         }
 
         // Ask for user approval

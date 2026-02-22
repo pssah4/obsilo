@@ -115,6 +115,7 @@ export class GitCheckpointService {
                     this.vault.adapter.read(vaultRelPath),
                     `Read ${vaultRelPath}`
                 );
+                console.log(`[Checkpoints] ${vaultRelPath}: read ${content.length} chars from vault`);
 
                 // Write into shadow repo at same relative path
                 const destPath = `${this.repoPath}/${repoRelative}`;
@@ -124,6 +125,7 @@ export class GitCheckpointService {
 
                 // Stage file
                 await git.add({ fs, dir: this.repoPath, filepath: repoRelative });
+                console.log(`[Checkpoints] ${vaultRelPath}: staged in shadow repo`);
                 staged.push(vaultRelPath);
             } catch (e) {
                 console.warn(`[Checkpoints] Could not snapshot ${vaultRelPath}:`, e);
@@ -149,6 +151,9 @@ export class GitCheckpointService {
                 author: { name: 'obsidian-agent', email: 'agent@obsidian.local' },
                 message: `checkpoint:${taskId}\n\nFiles: ${staged.join(', ')}`,
             });
+            console.log(`[Checkpoints] Committed ${staged.length} file(s): oid=${commitOid}`);
+        } else {
+            console.log(`[Checkpoints] No files staged (newFiles=${newFiles.length})`);
         }
 
         const info: CheckpointInfo = {
@@ -173,6 +178,7 @@ export class GitCheckpointService {
      * Restore files from a checkpoint back into the vault.
      */
     async restore(checkpoint: CheckpointInfo): Promise<RestoreResult> {
+        console.log(`[Checkpoints] restore() called: commitOid=${checkpoint.commitOid} files=${checkpoint.filesChanged.join(',')} newFiles=${checkpoint.newFiles?.join(',') ?? 'none'}`);
         await this.ensureInit();
         if (checkpoint.commitOid === 'empty') {
             return { restored: [], errors: ['No files were snapshotted'] };
@@ -193,19 +199,23 @@ export class GitCheckpointService {
                         filepath: vaultRelPath,
                     });
                     const content = new TextDecoder().decode(blob);
+                    console.log(`[Checkpoints] Restoring ${vaultRelPath}: ${content.length} chars from oid ${checkpoint.commitOid.substring(0, 8)}`);
 
                     const existingFile = this.vault.getAbstractFileByPath(vaultRelPath);
                     if (existingFile) {
                         const { TFile } = await import('obsidian');
                         if (existingFile instanceof TFile) {
                             await this.vault.modify(existingFile, content);
+                            console.log(`[Checkpoints] ${vaultRelPath}: restored via vault.modify`);
                         }
                     } else {
                         await this.vault.adapter.write(vaultRelPath, content);
+                        console.log(`[Checkpoints] ${vaultRelPath}: restored via vault.adapter.write (file was deleted)`);
                     }
                     restored.push(vaultRelPath);
                 } catch (e) {
                     const msg = e instanceof Error ? e.message : String(e);
+                    console.error(`[Checkpoints] Failed to restore ${vaultRelPath}:`, e);
                     errors.push(`${vaultRelPath}: ${msg}`);
                 }
             }
@@ -352,6 +362,28 @@ export class GitCheckpointService {
         } catch (e) {
             const msg = e instanceof Error ? e.message : String(e);
             return { restored: [], errors: [msg] };
+        }
+    }
+
+    /**
+     * Read the snapshotted content of a single file from a checkpoint.
+     * Returns null if the checkpoint has no commit or the file is not found.
+     */
+    async getSnapshotContent(checkpoint: CheckpointInfo, filePath: string): Promise<string | null> {
+        if (checkpoint.commitOid === 'empty' || checkpoint.commitOid === 'none') return null;
+        try {
+            await this.ensureInit();
+            const fs = this.getFs();
+            const { blob } = await git.readBlob({
+                fs,
+                dir: this.repoPath,
+                oid: checkpoint.commitOid,
+                filepath: filePath,
+            });
+            return new TextDecoder().decode(blob);
+        } catch (e) {
+            console.warn(`[Checkpoints] Could not read snapshot for ${filePath}:`, e);
+            return null;
         }
     }
 

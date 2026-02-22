@@ -41,7 +41,7 @@ export interface AgentTaskCallbacks {
     /** Called when ask_followup_question is invoked — pauses loop until resolved */
     onQuestion?: (question: string, options: string[] | undefined, resolve: (answer: string) => void) => void;
     /** Called when a write tool needs user approval — pauses loop until user decides */
-    onApprovalRequired?: (toolName: string, input: Record<string, any>) => Promise<'auto' | 'approved' | 'rejected'>;
+    onApprovalRequired?: (toolName: string, input: Record<string, any>) => Promise<import('./tool-execution/ToolExecutionPipeline').ApprovalResult>;
     /** Called when update_todo_list publishes a new todo plan */
     onTodoUpdate?: (items: import('./tools/agent/UpdateTodoListTool').TodoItem[]) => void;
     /** Called when switch_mode changes the active mode */

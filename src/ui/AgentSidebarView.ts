@@ -1211,6 +1211,10 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
                     if (taskWriteCount > 0 && (this.plugin.settings.enableCheckpoints ?? true) && !hasRenderedCheckpoints) {
                         this.showUndoBar(taskId, taskWriteCount);
                     }
+                    // Post-task review: show all changes for review/undo
+                    if (taskWriteCount > 0 && (this.plugin.settings.enableCheckpoints ?? true)) {
+                        this.showPostTaskReview(taskId);
+                    }
                     // Notify when sidebar is not the active (focused) view
                     if (this.app.workspace.getMostRecentLeaf()?.view !== this) {
                         new Notice('Agent task complete', 3000);
@@ -2246,16 +2250,12 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
         toolName: string,
         input: Record<string, any>,
         container?: HTMLElement,
-    ): Promise<'auto' | 'approved' | 'rejected'> {
-        // For note-edit tools, show the diff modal instead of the inline banner
-        const DIFF_TOOLS = new Set(['write_file', 'edit_file', 'append_to_file']);
-        if (DIFF_TOOLS.has(toolName)) {
-            return this.showDiffApproval(toolName, input);
-        }
-
+    ): Promise<import('../core/tool-execution/ToolExecutionPipeline').ApprovalResult> {
+        // All tools use the same inline approval card during execution.
+        // Post-task DiffReviewModal is shown in onComplete for collected review.
         return new Promise((resolve) => {
             const target = container ?? this.chatContainer;
-            if (!target) { resolve('approved'); return; }
+            if (!target) { resolve({ decision: 'approved' }); return; }
 
             const group = this.getToolGroup(toolName);
             const groupLabels: Record<string, string> = {
@@ -2279,60 +2279,18 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
 
             const cleanup = () => row.remove();
 
-            allowBtn.addEventListener('click', () => { cleanup(); resolve('approved'); });
-            denyBtn.addEventListener('click', () => { cleanup(); resolve('rejected'); });
+            allowBtn.addEventListener('click', () => { cleanup(); resolve({ decision: 'approved' }); });
+            denyBtn.addEventListener('click', () => { cleanup(); resolve({ decision: 'rejected' }); });
             enableBtn.addEventListener('click', async () => {
                 this.plugin.settings.autoApproval.enabled = true;
                 const permKey = this.groupToPermKey(group);
                 if (permKey) (this.plugin.settings.autoApproval as any)[permKey] = true;
                 await this.plugin.saveSettings();
                 cleanup();
-                resolve('approved');
+                resolve({ decision: 'approved' });
             });
 
             this.chatContainer?.scrollTo({ top: this.chatContainer!.scrollHeight });
-        });
-    }
-
-    /**
-     * Show a diff-based approval modal for note write/edit operations.
-     * Computes old vs. new content and presents the diff to the user.
-     */
-    private async showDiffApproval(
-        toolName: string,
-        input: Record<string, any>,
-    ): Promise<'auto' | 'approved' | 'rejected'> {
-        const filePath: string = input.path ?? '';
-
-        // Compute old content (empty string if file doesn't exist yet)
-        let oldContent = '';
-        try {
-            const file = this.app.vault.getFileByPath(filePath);
-            if (file) oldContent = await this.app.vault.read(file);
-        } catch { /* new file */ }
-
-        // Compute new content depending on tool
-        let newContent = oldContent;
-        if (toolName === 'write_file') {
-            newContent = input.content ?? '';
-        } else if (toolName === 'edit_file') {
-            const oldStr: string = input.old_string ?? '';
-            const newStr: string = input.new_string ?? '';
-            newContent = oldContent.replace(oldStr, newStr);
-        } else if (toolName === 'append_to_file') {
-            newContent = oldContent + (input.content ?? '');
-        }
-
-        return new Promise((resolve) => {
-            import('./ApproveEditModal').then(({ ApproveEditModal }) => {
-                new ApproveEditModal(
-                    this.app,
-                    filePath,
-                    oldContent,
-                    newContent,
-                    (accepted) => resolve(accepted ? 'approved' : 'rejected'),
-                ).open();
-            });
         });
     }
 
@@ -2376,12 +2334,24 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
 
         const label = marker.createSpan('checkpoint-label');
         const files = checkpoint.filesChanged.map((f) => f.split('/').pop()).join(', ');
+        const newFileNames = checkpoint.newFiles?.map((f) => f.split('/').pop()).join(', ');
+        const allFiles = [files, newFileNames].filter(Boolean).join(', ');
         const time = new Date(checkpoint.timestamp).toLocaleTimeString('de-DE', {
             hour: '2-digit',
             minute: '2-digit',
         });
-        label.setText(`Checkpoint · ${files} · ${time}`);
+        label.setText(`Checkpoint · ${allFiles} · ${time}`);
 
+        // Diff button (opens DiffReviewModal in review mode)
+        if (checkpoint.filesChanged.length > 0) {
+            const diffBtn = marker.createEl('button', {
+                cls: 'checkpoint-restore-btn',
+                text: 'Diff',
+            });
+            diffBtn.addEventListener('click', () => this.showCheckpointDiff(checkpoint));
+        }
+
+        // Restore button
         const restoreBtn = marker.createEl('button', {
             cls: 'checkpoint-restore-btn',
             text: 'Restore',
@@ -2404,6 +2374,9 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
                         role: 'user',
                         content: `[System] Checkpoint restored. Files affected: ${restoredFiles}.${deletedNote} The vault state has changed — do not assume previous file operations are still valid.`,
                     });
+                } else if (result && result.errors.length > 0) {
+                    restoreBtn.setText('Error');
+                    console.error('[Checkpoint Restore] Errors:', result.errors);
                 } else {
                     restoreBtn.setText('Nothing to restore');
                 }
@@ -2411,6 +2384,148 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
                 restoreBtn.setText('Failed');
             }
         });
+    }
+
+    /**
+     * Open DiffReviewModal in checkpoint mode for a single checkpoint.
+     * Shows the diff between snapshot (pre-write) and current vault state.
+     */
+    private async showCheckpointDiff(
+        checkpoint: import('../core/checkpoints/GitCheckpointService').CheckpointInfo,
+    ): Promise<void> {
+        const service = this.plugin.checkpointService;
+        if (!service) return;
+
+        const { DiffReviewModal } = await import('./DiffReviewModal');
+        const entries: import('./DiffReviewModal').FileDiffEntry[] = [];
+
+        for (const filePath of checkpoint.filesChanged) {
+            const before = await service.getSnapshotContent(checkpoint, filePath);
+            if (before === null) continue;
+
+            let after = '';
+            try {
+                const file = this.app.vault.getFileByPath(filePath);
+                if (file) after = await this.app.vault.read(file);
+            } catch { /* file deleted */ }
+
+            entries.push({ filePath, oldContent: before, newContent: after });
+        }
+
+        if (entries.length === 0) return;
+
+        new DiffReviewModal(
+            this.app,
+            entries,
+            {
+                mode: 'checkpoint',
+                checkpointInfo: checkpoint,
+                onRestore: async () => {
+                    const result = await service.restore(checkpoint);
+                    if (result && result.restored.length > 0) {
+                        const restoredFiles = result.restored.join(', ');
+                        const deletedNote = checkpoint.newFiles?.length
+                            ? ` Deleted: ${checkpoint.newFiles.join(', ')}.`
+                            : '';
+                        this.conversationHistory.push({
+                            role: 'user',
+                            content: `[System] Checkpoint restored. Files: ${restoredFiles}.${deletedNote} Vault state changed.`,
+                        });
+                    }
+                },
+            },
+        ).open();
+    }
+
+    // -------------------------------------------------------------------------
+    // Post-task review: show all changes for review/undo after agent finishes
+    // -------------------------------------------------------------------------
+
+    private async showPostTaskReview(taskId: string): Promise<void> {
+        const service = this.plugin.checkpointService;
+        if (!service) return;
+
+        const checkpoints = service.getCheckpointsForTask(taskId);
+        if (checkpoints.length === 0) return;
+
+        // Collect the earliest checkpoint content per file (pre-task state)
+        const fileOldContent = new Map<string, string>();
+        for (const cp of checkpoints) {
+            for (const filePath of cp.filesChanged) {
+                if (!fileOldContent.has(filePath)) {
+                    const content = await service.getSnapshotContent(cp, filePath);
+                    if (content !== null) {
+                        fileOldContent.set(filePath, content);
+                    }
+                }
+            }
+        }
+
+        // Build entries: old = earliest checkpoint, new = current vault
+        const { DiffReviewModal } = await import('./DiffReviewModal');
+        const entries: import('./DiffReviewModal').FileDiffEntry[] = [];
+
+        for (const [filePath, oldContent] of fileOldContent) {
+            let newContent = '';
+            try {
+                const file = this.app.vault.getFileByPath(filePath);
+                if (file) newContent = await this.app.vault.read(file);
+            } catch { /* file may have been deleted */ }
+
+            // Skip files that haven't actually changed
+            if (oldContent === newContent) continue;
+
+            entries.push({ filePath, oldContent, newContent });
+        }
+
+        // Also handle newly created files (no checkpoint snapshot — oldContent is empty)
+        const newFiles = new Set<string>();
+        for (const cp of checkpoints) {
+            if (cp.newFiles) {
+                for (const f of cp.newFiles) newFiles.add(f);
+            }
+        }
+        for (const filePath of newFiles) {
+            let newContent = '';
+            try {
+                const file = this.app.vault.getFileByPath(filePath);
+                if (file) newContent = await this.app.vault.read(file);
+            } catch { continue; }
+            if (newContent) {
+                entries.push({ filePath, oldContent: '', newContent });
+            }
+        }
+
+        if (entries.length === 0) return;
+
+        new DiffReviewModal(
+            this.app,
+            entries,
+            { mode: 'review' },
+            async (decisions) => {
+                // Apply user decisions: write back reverted/edited content
+                for (const d of decisions) {
+                    if (!d.hasChanges) continue;
+                    try {
+                        const file = this.app.vault.getFileByPath(d.filePath);
+                        if (file instanceof TFile) {
+                            await this.app.vault.modify(file, d.finalContent);
+                        } else {
+                            await this.app.vault.adapter.write(d.filePath, d.finalContent);
+                        }
+                    } catch (e) {
+                        console.error(`[PostTaskReview] Failed to apply decision for ${d.filePath}:`, e);
+                    }
+                }
+                if (decisions.length > 0) {
+                    const files = decisions.map((d) => d.filePath).join(', ');
+                    this.conversationHistory.push({
+                        role: 'user',
+                        content: `[System] Post-task review: User reverted changes in ${decisions.length} file(s): ${files}. Vault state changed.`,
+                    });
+                }
+            },
+        ).open();
     }
 
     // -------------------------------------------------------------------------
