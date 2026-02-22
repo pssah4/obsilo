@@ -144,8 +144,10 @@
     margin-bottom: 8px;
 }
 
-.message-content ul {
-    margin-left: 20px;
+.message-content ul,
+.message-content ol {
+    margin-left: 0;
+    padding-left: 16px;
     margin-bottom: 8px;
 }
 
