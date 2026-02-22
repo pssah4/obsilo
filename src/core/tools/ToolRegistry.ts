@@ -47,6 +47,9 @@ import { AttemptCompletionTool } from './agent/AttemptCompletionTool';
 import { UpdateTodoListTool } from './agent/UpdateTodoListTool';
 import { SwitchModeTool } from './agent/SwitchModeTool';
 import { NewTaskTool } from './agent/NewTaskTool';
+// Plugin Skills (PAS-1)
+import { ExecuteCommandTool } from './agent/ExecuteCommandTool';
+import { ResolveCapabilityGapTool } from './agent/ResolveCapabilityGapTool';
 // MCP tool
 import { UseMcpToolTool } from './mcp/UseMcpToolTool';
 import type { McpClient } from '../mcp/McpClient';
@@ -104,6 +107,9 @@ export class ToolRegistry {
         this.register(new UpdateTodoListTool(this.plugin));
         this.register(new SwitchModeTool(this.plugin));
         this.register(new NewTaskTool(this.plugin));
+        // Plugin Skills (PAS-1)
+        this.register(new ExecuteCommandTool(this.plugin));
+        this.register(new ResolveCapabilityGapTool(this.plugin));
 
         console.log(`ToolRegistry: Registered ${this.getToolCount()} tools`);
     }

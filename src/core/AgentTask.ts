@@ -126,6 +126,8 @@ export class AgentTask {
         allowedMcpServers?: string[],
         /** Pre-built memory context for system prompt injection */
         memoryContext?: string,
+        /** Compact plugin skills list from VaultDNA (PAS-1) */
+        pluginSkillsSection?: string,
     ): Promise<void> {
         // Resolve mode to ModeConfig
         let activeMode: ModeConfig = this.resolveMode(initialMode);
@@ -220,6 +222,8 @@ export class AgentTask {
                 mcpClient,
                 undefined,          // no per-session tool override for subtasks
                 allowedMcpServers,
+                undefined,          // no per-subtask memory context
+                pluginSkillsSection,
             );
             return childText;
         };
@@ -233,7 +237,7 @@ export class AgentTask {
 
         const rebuildPromptCache = () => {
             const allModes = this.modeService?.getAllModes();
-            cachedSystemPrompt = buildSystemPromptForMode(activeMode, allModes, globalCustomInstructions, includeTime, rulesContent, skillsSection, mcpClient, allowedMcpServers, memoryContext);
+            cachedSystemPrompt = buildSystemPromptForMode(activeMode, allModes, globalCustomInstructions, includeTime, rulesContent, skillsSection, mcpClient, allowedMcpServers, memoryContext, pluginSkillsSection);
             cachedTools = this.modeService
                 ? this.modeService.getToolDefinitions(activeMode, sessionToolOverride)
                 : this.toolRegistry.getToolDefinitions();

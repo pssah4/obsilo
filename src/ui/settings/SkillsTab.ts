@@ -1,11 +1,20 @@
 import { App, Notice, Setting, setIcon } from 'obsidian';
 import type ObsidianAgentPlugin from '../../main';
 import { ContentEditorModal } from './ContentEditorModal';
+import type { PluginSkillMeta } from '../../core/skills/types';
 
 export class SkillsTab {
     constructor(private plugin: ObsidianAgentPlugin, private app: App, private rerender: () => void) {}
 
     build(containerEl: HTMLElement): void {
+        // ── Plugin Skills (PAS-1) ─────────────────────────────────────────
+        this.buildPluginSkillsSection(containerEl);
+
+        // ── Separator ─────────────────────────────────────────────────────
+        containerEl.createEl('hr');
+
+        // ── Manual Skills ─────────────────────────────────────────────────
+        containerEl.createEl('h3', { text: 'Manual Skills' });
         containerEl.createEl('p', {
             cls: 'agent-settings-desc',
             text: 'Skills are automatically injected into the system prompt when relevant to the user\'s message. ' +
@@ -128,8 +137,114 @@ export class SkillsTab {
         refreshList();
     }
 
-    // ---------------------------------------------------------------------------
-    // Modes tab
-    // ---------------------------------------------------------------------------
+    // ── Plugin Skills (PAS-1) ─────────────────────────────────────────────
 
+    private buildPluginSkillsSection(containerEl: HTMLElement): void {
+        const scanner = this.plugin.vaultDNAScanner;
+        const registry = this.plugin.skillRegistry;
+
+        if (!scanner || !registry) {
+            containerEl.createEl('h3', { text: 'Plugin Skills' });
+            containerEl.createEl('p', {
+                cls: 'agent-settings-desc',
+                text: 'Plugin skills are disabled. Enable "VaultDNA" in the Advanced settings to auto-discover Obsidian plugins as agent skills.',
+            });
+            return;
+        }
+
+        const activeSkills = registry.getActivePluginSkills();
+        const disabledSkills = registry.getDisabledPluginSkills();
+        const allSkills = scanner.getAllPluginSkills();
+
+        // Header with stats
+        containerEl.createEl('h3', { text: 'Plugin Skills' });
+        const statsEl = containerEl.createEl('p', { cls: 'agent-settings-desc' });
+        statsEl.setText(
+            `Auto-discovered from installed Obsidian plugins. ` +
+            `Active: ${activeSkills.length} | Disabled: ${disabledSkills.length} | Total: ${allSkills.length}`,
+        );
+
+        // Rescan button
+        const rescanRow = containerEl.createDiv({ cls: 'agent-rules-create-row' });
+        const rescanBtn = rescanRow.createEl('button', { text: 'Rescan Vault', cls: 'mod-cta' });
+        rescanBtn.addEventListener('click', async () => {
+            rescanBtn.disabled = true;
+            rescanBtn.setText('Scanning...');
+            try {
+                await scanner.fullScan();
+                registry.updateToggles(this.plugin.settings.vaultDNA.skillToggles);
+                new Notice(`VaultDNA: Scanned ${scanner.getAllPluginSkills().length} plugins`);
+                this.rerender();
+            } catch (e) {
+                new Notice('VaultDNA scan failed');
+                console.error('[VaultDNA] Rescan failed:', e);
+            } finally {
+                rescanBtn.disabled = false;
+                rescanBtn.setText('Rescan Vault');
+            }
+        });
+
+        // Core Skills section
+        const coreSkills = allSkills.filter((s) => s.source === 'core');
+        if (coreSkills.length > 0) {
+            containerEl.createEl('h4', { text: 'Core Plugins' });
+            this.buildSkillList(containerEl, coreSkills);
+        }
+
+        // Community Skills section
+        const communitySkills = allSkills.filter((s) => s.source !== 'core');
+        if (communitySkills.length > 0) {
+            containerEl.createEl('h4', { text: 'Community Plugins' });
+            this.buildSkillList(containerEl, communitySkills);
+        }
+    }
+
+    private buildSkillList(containerEl: HTMLElement, skills: PluginSkillMeta[]): void {
+        const listEl = containerEl.createDiv({ cls: 'agent-rules-list' });
+
+        // Sort: enabled first, then alphabetical
+        const sorted = [...skills].sort((a, b) => {
+            if (a.enabled !== b.enabled) return a.enabled ? -1 : 1;
+            return a.name.localeCompare(b.name);
+        });
+
+        for (const skill of sorted) {
+            const row = listEl.createDiv({ cls: 'agent-rules-row' });
+
+            // Status indicator
+            const statusIcon = row.createSpan({ cls: 'agent-plugin-skill-status' });
+            statusIcon.style.display = 'inline-block';
+            statusIcon.style.width = '8px';
+            statusIcon.style.height = '8px';
+            statusIcon.style.borderRadius = '50%';
+            statusIcon.style.marginRight = '8px';
+            statusIcon.style.backgroundColor = skill.enabled
+                ? 'var(--color-green)' : 'var(--text-faint)';
+            statusIcon.title = skill.enabled ? 'Plugin enabled' : 'Plugin disabled';
+
+            // Label
+            const label = row.createSpan({ cls: 'agent-rules-label' });
+            label.createSpan({ text: skill.name });
+            const meta = `${skill.classification} | ${skill.commands.length} cmd${skill.commands.length !== 1 ? 's' : ''}`;
+            label.createSpan({ cls: 'agent-workflow-slug', text: meta });
+
+            // Agent toggle (only for enabled plugins)
+            if (skill.enabled) {
+                const actions = row.createDiv({ cls: 'agent-rules-actions' });
+                const isActive = this.plugin.settings.vaultDNA.skillToggles[skill.id] !== false;
+                const toggleBtn = actions.createEl('button', {
+                    text: isActive ? 'Active' : 'Off',
+                    cls: `agent-rules-edit-btn ${isActive ? '' : 'agent-toggle-off'}`,
+                });
+                toggleBtn.addEventListener('click', async () => {
+                    const current = this.plugin.settings.vaultDNA.skillToggles[skill.id] !== false;
+                    this.plugin.settings.vaultDNA.skillToggles[skill.id] = !current;
+                    this.plugin.skillRegistry?.updateToggles(this.plugin.settings.vaultDNA.skillToggles);
+                    await this.plugin.saveSettings();
+                    toggleBtn.setText(!current ? 'Active' : 'Off');
+                    toggleBtn.toggleClass('agent-toggle-off', current);
+                });
+            }
+        }
+    }
 }

@@ -429,6 +429,8 @@ h2[id], h3[id] { scroll-margin-top: calc(var(--header-h) + 1rem); }
   margin-bottom: 1.5rem;
 }
 .hero-badge span { color: var(--accent-light); font-weight: 600; }
+a.hero-badge { text-decoration: none; transition: border-color 0.15s, background 0.15s; }
+a.hero-badge:hover { background: var(--bg-4); border-color: var(--accent-light); text-decoration: none; }
 .hero h1 {
   font-size: clamp(2.5rem, 6vw, 4rem);
   font-weight: 800;
@@ -645,6 +647,79 @@ h2[id], h3[id] { scroll-margin-top: calc(var(--header-h) + 1rem); }
   margin: 0;
   line-height: 1.7;
 }
+
+/* ── About page ── */
+.about-layout {
+  padding-top: calc(var(--header-h) + 3rem);
+  padding-bottom: 4rem;
+  min-height: 100vh;
+}
+.about-inner {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+.about-profile {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  margin-bottom: 2.5rem;
+  flex-wrap: wrap;
+}
+.about-avatar {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--border);
+  flex-shrink: 0;
+}
+.about-profile-text h1 {
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+}
+.about-tagline {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  margin-bottom: 0.75rem !important;
+}
+.about-socials {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+.social-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.3rem 0.7rem;
+  text-decoration: none;
+  transition: color 0.15s, background 0.15s;
+}
+.social-link:hover { color: var(--text); background: var(--bg-4); text-decoration: none; }
+.about-section {
+  margin-top: 2.5rem;
+}
+.about-section h2 {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #f1f5f9;
+  margin-bottom: 0.75rem;
+}
+.about-section p {
+  color: var(--text-muted);
+  line-height: 1.75;
+  margin-bottom: 0.75rem;
+}
+.about-section a { color: var(--accent-light); }
+.about-support { margin-top: 2.5rem; }
+.about-support .bmc-btn { height: 44px; width: auto; margin-top: 0.75rem; border-radius: var(--radius); }
 
 /* ── Responsive ── */
 @media (max-width: 768px) {
