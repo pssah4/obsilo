@@ -2208,22 +2208,21 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
     ): void {
         if (!this.chatContainer) { resolve(''); return; }
 
-        const card = this.chatContainer.createDiv('question-card');
-        card.createDiv('question-text').setText(question);
+        const card = this.chatContainer.createDiv('followup-list');
+        card.createDiv('followup-heading').setText(question);
         const cleanup = () => card.remove();
 
         if (options && options.length > 0) {
-            const optionsEl = card.createDiv('question-options');
             options.forEach((opt) => {
-                const btn = optionsEl.createEl('button', { cls: 'question-option-btn', text: opt });
-                btn.addEventListener('click', () => { cleanup(); resolve(opt); });
+                const item = card.createEl('button', { cls: 'followup-item', text: opt });
+                item.addEventListener('click', () => { cleanup(); resolve(opt); });
             });
         }
 
         const inputRow = card.createDiv('question-input-row');
         const input = inputRow.createEl('input', {
             cls: 'question-input',
-            attr: { type: 'text', placeholder: 'Type your answer…' },
+            attr: { type: 'text', placeholder: 'Type your answer...' },
         }) as HTMLInputElement;
         const submitBtn = inputRow.createEl('button', { cls: 'question-submit-btn', text: 'Answer' });
         const submit = () => {
