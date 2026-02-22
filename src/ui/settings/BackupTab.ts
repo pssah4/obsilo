@@ -77,23 +77,25 @@ interface BackupManifest {
 
 const BACKUP_VERSION = 1;
 
+// Module-level state that survives tab rerenders (new BackupTab instances).
+// The settings tab creates a fresh BackupTab on every display() call,
+// so instance state would be lost on rerender.
+let _pendingImport: BackupManifest | null = null;
+let _importToggles: Record<string, boolean> = {};
+const _exportToggles: Record<string, boolean> = (() => {
+    const t: Record<string, boolean> = {};
+    for (const cat of CATEGORIES) t[cat.id] = true;
+    return t;
+})();
+
 // ── BackupTab ────────────────────────────────────────────────────────────────
 
 export class BackupTab {
-    private exportToggles: Record<string, boolean> = {};
-    private importData: BackupManifest | null = null;
-    private importToggles: Record<string, boolean> = {};
-
     constructor(
         private plugin: ObsidianAgentPlugin,
         private app: App,
         private rerender: () => void,
-    ) {
-        // All categories enabled by default for export
-        for (const cat of CATEGORIES) {
-            this.exportToggles[cat.id] = true;
-        }
-    }
+    ) {}
 
     build(containerEl: HTMLElement): void {
         containerEl.createEl('p', {
@@ -118,9 +120,9 @@ export class BackupTab {
             const label = row.createEl('label', { cls: 'agent-backup-label' });
 
             const cb = label.createEl('input', { type: 'checkbox' });
-            cb.checked = this.exportToggles[cat.id] ?? true;
+            cb.checked = _exportToggles[cat.id] ?? true;
             cb.addEventListener('change', () => {
-                this.exportToggles[cat.id] = cb.checked;
+                _exportToggles[cat.id] = cb.checked;
             });
 
             const textWrap = label.createSpan({ cls: 'agent-backup-label-text' });
@@ -173,7 +175,7 @@ export class BackupTab {
             let selectedCount = 0;
 
             for (const cat of CATEGORIES) {
-                if (!this.exportToggles[cat.id]) continue;
+                if (!_exportToggles[cat.id]) continue;
                 selectedCount++;
 
                 const files: Record<string, { content: string }> = {};
@@ -224,7 +226,7 @@ export class BackupTab {
         const section = container.createDiv('agent-backup-section');
         section.createEl('h4', { text: 'Import' });
 
-        if (!this.importData) {
+        if (!_pendingImport) {
             // Initial state: just the file picker button
             const btnRow = section.createDiv('agent-backup-row');
             const importBtn = btnRow.createEl('button', { text: 'Select backup file' });
@@ -252,7 +254,7 @@ export class BackupTab {
                     if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed) &&
                         ('activeModels' in parsed || 'customModes' in parsed || 'autoApproval' in parsed)) {
                         // Legacy settings file — wrap in manifest
-                        this.importData = {
+                        _pendingImport = {
                             format: 'obsilo-backup',
                             version: 1,
                             exportedAt: '',
@@ -269,13 +271,13 @@ export class BackupTab {
                         return;
                     }
                 } else {
-                    this.importData = parsed;
+                    _pendingImport = parsed;
                 }
 
                 // Enable all found categories by default
-                this.importToggles = {};
-                for (const catId of Object.keys(this.importData!.categories)) {
-                    this.importToggles[catId] = true;
+                _importToggles = {};
+                for (const catId of Object.keys(_pendingImport!.categories)) {
+                    _importToggles[catId] = true;
                 }
 
                 this.rerender();
@@ -287,7 +289,7 @@ export class BackupTab {
     }
 
     private buildImportConfirmation(container: HTMLElement): void {
-        const data = this.importData!;
+        const data = _pendingImport!;
         const dateStr = data.exportedAt
             ? new Date(data.exportedAt).toLocaleDateString('de-DE', {
                 year: 'numeric', month: 'short', day: 'numeric',
@@ -311,9 +313,9 @@ export class BackupTab {
             const label = row.createEl('label', { cls: 'agent-backup-label' });
 
             const cb = label.createEl('input', { type: 'checkbox' });
-            cb.checked = this.importToggles[catId] ?? true;
+            cb.checked = _importToggles[catId] ?? true;
             cb.addEventListener('change', () => {
-                this.importToggles[catId] = cb.checked;
+                _importToggles[catId] = cb.checked;
             });
 
             const textWrap = label.createSpan({ cls: 'agent-backup-label-text' });
@@ -339,14 +341,14 @@ export class BackupTab {
 
         const cancelBtn = btnRow.createEl('button', { text: 'Cancel' });
         cancelBtn.addEventListener('click', () => {
-            this.importData = null;
-            this.importToggles = {};
+            _pendingImport = null;
+            _importToggles = {};
             this.rerender();
         });
     }
 
     private async doImport(btn: HTMLElement): Promise<void> {
-        if (!this.importData) return;
+        if (!_pendingImport) return;
         btn.addClass('is-loading');
         btn.setText('Importing...');
 
@@ -354,8 +356,8 @@ export class BackupTab {
             let totalFiles = 0;
             let selectedCount = 0;
 
-            for (const [catId, catData] of Object.entries(this.importData.categories)) {
-                if (!this.importToggles[catId]) continue;
+            for (const [catId, catData] of Object.entries(_pendingImport.categories)) {
+                if (!_importToggles[catId]) continue;
                 selectedCount++;
 
                 if (catId === 'settings') {
@@ -380,8 +382,8 @@ export class BackupTab {
                 }
             }
 
-            this.importData = null;
-            this.importToggles = {};
+            _pendingImport = null;
+            _importToggles = {};
             new Notice(`Backup imported: ${totalFiles} files in ${selectedCount} categories. Reload Obsidian for full effect.`);
             this.rerender();
         } catch (e) {
