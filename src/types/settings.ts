@@ -468,7 +468,7 @@ export const DEFAULT_SETTINGS: ObsidianAgentSettings = {
             'move_file', 'update_frontmatter', 'generate_canvas', 'create_base', 'update_base',
             'web_fetch', 'web_search',
             'ask_followup_question', 'attempt_completion', 'update_todo_list', 'new_task',
-            'execute_command', 'resolve_capability_gap',
+            'execute_command', 'resolve_capability_gap', 'enable_plugin',
         ],
     },
     activeMcpServers: [],

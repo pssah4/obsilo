@@ -67,6 +67,7 @@ const TOOL_GROUPS: Record<string, ToolGroup> = {
     // Plugin Skills (PAS-1)
     execute_command: 'skill',
     resolve_capability_gap: 'skill',
+    enable_plugin: 'skill',
 };
 
 /** Result of an approval check — may include user-edited content */

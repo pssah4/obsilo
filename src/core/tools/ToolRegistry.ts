@@ -50,6 +50,7 @@ import { NewTaskTool } from './agent/NewTaskTool';
 // Plugin Skills (PAS-1)
 import { ExecuteCommandTool } from './agent/ExecuteCommandTool';
 import { ResolveCapabilityGapTool } from './agent/ResolveCapabilityGapTool';
+import { EnablePluginTool } from './agent/EnablePluginTool';
 // MCP tool
 import { UseMcpToolTool } from './mcp/UseMcpToolTool';
 import type { McpClient } from '../mcp/McpClient';
@@ -110,6 +111,7 @@ export class ToolRegistry {
         // Plugin Skills (PAS-1)
         this.register(new ExecuteCommandTool(this.plugin));
         this.register(new ResolveCapabilityGapTool(this.plugin));
+        this.register(new EnablePluginTool(this.plugin));
 
         console.log(`ToolRegistry: Registered ${this.getToolCount()} tools`);
     }

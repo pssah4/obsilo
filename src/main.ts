@@ -358,7 +358,10 @@ export default class ObsidianAgentPlugin extends Plugin {
         // Ensure new tools appear in default agent override list
         const agentOverride = this.settings.modeToolOverrides?.agent;
         if (agentOverride && !agentOverride.includes('execute_command')) {
-            agentOverride.push('execute_command', 'resolve_capability_gap');
+            agentOverride.push('execute_command', 'resolve_capability_gap', 'enable_plugin');
+        }
+        if (agentOverride && !agentOverride.includes('enable_plugin')) {
+            agentOverride.push('enable_plugin');
         }
     }
 

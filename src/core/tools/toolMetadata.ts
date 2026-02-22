@@ -225,6 +225,11 @@ export const TOOL_METADATA: Record<string, ToolMeta> = {
         signature: 'resolve_capability_gap(capability, context?)',
         description: 'When no tool or skill matches a task, check if a disabled or previously installed Obsidian plugin could help.',
     },
+    enable_plugin: {
+        group: 'skill', label: 'Enable Plugin', icon: 'plug',
+        signature: 'enable_plugin(plugin_id, enable?)',
+        description: 'Enable or disable an installed Obsidian community plugin. Use when a disabled plugin could help with the task and the user agrees to activate it.',
+    },
 };
 
 /**

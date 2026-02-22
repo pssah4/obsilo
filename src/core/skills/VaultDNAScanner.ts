@@ -10,7 +10,7 @@
  */
 
 import type { App, Vault } from 'obsidian';
-import type { VaultDNA, VaultDNAEntry, PluginClassification, PluginSkillMeta } from './types';
+import type { VaultDNA, VaultDNAEntry, PluginClassification, PluginSkillMeta, PluginSource } from './types';
 import { CORE_PLUGIN_DEFS, CORE_PLUGIN_IDS } from './CorePluginLibrary';
 
 /** Patterns that indicate a command is UI-only (not agentifiable) */
@@ -127,6 +127,7 @@ export class VaultDNAScanner {
                 status: isEnabled ? 'enabled' : 'disabled',
                 source: 'core',
                 skillFile: `${def.id}.skill.md`,
+                description: def.description,
             };
 
             const skill: PluginSkillMeta = {
@@ -162,6 +163,7 @@ export class VaultDNAScanner {
             const classification = isEnabled ? this.classify(id) : 'PARTIAL';
             // Disabled plugins can't be classified (no commands loaded) — assume PARTIAL
 
+            const pluginDesc = manifest.description ?? `Community plugin: ${manifest.name ?? id}`;
             const entry: VaultDNAEntry = {
                 id,
                 name: manifest.name ?? id,
@@ -170,6 +172,7 @@ export class VaultDNAScanner {
                 status: isEnabled ? 'enabled' : 'disabled',
                 version: manifest.version,
                 source: 'vault-native',
+                description: pluginDesc,
                 ...(classification === 'NONE' ? { reason: 'No agentifiable commands' } : {}),
                 ...(classification !== 'NONE' ? { skillFile: `${id}.skill.md` } : {}),
             };
@@ -219,6 +222,186 @@ export class VaultDNAScanner {
         return result;
     }
 
+    // ── Plugin Settings ─────────────────────────────────────────────────
+
+    /** Patterns indicating a sensitive field name — silently redacted */
+    private static readonly SENSITIVE_PATTERNS = [
+        /api[_-]?key/i,
+        /apikey/i,
+        /secret/i,
+        /password/i,
+        /passwd/i,
+        /credential/i,
+        /token(?!ize)/i,
+        /license[_-]?key/i,
+        /access[_-]?key/i,
+        /private[_-]?key/i,
+        /auth(?:orization)?[_-]?(?:key|header|bearer)/i,
+        /^oauth/i,
+        /client[_-]?secret/i,
+        /webhook[_-]?(?:url|secret)/i,
+    ];
+
+    /** Keys that are internal state, not useful to the agent */
+    private static readonly EXCLUDED_KEYS = [
+        /^lastBatch/i,
+        /^last(?:Sync|Run|Check|Update|Shown)/i,
+        /^cache/i,
+        /^__/,
+        /^installed/i,
+        /^version$/i,
+        /once[_-]?off/i,
+        /settings[_-]?converted/i,
+    ];
+
+    private static readonly MAX_VALUE_SIZE = 500;
+    private static readonly MAX_SETTINGS_OUTPUT = 3000;
+    private static readonly MAX_NESTING_DEPTH = 3;
+
+    /**
+     * Read plugin settings from disk.
+     * Community: .obsidian/plugins/{id}/data.json
+     * Core: .obsidian/{id}.json (fallback: instance.options)
+     */
+    private async readPluginSettings(
+        pluginId: string,
+        source: PluginSource,
+    ): Promise<Record<string, unknown> | null> {
+        try {
+            const settingsPath = source === 'core'
+                ? `.obsidian/${pluginId}.json`
+                : `.obsidian/plugins/${pluginId}/data.json`;
+
+            const exists = await this.vault.adapter.exists(settingsPath);
+            if (!exists) return null;
+
+            const raw = await this.vault.adapter.read(settingsPath);
+            return JSON.parse(raw) as Record<string, unknown>;
+        } catch {
+            return null;
+        }
+    }
+
+    /**
+     * Sanitize plugin settings: remove secrets, trim large values,
+     * enforce size budget. Returns a readable string for the .skill.md.
+     */
+    private sanitizeSettings(
+        raw: Record<string, unknown>,
+    ): { sanitized: string; redactedCount: number; isEmpty: boolean } {
+        const result: Record<string, unknown> = {};
+        let redactedCount = 0;
+
+        const processObject = (
+            obj: Record<string, unknown>,
+            target: Record<string, unknown>,
+            depth: number,
+        ): void => {
+            if (depth > VaultDNAScanner.MAX_NESTING_DEPTH) return;
+
+            for (const [key, value] of Object.entries(obj)) {
+                if (VaultDNAScanner.SENSITIVE_PATTERNS.some((p) => p.test(key))) {
+                    redactedCount++;
+                    continue;
+                }
+                if (VaultDNAScanner.EXCLUDED_KEYS.some((p) => p.test(key))) {
+                    continue;
+                }
+                if (value === null || value === undefined) continue;
+
+                if (typeof value === 'string') {
+                    if (value.length > VaultDNAScanner.MAX_VALUE_SIZE) {
+                        target[key] = `[string, ${value.length} chars]`;
+                    } else if (value !== '') {
+                        target[key] = value;
+                    }
+                } else if (typeof value === 'boolean' || typeof value === 'number') {
+                    target[key] = value;
+                } else if (Array.isArray(value)) {
+                    if (value.length === 0) continue;
+                    const serialized = JSON.stringify(value);
+                    if (serialized.length > VaultDNAScanner.MAX_VALUE_SIZE) {
+                        const preview = value.slice(0, 3).map((v) =>
+                            typeof v === 'string' ? v :
+                            typeof v === 'object' ? '{...}' : String(v),
+                        );
+                        target[key] = `[${value.length} items: ${preview.join(', ')}...]`;
+                    } else if (value.every((v) => typeof v === 'string' || typeof v === 'number')) {
+                        target[key] = value;
+                    } else {
+                        target[key] = `[${value.length} items]`;
+                    }
+                } else if (typeof value === 'object') {
+                    const child: Record<string, unknown> = {};
+                    processObject(value as Record<string, unknown>, child, depth + 1);
+                    if (Object.keys(child).length > 0) {
+                        target[key] = child;
+                    }
+                }
+            }
+        };
+
+        processObject(raw, result, 0);
+
+        let output = this.settingsToYamlString(result, 0);
+
+        if (output.length > VaultDNAScanner.MAX_SETTINGS_OUTPUT) {
+            output = output.substring(0, VaultDNAScanner.MAX_SETTINGS_OUTPUT)
+                + '\n[...truncated -- full settings in data.json]';
+        }
+
+        return {
+            sanitized: output,
+            redactedCount,
+            isEmpty: Object.keys(result).length === 0,
+        };
+    }
+
+    /**
+     * Convert a settings object to a readable indented key-value format.
+     */
+    private settingsToYamlString(
+        obj: Record<string, unknown>,
+        indent: number,
+    ): string {
+        const lines: string[] = [];
+        const prefix = '  '.repeat(indent);
+
+        for (const [key, value] of Object.entries(obj)) {
+            if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+                lines.push(`${prefix}${key}:`);
+                lines.push(this.settingsToYamlString(
+                    value as Record<string, unknown>, indent + 1,
+                ));
+            } else if (Array.isArray(value)) {
+                lines.push(`${prefix}${key}: [${value.join(', ')}]`);
+            } else {
+                lines.push(`${prefix}${key}: ${value}`);
+            }
+        }
+
+        return lines.join('\n');
+    }
+
+    /**
+     * Determine if a plugin needs setup based on its settings state.
+     */
+    private detectSetupStatus(
+        settings: Record<string, unknown> | null,
+        isEnabled: boolean,
+    ): string | null {
+        if (!isEnabled) {
+            return 'Plugin is disabled. Use enable_plugin to activate it first.';
+        }
+        if (settings === null) {
+            return 'No settings file found (data.json). Plugin may need initial setup via Obsidian Settings.';
+        }
+        if (Object.keys(settings).length === 0) {
+            return 'Settings are empty. Plugin likely needs configuration via Obsidian Settings.';
+        }
+        return null;
+    }
+
     // ── .skill.md Generation ─────────────────────────────────────────────
 
     private async writeSkillFile(skill: PluginSkillMeta): Promise<void> {
@@ -226,13 +409,24 @@ export class VaultDNAScanner {
             ? CORE_PLUGIN_DEFS.find((d) => d.id === skill.id)
             : undefined;
 
+        // Read and sanitize plugin settings
+        const rawSettings = await this.readPluginSettings(skill.id, skill.source);
+        const { sanitized, redactedCount, isEmpty } = rawSettings
+            ? this.sanitizeSettings(rawSettings)
+            : { sanitized: '', redactedCount: 0, isEmpty: true };
+        const setupHint = this.detectSetupStatus(rawSettings, skill.enabled);
+
+        // Update skill meta flags
+        skill.hasSettings = !isEmpty;
+        skill.needsSetup = setupHint !== null;
+
         const commandsYaml = skill.commands
             .map((c) => `  - id: "${c.id}"\n    name: "${c.name}"`)
             .join('\n');
 
         const body = coreDef
-            ? coreDef.instructions
-            : this.generateSkeletonBody(skill);
+            ? this.enrichCoreBody(coreDef.instructions, sanitized, setupHint, redactedCount)
+            : this.generateSkeletonBody(skill, sanitized, setupHint, redactedCount);
 
         const content = [
             '---',
@@ -242,6 +436,9 @@ export class VaultDNAScanner {
             `plugin-type: ${skill.source === 'core' ? 'core' : 'community'}`,
             `status: ${skill.enabled ? 'enabled' : 'disabled'}`,
             `class: ${skill.classification}`,
+            `description: "${skill.description.replace(/"/g, '\\"')}"`,
+            `has-settings: ${!isEmpty}`,
+            ...(setupHint ? ['needs-setup: true'] : []),
             ...(commandsYaml ? [`commands:\n${commandsYaml}`] : []),
             '---',
             '',
@@ -253,21 +450,99 @@ export class VaultDNAScanner {
         await this.vault.adapter.write(path, content);
     }
 
-    private generateSkeletonBody(skill: PluginSkillMeta): string {
+    private generateSkeletonBody(
+        skill: PluginSkillMeta,
+        settingsBlock: string,
+        setupHint: string | null,
+        redactedCount: number,
+    ): string {
         const lines: string[] = [];
-        lines.push(`Plugin "${skill.name}" ist installiert.`);
+        lines.push(`# ${skill.name}`);
+        lines.push('');
+        lines.push(`**Description:** ${skill.description}`);
+        lines.push(`**Status:** ${skill.enabled ? 'Enabled' : 'Disabled'}`);
+        lines.push(`**Plugin ID:** ${skill.id}`);
+
+        if (setupHint) {
+            lines.push('');
+            lines.push('## Setup Required');
+            lines.push('');
+            lines.push(setupHint);
+            lines.push('Guide the user to configure this plugin via Obsidian Settings if needed.');
+        }
 
         if (skill.commands.length > 0) {
             lines.push('');
-            lines.push('Verfuegbare Commands:');
+            lines.push('## Available Commands');
+            lines.push('');
+            lines.push('Use these with execute_command(command_id):');
             for (const cmd of skill.commands) {
-                lines.push(`- ${cmd.id} -- ${cmd.name}`);
+                lines.push(`- \`${cmd.id}\` -- ${cmd.name}`);
+            }
+        }
+
+        if (settingsBlock) {
+            lines.push('');
+            lines.push('## Current Configuration');
+            lines.push('');
+            lines.push('These are the plugin\'s current settings (sensitive values redacted):');
+            lines.push('');
+            lines.push('```');
+            lines.push(settingsBlock);
+            lines.push('```');
+            if (redactedCount > 0) {
+                lines.push(`(${redactedCount} sensitive field(s) redacted)`);
             }
         }
 
         lines.push('');
-        lines.push(`Nutze diesen Skill wenn der Nutzer Aufgaben beschreibt die mit ${skill.name} erledigt werden koennen.`);
+        lines.push('## Usage');
+        lines.push('');
+        if (skill.enabled) {
+            lines.push(`When the user asks for functionality related to ${skill.name}, use execute_command with the commands listed above.`);
+            lines.push('Do NOT substitute built-in tools -- always use this plugin\'s own commands.');
+            if (settingsBlock) {
+                lines.push('Use the configuration above to understand how the plugin is set up. Reference specific settings when helping the user.');
+            }
+        } else {
+            lines.push(`This plugin is currently disabled. Use enable_plugin("${skill.id}") to activate it first.`);
+            lines.push('After enabling, the plugin\'s commands will become available for execute_command.');
+        }
+
         return lines.join('\n');
+    }
+
+    /**
+     * Enrich a core plugin's existing hand-written instructions with settings data.
+     */
+    private enrichCoreBody(
+        originalInstructions: string,
+        settingsBlock: string,
+        setupHint: string | null,
+        redactedCount: number,
+    ): string {
+        const parts: string[] = [originalInstructions];
+
+        if (setupHint) {
+            parts.push('');
+            parts.push('## Setup Required');
+            parts.push('');
+            parts.push(setupHint);
+        }
+
+        if (settingsBlock) {
+            parts.push('');
+            parts.push('## Current Configuration');
+            parts.push('');
+            parts.push('```');
+            parts.push(settingsBlock);
+            parts.push('```');
+            if (redactedCount > 0) {
+                parts.push(`(${redactedCount} sensitive field(s) redacted)`);
+            }
+        }
+
+        return parts.join('\n');
     }
 
     // ── Continuous Sync (Polling) ────────────────────────────────────────
@@ -307,7 +582,7 @@ export class VaultDNAScanner {
         this.lastKnownEnabledSet = currentEnabled;
     }
 
-    private async handlePluginEnabled(pluginId: string): Promise<void> {
+    async handlePluginEnabled(pluginId: string): Promise<void> {
         if (!this.vaultDNA) return;
         const entry = this.vaultDNA.plugins.find((p) => p.id === pluginId);
         if (entry) {
@@ -326,7 +601,7 @@ export class VaultDNAScanner {
         await this.vault.adapter.write(this.dnaPath, JSON.stringify(this.vaultDNA, null, 2));
     }
 
-    private async handlePluginDisabled(pluginId: string): Promise<void> {
+    async handlePluginDisabled(pluginId: string): Promise<void> {
         if (!this.vaultDNA) return;
         const entry = this.vaultDNA.plugins.find((p) => p.id === pluginId);
         if (entry) {
