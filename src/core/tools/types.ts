@@ -44,7 +44,10 @@ export type ToolName =
     | 'new_task'
     | 'update_todo_list'
     // MCP
-    | 'use_mcp_tool';
+    | 'use_mcp_tool'
+    // Skill (PAS-1)
+    | 'execute_command'
+    | 'resolve_capability_gap';
 
 /**
  * Tool use request from LLM

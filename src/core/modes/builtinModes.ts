@@ -23,6 +23,7 @@ export const TOOL_GROUP_MAP: Record<ToolGroup, string[]> = {
     web:   ['web_fetch', 'web_search'],
     agent: ['ask_followup_question', 'attempt_completion', 'update_todo_list', 'new_task', 'switch_mode'],
     mcp:   ['use_mcp_tool'],
+    skill: ['execute_command', 'resolve_capability_gap'],
 };
 
 // ---------------------------------------------------------------------------
@@ -85,7 +86,7 @@ When the user picks an action that requires writing, use switch_mode to escalate
         icon: 'zap',
         description: 'Fully capable autonomous agent. Reads, writes, searches, browses the web, and delegates to sub-agents.',
         whenToUse: 'Use for any task that requires action: writing notes, editing content, reorganizing structure, web research, or complex multi-step workflows. Can spawn sub-agents for parallel or sequential delegation.',
-        toolGroups: ['read', 'vault', 'edit', 'web', 'agent', 'mcp'],
+        toolGroups: ['read', 'vault', 'edit', 'web', 'agent', 'mcp', 'skill'],
         source: 'built-in',
         roleDefinition: `You are Obsilo in Agent mode — fully autonomous with access to all tools: vault read/write, web research, sub-agents, MCP, and plugin skills.
 

@@ -191,7 +191,7 @@ export interface McpServerConfig {
 // ---------------------------------------------------------------------------
 
 /** Logical tool groups — controls which tools are available in a mode */
-export type ToolGroup = 'read' | 'vault' | 'edit' | 'web' | 'agent' | 'mcp';
+export type ToolGroup = 'read' | 'vault' | 'edit' | 'web' | 'agent' | 'mcp' | 'skill';
 
 export interface ModeConfig {
     /** URL-safe identifier (e.g. "researcher", "daily-writer") */
@@ -426,8 +426,24 @@ export interface ObsidianAgentSettings {
     // Custom Prompts — user-defined slash-command templates
     customPrompts: CustomPrompt[];
 
+    // VaultDNA — Plugin-as-Skill (PAS-1)
+    vaultDNA: VaultDNASettings;
+
     // Advanced
     debugMode: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// VaultDNA Settings (PAS-1)
+// ---------------------------------------------------------------------------
+
+export interface VaultDNASettings {
+    /** Master toggle for plugin-as-skill discovery */
+    enabled: boolean;
+    /** Per-plugin agent-side toggle: maps plugin-id -> boolean (default: true) */
+    skillToggles: Record<string, boolean>;
+    /** ISO timestamp of last full scan */
+    lastScanAt: string;
 }
 
 export const DEFAULT_SETTINGS: ObsidianAgentSettings = {
@@ -452,6 +468,7 @@ export const DEFAULT_SETTINGS: ObsidianAgentSettings = {
             'move_file', 'update_frontmatter', 'generate_canvas', 'create_base', 'update_base',
             'web_fetch', 'web_search',
             'ask_followup_question', 'attempt_completion', 'update_todo_list', 'new_task',
+            'execute_command', 'resolve_capability_gap',
         ],
     },
     activeMcpServers: [],
@@ -531,5 +548,10 @@ export const DEFAULT_SETTINGS: ObsidianAgentSettings = {
     rulesToggles: {},
     workflowToggles: {},
     customPrompts: [],
+    vaultDNA: {
+        enabled: true,
+        skillToggles: {},
+        lastScanAt: '',
+    },
     debugMode: false,
 };

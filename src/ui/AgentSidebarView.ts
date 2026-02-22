@@ -1295,6 +1295,10 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
             }
         }
 
+        // Build plugin skills section from VaultDNA (PAS-1)
+        const pluginSkillsSection = (this.plugin as any).skillRegistry
+            ?.getPluginSkillsPromptSection() as string | undefined;
+
         const sessionToolOverride = this.toolPicker.sessionToolOverrides.get(activeMode.slug);
         const allowedMcpServers = this.plugin.settings.modeMcpServers?.[activeMode.slug];
 
@@ -1350,6 +1354,7 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
             sessionToolOverride,
             allowedMcpServers,
             memoryContext,
+            pluginSkillsSection || undefined,
         );
     }
 

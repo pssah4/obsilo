@@ -37,6 +37,7 @@ export const GROUP_META: Record<string, { label: string; icon: string }> = {
     web:   { label: 'Web Access',          icon: 'globe' },
     agent: { label: 'Agent Control',       icon: 'list-checks' },
     mcp:   { label: 'MCP Tools',           icon: 'plug-2' },
+    skill: { label: 'Plugin Skills',      icon: 'puzzle' },
 };
 
 /**
@@ -49,12 +50,13 @@ export const GROUP_PROMPT_HEADERS: Record<string, string> = {
     web:   '**Web:**',
     agent: '**Agent Control:**',
     mcp:   '**MCP Tools:**',
+    skill: '**Plugin Skills:**',
 };
 
 /**
  * Ordered list of groups for consistent rendering.
  */
-export const GROUP_ORDER: ToolGroup[] = ['read', 'vault', 'edit', 'web', 'agent', 'mcp'];
+export const GROUP_ORDER: ToolGroup[] = ['read', 'vault', 'edit', 'web', 'agent', 'mcp', 'skill'];
 
 /**
  * Central tool metadata registry.
@@ -210,6 +212,18 @@ export const TOOL_METADATA: Record<string, ToolMeta> = {
         group: 'mcp', label: 'MCP Tool', icon: 'plug-2',
         signature: 'use_mcp_tool(server_name, tool_name, arguments)',
         description: 'Call a tool on an MCP server configured in settings.',
+    },
+
+    // ── Plugin Skills (PAS-1) ──────────────────────────────────────────
+    execute_command: {
+        group: 'skill', label: 'Execute Command', icon: 'terminal',
+        signature: 'execute_command(command_id)',
+        description: 'Execute an Obsidian command by its ID. Use this to trigger plugin functionality. Check PLUGIN SKILLS in your context for available commands.',
+    },
+    resolve_capability_gap: {
+        group: 'skill', label: 'Resolve Gap', icon: 'search',
+        signature: 'resolve_capability_gap(capability, context?)',
+        description: 'When no tool or skill matches a task, check if a disabled or previously installed Obsidian plugin could help.',
     },
 };
 

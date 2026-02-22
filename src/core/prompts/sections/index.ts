@@ -15,5 +15,6 @@ export { getExplicitInstructionsSection } from './explicitInstructions';
 export { getSecurityBoundarySection } from './securityBoundary';
 export { getModeDefinitionSection } from './modeDefinition';
 export { getCustomInstructionsSection } from './customInstructions';
+export { getPluginSkillsSection } from './pluginSkills';
 export { getSkillsSection } from './skills';
 export { getRulesSection } from './rules';

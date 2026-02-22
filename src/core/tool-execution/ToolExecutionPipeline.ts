@@ -25,7 +25,7 @@ import type { IgnoreService } from '../governance/IgnoreService';
 import type { OperationLogger } from '../governance/OperationLogger';
 
 /** Tool group classification for auto-approval checks */
-type ToolGroup = 'read' | 'note-edit' | 'vault-change' | 'web' | 'agent' | 'mode' | 'subtask' | 'mcp';
+type ToolGroup = 'read' | 'note-edit' | 'vault-change' | 'web' | 'agent' | 'mode' | 'subtask' | 'mcp' | 'skill';
 
 const TOOL_GROUPS: Record<string, ToolGroup> = {
     // Read-only vault tools
@@ -64,6 +64,9 @@ const TOOL_GROUPS: Record<string, ToolGroup> = {
     new_task: 'subtask',
     // MCP
     use_mcp_tool: 'mcp',
+    // Plugin Skills (PAS-1)
+    execute_command: 'skill',
+    resolve_capability_gap: 'skill',
 };
 
 /** Result of an approval check — may include user-edited content */
@@ -256,6 +259,7 @@ export class ToolExecutionPipeline {
             if (group === 'mcp' && cfg.mcp) return { decision: 'auto' };
             if (group === 'mode' && cfg.mode) return { decision: 'auto' };
             if (group === 'subtask' && cfg.subtasks) return { decision: 'auto' };
+            if (group === 'skill' && cfg.skills) return { decision: 'auto' };
         }
 
         // No auto-approve config AND no approval callback — fail-closed.

@@ -41,6 +41,7 @@ import {
     getSecurityBoundarySection,
     getModeDefinitionSection,
     getCustomInstructionsSection,
+    getPluginSkillsSection,
     getSkillsSection,
     getRulesSection,
 } from './prompts/sections';
@@ -57,6 +58,7 @@ import {
  * @param mcpClient - MCP client for dynamic tool listing.
  * @param allowedMcpServers - Per-mode MCP server whitelist.
  * @param memoryContext - Pre-built memory context string.
+ * @param pluginSkillsSection - Compact plugin skills list from VaultDNA.
  */
 export function buildSystemPromptForMode(
     mode: ModeConfig,
@@ -68,6 +70,7 @@ export function buildSystemPromptForMode(
     mcpClient?: McpClient,
     allowedMcpServers?: string[],
     memoryContext?: string,
+    pluginSkillsSection?: string,
 ): string {
     const sections: string[] = [
         // 1. Date/time + 2. Vault context (combined at top)
@@ -110,7 +113,10 @@ export function buildSystemPromptForMode(
         // 13. Custom instructions (conditional)
         getCustomInstructionsSection(globalCustomInstructions, mode.customInstructions),
 
-        // 14. Skills (conditional)
+        // 14a. Plugin Skills — VaultDNA auto-discovered (conditional)
+        getPluginSkillsSection(pluginSkillsSection),
+
+        // 14b. Skills (conditional)
         getSkillsSection(skillsSection),
 
         // 15. Rules (conditional)

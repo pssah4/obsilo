@@ -19,6 +19,9 @@ import { ExtractionQueue } from './core/memory/ExtractionQueue';
 import { SessionExtractor } from './core/memory/SessionExtractor';
 import { LongTermExtractor } from './core/memory/LongTermExtractor';
 import { McpClient } from './core/mcp/McpClient';
+import { VaultDNAScanner } from './core/skills/VaultDNAScanner';
+import { SkillRegistry } from './core/skills/SkillRegistry';
+import { CapabilityGapResolver } from './core/skills/CapabilityGapResolver';
 import { buildApiHandler } from './api/index';
 import type { ApiHandler } from './api/types';
 import type { ToolUse, ToolCallbacks } from './core/tools/types';
@@ -57,6 +60,9 @@ export default class ObsidianAgentPlugin extends Plugin {
     memoryService: MemoryService | null = null;
     extractionQueue: ExtractionQueue | null = null;
     mcpClient: McpClient;
+    vaultDNAScanner: VaultDNAScanner | null = null;
+    skillRegistry: SkillRegistry | null = null;
+    capabilityGapResolver: CapabilityGapResolver | null = null;
 
     /**
      * Plugin initialization
@@ -92,6 +98,21 @@ export default class ObsidianAgentPlugin extends Plugin {
         // Skills manager (Sprint 3.4)
         this.skillsManager = new SkillsManager(this.app.vault);
         await this.skillsManager.initialize();
+
+        // VaultDNA: auto-discover plugins as skills (PAS-1)
+        if (this.settings.vaultDNA.enabled) {
+            this.vaultDNAScanner = new VaultDNAScanner(this.app, this.app.vault);
+            await this.vaultDNAScanner.initialize().catch((e) =>
+                console.warn('[Plugin] VaultDNA scanner init failed (non-fatal):', e)
+            );
+            this.skillRegistry = new SkillRegistry(
+                this.vaultDNAScanner,
+                this.settings.vaultDNA.skillToggles,
+            );
+            this.capabilityGapResolver = new CapabilityGapResolver(
+                this.vaultDNAScanner,
+            );
+        }
 
         // Governance: persistent operation log + checkpoints
         const pluginDir = `.obsidian/plugins/${this.manifest.id}`;
@@ -270,6 +291,7 @@ export default class ObsidianAgentPlugin extends Plugin {
      */
     async onunload() {
         console.log('Unloading Obsilo Agent plugin');
+        this.vaultDNAScanner?.destroy();
         for (const timer of this.autoIndexDebounceTimers.values()) clearTimeout(timer);
         this.autoIndexDebounceTimers.clear();
         await this.mcpClient?.disconnectAll();
@@ -325,6 +347,19 @@ export default class ObsidianAgentPlugin extends Plugin {
         this.settings.memory.autoUpdateLongTerm = this.settings.memory.autoUpdateLongTerm ?? memDefaults.autoUpdateLongTerm;
         this.settings.memory.memoryModelKey = this.settings.memory.memoryModelKey ?? memDefaults.memoryModelKey;
         this.settings.memory.extractionThreshold = this.settings.memory.extractionThreshold ?? memDefaults.extractionThreshold;
+
+        // Deep-merge VaultDNA settings (PAS-1)
+        const dnaDefaults = DEFAULT_SETTINGS.vaultDNA;
+        this.settings.vaultDNA = this.settings.vaultDNA ?? dnaDefaults;
+        this.settings.vaultDNA.enabled = this.settings.vaultDNA.enabled ?? dnaDefaults.enabled;
+        this.settings.vaultDNA.skillToggles = this.settings.vaultDNA.skillToggles ?? dnaDefaults.skillToggles;
+        this.settings.vaultDNA.lastScanAt = this.settings.vaultDNA.lastScanAt ?? dnaDefaults.lastScanAt;
+
+        // Ensure new tools appear in default agent override list
+        const agentOverride = this.settings.modeToolOverrides?.agent;
+        if (agentOverride && !agentOverride.includes('execute_command')) {
+            agentOverride.push('execute_command', 'resolve_capability_gap');
+        }
     }
 
     /** Return the currently active CustomModel, or null if none configured */
