@@ -14,6 +14,7 @@ import type ObsidianAgentPlugin from '../../../main';
 interface AskFollowupQuestionInput {
     question: string;
     options?: string[];
+    allow_multiple?: boolean;
 }
 
 export class AskFollowupQuestionTool extends BaseTool<'ask_followup_question'> {
@@ -44,6 +45,11 @@ export class AskFollowupQuestionTool extends BaseTool<'ask_followup_question'> {
                         description:
                             'Optional list of suggested answers. If provided, the user can click one or type their own answer.',
                     },
+                    allow_multiple: {
+                        type: 'boolean',
+                        description:
+                            'When true, the user can select multiple options (checkboxes). The answer will be a comma-separated list.',
+                    },
                 },
                 required: ['question'],
             },
@@ -51,7 +57,7 @@ export class AskFollowupQuestionTool extends BaseTool<'ask_followup_question'> {
     }
 
     async execute(input: Record<string, any>, context: ToolExecutionContext): Promise<void> {
-        const { question, options } = input as AskFollowupQuestionInput;
+        const { question, options, allow_multiple } = input as AskFollowupQuestionInput;
         const { callbacks } = context;
 
         if (!question) {
@@ -68,7 +74,7 @@ export class AskFollowupQuestionTool extends BaseTool<'ask_followup_question'> {
         }
 
         try {
-            const answer = await context.askQuestion(question, options);
+            const answer = await context.askQuestion(question, options, allow_multiple);
             callbacks.pushToolResult(`<answer>${answer}</answer>`);
             callbacks.log(`User answered followup question: "${answer}"`);
         } catch (error) {

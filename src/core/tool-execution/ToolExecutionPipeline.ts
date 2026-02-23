@@ -73,6 +73,9 @@ const TOOL_GROUPS: Record<string, ToolGroup> = {
     // Plugin API + Recipe Shell (PAS-1.5)
     call_plugin_api: 'plugin-api',
     execute_recipe: 'recipe',
+    // Settings & Model configuration (Onboarding)
+    update_settings: 'agent',
+    configure_model: 'agent',
 };
 
 /** Result of an approval check — may include user-edited content */
@@ -84,7 +87,7 @@ export interface ApprovalResult {
 
 /** Extra context injected by AgentTask for agent-control tools */
 export interface ContextExtensions {
-    askQuestion?: (question: string, options?: string[]) => Promise<string>;
+    askQuestion?: (question: string, options?: string[], allowMultiple?: boolean) => Promise<string>;
     signalCompletion?: (result: string) => void;
     /**
      * Request user approval for a tool call.

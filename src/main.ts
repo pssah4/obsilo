@@ -65,6 +65,7 @@ export default class ObsidianAgentPlugin extends Plugin {
     vaultDNAScanner: VaultDNAScanner | null = null;
     skillRegistry: SkillRegistry | null = null;
     capabilityGapResolver: CapabilityGapResolver | null = null;
+    settingsTab: AgentSettingsTab | null = null;
 
     /**
      * Plugin initialization
@@ -293,7 +294,15 @@ export default class ObsidianAgentPlugin extends Plugin {
         });
 
         // 5. Register settings tab
-        this.addSettingTab(new AgentSettingsTab(this.app, this));
+        this.settingsTab = new AgentSettingsTab(this.app, this);
+        this.addSettingTab(this.settingsTab);
+
+        // 6. Register deep-link protocol handler: obsidian://obsilo-settings?tab=advanced&sub=backup
+        this.registerObsidianProtocolHandler('obsilo-settings', (params) => {
+            const tab = params.tab as any;
+            const sub = params.sub;
+            if (tab) this.openSettingsAt(tab, sub);
+        });
 
         // 7. Initialize MCP connections
         // TODO: Phase 6 - Uncomment when MCP is implemented
@@ -373,6 +382,14 @@ export default class ObsidianAgentPlugin extends Plugin {
         // toolGroups, description, and whenToUse updated — customInstructions preserved.
         this.migrateBuiltInModeOverrides();
 
+        // Deep-merge onboarding settings
+        const obDefaults = DEFAULT_SETTINGS.onboarding;
+        this.settings.onboarding = this.settings.onboarding ?? obDefaults;
+        this.settings.onboarding.completed = this.settings.onboarding.completed ?? obDefaults.completed;
+        this.settings.onboarding.currentStep = this.settings.onboarding.currentStep ?? obDefaults.currentStep;
+        this.settings.onboarding.skippedSteps = this.settings.onboarding.skippedSteps ?? obDefaults.skippedSteps;
+        this.settings.onboarding.startedAt = this.settings.onboarding.startedAt ?? obDefaults.startedAt;
+
         // Deep-merge VaultDNA settings (PAS-1)
         const dnaDefaults = DEFAULT_SETTINGS.vaultDNA;
         this.settings.vaultDNA = this.settings.vaultDNA ?? dnaDefaults;
@@ -410,6 +427,9 @@ export default class ObsidianAgentPlugin extends Plugin {
         }
         if (agentOverride && !agentOverride.includes('enable_plugin')) {
             agentOverride.push('enable_plugin');
+        }
+        if (agentOverride && !agentOverride.includes('update_settings')) {
+            agentOverride.push('update_settings', 'configure_model');
         }
     }
 
@@ -583,6 +603,42 @@ export default class ObsidianAgentPlugin extends Plugin {
                 rightSplit.setSize(targetWidth);
             }
         }
+    }
+
+    /**
+     * Open Obsidian settings and navigate to a specific tab/subtab.
+     * Used by protocol handler and agent deep-links.
+     */
+    openSettingsAt(tab: string, subTab?: string): void {
+        // Open the Obsidian settings modal
+        const setting = (this.app as any).setting;
+        if (setting) {
+            setting.open();
+            // Navigate to our plugin's settings tab
+            setting.openTabById(this.manifest.id);
+            // Then navigate to the specific tab/subtab within our settings
+            setTimeout(() => {
+                if (this.settingsTab) {
+                    this.settingsTab.openAt(tab as any, subTab);
+                }
+            }, 50);
+        }
+    }
+
+    /**
+     * Open the sidebar and programmatically send a message.
+     * Used by Settings buttons to trigger agent actions (e.g. "Start setup").
+     */
+    async sendMessageToAgent(text: string, hidden = false): Promise<void> {
+        await this.activateView();
+        // Small delay to ensure the view is rendered
+        setTimeout(() => {
+            const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_AGENT_SIDEBAR);
+            if (leaves.length > 0) {
+                const view = leaves[0].view as AgentSidebarView;
+                view.sendProgrammaticMessage(text, hidden);
+            }
+        }, 200);
     }
 
     /**

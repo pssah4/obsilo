@@ -21,7 +21,7 @@ export const TOOL_GROUP_MAP: Record<ToolGroup, string[]> = {
     vault: ['get_frontmatter', 'search_by_tag', 'get_vault_stats', 'get_linked_notes', 'get_daily_note', 'open_note', 'semantic_search', 'query_base'],
     edit:  ['write_file', 'edit_file', 'append_to_file', 'create_folder', 'delete_file', 'move_file', 'update_frontmatter', 'generate_canvas', 'create_base', 'update_base'],
     web:   ['web_fetch', 'web_search'],
-    agent: ['ask_followup_question', 'attempt_completion', 'update_todo_list', 'new_task', 'switch_mode'],
+    agent: ['ask_followup_question', 'attempt_completion', 'update_todo_list', 'new_task', 'switch_mode', 'update_settings', 'configure_model'],
     mcp:   ['use_mcp_tool'],
     skill: ['execute_command', 'execute_recipe', 'call_plugin_api', 'resolve_capability_gap', 'enable_plugin'],
 };

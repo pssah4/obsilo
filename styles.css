@@ -1932,22 +1932,83 @@
     min-height: 0;
     max-width: 100%;
     overflow: visible;
-    padding: 4px 0 4px 10px;
-    margin: 0;
-    border: none;
-    border-left: 2px solid var(--background-modifier-border);
-    border-radius: 0;
-    background: transparent;
+    padding: 6px 12px;
+    margin: 3px 0;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 8px;
+    background: var(--background-secondary);
     color: var(--text-muted);
     font-size: 12px;
     cursor: pointer;
-    transition: border-color 0.15s, color 0.15s;
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
     line-height: 1.45;
 }
 
 .followup-item:hover {
-    border-left-color: var(--interactive-accent);
+    border-color: var(--interactive-accent);
     color: var(--text-normal);
+    background: var(--background-modifier-hover);
+}
+
+/* Multi-select mode */
+.followup-item-selected {
+    border-color: var(--interactive-accent);
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+}
+.followup-item-selected:hover {
+    opacity: 0.9;
+}
+.followup-confirm-btn {
+    display: block;
+    width: 100%;
+    margin-top: 6px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--interactive-accent);
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: opacity 0.15s ease;
+}
+.followup-confirm-btn:hover {
+    opacity: 0.85;
+}
+
+/* ── Setup Welcome Buttons ─────────────────────────────────────────────── */
+.setup-welcome-buttons {
+    display: flex;
+    gap: 8px;
+    margin-top: 14px;
+}
+.setup-welcome-btn {
+    padding: 8px 18px;
+    border-radius: 8px;
+    border: 1px solid var(--background-modifier-border);
+    cursor: pointer;
+    font-size: 13px;
+    font-family: inherit;
+    transition: all 0.15s ease;
+}
+.setup-welcome-btn-primary {
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+    border-color: var(--interactive-accent);
+    font-weight: 600;
+}
+.setup-welcome-btn-primary:hover {
+    opacity: 0.85;
+}
+.setup-welcome-btn-secondary {
+    background: var(--background-secondary);
+    color: var(--text-muted);
+}
+.setup-welcome-btn-secondary:hover {
+    color: var(--text-normal);
+    border-color: var(--interactive-accent);
 }
 
 .question-input-row {

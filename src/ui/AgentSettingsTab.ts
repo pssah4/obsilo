@@ -41,6 +41,20 @@ export class AgentSettingsTab extends PluginSettingTab {
         this.plugin = plugin;
     }
 
+    /**
+     * Programmatically navigate to a specific tab/subtab and re-render.
+     * Used by deep-links (obsidian://obsilo-settings) and plugin methods.
+     */
+    openAt(tab: TabId, subTab?: string): void {
+        this.activeTab = tab;
+        if (subTab) {
+            if (tab === 'providers') this.activeProvidersSubTab = subTab;
+            if (tab === 'agent-behaviour') this.activeAgentSubTab = subTab;
+            if (tab === 'advanced') this.activeAdvancedSubTab = subTab;
+        }
+        this.display();
+    }
+
     display(): void {
         const { containerEl } = this;
         containerEl.empty();

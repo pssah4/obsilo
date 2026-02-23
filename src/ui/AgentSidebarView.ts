@@ -14,6 +14,7 @@ import { VaultFilePicker } from './sidebar/VaultFilePicker';
 import { HistoryPanel } from './sidebar/HistoryPanel';
 import type { UiMessage } from '../core/history/ConversationStore';
 import { MemoryRetriever } from '../core/memory/MemoryRetriever';
+import { OnboardingService } from '../core/memory/OnboardingService';
 
 export const VIEW_TYPE_AGENT_SIDEBAR = 'obsidian-agent-sidebar';
 
@@ -55,6 +56,8 @@ export class AgentSidebarView extends ItemView {
     private lastUserMessage = '';
     // Last known active MarkdownView — tracked because clicking sidebar loses getActiveViewOfType
     private lastMarkdownView: MarkdownView | null = null;
+    // Hidden message flag — when true, skip user bubble rendering but still send to LLM
+    private nextMessageHidden = false;
 
     // Tool picker (pocket-knife button)
     private toolPickerButton: HTMLElement | null = null;
@@ -120,9 +123,7 @@ export class AgentSidebarView extends ItemView {
             })
         );
 
-        if (this.plugin.settings.showWelcomeMessage) {
-            this.showWelcomeMessage();
-        }
+        this.showWelcomeMessage();
     }
 
     async onClose(): Promise<void> {
@@ -583,6 +584,55 @@ export class AgentSidebarView extends ItemView {
 
     private showWelcomeMessage(): void {
         if (!this.chatContainer) return;
+
+        // First-ever activation: onboarding not completed AND never started before
+        const ob = this.plugin.settings.onboarding;
+        const isFirstActivation = !ob.completed && !ob.startedAt && this.plugin.memoryService;
+
+        if (isFirstActivation) {
+            const onboarding = new OnboardingService(this.plugin.memoryService!, this.plugin);
+
+            const wrapper = this.chatContainer.createDiv('message assistant-message');
+            const bubble = wrapper.createDiv('message-bubble');
+
+            MarkdownRenderer.render(this.app,
+                `## Willkommen bei Obsilo\n\nIch bin dein KI-Assistent fuer Obsidian. Lass uns zusammen alles einrichten — das dauert nur ein paar Minuten.`,
+                bubble, '', this,
+            );
+
+            const btnRow = bubble.createDiv('setup-welcome-buttons');
+
+            const startBtn = btnRow.createEl('button', {
+                cls: 'setup-welcome-btn setup-welcome-btn-primary',
+                text: 'Los geht\'s',
+            });
+            startBtn.addEventListener('click', () => {
+                this.sendProgrammaticMessage(
+                    'Starte den Setup-Prozess. Folge den Onboarding-Anweisungen im System-Prompt.',
+                    true,
+                );
+            });
+
+            const skipBtn = btnRow.createEl('button', {
+                cls: 'setup-welcome-btn setup-welcome-btn-secondary',
+                text: 'Setup ueberspringen',
+            });
+            skipBtn.addEventListener('click', async () => {
+                await onboarding.markCompleted();
+                new Notice('Setup uebersprungen. Du kannst es jederzeit in den Einstellungen neu starten.');
+                if (this.chatContainer) {
+                    this.chatContainer.empty();
+                    this.showRegularWelcome();
+                }
+            });
+            return;
+        }
+
+        this.showRegularWelcome();
+    }
+
+    private showRegularWelcome(): void {
+        if (!this.chatContainer) return;
         const welcomeMarkdown = `## Welcome to Obsilo Agent
 
 An agentic AI assistant integrated into your vault.
@@ -599,6 +649,18 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
     }
 
     /**
+     * Programmatically send a message as if the user typed it.
+     * Used by Settings buttons (e.g. "Start setup") to trigger agent actions.
+     * When hidden=true, the user bubble is not rendered (the agent speaks first).
+     */
+    sendProgrammaticMessage(text: string, hidden = false): void {
+        if (!this.textarea) return;
+        this.nextMessageHidden = hidden;
+        this.textarea.value = text;
+        this.handleSendMessage();
+    }
+
+    /**
      * Feature 1+3: Handle sending a message with persistent history and cancellation
      */
     private async handleSendMessage(): Promise<void> {
@@ -607,6 +669,9 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
         const text = this.textarea.value.trim();
         if (!text && this.attachments.pending.length === 0) return;
         if (this.currentAbortController) return; // Already running
+
+        const isHidden = this.nextMessageHidden;
+        this.nextMessageHidden = false;
 
         this.lastUserMessage = text;
 
@@ -621,16 +686,20 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
             );
         }
 
-        // Track user UI message for history persistence
-        this.uiMessages.push({ role: 'user', text, ts: new Date().toISOString() });
+        // Track user UI message for history persistence (skip for hidden messages)
+        if (!isHidden) {
+            this.uiMessages.push({ role: 'user', text, ts: new Date().toISOString() });
+        }
 
         // Snapshot attachments, clear the chip bar, render user bubble with previews
         const attachments = [...this.attachments.pending];
         this.attachments.clear();
-        const activeFileForBubble = (this.plugin.settings.autoAddActiveFileContext && !this.userDismissedContext)
-            ? this.app.workspace.getActiveFile()
-            : null;
-        this.addUserMessage(text, attachments, activeFileForBubble);
+        if (!isHidden) {
+            const activeFileForBubble = (this.plugin.settings.autoAddActiveFileContext && !this.userDismissedContext)
+                ? this.app.workspace.getActiveFile()
+                : null;
+            this.addUserMessage(text, attachments, activeFileForBubble);
+        }
         this.textarea.value = '';
         this.autoResizeTextarea();
 
@@ -1102,8 +1171,8 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
                     hasRenderedCheckpoints = true;
                     scheduleScroll();
                 },
-                onQuestion: (question, options, resolve) => {
-                    this.showQuestionCard(question, options, resolve);
+                onQuestion: (question, options, resolve, allowMultiple) => {
+                    this.showQuestionCard(question, options, resolve, allowMultiple);
                 },
                 onApprovalRequired: async (toolName, input) => {
                     return this.showApprovalCard(toolName, input, toolsEl);
@@ -1330,9 +1399,12 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
                 const ctx = this.plugin.memoryService.buildMemoryContext(files);
                 if (ctx) parts.push(ctx);
 
-                // Note: Onboarding detection is handled in Settings UI only (MemoryTab).
-                // We intentionally do NOT inject onboarding prompts into the system prompt
-                // because they confuse smaller models and override normal conversation behavior.
+                // Onboarding: inject step-specific setup instructions when setup is incomplete
+                if (this.plugin.memoryService) {
+                    const onboarding = new OnboardingService(this.plugin.memoryService, this.plugin);
+                    const onboardingPrompt = onboarding.getOnboardingPrompt();
+                    if (onboardingPrompt) parts.unshift(onboardingPrompt);
+                }
 
                 // Session retrieval — only on first message, using raw user text
                 // (not userMessageText which includes <context> and <vault_context> blocks).
@@ -1409,9 +1481,7 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
         if (this.chatContainer) {
             this.chatContainer.empty();
         }
-        if (this.plugin.settings.showWelcomeMessage) {
-            this.showWelcomeMessage();
-        }
+        this.showWelcomeMessage();
         this.updateContextBadge();
         this.historyPanel?.setActiveId(null);
     }
@@ -1503,9 +1573,7 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
             if (this.chatContainer) {
                 this.chatContainer.empty();
             }
-            if (this.plugin.settings.showWelcomeMessage) {
-                this.showWelcomeMessage();
-            }
+            this.showWelcomeMessage();
         }
         this.historyPanel?.refresh();
     }
@@ -2236,6 +2304,7 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
         question: string,
         options: string[] | undefined,
         resolve: (answer: string) => void,
+        allowMultiple = false,
     ): void {
         if (!this.chatContainer) { resolve(''); return; }
 
@@ -2244,10 +2313,39 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
         const cleanup = () => card.remove();
 
         if (options && options.length > 0) {
-            options.forEach((opt) => {
-                const item = card.createEl('button', { cls: 'followup-item', text: opt });
-                item.addEventListener('click', () => { cleanup(); resolve(opt); });
-            });
+            if (allowMultiple) {
+                // Multi-select mode: checkboxes + confirm button
+                const selected = new Set<string>();
+                const optionEls: HTMLElement[] = [];
+                options.forEach((opt) => {
+                    const item = card.createEl('button', { cls: 'followup-item followup-item-multi', text: opt });
+                    optionEls.push(item);
+                    item.addEventListener('click', () => {
+                        if (selected.has(opt)) {
+                            selected.delete(opt);
+                            item.removeClass('followup-item-selected');
+                        } else {
+                            selected.add(opt);
+                            item.addClass('followup-item-selected');
+                        }
+                    });
+                });
+                const confirmBtn = card.createEl('button', {
+                    cls: 'followup-confirm-btn',
+                    text: 'Auswahl bestaetigen',
+                });
+                confirmBtn.addEventListener('click', () => {
+                    if (selected.size === 0) return;
+                    cleanup();
+                    resolve([...selected].join(', '));
+                });
+            } else {
+                // Single-select mode: click to answer
+                options.forEach((opt) => {
+                    const item = card.createEl('button', { cls: 'followup-item', text: opt });
+                    item.addEventListener('click', () => { cleanup(); resolve(opt); });
+                });
+            }
         }
 
         const inputRow = card.createDiv('question-input-row');

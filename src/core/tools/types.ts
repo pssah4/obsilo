@@ -51,7 +51,10 @@ export type ToolName =
     | 'enable_plugin'
     // Plugin API + Recipe Shell (PAS-1.5)
     | 'call_plugin_api'
-    | 'execute_recipe';
+    | 'execute_recipe'
+    // Settings & Model configuration (Onboarding)
+    | 'update_settings'
+    | 'configure_model';
 
 /**
  * Tool use request from LLM
@@ -129,7 +132,7 @@ export interface ToolExecutionContext {
      * Ask the user a followup question and wait for their answer.
      * Used by ask_followup_question tool.
      */
-    askQuestion?: (question: string, options?: string[]) => Promise<string>;
+    askQuestion?: (question: string, options?: string[], allowMultiple?: boolean) => Promise<string>;
 
     /**
      * Signal that the task is complete with a result summary.
