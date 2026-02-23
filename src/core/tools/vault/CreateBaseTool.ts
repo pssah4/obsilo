@@ -94,6 +94,17 @@ export class CreateBaseTool extends BaseTool<'create_base'> {
         }
 
         try {
+            // Refuse to overwrite existing bases — use update_base instead
+            const existingFile = this.app.vault.getFileByPath(path);
+            if (existingFile) {
+                callbacks.pushToolResult(
+                    `<error>Base file already exists: ${path}. ` +
+                    `Use update_base to add or modify views in an existing base. ` +
+                    `Do NOT use create_base on existing files.</error>`,
+                );
+                return;
+            }
+
             // Build the filter conditions
             const filterConditions: string[] = [];
             if (filterProp && filterValues.length > 0) {
@@ -134,19 +145,13 @@ export class CreateBaseTool extends BaseTool<'create_base'> {
 
             const yaml = lines.join('\n') + '\n';
 
-            // Write the file
-            const existing = this.app.vault.getFileByPath(path);
-            if (existing) {
-                await this.app.vault.modify(existing, yaml);
-                callbacks.pushToolResult(`Updated base: **${path}**`);
-            } else {
-                const dir = path.includes('/') ? path.split('/').slice(0, -1).join('/') : null;
-                if (dir) {
-                    await this.app.vault.createFolder(dir).catch(() => { /* already exists */ });
-                }
-                await this.app.vault.create(path, yaml);
-                callbacks.pushToolResult(`Created base: **${path}**\n\nOpen the file in Obsidian to view it as a database table.`);
+            // Write the file (we already verified it doesn't exist above)
+            const dir = path.includes('/') ? path.split('/').slice(0, -1).join('/') : null;
+            if (dir) {
+                await this.app.vault.createFolder(dir).catch(() => { /* already exists */ });
             }
+            await this.app.vault.create(path, yaml);
+            callbacks.pushToolResult(`Created base: **${path}**\n\nOpen the file in Obsidian to view it as a database table.`);
             callbacks.log(`Created base: ${path}`);
         } catch (error) {
             callbacks.pushToolResult(this.formatError(error));
