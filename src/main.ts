@@ -264,6 +264,16 @@ export default class ObsidianAgentPlugin extends Plugin {
             (leaf) => new AgentSidebarView(leaf, this)
         );
 
+        // Ribbon icon in left activity bar
+        this.addRibbonIcon('message-square-more', 'Obsilo Agent', () => {
+            this.activateView();
+        });
+
+        // Auto-open sidebar when Obsidian starts
+        this.app.workspace.onLayoutReady(() => {
+            this.activateView();
+        });
+
         // 4. Register commands
         this.addCommand({
             id: 'open-agent-sidebar',
@@ -531,8 +541,23 @@ export default class ObsidianAgentPlugin extends Plugin {
         const leaves = workspace.getLeavesOfType(VIEW_TYPE_AGENT_SIDEBAR);
 
         if (leaves.length > 0) {
-            // View already exists, reveal it
-            leaf = leaves[0];
+            const existing = leaves[0];
+            // If the leaf ended up in the wrong sidebar (e.g. left), migrate it to the right
+            const rightSplit = (workspace as any).rightSplit;
+            const isInRight = rightSplit && existing.getRoot() === rightSplit;
+            if (isInRight) {
+                leaf = existing;
+            } else {
+                // Detach from wrong location and recreate in right sidebar
+                existing.detach();
+                leaf = workspace.getRightLeaf(false);
+                if (leaf) {
+                    await leaf.setViewState({
+                        type: VIEW_TYPE_AGENT_SIDEBAR,
+                        active: true,
+                    });
+                }
+            }
         } else {
             // Create new leaf in right sidebar
             leaf = workspace.getRightLeaf(false);
@@ -544,9 +569,15 @@ export default class ObsidianAgentPlugin extends Plugin {
             }
         }
 
-        // Reveal the view
+        // Reveal the view and set sidebar width to 28.5% of window
         if (leaf) {
             workspace.revealLeaf(leaf);
+
+            const rightSplit = (workspace as any).rightSplit;
+            if (rightSplit && typeof rightSplit.setSize === 'function') {
+                const targetWidth = Math.round(window.innerWidth * 0.285);
+                rightSplit.setSize(targetWidth);
+            }
         }
     }
 
