@@ -64,6 +64,38 @@ const CATEGORIES: BackupCategory[] = [
         recursive: true,
         description: 'Custom skill definitions',
     },
+    {
+        id: 'plugin-skills',
+        label: 'Plugin Skill Files',
+        root: 'vault',
+        dir: '.obsidian-agent/plugin-skills',
+        recursive: false,
+        description: 'Auto-generated skill and README files from VaultDNA scanner',
+    },
+    {
+        id: 'vault-dna',
+        label: 'VaultDNA Scan Cache',
+        root: 'vault',
+        dir: null,
+        recursive: false,
+        description: 'Plugin scan results (vault-dna.json) — avoids rescan on import',
+    },
+    {
+        id: 'semantic-index',
+        label: 'Semantic Index',
+        root: 'vault',
+        dir: '.obsidian-agent/semantic-index',
+        recursive: false,
+        description: 'Vectra embedding index — can be rebuilt by re-indexing',
+    },
+    {
+        id: 'logs',
+        label: 'Operation Logs',
+        root: 'plugin',
+        dir: 'logs',
+        recursive: false,
+        description: 'Agent operation log history',
+    },
 ];
 
 // ── Backup manifest types ────────────────────────────────────────────────────
@@ -149,6 +181,13 @@ export class BackupTab {
                 const size = JSON.stringify(this.plugin.settings).length;
                 return this.formatSize(size);
             }
+            if (cat.id === 'vault-dna') {
+                const path = '.obsidian-agent/vault-dna.json';
+                const exists = await this.app.vault.adapter.exists(path);
+                if (!exists) return '0 files';
+                const content = await this.app.vault.adapter.read(path);
+                return `1 file, ${this.formatSize(content.length)}`;
+            }
             const dir = this.resolveDir(cat);
             const exists = await this.app.vault.adapter.exists(dir);
             if (!exists) return '0 files';
@@ -184,6 +223,14 @@ export class BackupTab {
                     files['data.json'] = {
                         content: JSON.stringify(this.plugin.settings, null, 2),
                     };
+                } else if (cat.id === 'vault-dna') {
+                    const path = '.obsidian-agent/vault-dna.json';
+                    const exists = await this.app.vault.adapter.exists(path);
+                    if (exists) {
+                        files['vault-dna.json'] = {
+                            content: await this.app.vault.adapter.read(path),
+                        };
+                    }
                 } else {
                     const dir = this.resolveDir(cat);
                     const exists = await this.app.vault.adapter.exists(dir);
@@ -366,6 +413,15 @@ export class BackupTab {
                         const parsed = JSON.parse(settingsFile.content);
                         this.plugin.settings = Object.assign({}, DEFAULT_SETTINGS, parsed);
                         await this.plugin.saveSettings();
+                        totalFiles++;
+                    }
+                } else if (catId === 'vault-dna') {
+                    const vdnFile = catData.files['vault-dna.json'];
+                    if (vdnFile) {
+                        const dir = '.obsidian-agent';
+                        const exists = await this.app.vault.adapter.exists(dir);
+                        if (!exists) await this.app.vault.adapter.mkdir(dir);
+                        await this.app.vault.adapter.write(`${dir}/vault-dna.json`, vdnFile.content);
                         totalFiles++;
                     }
                 } else {

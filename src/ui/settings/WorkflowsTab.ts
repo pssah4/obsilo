@@ -6,6 +6,7 @@ export class WorkflowsTab {
     constructor(private plugin: ObsidianAgentPlugin, private app: App, private rerender: () => void) {}
 
     build(containerEl: HTMLElement): void {
+        containerEl.createEl('h3', { text: 'Workflows' });
         containerEl.createEl('p', {
             cls: 'agent-settings-desc',
             text: 'Workflows are triggered by typing /workflow-name in the chat. ' +
@@ -14,7 +15,7 @@ export class WorkflowsTab {
 
         const workflowLoader = (this.plugin as any).workflowLoader;
 
-        // ── Create new workflow ────────────────────────────────────────────
+        // ── Create row ───────────────────────────────────────────────────
         const createRow = containerEl.createDiv({ cls: 'agent-rules-create-row' });
         const nameInput = createRow.createEl('input', {
             type: 'text', placeholder: 'Workflow name (e.g. "daily-review")',
@@ -23,8 +24,8 @@ export class WorkflowsTab {
         const createBtn = createRow.createEl('button', { text: 'Create workflow', cls: 'mod-cta' });
 
         // Import button
-        const importWfBtn = createRow.createEl('button', { text: 'Import', cls: 'agent-rules-import-btn' });
-        importWfBtn.addEventListener('click', () => {
+        const importBtn = createRow.createEl('button', { text: 'Import', cls: 'agent-rules-import-btn' });
+        importBtn.addEventListener('click', () => {
             const fileInput = document.createElement('input');
             fileInput.type = 'file';
             fileInput.accept = '.md,.txt';
@@ -33,46 +34,42 @@ export class WorkflowsTab {
                 if (!file || !workflowLoader) return;
                 const content = await file.text();
                 const nameWithoutExt = file.name.replace(/\.[^.]+$/, '');
-                await workflowLoader.createWorkflow(nameWithoutExt, content);
-                await refreshList();
+                try {
+                    await workflowLoader.createWorkflow(nameWithoutExt, content);
+                    await refreshList();
+                } catch {
+                    new Notice('Could not import workflow');
+                }
             });
             fileInput.click();
         });
 
-        // ── Workflow list ──────────────────────────────────────────────────
+        // ── Workflow list ────────────────────────────────────────────────
         const listEl = containerEl.createDiv({ cls: 'agent-rules-list' });
 
         const refreshList = async () => {
             listEl.empty();
             if (!workflowLoader) {
-                listEl.createEl('p', { cls: 'agent-settings-desc', text: 'Workflow loader not available.' });
+                listEl.createEl('p', { cls: 'agent-empty-state', text: 'Workflow loader not available.' });
                 return;
             }
             const workflows: { path: string; slug: string; displayName: string }[] =
                 await workflowLoader.discoverWorkflows();
             if (workflows.length === 0) {
-                listEl.createEl('p', { cls: 'agent-settings-desc', text: 'No workflows yet. Create one above.' });
+                listEl.createEl('p', { cls: 'agent-empty-state', text: 'No workflows yet. Create one above.' });
                 return;
             }
             for (const wf of workflows) {
                 const row = listEl.createDiv({ cls: 'agent-rules-row' });
                 const label = row.createSpan({ cls: 'agent-rules-label' });
-
-                const enabled = this.plugin.settings.workflowToggles?.[wf.path] !== false;
-                const toggle = label.createEl('input', { type: 'checkbox' });
-                (toggle as HTMLInputElement).checked = enabled;
-                toggle.addEventListener('change', async () => {
-                    this.plugin.settings.workflowToggles ??= {};
-                    this.plugin.settings.workflowToggles[wf.path] = (toggle as HTMLInputElement).checked;
-                    await this.plugin.saveSettings();
-                });
-
-                const nameSpan = label.createSpan({ text: wf.displayName });
-                const slugSpan = label.createSpan({ cls: 'agent-workflow-slug', text: `/${wf.slug}` });
-                nameSpan; slugSpan; // suppress unused warnings
+                label.createSpan({ text: wf.displayName });
+                label.createSpan({ cls: 'agent-workflow-slug', text: `/${wf.slug}` });
 
                 const actions = row.createDiv({ cls: 'agent-rules-actions' });
-                const editBtn = actions.createEl('button', { text: 'Edit', cls: 'agent-rules-edit-btn' });
+
+                const editBtn = actions.createEl('button', { cls: 'agent-rules-edit-btn' });
+                setIcon(editBtn, 'pencil');
+                editBtn.setAttribute('aria-label', 'Edit');
                 editBtn.addEventListener('click', async () => {
                     const content = await this.app.vault.adapter.read(wf.path);
                     new ContentEditorModal(this.app, `Edit workflow: ${wf.displayName}`, content, async (newContent) => {
@@ -80,8 +77,10 @@ export class WorkflowsTab {
                     }).open();
                 });
 
-                const exportWfBtn = actions.createEl('button', { text: 'Export', cls: 'agent-rules-export-btn' });
-                exportWfBtn.addEventListener('click', async () => {
+                const exportBtn = actions.createEl('button', { cls: 'agent-rules-export-btn' });
+                setIcon(exportBtn, 'download');
+                exportBtn.setAttribute('aria-label', 'Export');
+                exportBtn.addEventListener('click', async () => {
                     const content = await this.app.vault.adapter.read(wf.path);
                     const blob = new Blob([content], { type: 'text/markdown' });
                     const url = URL.createObjectURL(blob);
@@ -92,13 +91,29 @@ export class WorkflowsTab {
                     URL.revokeObjectURL(url);
                 });
 
-                const delBtn = actions.createEl('button', { text: 'Delete', cls: 'agent-rules-delete-btn' });
+                const delBtn = actions.createEl('button', { cls: 'agent-rules-delete-btn' });
+                setIcon(delBtn, 'trash-2');
+                delBtn.setAttribute('aria-label', 'Delete');
                 delBtn.addEventListener('click', async () => {
                     await workflowLoader.deleteWorkflow(wf.path);
                     this.plugin.settings.workflowToggles ??= {};
                     delete this.plugin.settings.workflowToggles[wf.path];
                     await this.plugin.saveSettings();
                     await refreshList();
+                });
+
+                // Enable/disable toggle
+                this.plugin.settings.workflowToggles ??= {};
+                const isActive = this.plugin.settings.workflowToggles[wf.path] !== false;
+                const toggleEl = row.createDiv({
+                    cls: `checkbox-container agent-rules-toggle${isActive ? ' is-enabled' : ''}`,
+                });
+                toggleEl.addEventListener('click', async () => {
+                    this.plugin.settings.workflowToggles ??= {};
+                    const current = this.plugin.settings.workflowToggles[wf.path] !== false;
+                    this.plugin.settings.workflowToggles[wf.path] = !current;
+                    await this.plugin.saveSettings();
+                    toggleEl.toggleClass('is-enabled', !current);
                 });
             }
         };

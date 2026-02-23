@@ -81,8 +81,12 @@ export class SkillsManager {
      * or empty string if no matches. Inlining eliminates the read_file round-trip
      * that the agent would otherwise need before applying the skill.
      */
-    async getRelevantSkills(userMessage: string): Promise<string> {
-        const skills = await this.discoverSkills();
+    async getRelevantSkills(userMessage: string, toggles?: Record<string, boolean>): Promise<string> {
+        const allSkills = await this.discoverSkills();
+        // Filter out disabled skills when toggles are provided
+        const skills = toggles
+            ? allSkills.filter((s) => toggles[s.path] !== false)
+            : allSkills;
         if (skills.length === 0) return '';
 
         const msgWords = new Set(userMessage.toLowerCase().match(/\b\w{3,}\b/g) ?? []);

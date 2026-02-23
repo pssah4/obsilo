@@ -525,11 +525,13 @@ export class AgentSidebarView extends ItemView {
 
         // For keyword-matched skills, use getRelevantSkills() which inlines full SKILL.md content.
         // This eliminates the read_file round-trip the agent would otherwise need.
-        let section = await skillsManager.getRelevantSkills(userMessage) as string;
+        const toggles = this.plugin.settings.manualSkillToggles ?? {};
+        let section = await skillsManager.getRelevantSkills(userMessage, toggles) as string;
 
         // Also inject any forced skills that weren't keyword-matched
         if (forcedSkillNames.length > 0) {
-            const allSkills = await skillsManager.discoverSkills() as any[];
+            const allSkillsRaw = await skillsManager.discoverSkills() as any[];
+            const allSkills = allSkillsRaw.filter((s: any) => toggles[s.path] !== false);
             const keywordSection = section; // already built above
             const keywordNames = new Set(
                 allSkills
@@ -2281,6 +2283,8 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
                 'note-edit': 'note edits', 'vault-change': 'vault changes',
                 web: 'web', mcp: 'MCP', read: 'read',
                 mode: 'mode switching', subtask: 'sub-agents',
+                skill: 'plugin skills',
+                'plugin-api': 'plugin API', recipe: 'recipes',
             };
 
             // Compact inline row — appears within the tool call area
@@ -2313,29 +2317,36 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
         });
     }
 
-    private getToolGroup(toolName: string): 'note-edit' | 'vault-change' | 'web' | 'mcp' | 'read' | 'mode' | 'subtask' {
-        const webTools = ['web_fetch', 'web_search'];
-        const mcpTools = ['use_mcp_tool'];
-        const readTools = ['read_file', 'list_files', 'search_files', 'get_frontmatter', 'get_linked_notes', 'get_vault_stats', 'search_by_tag', 'get_daily_note', 'query_base'];
+    private getToolGroup(toolName: string): 'note-edit' | 'vault-change' | 'web' | 'mcp' | 'read' | 'mode' | 'subtask' | 'skill' | 'plugin-api' | 'recipe' {
+        const readTools = ['read_file', 'list_files', 'search_files', 'get_frontmatter', 'get_linked_notes', 'get_vault_stats', 'search_by_tag', 'get_daily_note', 'query_base', 'semantic_search'];
         const vaultChangeTools = ['create_folder', 'delete_file', 'move_file', 'generate_canvas', 'create_base', 'update_base'];
-        if (webTools.includes(toolName)) return 'web';
-        if (mcpTools.includes(toolName)) return 'mcp';
+        const skillTools = ['execute_command', 'enable_plugin', 'resolve_capability_gap'];
+        if (['web_fetch', 'web_search'].includes(toolName)) return 'web';
+        if (toolName === 'use_mcp_tool') return 'mcp';
         if (readTools.includes(toolName)) return 'read';
         if (vaultChangeTools.includes(toolName)) return 'vault-change';
+        if (skillTools.includes(toolName)) return 'skill';
+        if (toolName === 'call_plugin_api') return 'plugin-api';
+        if (toolName === 'execute_recipe') return 'recipe';
         if (toolName === 'switch_mode') return 'mode';
         if (toolName === 'new_task') return 'subtask';
         return 'note-edit'; // write_file, edit_file, append_to_file, update_frontmatter
     }
 
     /** Map a tool group to the corresponding permission key in autoApproval config */
-    private groupToPermKey(group: string): 'noteEdits' | 'vaultChanges' | 'web' | 'mcp' | 'mode' | 'subtasks' | null {
-        if (group === 'note-edit') return 'noteEdits';
-        if (group === 'vault-change') return 'vaultChanges';
-        if (group === 'web') return 'web';
-        if (group === 'mcp') return 'mcp';
-        if (group === 'mode') return 'mode';
-        if (group === 'subtask') return 'subtasks';
-        return null;
+    private groupToPermKey(group: string): string | null {
+        const map: Record<string, string> = {
+            'note-edit': 'noteEdits',
+            'vault-change': 'vaultChanges',
+            web: 'web',
+            mcp: 'mcp',
+            mode: 'mode',
+            subtask: 'subtasks',
+            skill: 'skills',
+            'plugin-api': 'pluginApiWrite', // "Enable" sets the broader write permission
+            recipe: 'recipes',
+        };
+        return map[group] ?? null;
     }
 
     // -------------------------------------------------------------------------

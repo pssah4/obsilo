@@ -89,8 +89,8 @@ export class SkillRegistry {
 
         // Disambiguation examples — prevent common tool confusion
         lines.push('COMMON MISTAKES TO AVOID:');
-        lines.push('- WRONG: User says "export as PDF" -> you use execute_recipe even though file:export-to-pdf exists');
-        lines.push('  RIGHT: User says "export as PDF" -> execute_command("file:export-to-pdf") -- native, zero dependencies');
+        lines.push('- WRONG: User says "export as PDF" -> you use execute_recipe even though workspace:export-pdf exists');
+        lines.push('  RIGHT: User says "export as PDF" -> execute_command("workspace:export-pdf") -- native, zero dependencies');
         lines.push('  ALSO RIGHT: User needs custom template or DOCX -> execute_recipe("pandoc-pdf", {input, output})');
         lines.push('- WRONG: User says "DB Folder Tabelle" -> you use create_base');
         lines.push('  RIGHT: User says "DB Folder Tabelle" -> read .skill.md then execute_command("dbfolder:create-new-database-folder")');

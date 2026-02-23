@@ -125,6 +125,16 @@ export class PermissionsTab {
                 }),
             );
 
+        new Setting(containerEl)
+            .setName('Plugin skills')
+            .setDesc('Execute Obsidian commands via execute_command, enable/disable plugins, and resolve capability gaps. Includes native commands like PDF export.')
+            .addToggle((t) =>
+                t.setValue(this.plugin.settings.autoApproval.skills).onChange(async (v) => {
+                    this.plugin.settings.autoApproval.skills = v;
+                    await this.plugin.saveSettings();
+                }),
+            );
+
         containerEl.createEl('h3', { cls: 'agent-settings-section', text: 'Plugin API & Recipes' });
 
         new Setting(containerEl)

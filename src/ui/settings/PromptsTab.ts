@@ -8,6 +8,7 @@ export class PromptsTab {
     constructor(private plugin: ObsidianAgentPlugin, private app: App, private rerender: () => void) {}
 
     build(containerEl: HTMLElement): void {
+        containerEl.createEl('h3', { text: 'Prompts' });
         containerEl.createEl('p', {
             cls: 'agent-settings-desc',
             text: 'Create your own prompt templates. Type / in the chat to trigger them. ' +
@@ -15,7 +16,6 @@ export class PromptsTab {
                   'and {{activeFile}} to insert the name of the active note.',
         });
 
-        const listEl = containerEl.createDiv({ cls: 'agent-rules-list' });
         let editingId: string | null = null;
 
         const savePrompts = async (prompts: CustomPrompt[]) => {
@@ -23,18 +23,59 @@ export class PromptsTab {
             await this.plugin.saveSettings();
         };
 
-        // Collect all available modes for the mode selector
         const allModes = [
             ...BUILT_IN_MODES,
             ...(this.plugin.settings.customModes ?? []),
         ];
 
-        // ── Inline form (create / edit) ────────────────────────────────────────
+        // ── Create row (same pattern as Skills/Rules/Workflows) ─────────
+        const createRow = containerEl.createDiv({ cls: 'agent-rules-create-row' });
+        const nameInput = createRow.createEl('input', {
+            type: 'text', placeholder: 'Prompt name (e.g. "daily-report")',
+            cls: 'agent-rules-name-input',
+        }) as HTMLInputElement;
+        const createBtn = createRow.createEl('button', { text: 'Create prompt', cls: 'mod-cta' });
+
+        // Import button
+        const importBtn = createRow.createEl('button', { text: 'Import', cls: 'agent-rules-import-btn' });
+        importBtn.addEventListener('click', () => {
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.accept = '.json';
+            fileInput.addEventListener('change', async () => {
+                const file = fileInput.files?.[0];
+                if (!file) return;
+                try {
+                    const text = await file.text();
+                    const data = JSON.parse(text);
+                    if (!data.name || !data.slug || !data.content) {
+                        new Notice('Invalid prompt file: missing name, slug, or content');
+                        return;
+                    }
+                    const prompts = [...(this.plugin.settings.customPrompts ?? [])];
+                    prompts.push({
+                        id: `custom-${Date.now()}`,
+                        name: data.name,
+                        slug: data.slug,
+                        content: data.content,
+                        enabled: true,
+                        mode: data.mode || undefined,
+                    });
+                    await savePrompts(prompts);
+                    renderList();
+                } catch {
+                    new Notice('Could not import prompt');
+                }
+            });
+            fileInput.click();
+        });
+
+        // ── Inline form (edit only — appears when editing a prompt) ─────
         const formEl = containerEl.createDiv({ cls: 'agent-prompt-form' });
         formEl.style.display = 'none';
 
         const formTitle = formEl.createEl('p', { cls: 'agent-prompt-form-title', text: 'New Prompt' });
-        const nameInput = formEl.createEl('input', {
+        const formNameInput = formEl.createEl('input', {
             type: 'text', placeholder: 'Name (e.g. "Daily report")',
             cls: 'agent-prompt-input',
         }) as HTMLInputElement;
@@ -43,10 +84,9 @@ export class PromptsTab {
             cls: 'agent-prompt-input',
         }) as HTMLInputElement;
 
-        // Auto-derive slug from name
-        nameInput.addEventListener('input', () => {
+        formNameInput.addEventListener('input', () => {
             if (!editingId) {
-                slugInput.value = nameInput.value
+                slugInput.value = formNameInput.value
                     .toLowerCase()
                     .replace(/[^a-z0-9]+/g, '-')
                     .replace(/^-+|-+$/g, '');
@@ -59,11 +99,10 @@ export class PromptsTab {
         }) as HTMLTextAreaElement;
         contentInput.rows = 5;
 
-        const formHint = formEl.createEl('p', {
-            cls: 'agent-settings-desc',
+        formEl.createEl('p', {
+            cls: 'agent-empty-state',
             text: 'Variables: {{userInput}} = current chat message  |  {{activeFile}} = active note name',
         });
-        formHint.style.fontSize = 'var(--font-smaller)';
 
         // Optional mode selector
         const modeRow = formEl.createDiv({ cls: 'agent-prompt-mode-row' });
@@ -74,9 +113,9 @@ export class PromptsTab {
             modeSelect.createEl('option', { value: mode.slug, text: mode.name });
         }
         modeRow.createEl('span', {
-            cls: 'agent-settings-desc',
+            cls: 'agent-empty-state',
             text: 'Restrict this prompt to a specific mode. Leave blank to show in all modes.',
-        }).style.fontSize = 'var(--font-smaller)';
+        });
 
         const formBtns = formEl.createDiv({ cls: 'agent-prompt-form-btns' });
         const saveBtn = formBtns.createEl('button', { text: 'Save', cls: 'mod-cta' });
@@ -85,12 +124,12 @@ export class PromptsTab {
         const openForm = (prompt?: CustomPrompt) => {
             editingId = prompt?.id ?? null;
             formTitle.setText(prompt ? 'Edit Prompt' : 'New Prompt');
-            nameInput.value = prompt?.name ?? '';
+            formNameInput.value = prompt?.name ?? '';
             slugInput.value = prompt?.slug ?? '';
             contentInput.value = prompt?.content ?? '';
             modeSelect.value = prompt?.mode ?? '';
             formEl.style.display = '';
-            nameInput.focus();
+            formNameInput.focus();
         };
 
         cancelBtn.addEventListener('click', () => {
@@ -99,7 +138,7 @@ export class PromptsTab {
         });
 
         saveBtn.addEventListener('click', async () => {
-            const name = nameInput.value.trim();
+            const name = formNameInput.value.trim();
             const slug = slugInput.value.trim().replace(/[^a-z0-9-]/g, '');
             const content = contentInput.value.trim();
             if (!name || !slug || !content) return;
@@ -118,34 +157,31 @@ export class PromptsTab {
             renderList();
         });
 
-        // ── New prompt button ──────────────────────────────────────────────────
-        const addBtn = containerEl.createEl('button', { text: 'New Prompt', cls: 'mod-cta agent-prompt-add-btn' });
-        addBtn.addEventListener('click', () => openForm());
+        createBtn.addEventListener('click', () => {
+            const rawName = nameInput.value.trim();
+            if (!rawName) return;
+            const slug = rawName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+            openForm({ id: '', name: rawName, slug, content: '', enabled: true });
+            editingId = null; // new prompt, not editing existing
+            nameInput.value = '';
+        });
 
-        // ── List rendering ─────────────────────────────────────────────────────
+        // ── Prompt list ─────────────────────────────────────────────────
+        const listEl = containerEl.createDiv({ cls: 'agent-rules-list' });
+
         const renderList = () => {
             listEl.empty();
             const prompts = this.plugin.settings.customPrompts ?? [];
             if (prompts.length === 0) {
                 listEl.createEl('p', {
-                    cls: 'agent-settings-desc',
-                    text: 'No custom prompts yet. Click "New Prompt" to create one.',
+                    cls: 'agent-empty-state',
+                    text: 'No custom prompts yet. Create one above.',
                 });
                 return;
             }
             for (const p of prompts) {
                 const row = listEl.createDiv({ cls: 'agent-rules-row' });
                 const label = row.createSpan({ cls: 'agent-rules-label' });
-
-                const toggle = label.createEl('input', { type: 'checkbox' }) as HTMLInputElement;
-                toggle.checked = p.enabled !== false;
-                toggle.addEventListener('change', async () => {
-                    const updated = (this.plugin.settings.customPrompts ?? []).map((cp) =>
-                        cp.id === p.id ? { ...cp, enabled: toggle.checked } : cp
-                    );
-                    await savePrompts(updated);
-                });
-
                 label.createSpan({ text: p.name });
                 label.createSpan({ cls: 'agent-workflow-slug', text: `/${p.slug}` });
                 if (p.mode) {
@@ -160,6 +196,20 @@ export class PromptsTab {
                 editBtn.setAttribute('aria-label', 'Edit');
                 editBtn.addEventListener('click', () => openForm(p));
 
+                const exportBtn = actions.createEl('button', { cls: 'agent-rules-export-btn' });
+                setIcon(exportBtn, 'download');
+                exportBtn.setAttribute('aria-label', 'Export');
+                exportBtn.addEventListener('click', () => {
+                    const data = { name: p.name, slug: p.slug, content: p.content, mode: p.mode };
+                    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `prompt-${p.slug}.json`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                });
+
                 const delBtn = actions.createEl('button', { cls: 'agent-rules-delete-btn' });
                 setIcon(delBtn, 'trash-2');
                 delBtn.setAttribute('aria-label', 'Delete');
@@ -167,6 +217,21 @@ export class PromptsTab {
                     const updated = (this.plugin.settings.customPrompts ?? []).filter((cp) => cp.id !== p.id);
                     await savePrompts(updated);
                     renderList();
+                });
+
+                // Enable/disable toggle
+                const isActive = p.enabled !== false;
+                const toggleEl = row.createDiv({
+                    cls: `checkbox-container agent-rules-toggle${isActive ? ' is-enabled' : ''}`,
+                });
+                toggleEl.addEventListener('click', async () => {
+                    const prompts = [...(this.plugin.settings.customPrompts ?? [])];
+                    const idx = prompts.findIndex((cp) => cp.id === p.id);
+                    if (idx !== -1) {
+                        prompts[idx] = { ...prompts[idx], enabled: prompts[idx].enabled === false };
+                        await savePrompts(prompts);
+                        toggleEl.toggleClass('is-enabled', prompts[idx].enabled !== false);
+                    }
                 });
             }
         };

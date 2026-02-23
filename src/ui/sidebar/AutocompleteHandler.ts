@@ -36,11 +36,12 @@ export class AutocompleteHandler {
             const query = value.slice(1).split(' ')[0].toLowerCase();
 
             const workflowLoader = (this.plugin as any).workflowLoader;
-            const workflows: { slug: string; displayName: string }[] = workflowLoader
+            const workflows: { path: string; slug: string; displayName: string }[] = workflowLoader
                 ? await workflowLoader.discoverWorkflows()
                 : [];
+            const wfToggles = this.plugin.settings.workflowToggles ?? {};
             const workflowItems = workflows
-                .filter((w) => query === '' || w.slug.startsWith(query))
+                .filter((w) => wfToggles[w.path] !== false && (query === '' || w.slug.startsWith(query)))
                 .map((w) => ({
                     label: w.displayName,
                     sub: `/${w.slug}`,

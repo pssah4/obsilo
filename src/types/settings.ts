@@ -431,6 +431,9 @@ export interface ObsidianAgentSettings {
     // Workflows (Sprint 3.3) — per-file enabled/disabled toggles
     workflowToggles: Record<string, boolean>;
 
+    // Manual Skills — per-path enabled/disabled toggles
+    manualSkillToggles: Record<string, boolean>;
+
     // Custom Prompts — user-defined slash-command templates
     customPrompts: CustomPrompt[];
 
@@ -531,7 +534,7 @@ export const DEFAULT_SETTINGS: ObsidianAgentSettings = {
         subtasks: false,
         question: true,
         todo: true,
-        skills: false,
+        skills: true,
         pluginApiRead: true,
         pluginApiWrite: false,
         recipes: true,
@@ -594,6 +597,7 @@ export const DEFAULT_SETTINGS: ObsidianAgentSettings = {
     includeCurrentTimeInContext: true,
     rulesToggles: {},
     workflowToggles: {},
+    manualSkillToggles: {},
     customPrompts: [],
     vaultDNA: {
         enabled: true,
