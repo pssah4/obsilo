@@ -3,7 +3,8 @@
  *
  * Promotes durable facts from session summaries into long-term memory files.
  * Takes a session summary (passed as transcript in a 'long-term' PendingExtraction)
- * and merges new information into user-profile.md, projects.md, and patterns.md.
+ * and merges new information into user-profile.md, projects.md, patterns.md,
+ * soul.md (agent personality), and learnings.md (task outcomes & strategies).
  *
  * Called by ExtractionQueue when processing a 'long-term' type item.
  */
@@ -36,6 +37,34 @@ Current memory files:
 {PATTERNS}
 </patterns>
 
+<soul>
+{SOUL}
+</soul>
+
+<learnings>
+{LEARNINGS}
+</learnings>
+
+Target files:
+- user-profile.md: User identity, preferences, communication style
+- projects.md: Active projects, goals, context
+- patterns.md: Behavioral patterns, workflow preferences
+- soul.md: Agent personality — name, communication style, values, anti-patterns.
+  Update soul.md when the session reveals:
+  - The user prefers a different tone or response length
+  - The user corrects the agent's behavior
+  - The user renames the agent
+  - New expertise areas or areas to avoid
+  Keep soul.md concise and actionable (behaviors, not abstract traits).
+- learnings.md: Task learnings — successful strategies, common mistakes, tool effectiveness.
+  Update learnings.md when the session reveals:
+  - A strategy that worked well (or poorly) for a specific type of task
+  - Tools that helped or hindered — with context on when/why
+  - User corrections that indicate a recurring mistake pattern
+  - Workflow optimizations discovered during the session
+  Keep entries actionable: "When doing X, use Y because Z."
+  Remove outdated learnings that are contradicted by newer experience.
+
 Rules:
 - Only output updates for files that actually need changes
 - Never remove existing information unless it is explicitly contradicted
@@ -47,7 +76,7 @@ Output format:
 {
   "updates": [
     {
-      "file": "user-profile.md" | "projects.md" | "patterns.md",
+      "file": "user-profile.md" | "projects.md" | "patterns.md" | "soul.md" | "learnings.md",
       "action": "append" | "replace",
       "section": "section heading (e.g. '## Identity', '## Communication')",
       "content": "the new content to add or replace under that section"
@@ -100,7 +129,9 @@ export class LongTermExtractor {
         const systemPrompt = LONG_TERM_EXTRACTION_PROMPT
             .replace('{USER_PROFILE}', files.userProfile.trim() || '(empty)')
             .replace('{PROJECTS}', files.projects.trim() || '(empty)')
-            .replace('{PATTERNS}', files.patterns.trim() || '(empty)');
+            .replace('{PATTERNS}', files.patterns.trim() || '(empty)')
+            .replace('{SOUL}', files.soul.trim() || '(empty)')
+            .replace('{LEARNINGS}', files.learnings.trim() || '(empty)');
 
         // The transcript for long-term items is the session summary
         const userMessage = `Session summary to analyze:\n\n${item.transcript}`;
@@ -156,7 +187,7 @@ export class LongTermExtractor {
             const valid = parsed.updates.filter((u: MemoryUpdate) =>
                 typeof u.file === 'string' &&
                 typeof u.content === 'string' &&
-                ['user-profile.md', 'projects.md', 'patterns.md'].includes(u.file) &&
+                ['user-profile.md', 'projects.md', 'patterns.md', 'soul.md', 'learnings.md'].includes(u.file) &&
                 ['append', 'replace'].includes(u.action)
             );
             return { updates: valid };

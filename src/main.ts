@@ -642,6 +642,21 @@ export default class ObsidianAgentPlugin extends Plugin {
     }
 
     /**
+     * Open the sidebar and start the LLM-driven onboarding conversation.
+     * Used by Settings buttons (Start/Restart setup).
+     */
+    async startOnboarding(): Promise<void> {
+        await this.activateView();
+        setTimeout(() => {
+            const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_AGENT_SIDEBAR);
+            if (leaves.length > 0) {
+                const view = leaves[0].view as AgentSidebarView;
+                view.startOnboardingChat();
+            }
+        }, 200);
+    }
+
+    /**
      * Schedule a single file for re-indexing after a 2s debounce.
      * Fires on vault modify/create events — debounce prevents thrashing
      * while the user is actively typing in a note.

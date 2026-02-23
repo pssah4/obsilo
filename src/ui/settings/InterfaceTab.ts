@@ -13,42 +13,22 @@ export class InterfaceTab {
         if (this.plugin.memoryService) {
             const onboarding = new OnboardingService(this.plugin.memoryService, this.plugin);
             const isComplete = !onboarding.needsOnboarding();
-            const isInProgress = !isComplete && onboarding.getSetupStep() !== 'backup';
 
             const setupSetting = new Setting(containerEl)
                 .setName('Guided setup')
                 .setDesc(
                     isComplete
                         ? 'Setup completed. Restart to re-configure model, permissions, and profile.'
-                        : isInProgress
-                            ? `Setup in progress (Step ${onboarding.getStepIndex()}/${onboarding.getTotalSteps()} — ${onboarding.getStepLabel()}). Open the chat to continue.`
-                            : 'Setup not started yet. Open the chat to begin.',
+                        : 'Setup not started yet. Open the chat to begin.',
                 );
 
-            // Start / Restart Setup — triggers agent message with explicit setup instruction
             setupSetting.addButton((b) =>
                 b.setButtonText(isComplete ? 'Restart setup' : 'Start setup').setCta().onClick(async () => {
                     await onboarding.reset();
-                    await this.plugin.sendMessageToAgent(
-                        'Starte den Setup-Prozess. Folge den Onboarding-Anweisungen im System-Prompt.',
-                        true,
-                    );
+                    await this.plugin.startOnboarding();
                 }),
             );
 
-            // Continue Setup (only when in progress) — opens chat at current step
-            if (isInProgress) {
-                setupSetting.addButton((b) =>
-                    b.setButtonText('Continue setup').onClick(async () => {
-                        await this.plugin.sendMessageToAgent(
-                            'Setze den Setup-Prozess fort. Folge den Onboarding-Anweisungen im System-Prompt.',
-                            true,
-                        );
-                    }),
-                );
-            }
-
-            // Skip Setup (only when not complete)
             if (!isComplete) {
                 setupSetting.addButton((b) =>
                     b.setButtonText('Skip setup').onClick(async () => {
@@ -72,16 +52,6 @@ export class InterfaceTab {
             .addToggle((t) =>
                 t.setValue(this.plugin.settings.autoAddActiveFileContext).onChange(async (v) => {
                     this.plugin.settings.autoAddActiveFileContext = v;
-                    await this.plugin.saveSettings();
-                }),
-            );
-
-        new Setting(containerEl)
-            .setName('Show welcome message')
-            .setDesc('Show an introductory message the first time the agent sidebar opens.')
-            .addToggle((t) =>
-                t.setValue(this.plugin.settings.showWelcomeMessage).onChange(async (v) => {
-                    this.plugin.settings.showWelcomeMessage = v;
                     await this.plugin.saveSettings();
                 }),
             );

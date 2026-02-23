@@ -436,7 +436,6 @@ export interface ObsidianAgentSettings {
 
     // UI
     sidebarPosition: 'left' | 'right';
-    showWelcomeMessage: boolean;
     autoAddActiveFileContext: boolean;
     /** Press Enter to send (Shift+Enter for newline). When false, Ctrl/Cmd+Enter sends. */
     sendWithEnter: boolean;
@@ -631,7 +630,6 @@ export const DEFAULT_SETTINGS: ObsidianAgentSettings = {
     chatHistoryFolder: '',
 
     sidebarPosition: 'right',
-    showWelcomeMessage: true,
     autoAddActiveFileContext: true,
     sendWithEnter: true,
     includeCurrentTimeInContext: true,

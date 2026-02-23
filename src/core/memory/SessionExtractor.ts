@@ -25,11 +25,18 @@ Extract:
 1. **Summary**: What was accomplished in 2-3 sentences
 2. **Decisions**: Key decisions made (bullet points)
 3. **User Preferences Observed**: Communication style, workflow habits, tool preferences (bullet points)
-4. **Open Questions**: Unresolved items or follow-ups (bullet points)
+4. **Task Outcome**: How the task went — was the result satisfactory? Did the user need corrections? (bullet points)
+5. **Tool Effectiveness**: Which tools helped, which caused problems, which were unnecessary (bullet points, format: "tool_name: helpful/unhelpful — reason")
+6. **Learnings**: What worked well and what should be done differently next time (bullet points)
+7. **Open Questions**: Unresolved items or follow-ups (bullet points)
 
 Rules:
-- Be concise — the summary should be under 300 words
+- Be concise — the summary should be under 400 words
 - Focus on durable facts, not transient details
+- For Task Outcome: Look for signals like user corrections, repeated attempts, explicit feedback
+- For Tool Effectiveness: Only include tools that were actually used in the conversation
+- For Learnings: Focus on actionable insights the agent can apply to future tasks
+- If a section has no relevant content, omit it entirely
 - If the conversation is purely casual with no actionable content, still provide a brief summary
 - Output ONLY the Markdown content (no code fences, no preamble)
 
@@ -47,6 +54,15 @@ date: {DATE}
 - ...
 
 ## User Preferences Observed
+- ...
+
+## Task Outcome
+- ...
+
+## Tool Effectiveness
+- ...
+
+## Learnings
 - ...
 
 ## Open Questions

@@ -8,6 +8,7 @@
  *   - user-profile.md  (~200 tokens)
  *   - projects.md       (~300 tokens)
  *   - patterns.md       (~200 tokens)
+ *   - soul.md           (~200 tokens) — Agent identity & personality (OpenClaw SOUL.md inspired)
  *
  * knowledge.md is on-demand only (via semantic search), NOT in the system prompt.
  */
@@ -23,6 +24,8 @@ export interface MemoryFiles {
     projects: string;
     patterns: string;
     knowledge: string;
+    soul: string;
+    learnings: string;
 }
 
 export interface MemoryStats {
@@ -35,7 +38,7 @@ export interface MemoryStats {
 // Constants
 // ---------------------------------------------------------------------------
 
-const MEMORY_FILES = ['user-profile.md', 'projects.md', 'patterns.md', 'knowledge.md'] as const;
+const MEMORY_FILES = ['user-profile.md', 'projects.md', 'patterns.md', 'knowledge.md', 'soul.md', 'learnings.md'] as const;
 
 const TEMPLATES: Record<string, string> = {
     'user-profile.md': `# User Profile
@@ -56,12 +59,34 @@ const TEMPLATES: Record<string, string> = {
 `,
     'knowledge.md': `# Domain Knowledge
 `,
+    'soul.md': `# Agent Identity
+
+## Name
+Obsilo
+
+## Communication
+- Language: Deutsch
+- Style: Warm, nahbar, auf Augenhoehe
+
+## Values
+- Nuetzlichkeit vor Hoeflichkeit
+- Ehrlichkeit — sage wenn ich etwas nicht weiss
+- Respektiere die Arbeit des Nutzers
+- Lerne aus Fehlern
+
+## Anti-Patterns
+- Keine leeren Floskeln
+- Keine unnoetigen Entschuldigungen
+- Keine Emojis
+`,
+    'learnings.md': `# Task Learnings
+`,
 };
 
 /** Maximum characters per memory file injected into the system prompt. */
 const MAX_CHARS_PER_FILE = 800;
 /** Maximum total characters for the combined memory context. */
-const MAX_TOTAL_CHARS = 3000;
+const MAX_TOTAL_CHARS = 4000;
 
 // ---------------------------------------------------------------------------
 // MemoryService
@@ -103,6 +128,8 @@ export class MemoryService {
             projects: await this.readFile('projects.md'),
             patterns: await this.readFile('patterns.md'),
             knowledge: await this.readFile('knowledge.md'),
+            soul: await this.readFile('soul.md'),
+            learnings: await this.readFile('learnings.md'),
         };
     }
 
@@ -153,9 +180,7 @@ export class MemoryService {
 
         const addSection = (tag: string, content: string) => {
             const trimmed = content.trim();
-            if (!trimmed || trimmed === TEMPLATES['user-profile.md']?.trim() ||
-                trimmed === TEMPLATES['projects.md']?.trim() ||
-                trimmed === TEMPLATES['patterns.md']?.trim()) {
+            if (!trimmed || Object.values(TEMPLATES).some((t) => trimmed === t.trim())) {
                 return; // Skip empty/template-only files
             }
             const truncated = trimmed.length > MAX_CHARS_PER_FILE
@@ -164,9 +189,11 @@ export class MemoryService {
             sections.push(`<${tag}>\n${truncated}\n</${tag}>`);
         };
 
+        addSection('agent_identity', files.soul);
         addSection('user_profile', files.userProfile);
         addSection('active_projects', files.projects);
         addSection('behavioral_patterns', files.patterns);
+        addSection('task_learnings', files.learnings);
         // knowledge.md is NOT included — it's on-demand via semantic search
 
         if (sections.length === 0) return '';

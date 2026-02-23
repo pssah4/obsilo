@@ -174,7 +174,6 @@ export class MemoryTab {
             if (memService) {
                 const onboarding = new OnboardingService(memService, this.plugin);
                 const isComplete = !onboarding.needsOnboarding();
-                const isInProgress = !isComplete && onboarding.getSetupStep() !== 'backup';
 
                 const profileSetting = new Setting(containerEl)
                     .setName('User profile');
@@ -191,31 +190,15 @@ export class MemoryTab {
                     .setDesc(
                         isComplete
                             ? 'Setup completed. Restart to re-configure model, permissions, and profile.'
-                            : isInProgress
-                                ? `Setup in progress (Step ${onboarding.getStepIndex()}/${onboarding.getTotalSteps()} — ${onboarding.getStepLabel()}). Open the chat to continue.`
-                                : 'Setup not started yet. Open the chat to begin.',
+                            : 'Setup not started yet. Open the chat to begin.',
                     );
 
                 setupSetting.addButton((b) =>
                     b.setButtonText(isComplete ? 'Restart setup' : 'Start setup').setCta().onClick(async () => {
                         await onboarding.reset();
-                        await this.plugin.sendMessageToAgent(
-                            'Starte den Setup-Prozess. Folge den Onboarding-Anweisungen im System-Prompt.',
-                            true,
-                        );
+                        await this.plugin.startOnboarding();
                     }),
                 );
-
-                if (isInProgress) {
-                    setupSetting.addButton((b) =>
-                        b.setButtonText('Continue setup').onClick(async () => {
-                            await this.plugin.sendMessageToAgent(
-                                'Setze den Setup-Prozess fort. Folge den Onboarding-Anweisungen im System-Prompt.',
-                                true,
-                            );
-                        }),
-                    );
-                }
 
                 if (!isComplete) {
                     setupSetting.addButton((b) =>

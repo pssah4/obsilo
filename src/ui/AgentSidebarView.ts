@@ -582,70 +582,58 @@ export class AgentSidebarView extends ItemView {
         this.textarea.style.height = Math.min(this.textarea.scrollHeight, 15 * 24) + 'px';
     }
 
+    /**
+     * Show the onboarding welcome card (first activation only).
+     * After onboarding is complete, new conversations start with an empty chat.
+     */
     private showWelcomeMessage(): void {
         if (!this.chatContainer) return;
 
-        // First-ever activation: onboarding not completed AND never started before
+        // Only show for first-ever activation: onboarding not completed AND never started
         const ob = this.plugin.settings.onboarding;
-        const isFirstActivation = !ob.completed && !ob.startedAt && this.plugin.memoryService;
+        if (ob.completed || ob.startedAt || !this.plugin.memoryService) return;
 
-        if (isFirstActivation) {
-            const onboarding = new OnboardingService(this.plugin.memoryService!, this.plugin);
+        const onboarding = new OnboardingService(this.plugin.memoryService, this.plugin);
 
-            const wrapper = this.chatContainer.createDiv('message assistant-message');
-            const bubble = wrapper.createDiv('message-bubble');
+        const wrapper = this.chatContainer.createDiv('message assistant-message');
+        const bubble = wrapper.createDiv('message-bubble');
 
-            MarkdownRenderer.render(this.app,
-                `## Willkommen bei Obsilo\n\nIch bin dein KI-Assistent fuer Obsidian. Lass uns zusammen alles einrichten — das dauert nur ein paar Minuten.`,
-                bubble, '', this,
-            );
+        MarkdownRenderer.render(this.app,
+            `## Willkommen\n\nLass uns gemeinsam starten — ich richte mich ganz nach dir ein.`,
+            bubble, '', this,
+        );
 
-            const btnRow = bubble.createDiv('setup-welcome-buttons');
+        const btnRow = bubble.createDiv('setup-welcome-buttons');
 
-            const startBtn = btnRow.createEl('button', {
-                cls: 'setup-welcome-btn setup-welcome-btn-primary',
-                text: 'Los geht\'s',
-            });
-            startBtn.addEventListener('click', () => {
-                this.sendProgrammaticMessage(
-                    'Starte den Setup-Prozess. Folge den Onboarding-Anweisungen im System-Prompt.',
-                    true,
-                );
-            });
+        const startBtn = btnRow.createEl('button', {
+            cls: 'setup-welcome-btn setup-welcome-btn-primary',
+            text: 'Los geht\'s',
+        });
+        startBtn.addEventListener('click', () => this.startOnboardingChat());
 
-            const skipBtn = btnRow.createEl('button', {
-                cls: 'setup-welcome-btn setup-welcome-btn-secondary',
-                text: 'Setup ueberspringen',
-            });
-            skipBtn.addEventListener('click', async () => {
-                await onboarding.markCompleted();
-                new Notice('Setup uebersprungen. Du kannst es jederzeit in den Einstellungen neu starten.');
-                if (this.chatContainer) {
-                    this.chatContainer.empty();
-                    this.showRegularWelcome();
-                }
-            });
-            return;
-        }
-
-        this.showRegularWelcome();
+        const skipBtn = btnRow.createEl('button', {
+            cls: 'setup-welcome-btn setup-welcome-btn-secondary',
+            text: 'Setup ueberspringen',
+        });
+        skipBtn.addEventListener('click', async () => {
+            await onboarding.markCompleted();
+            new Notice('Setup uebersprungen. Du kannst es jederzeit in den Einstellungen neu starten.');
+            if (this.chatContainer) this.chatContainer.empty();
+        });
     }
 
-    private showRegularWelcome(): void {
-        if (!this.chatContainer) return;
-        const welcomeMarkdown = `## Welcome to Obsilo Agent
-
-An agentic AI assistant integrated into your vault.
-
-**Capabilities**
-- Answer questions about your notes
-- Edit and create content
-- Organize and structure your vault
-
-**How to use**
-Select a mode in the toolbar below and start chatting. The agent can read and write files in your vault.`;
-
-        this.renderMarkdownMessage(welcomeMarkdown, 'assistant');
+    /**
+     * Start the LLM-driven onboarding conversation.
+     * Sends a hidden trigger message; the onboarding system prompt guides the LLM.
+     * Called from the welcome card, settings buttons, or programmatically.
+     */
+    startOnboardingChat(): void {
+        // Mark as started (prevents re-trigger on reload)
+        this.plugin.settings.onboarding.startedAt = new Date().toISOString();
+        this.plugin.saveSettings();
+        // Clear welcome card, send hidden trigger
+        if (this.chatContainer) this.chatContainer.empty();
+        this.sendProgrammaticMessage('Starte das Setup', true);
     }
 
     /**
@@ -1352,14 +1340,19 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
         const activeMode = this.modeService.getActiveMode();
 
         // Load relevant skills for this message (Sprint 3.4)
-        // Combines keyword-matched + forced skills from tool picker
-        const userMessageText = typeof messageToSend === 'string'
-            ? messageToSend
-            : (messageToSend as any[]).find((b: any) => b.type === 'text')?.text ?? '';
-        const forcedSkillNames = [
-            ...(this.toolPicker.sessionForcedSkills.get(activeMode.slug) ?? this.plugin.settings.forcedSkills?.[activeMode.slug] ?? []),
-        ];
-        const skillsSection = await this.buildSkillsSection(userMessageText, forcedSkillNames);
+        // Skip during onboarding — the onboarding prompt has everything the LLM needs.
+        // Loading skills would trigger keyword matches (e.g. "Setup") causing unnecessary delay.
+        const isOnboarding = !this.plugin.settings.onboarding.completed;
+        let skillsSection: string | undefined;
+        if (!isOnboarding) {
+            const userMessageText = typeof messageToSend === 'string'
+                ? messageToSend
+                : (messageToSend as any[]).find((b: any) => b.type === 'text')?.text ?? '';
+            const forcedSkillNames = [
+                ...(this.toolPicker.sessionForcedSkills.get(activeMode.slug) ?? this.plugin.settings.forcedSkills?.[activeMode.slug] ?? []),
+            ];
+            skillsSection = await this.buildSkillsSection(userMessageText, forcedSkillNames);
+        }
 
         // Apply forced workflow from tool picker (when message doesn't start with slash command)
         const forcedWorkflowSlug = this.toolPicker.sessionForcedWorkflow.get(activeMode.slug)
@@ -1380,9 +1373,9 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
             }
         }
 
-        // Build plugin skills section from VaultDNA (PAS-1)
-        const pluginSkillsSection = (this.plugin as any).skillRegistry
-            ?.getPluginSkillsPromptSection() as string | undefined;
+        // Build plugin skills section from VaultDNA (PAS-1) — skip during onboarding
+        const pluginSkillsSection = isOnboarding ? undefined
+            : (this.plugin as any).skillRegistry?.getPluginSkillsPromptSection() as string | undefined;
 
         const sessionToolOverride = this.toolPicker.sessionToolOverrides.get(activeMode.slug);
         const allowedMcpServers = this.plugin.settings.modeMcpServers?.[activeMode.slug];

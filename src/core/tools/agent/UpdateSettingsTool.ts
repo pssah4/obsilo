@@ -11,7 +11,7 @@
 import { BaseTool } from '../BaseTool';
 import type { ToolDefinition, ToolExecutionContext } from '../types';
 import type ObsidianAgentPlugin from '../../../main';
-import type { AutoApprovalConfig, OnboardingStep } from '../../../types/settings';
+import type { AutoApprovalConfig } from '../../../types/settings';
 
 /** Dot-paths that are writable via update_settings */
 const WRITABLE_PATHS = new Set([
@@ -50,7 +50,6 @@ const WRITABLE_PATHS = new Set([
     'memory.autoExtractSessions',
     'memory.autoUpdateLongTerm',
     // UI
-    'showWelcomeMessage',
     'autoAddActiveFileContext',
     'sendWithEnter',
     'includeCurrentTimeInContext',

@@ -1914,10 +1914,11 @@
 }
 
 .followup-heading {
-    font-size: 12px;
-    color: var(--text-faint);
-    font-weight: 400;
-    margin-bottom: 4px;
+    font-size: var(--font-ui-small);
+    color: var(--text-normal);
+    font-weight: 500;
+    margin-bottom: 8px;
+    line-height: 1.5;
 }
 
 .followup-item {
