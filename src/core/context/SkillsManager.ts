@@ -43,8 +43,28 @@ export class SkillsManager {
             if (!exists) {
                 await this.vault.adapter.mkdir(this.skillsDir);
             }
+            // Ensure built-in skills exist
+            await this.ensureBuiltInSkills();
         } catch {
             // Non-fatal
+        }
+    }
+
+    /**
+     * Create built-in skills if they don't exist yet.
+     */
+    private async ensureBuiltInSkills(): Promise<void> {
+        const settingsSkillDir = `${this.skillsDir}/settings-assistant`;
+        const settingsSkillPath = `${settingsSkillDir}/SKILL.md`;
+
+        try {
+            const exists = await this.vault.adapter.exists(settingsSkillPath);
+            if (!exists) {
+                await this.vault.adapter.mkdir(settingsSkillDir).catch(() => {});
+                await this.vault.adapter.write(settingsSkillPath, SETTINGS_SKILL_CONTENT);
+            }
+        } catch {
+            // Non-fatal — skill just won't be available
         }
     }
 
@@ -149,3 +169,31 @@ export class SkillsManager {
             .replace(/"/g, '&quot;');
     }
 }
+
+// ---------------------------------------------------------------------------
+// Built-in skill content
+// ---------------------------------------------------------------------------
+
+const SETTINGS_SKILL_CONTENT = `---
+name: settings-assistant
+description: Hilft dem Nutzer Obsilo-Einstellungen zu aendern. Settings, Einstellungen, Konfiguration, Setup, Permissions, Modell, API Key, Berechtigungen.
+---
+
+# Settings Assistant
+
+Du kannst dem Nutzer helfen, seine Obsilo-Einstellungen zu aendern.
+
+## Verfuegbare Aktionen
+
+- **Modell wechseln oder konfigurieren**: Nutze \`configure_model\` (add/select/test)
+- **Permissions aendern**: Nutze \`update_settings\` mit action="apply_preset" (permissive/balanced/restrictive)
+- **Einzelne Einstellung aendern**: Nutze \`update_settings\` mit action="set" und dem Pfad
+- **Setup neu starten**: Setze onboarding.completed auf false und onboarding.currentStep auf "backup"
+
+## Wichtige Regeln
+
+- Frage den Nutzer was er aendern moechte, statt alle Optionen aufzulisten.
+- API-Keys nur ueber configure_model setzen, nie ueber update_settings.
+- Erklaere was eine Einstellung bewirkt, bevor du sie aenderst.
+- Bestaetige nach der Aenderung was sich geaendert hat.
+`;

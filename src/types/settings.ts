@@ -120,6 +120,25 @@ export const BUILT_IN_MODELS: CustomModel[] = [
         enabled: false,
         isBuiltIn: true,
     },
+    // Google Gemini (Free Tier — OpenAI-compatible endpoint)
+    {
+        name: 'gemini-2.5-flash',
+        provider: 'custom',
+        displayName: 'Gemini 2.5 Flash (Free)',
+        baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
+        enabled: false,
+        isBuiltIn: true,
+        maxTokens: 8192,
+    },
+    {
+        name: 'gemini-2.5-flash-lite',
+        provider: 'custom',
+        displayName: 'Gemini 2.5 Flash-Lite (Free)',
+        baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
+        enabled: false,
+        isBuiltIn: true,
+        maxTokens: 8192,
+    },
 ];
 
 // ---------------------------------------------------------------------------
@@ -446,6 +465,9 @@ export interface ObsidianAgentSettings {
     // Recipes (PAS-1.5)
     recipes: RecipeSettings;
 
+    // Onboarding
+    onboarding: OnboardingSettings;
+
     // Advanced
     debugMode: boolean;
 }
@@ -476,6 +498,23 @@ export interface RecipeSettings {
     recipeToggles: Record<string, boolean>;
     /** User-defined custom recipes (validated on load) */
     customRecipes: import('../core/tools/agent/recipeRegistry').Recipe[];
+}
+
+// ---------------------------------------------------------------------------
+// Onboarding Settings
+// ---------------------------------------------------------------------------
+
+export type OnboardingStep = 'backup' | 'profile' | 'model' | 'permissions' | 'done';
+
+export interface OnboardingSettings {
+    /** true when setup has been fully completed */
+    completed: boolean;
+    /** Current step in the setup flow */
+    currentStep: OnboardingStep;
+    /** Steps the user chose to skip */
+    skippedSteps: OnboardingStep[];
+    /** ISO timestamp when setup was started */
+    startedAt: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -515,6 +554,7 @@ export const DEFAULT_SETTINGS: ObsidianAgentSettings = {
             'ask_followup_question', 'attempt_completion', 'update_todo_list', 'new_task',
             'execute_command', 'resolve_capability_gap', 'enable_plugin',
             'call_plugin_api', 'execute_recipe',
+            'update_settings', 'configure_model',
         ],
     },
     activeMcpServers: [],
@@ -612,6 +652,12 @@ export const DEFAULT_SETTINGS: ObsidianAgentSettings = {
         enabled: true,
         recipeToggles: {},
         customRecipes: [],
+    },
+    onboarding: {
+        completed: false,
+        currentStep: 'backup',
+        skippedSteps: [],
+        startedAt: '',
     },
     debugMode: false,
 };

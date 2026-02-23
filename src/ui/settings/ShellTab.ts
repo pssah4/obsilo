@@ -30,13 +30,12 @@ export class ShellTab {
                 }),
             );
 
-        // Show built-in allowlist as read-only info
+        // Show built-in allowlist as Setting items
         if (this.plugin.settings.pluginApi?.enabled !== false) {
-            const allowlistEl = containerEl.createDiv({ cls: 'agent-settings-info-block' });
-            allowlistEl.createEl('h4', { text: 'Built-in Allowlist' });
-            allowlistEl.createEl('p', {
+            containerEl.createEl('h4', { cls: 'agent-settings-section', text: 'Built-in Allowlist' });
+            containerEl.createEl('p', {
                 cls: 'agent-settings-desc',
-                text: 'These plugin methods are pre-approved and can be called by the agent. Read methods can be auto-approved; write methods require explicit approval unless configured otherwise.',
+                text: 'Pre-approved plugin methods the agent can call. Read methods auto-approve; write methods require confirmation.',
             });
 
             // Group by plugin
@@ -48,16 +47,11 @@ export class ShellTab {
             }
 
             for (const [pluginId, methods] of byPlugin) {
-                const group = allowlistEl.createDiv({ cls: 'agent-settings-allowlist-group' });
-                group.createEl('strong', { text: pluginId });
-                const list = group.createEl('ul');
                 for (const m of methods) {
-                    const li = list.createEl('li');
-                    li.createEl('code', { text: m.method });
-                    li.appendText(` — ${m.description}`);
-                    if (m.isWrite) {
-                        li.createEl('span', { cls: 'agent-settings-badge-write', text: ' write' });
-                    }
+                    const badge = m.isWrite ? ' [write]' : ' [read]';
+                    new Setting(containerEl)
+                        .setName(`${pluginId}.${m.method}`)
+                        .setDesc(`${m.description}${badge}`);
                 }
             }
 
@@ -65,13 +59,13 @@ export class ShellTab {
             const overrides = this.plugin.settings.pluginApi?.safeMethodOverrides ?? {};
             const overrideKeys = Object.keys(overrides).filter((k) => overrides[k]);
             if (overrideKeys.length > 0) {
-                allowlistEl.createEl('h4', { text: 'User Safe-Marked Methods' });
-                allowlistEl.createEl('p', {
+                containerEl.createEl('h4', { cls: 'agent-settings-section', text: 'User Safe-Marked Methods' });
+                containerEl.createEl('p', {
                     cls: 'agent-settings-desc',
                     text: 'Dynamically discovered methods you marked as safe (read-only). Remove to require approval again.',
                 });
                 for (const key of overrideKeys) {
-                    new Setting(allowlistEl)
+                    new Setting(containerEl)
                         .setName(key)
                         .setDesc('Marked as safe (read) — auto-approvable')
                         .addButton((btn) =>
@@ -103,7 +97,7 @@ export class ShellTab {
             );
 
         if (this.plugin.settings.recipes?.enabled) {
-            containerEl.createEl('h4', { text: 'Built-in Recipes' });
+            containerEl.createEl('h4', { cls: 'agent-settings-section', text: 'Built-in Recipes' });
 
             const toggles = this.plugin.settings.recipes?.recipeToggles ?? {};
 

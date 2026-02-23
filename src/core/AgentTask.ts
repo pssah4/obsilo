@@ -39,7 +39,7 @@ export interface AgentTaskCallbacks {
     /** Called when attempt_completion fires — triggers todo auto-complete */
     onAttemptCompletion?: () => void;
     /** Called when ask_followup_question is invoked — pauses loop until resolved */
-    onQuestion?: (question: string, options: string[] | undefined, resolve: (answer: string) => void) => void;
+    onQuestion?: (question: string, options: string[] | undefined, resolve: (answer: string) => void, allowMultiple?: boolean) => void;
     /** Called when a write tool needs user approval — pauses loop until user decides */
     onApprovalRequired?: (toolName: string, input: Record<string, any>) => Promise<import('./tool-execution/ToolExecutionPipeline').ApprovalResult>;
     /** Called when update_todo_list publishes a new todo plan */
@@ -170,9 +170,9 @@ export class AgentTask {
 
         // Wire up context extensions for agent-control tools
         const askQuestion = this.taskCallbacks.onQuestion
-            ? (question: string, options?: string[]): Promise<string> => {
+            ? (question: string, options?: string[], allowMultiple?: boolean): Promise<string> => {
                 return new Promise<string>((resolve) => {
-                    this.taskCallbacks.onQuestion!(question, options, resolve);
+                    this.taskCallbacks.onQuestion!(question, options, resolve, allowMultiple);
                 });
             }
             : undefined;

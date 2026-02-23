@@ -2,6 +2,7 @@ import { App, Notice, setIcon } from 'obsidian';
 import type ObsidianAgentPlugin from '../../main';
 import { ContentEditorModal } from './ContentEditorModal';
 import type { PluginSkillMeta } from '../../core/skills/types';
+import { BUILT_IN_MODES } from '../../core/modes/builtinModes';
 
 export class SkillsTab {
     private readonly skillsDir = '.obsidian-agent/plugin-skills';
@@ -11,6 +12,12 @@ export class SkillsTab {
     build(containerEl: HTMLElement): void {
         // -- Manual Skills (first) --
         this.buildManualSkillsSection(containerEl);
+
+        // -- Separator --
+        containerEl.createEl('hr');
+
+        // -- Skills per Mode --
+        this.buildSkillsPerModeSection(containerEl);
 
         // -- Separator --
         containerEl.createEl('hr');
@@ -166,6 +173,75 @@ export class SkillsTab {
         });
 
         refreshList();
+    }
+
+    // -- Skills per Mode --
+
+    private buildSkillsPerModeSection(containerEl: HTMLElement): void {
+        containerEl.createEl('h3', { text: 'Skills per Mode' });
+        containerEl.createEl('p', {
+            cls: 'agent-settings-desc',
+            text: 'Force specific skills to always be injected into the system prompt for a mode, regardless of keyword matching.',
+        });
+
+        const skillsManager = (this.plugin as any).skillsManager;
+        if (!skillsManager) {
+            containerEl.createEl('p', { cls: 'agent-settings-desc', text: 'Skills manager not available.' });
+            return;
+        }
+
+        const listEl = containerEl.createDiv({ cls: 'agent-skills-per-mode-list' });
+        listEl.createEl('span', { cls: 'modes-loading-hint', text: 'Loading...' });
+
+        (async () => {
+            listEl.empty();
+            const allSkills: { path: string; name: string; description: string }[] =
+                await skillsManager.discoverSkills();
+
+            if (allSkills.length === 0) {
+                listEl.createEl('p', { cls: 'agent-empty-state', text: 'No manual skills found. Create skills above first.' });
+                return;
+            }
+
+            // Collect all modes: built-in + custom
+            const allModes = [...BUILT_IN_MODES, ...(this.plugin.settings.customModes ?? [])];
+
+            for (const mode of allModes) {
+                const modeWrap = listEl.createDiv({ cls: 'agent-skills-mode-block' });
+                const header = modeWrap.createDiv({ cls: 'agent-skill-group-header' });
+                const chevron = header.createSpan({ cls: 'agent-skill-group-chevron' });
+                setIcon(chevron, 'chevron-down');
+                header.createSpan({ text: `${mode.name} (${mode.slug})`, cls: 'agent-skill-group-title' });
+
+                const content = modeWrap.createDiv({ cls: 'agent-skill-group-content' });
+
+                const forcedSet = new Set<string>(this.plugin.settings.forcedSkills?.[mode.slug] ?? []);
+
+                for (const skill of allSkills) {
+                    const row = content.createDiv({ cls: 'modes-skills-row' });
+                    const cb = row.createEl('input', { type: 'checkbox' }) as HTMLInputElement;
+                    cb.checked = forcedSet.has(skill.name);
+                    const lbl = row.createEl('label', { cls: 'modes-skills-label' });
+                    lbl.createSpan({ text: skill.name });
+                    if (skill.description) lbl.createSpan({ cls: 'modes-skills-desc', text: skill.description });
+                    cb.addEventListener('change', async () => {
+                        if (!this.plugin.settings.forcedSkills) this.plugin.settings.forcedSkills = {};
+                        const cur = new Set<string>(this.plugin.settings.forcedSkills[mode.slug] ?? []);
+                        if (cb.checked) cur.add(skill.name);
+                        else cur.delete(skill.name);
+                        this.plugin.settings.forcedSkills[mode.slug] = [...cur];
+                        await this.plugin.saveSettings();
+                    });
+                }
+
+                // Collapsible toggle
+                header.addEventListener('click', () => {
+                    const collapsed = content.classList.toggle('agent-skill-group-collapsed');
+                    chevron.empty();
+                    setIcon(chevron, collapsed ? 'chevron-right' : 'chevron-down');
+                });
+            }
+        })();
     }
 
     // -- Obsidian Plugin Skills (PAS-1) --

@@ -1,7 +1,7 @@
 # Obsidian Agent — Backlog
 
 > Status: `[x]` fertig · `[~]` in Arbeit · `[ ]` offen · `[-]` zurückgestellt
-> Letzte Aktualisierung: 2026-02-21 (Code Import Models)
+> Letzte Aktualisierung: 2026-02-23 (Onboarding & Settings-Skill)
 
 ---
 
@@ -60,7 +60,7 @@
 | `[x]` | ExtractionQueue (persistent FIFO, survives restarts, background processing) | `src/core/memory/ExtractionQueue.ts` |
 | `[x]` | SessionExtractor (LLM-based session summary via memoryModelKey) | `src/core/memory/SessionExtractor.ts` |
 | `[x]` | LongTermExtractor (promote facts from sessions to long-term files) | `src/core/memory/LongTermExtractor.ts` |
-| `[x]` | OnboardingService (first-contact detection, profile bootstrapping) | `src/core/memory/OnboardingService.ts` |
+| `[x]` | OnboardingService (step-based conversational setup, 5-step flow) | `src/core/memory/OnboardingService.ts` |
 | `[x]` | MemoryRetriever (cross-session context via semantic search) | `src/core/memory/MemoryRetriever.ts` |
 | `[x]` | Event Separation (hasStreamedText flag, completion result as fallback only) | `src/core/AgentTask.ts` |
 
@@ -122,6 +122,8 @@
 | `[x]` | new_task (multi-agent subtask delegation) | `src/core/tools/agent/NewTaskTool.ts` |
 | `[x]` | call_plugin_api (Plugin API Bridge) | `src/core/tools/agent/CallPluginApiTool.ts` |
 | `[x]` | execute_recipe (Recipe Shell) | `src/core/tools/agent/ExecuteRecipeTool.ts` |
+| `[x]` | update_settings (set + apply_preset) | `src/core/tools/agent/UpdateSettingsTool.ts` |
+| `[x]` | configure_model (add + select + test) | `src/core/tools/agent/ConfigureModelTool.ts` |
 
 ### Tools: MCP
 | Status | Tool | Datei |
@@ -187,12 +189,12 @@
 
 ## Tool-Zählung
 
-**32 Tools implementiert:**
+**34 Tools implementiert:**
 - read (3): read_file, list_files, search_files
 - vault (9): get_vault_stats, get_frontmatter, update_frontmatter, search_by_tag, get_linked_notes, open_note, get_daily_note, semantic_search, query_base
 - edit (9): write_file, edit_file, append_to_file, create_folder, delete_file, move_file, generate_canvas, create_base, update_base
 - web (2): web_fetch, web_search
-- agent (7): ask_followup_question, attempt_completion, switch_mode, update_todo_list, new_task, call_plugin_api, execute_recipe
+- agent (9): ask_followup_question, attempt_completion, switch_mode, update_todo_list, new_task, call_plugin_api, execute_recipe, update_settings, configure_model
 - mcp (1): use_mcp_tool
 - skill (3): execute_command, resolve_capability_gap, enable_plugin
 - (update_frontmatter ist in vault + edit verfügbar)

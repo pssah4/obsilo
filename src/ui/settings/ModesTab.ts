@@ -323,49 +323,6 @@ export class ModesTab {
                 });
             }
 
-            // ── Forced Skills ────────────────────────────────────────────────
-            const skillsMgrForMode = (this.plugin as any).skillsManager;
-            if (skillsMgrForMode) {
-                const skillsWrap = formArea.createDiv('modes-field');
-                skillsWrap.createEl('div', { cls: 'modes-field-label', text: 'Forced Skills' });
-                skillsWrap.createEl('div', {
-                    cls: 'modes-field-desc',
-                    text: 'Skills always injected into the system prompt for this mode, regardless of message keyword matching.',
-                });
-                const skillsCbList = skillsWrap.createDiv('modes-skills-list');
-                skillsCbList.createEl('span', { cls: 'modes-loading-hint', text: 'Loading skills…' });
-                (async () => {
-                    skillsCbList.empty();
-                    try {
-                        const allSkills: { path: string; name: string; description: string }[] =
-                            await skillsMgrForMode.discoverSkills();
-                        if (allSkills.length === 0) {
-                            skillsCbList.createEl('span', { cls: 'modes-loading-hint', text: 'No skills found. Create skills in the Skills tab.' });
-                        } else {
-                            const forcedSet = new Set<string>(this.plugin.settings.forcedSkills?.[slug] ?? []);
-                            for (const skill of allSkills) {
-                                const row = skillsCbList.createDiv('modes-skills-row');
-                                const cb = row.createEl('input', { type: 'checkbox' }) as HTMLInputElement;
-                                cb.checked = forcedSet.has(skill.name);
-                                const lbl = row.createEl('label', { cls: 'modes-skills-label' });
-                                lbl.createSpan({ text: skill.name });
-                                if (skill.description) lbl.createSpan({ cls: 'modes-skills-desc', text: skill.description });
-                                cb.addEventListener('change', async () => {
-                                    if (!this.plugin.settings.forcedSkills) this.plugin.settings.forcedSkills = {};
-                                    const cur = new Set<string>(this.plugin.settings.forcedSkills[slug] ?? []);
-                                    if (cb.checked) cur.add(skill.name);
-                                    else cur.delete(skill.name);
-                                    this.plugin.settings.forcedSkills[slug] = [...cur];
-                                    await this.plugin.saveSettings();
-                                });
-                            }
-                        }
-                    } catch {
-                        skillsCbList.createEl('span', { cls: 'modes-loading-hint', text: 'Error loading skills.' });
-                    }
-                })();
-            }
-
             // ── Allowed MCP Servers ──────────────────────────────────────────
             const mcpServerNames = Object.keys(this.plugin.settings.mcpServers ?? {});
             if (mcpServerNames.length > 0) {

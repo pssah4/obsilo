@@ -172,26 +172,60 @@ export class MemoryTab {
             containerEl.createEl('h3', { cls: 'agent-settings-section', text: 'Onboarding' });
 
             if (memService) {
-                const onboarding = new OnboardingService(memService);
-                const onboardingSetting = new Setting(containerEl)
-                    .setName('User profile')
-                    .setDesc('Checking...');
+                const onboarding = new OnboardingService(memService, this.plugin);
+                const isComplete = !onboarding.needsOnboarding();
+                const isInProgress = !isComplete && onboarding.getSetupStep() !== 'backup';
 
-                onboarding.needsOnboarding().then((needs) => {
-                    if (needs) {
-                        onboardingSetting.setDesc('No profile yet. Start a conversation and the agent will naturally learn about you.');
-                    } else {
-                        onboardingSetting.setDesc('Profile active. The agent uses your preferences to personalize responses.');
-                        onboardingSetting.addButton((b) =>
-                            b.setButtonText('Re-run onboarding').onClick(async () => {
-                                // Reset user-profile.md to template so onboarding triggers again
-                                await memService.writeFile('user-profile.md', '# User Profile\n\n## Identity\n- Name:\n- Role:\n\n## Communication\n- Language:\n- Style:\n\n## Agent Behavior\n');
-                                new Notice('Profile reset. Onboarding will run on your next conversation.');
-                                this.rerender();
-                            }),
+                const profileSetting = new Setting(containerEl)
+                    .setName('User profile');
+
+                if (!isComplete) {
+                    profileSetting.setDesc('No profile yet. Start a conversation and the agent will guide you through setup.');
+                } else {
+                    profileSetting.setDesc('Profile active. The agent uses your preferences to personalize responses.');
+                }
+
+                // Setup dialog controls
+                const setupSetting = new Setting(containerEl)
+                    .setName('Setup dialog')
+                    .setDesc(
+                        isComplete
+                            ? 'Setup completed. Restart to re-configure model, permissions, and profile.'
+                            : isInProgress
+                                ? `Setup in progress (Step ${onboarding.getStepIndex()}/${onboarding.getTotalSteps()} — ${onboarding.getStepLabel()}). Open the chat to continue.`
+                                : 'Setup not started yet. Open the chat to begin.',
+                    );
+
+                setupSetting.addButton((b) =>
+                    b.setButtonText(isComplete ? 'Restart setup' : 'Start setup').setCta().onClick(async () => {
+                        await onboarding.reset();
+                        await this.plugin.sendMessageToAgent(
+                            'Starte den Setup-Prozess. Folge den Onboarding-Anweisungen im System-Prompt.',
+                            true,
                         );
-                    }
-                });
+                    }),
+                );
+
+                if (isInProgress) {
+                    setupSetting.addButton((b) =>
+                        b.setButtonText('Continue setup').onClick(async () => {
+                            await this.plugin.sendMessageToAgent(
+                                'Setze den Setup-Prozess fort. Folge den Onboarding-Anweisungen im System-Prompt.',
+                                true,
+                            );
+                        }),
+                    );
+                }
+
+                if (!isComplete) {
+                    setupSetting.addButton((b) =>
+                        b.setButtonText('Skip setup').onClick(async () => {
+                            await onboarding.markCompleted();
+                            new Notice('Setup skipped. You can restart it anytime from settings.');
+                            this.rerender();
+                        }),
+                    );
+                }
             }
         }
     }

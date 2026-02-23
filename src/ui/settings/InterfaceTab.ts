@@ -1,11 +1,71 @@
 import { App, Notice, Setting, setIcon } from 'obsidian';
 import type ObsidianAgentPlugin from '../../main';
+import { OnboardingService } from '../../core/memory/OnboardingService';
 
 
 export class InterfaceTab {
     constructor(private plugin: ObsidianAgentPlugin, private app: App, private rerender: () => void) {}
 
     build(containerEl: HTMLElement): void {
+        // ─── Setup Dialog ─────────────────────────────────────────────
+        containerEl.createEl('h3', { cls: 'agent-settings-section', text: 'Setup Dialog' });
+
+        if (this.plugin.memoryService) {
+            const onboarding = new OnboardingService(this.plugin.memoryService, this.plugin);
+            const isComplete = !onboarding.needsOnboarding();
+            const isInProgress = !isComplete && onboarding.getSetupStep() !== 'backup';
+
+            const setupSetting = new Setting(containerEl)
+                .setName('Guided setup')
+                .setDesc(
+                    isComplete
+                        ? 'Setup completed. Restart to re-configure model, permissions, and profile.'
+                        : isInProgress
+                            ? `Setup in progress (Step ${onboarding.getStepIndex()}/${onboarding.getTotalSteps()} — ${onboarding.getStepLabel()}). Open the chat to continue.`
+                            : 'Setup not started yet. Open the chat to begin.',
+                );
+
+            // Start / Restart Setup — triggers agent message with explicit setup instruction
+            setupSetting.addButton((b) =>
+                b.setButtonText(isComplete ? 'Restart setup' : 'Start setup').setCta().onClick(async () => {
+                    await onboarding.reset();
+                    await this.plugin.sendMessageToAgent(
+                        'Starte den Setup-Prozess. Folge den Onboarding-Anweisungen im System-Prompt.',
+                        true,
+                    );
+                }),
+            );
+
+            // Continue Setup (only when in progress) — opens chat at current step
+            if (isInProgress) {
+                setupSetting.addButton((b) =>
+                    b.setButtonText('Continue setup').onClick(async () => {
+                        await this.plugin.sendMessageToAgent(
+                            'Setze den Setup-Prozess fort. Folge den Onboarding-Anweisungen im System-Prompt.',
+                            true,
+                        );
+                    }),
+                );
+            }
+
+            // Skip Setup (only when not complete)
+            if (!isComplete) {
+                setupSetting.addButton((b) =>
+                    b.setButtonText('Skip setup').onClick(async () => {
+                        await onboarding.markCompleted();
+                        new Notice('Setup skipped. You can restart it anytime from settings.');
+                        this.rerender();
+                    }),
+                );
+            }
+        } else {
+            new Setting(containerEl)
+                .setName('Guided setup')
+                .setDesc('Memory service not available. Enable memory to use the setup dialog.');
+        }
+
+        // ─── Interface Settings ───────────────────────────────────────
+        containerEl.createEl('h3', { cls: 'agent-settings-section', text: 'Interface' });
         new Setting(containerEl)
             .setName('Auto-add active note as context')
             .setDesc('Automatically attach the note you have open in the editor to every message you send. The agent can see and reference its content.')
