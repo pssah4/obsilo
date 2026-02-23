@@ -19,6 +19,7 @@ import { LogTab }         from './settings/LogTab';
 import { DebugTab }       from './settings/DebugTab';
 import { BackupTab }      from './settings/BackupTab';
 import { MemoryTab }      from './settings/MemoryTab';
+import { ShellTab }       from './settings/ShellTab';
 
 // Re-export for backward compatibility (used in main.ts and other places)
 export { ModelConfigModal } from './settings/ModelConfigModal';
@@ -187,6 +188,7 @@ export class AgentSettingsTab extends PluginSettingTab {
             container,
             [
                 { id: 'interface', label: 'Interface' },
+                { id: 'shell',     label: 'Shell'     },
                 { id: 'log',       label: 'Log'       },
                 { id: 'debug',     label: 'Debug'     },
                 { id: 'backup',    label: 'Backup'    },
@@ -197,6 +199,7 @@ export class AgentSettingsTab extends PluginSettingTab {
         const content = container.createDiv({ cls: 'agent-settings-subcontent' });
         const rerender = () => this.display();
         if (this.activeAdvancedSubTab === 'interface') new InterfaceTab(this.plugin, this.app, rerender).build(content);
+        if (this.activeAdvancedSubTab === 'shell')     new ShellTab(this.plugin, this.app, rerender).build(content);
         if (this.activeAdvancedSubTab === 'log')       new LogTab(this.plugin, this.app, rerender).build(content);
         if (this.activeAdvancedSubTab === 'debug')     new DebugTab(this.plugin, this.app, rerender).build(content);
         if (this.activeAdvancedSubTab === 'backup')    new BackupTab(this.plugin, this.app, rerender).build(content);

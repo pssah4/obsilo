@@ -47,4 +47,8 @@ export interface PluginSkillMeta {
     hasSettings?: boolean;
     /** Whether the plugin appears to need setup/configuration */
     needsSetup?: boolean;
+    /** Whether this plugin exposes a JavaScript API (plugin.api or plugin itself) */
+    hasApi?: boolean;
+    /** Method names discovered via Reflection on the API object */
+    apiMethods?: string[];
 }

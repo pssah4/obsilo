@@ -612,6 +612,42 @@ PAS-2 und PAS-3 fügen **ausschließlich** neue Komponenten hinzu. An PAS-1-Komp
 
 ## Offene Fragen
 
+**US-07 · Plugin API Queries**
+Als Nutzer moechte ich, dass der Agent Plugin-APIs direkt aufrufen kann (z.B. Dataview-Queries, Omnisearch-Suche, MetaEdit-Updates) und strukturierte Ergebnisse zurueckbekommt – ohne Umweg ueber Commands.
+
+*Akzeptanzkriterien:*
+- Neues Tool `call_plugin_api(plugin_id, method, args)` verfuegbar
+- Built-in Allowlist fuer bekannte Plugins: Dataview (query, tryQueryMarkdown, pages, page), Omnisearch (search), MetaEdit (getPropertyValue, getFilesWithProperty, update)
+- Dynamische Discovery: VaultDNA Scanner erkennt Plugins mit `.api`-Property und listet Methoden per Reflection
+- Dynamisch entdeckte Methoden erfordern IMMER User-Approval (isWrite = true) bis User explizit als safe markiert
+- Methoden-Blocklist: execute, executeJs, render, register, unregister immer geblockt
+- 10s Timeout pro Call, Return-Value truncated auf maxReturnSize
+- Settings Toggle: `pluginApi.enabled` (default: true)
+- Auto-Approval getrennt fuer Read und Write: `autoApproval.pluginApiRead` (default: true), `autoApproval.pluginApiWrite` (default: false)
+- Fehlermeldung wenn Plugin nicht geladen oder Methode nicht in Allowlist/Discovery
+
+**US-08 · Recipe-basierte externe Tool-Ausfuehrung**
+Als Nutzer moechte ich, dass der Agent vordefinierte Rezepte fuer externe Tools ausfuehren kann (z.B. Pandoc PDF-Export) – ohne Zugriff auf eine offene Shell.
+
+*Akzeptanzkriterien:*
+- Neues Tool `execute_recipe(recipe_id, params)` verfuegbar
+- Built-in Rezepte: pandoc-pdf, pandoc-docx, pandoc-convert, check-dependency
+- Kein `shell: true` – alle Rezepte laufen via `child_process.spawn` mit args-Array
+- Parameter-Validierung: Shell-Metazeichen verboten, Pfad-Confinement auf Vault-Root, Typ-Pruefung
+- Binary-Pfad via `which`/`where` zu absolutem Pfad resolved (kein PATH-Hijacking)
+- Timeout + SIGKILL-Fallback, Output-Limit, stdin geschlossen
+- Minimale Env-Vars: nur PATH, HOME, LANG
+- Master-Toggle: `recipes.enabled` (default: false, Opt-in)
+- Jedes Rezept einzeln aktivierbar via `recipeToggles`
+- User kann eigene Rezepte hinzufuegen (validiert beim Laden)
+- Auto-Approval: `autoApproval.recipes` (default: false)
+- Settings Tab "Shell" mit Rezept-Uebersicht und Toggles
+- Klare Fehlermeldung wenn Binary nicht installiert
+
+---
+
+## Offene Fragen
+
 **OQ-01 · Obsidian Plugin Events**
 Obsidian dokumentiert `plugin-enabled` / `plugin-disabled` Events nicht offiziell. Fallback-Strategie: kurzes Polling (alle 5s) auf `app.plugins.enabledPlugins` als Diff gegen letzten bekannten Stand. Muss im Prototyp getestet werden.
 

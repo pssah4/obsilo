@@ -252,6 +252,12 @@ export interface AutoApprovalConfig {
     todo: boolean;
     /** Auto-approve skills injection into context (future) */
     skills: boolean;
+    /** Auto-approve plugin API read calls (built-in allowlist, isWrite=false) */
+    pluginApiRead: boolean;
+    /** Auto-approve plugin API write calls (built-in allowlist, isWrite=true) */
+    pluginApiWrite: boolean;
+    /** Auto-approve recipe execution */
+    recipes: boolean;
 }
 
 /** Legacy — kept for backwards compat */
@@ -429,8 +435,42 @@ export interface ObsidianAgentSettings {
     // VaultDNA — Plugin-as-Skill (PAS-1)
     vaultDNA: VaultDNASettings;
 
+    // Plugin API (PAS-1.5)
+    pluginApi: PluginApiSettings;
+
+    // Recipes (PAS-1.5)
+    recipes: RecipeSettings;
+
     // Advanced
     debugMode: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// Plugin API Settings (PAS-1.5, ADR-108)
+// ---------------------------------------------------------------------------
+
+export interface PluginApiSettings {
+    /** Master toggle for plugin API calls (default: true — runs in JS sandbox) */
+    enabled: boolean;
+    /**
+     * Per-method safe overrides for dynamically discovered methods.
+     * Key: "pluginId:methodName", value: true = treat as read (auto-approvable).
+     * Only relevant for methods NOT in the built-in allowlist.
+     */
+    safeMethodOverrides: Record<string, boolean>;
+}
+
+// ---------------------------------------------------------------------------
+// Recipe Settings (PAS-1.5, ADR-109)
+// ---------------------------------------------------------------------------
+
+export interface RecipeSettings {
+    /** Master toggle — default false (opt-in) */
+    enabled: boolean;
+    /** Per-recipe toggle: maps recipe id → boolean. Missing = enabled by default. */
+    recipeToggles: Record<string, boolean>;
+    /** User-defined custom recipes (validated on load) */
+    customRecipes: import('../core/tools/agent/recipeRegistry').Recipe[];
 }
 
 // ---------------------------------------------------------------------------
@@ -469,6 +509,7 @@ export const DEFAULT_SETTINGS: ObsidianAgentSettings = {
             'web_fetch', 'web_search',
             'ask_followup_question', 'attempt_completion', 'update_todo_list', 'new_task',
             'execute_command', 'resolve_capability_gap', 'enable_plugin',
+            'call_plugin_api', 'execute_recipe',
         ],
     },
     activeMcpServers: [],
@@ -489,6 +530,9 @@ export const DEFAULT_SETTINGS: ObsidianAgentSettings = {
         question: true,
         todo: true,
         skills: false,
+        pluginApiRead: true,
+        pluginApiWrite: false,
+        recipes: false,
     },
     autoApprovalRules: {
         readOperations: true,
@@ -552,6 +596,15 @@ export const DEFAULT_SETTINGS: ObsidianAgentSettings = {
         enabled: true,
         skillToggles: {},
         lastScanAt: '',
+    },
+    pluginApi: {
+        enabled: true,
+        safeMethodOverrides: {},
+    },
+    recipes: {
+        enabled: false,
+        recipeToggles: {},
+        customRecipes: [],
     },
     debugMode: false,
 };

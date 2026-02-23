@@ -51,6 +51,9 @@ import { NewTaskTool } from './agent/NewTaskTool';
 import { ExecuteCommandTool } from './agent/ExecuteCommandTool';
 import { ResolveCapabilityGapTool } from './agent/ResolveCapabilityGapTool';
 import { EnablePluginTool } from './agent/EnablePluginTool';
+// Plugin API + Recipe Shell (PAS-1.5)
+import { CallPluginApiTool } from './agent/CallPluginApiTool';
+import { ExecuteRecipeTool } from './agent/ExecuteRecipeTool';
 // MCP tool
 import { UseMcpToolTool } from './mcp/UseMcpToolTool';
 import type { McpClient } from '../mcp/McpClient';
@@ -112,6 +115,9 @@ export class ToolRegistry {
         this.register(new ExecuteCommandTool(this.plugin));
         this.register(new ResolveCapabilityGapTool(this.plugin));
         this.register(new EnablePluginTool(this.plugin));
+        // Plugin API + Recipe Shell (PAS-1.5)
+        this.register(new CallPluginApiTool(this.plugin));
+        this.register(new ExecuteRecipeTool(this.plugin));
 
         console.log(`ToolRegistry: Registered ${this.getToolCount()} tools`);
     }

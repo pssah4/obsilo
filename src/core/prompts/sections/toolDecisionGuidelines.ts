@@ -16,7 +16,9 @@ export function getToolDecisionGuidelinesSection(): string {
    (e) Execute the command via execute_command.
    Config paths: Community: .obsidian/plugins/{id}/data.json | Core: .obsidian/{id}.json
    NEVER ask the user to configure via Settings UI. Write data.json yourself.
-1c. NEVER CREATE FAKE OUTPUT — When the user asks to export/convert a file (PDF, DOCX, etc.), use the plugin's execute_command. NEVER write content to a .pdf/.docx file yourself. If the command opens a dialog, execute it and briefly tell the user what to click. If no plugin exists, tell the user which to install.
+1c. NEVER CREATE FAKE OUTPUT — When the user asks to export/convert a file (PDF, DOCX, etc.), use execute_recipe or the plugin's execute_command. NEVER write content to a .pdf/.docx file yourself. If the command opens a dialog, execute it and briefly tell the user what to click. If no plugin exists, tell the user which to install.
+1d. PLUGIN API — When you need structured data from a plugin (Dataview queries, Omnisearch results, MetaEdit properties), use call_plugin_api instead of execute_command. It returns actual data. Check the PLUGIN SKILLS section for available API methods per plugin.
+1e. RECIPES FOR EXTERNAL TOOLS — For file conversion (PDF, DOCX), use execute_recipe with the appropriate recipe (pandoc-pdf, pandoc-docx, pandoc-convert). Use check-dependency first to verify the program is installed. Recipes run without shell — parameters are validated and safe.
 2. CHECK CONTEXT FIRST. The <vault_context> block shows the vault's top-level structure. Use it before calling list_files or get_vault_stats.
 3. NO REDUNDANT READS. Only call read_file for files whose content is NOT already in the conversation.
 4. BATCH INDEPENDENT CALLS. Call multiple independent tools in one step (parallel execution).

@@ -48,7 +48,10 @@ export type ToolName =
     // Skill (PAS-1)
     | 'execute_command'
     | 'resolve_capability_gap'
-    | 'enable_plugin';
+    | 'enable_plugin'
+    // Plugin API + Recipe Shell (PAS-1.5)
+    | 'call_plugin_api'
+    | 'execute_recipe';
 
 /**
  * Tool use request from LLM

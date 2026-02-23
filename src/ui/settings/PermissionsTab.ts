@@ -124,5 +124,37 @@ export class PermissionsTab {
                     await this.plugin.saveSettings();
                 }),
             );
+
+        containerEl.createEl('h3', { cls: 'agent-settings-section', text: 'Plugin API & Recipes' });
+
+        new Setting(containerEl)
+            .setName('Plugin API reads')
+            .setDesc('Auto-approve read-only plugin API calls (e.g., Dataview queries, Omnisearch). These never modify your vault.')
+            .addToggle((t) =>
+                t.setValue(this.plugin.settings.autoApproval.pluginApiRead ?? true).onChange(async (v) => {
+                    this.plugin.settings.autoApproval.pluginApiRead = v;
+                    await this.plugin.saveSettings();
+                }),
+            );
+
+        new Setting(containerEl)
+            .setName('Plugin API writes')
+            .setDesc('Auto-approve plugin API calls that modify data (e.g., MetaEdit update). Off by default for safety.')
+            .addToggle((t) =>
+                t.setValue(this.plugin.settings.autoApproval.pluginApiWrite ?? false).onChange(async (v) => {
+                    this.plugin.settings.autoApproval.pluginApiWrite = v;
+                    await this.plugin.saveSettings();
+                }),
+            );
+
+        new Setting(containerEl)
+            .setName('Recipe execution')
+            .setDesc('Auto-approve recipe execution (Pandoc exports, etc.). Off by default. Each recipe runs via spawn without shell expansion.')
+            .addToggle((t) =>
+                t.setValue(this.plugin.settings.autoApproval.recipes ?? false).onChange(async (v) => {
+                    this.plugin.settings.autoApproval.recipes = v;
+                    await this.plugin.saveSettings();
+                }),
+            );
     }
 }

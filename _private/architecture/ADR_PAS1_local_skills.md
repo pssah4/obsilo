@@ -201,3 +201,107 @@ Option A würde den System Prompt mit nutzlosen Skills aufblähen. Option B erfo
 - NONE-Plugins werden in `vault-dna.json` mit `reason` eingetragen aber kein Skill-File generiert
 - Heuristik kann für manche Plugins suboptimal sein → Nutzer-Override via Settings Tab
 - In PAS-3 kann LLM-Anreicherung die Klassifizierung verfeinern (als zweiter Pass)
+
+---
+
+## ADR-108: Plugin API Bridge statt offener Shell-Zugriff
+
+**Status:** `ACCEPTED`
+
+**Kontext**
+
+Der Agent kann Obsidian-Commands per `execute_command` feuern, aber: kein Parameter-Passing, kein Return-Value. Viele wertvolle Plugins (Dataview, Omnisearch, MetaEdit) bieten JavaScript-APIs die strukturierte Daten liefern. In VS Code loest Kilo Code das ueber eine offene Shell (`execa({ shell: true })`). Obsidian-Nutzer sind aber haeufig nicht technikaffin – eine offene Shell waere ein erhebliches Sicherheitsrisiko.
+
+Optionen:
+- (A) Offene Shell (`execute_shell`) mit Allowlist
+- (B) Plugin API Bridge: direkter Aufruf von Plugin-JS-APIs ohne Shell
+- (C) Beides (API Bridge + eingeschraenkte Shell fuer externe Tools)
+- (D) Kein neues Tool – nur bestehende `execute_command` nutzen
+
+**Entscheidung**
+
+Option C, aufgeteilt in zwei spezialisierte Tools: `call_plugin_api` (API Bridge, ADR-108) und `execute_recipe` (eingeschraenkte Shell, ADR-109). Die offene Shell (Option A) wird explizit abgelehnt.
+
+**Begruendung**
+
+Option A (`shell: true`) erlaubt Shell-Expansion, Pipe-Chains und Metazeichen-Interpretation – fuer nicht-technische User inakzeptabel. Option D ist zu eingeschraenkt: `executeCommandById()` nimmt keine Parameter und liefert keinen Output. Option B allein deckt externe Tools (Pandoc, LaTeX) nicht ab. Option C kombiniert die Staerken: Plugin-APIs laufen in Obsidians JS-Sandbox (sicher), externe Tools laufen ueber `spawn` mit `shell: false` und validierte Rezepte (kontrolliert).
+
+**Sicherheitsarchitektur (7 Schichten)**
+
+```
+Schicht 1: Master-Toggle (recipes.enabled: false, pluginApi.enabled: true)
+Schicht 2: Statische Allowlist (compile-time, nicht vom Agent aenderbar)
+Schicht 3: Parameter-Validierung (Typ, Laenge, Zeichensatz, Pfad-Confinement)
+Schicht 4: Keine Shell-Expansion (spawn mit args-Array, NICHT shell: true)
+Schicht 5: Pipeline-Approval (isWriteOperation = true, fail-closed)
+Schicht 6: Prozess-Confinement (cwd=vault, Timeout, Output-Limit, SIGKILL)
+Schicht 7: Audit-Trail (OperationLogger, Parameter-Sanitization)
+```
+
+**Konsequenzen**
+
+- Plugin-API-Calls laufen in Obsidians JS-Runtime (kein Prozess-Spawn)
+- Zweistufige Allowlist: Built-in (compile-time, kuratiert) + dynamische Discovery (VaultDNA Scanner)
+- Dynamisch entdeckte Methoden sind IMMER `isWrite = true` bis User explizit als safe markiert
+- Methoden-Blocklist: `execute`, `executeJs`, `render`, `register`, `unregister` immer geblockt
+- NexusIQ/SonarQube-konform: kein Command Injection, kein Path Traversal, kein Arbitrary Code Exec
+
+---
+
+## ADR-109: Recipe Shell statt offener Shell fuer externe Tools
+
+**Status:** `ACCEPTED`
+
+**Kontext**
+
+Manche Aufgaben erfordern externe Binaries (Pandoc fuer PDF/DOCX-Export, LaTeX). Diese koennen nicht ueber Plugin-APIs aufgerufen werden. Eine offene Shell (`shell: true`) wie in Kilo Code ist fuer die Obsidian-Zielgruppe zu riskant.
+
+Optionen:
+- (A) `execa({ shell: true })` mit Allowlist (Kilo Code Ansatz)
+- (B) `child_process.spawn(binary, argsArray, { shell: false })` mit vordefinierten Rezepten
+- (C) Kein externer Tool-Zugriff
+
+**Entscheidung**
+
+Option B: Recipe Shell mit `spawn` ohne Shell-Expansion.
+
+**Begruendung**
+
+Option A interpretiert Shell-Metazeichen (`$()`, Backticks, `|`, `;`) in Parametern – selbst mit Allowlist ist Command Injection moeglich wenn Parameter nicht korrekt escaped werden. Option B eliminiert dieses Risiko komplett: `spawn` mit `shell: false` uebergibt Parameter als isolierte Array-Elemente. Die Shell interpretiert nichts. Kilo Codes `containsDangerousSubstitution()` ist ein schmaler Regex der bekannte Patterns prueft – neue Injection-Vektoren koennten durchkommen. Unsere Loesung ist by-design sicher: keine Shell, keine Interpretation.
+
+```typescript
+// KILO CODE (unsicher fuer non-tech Users):
+execa({ shell: true })`pandoc "${input}" -o "${output}"`
+
+// UNSER ANSATZ:
+spawn(binaryPath, [input, '-o', output], { shell: false })
+```
+
+**Rezept-System**
+
+Jedes Rezept definiert:
+- `binary`: Name des externen Programms (resolved via `which`/`where` zu absolutem Pfad)
+- `argsTemplate`: Array von Argument-Templates mit `{{param}}`-Platzhaltern
+- `parameters`: Typisierte Parameter mit Validierung (`vault-file`, `vault-output`, `enum`, `safe-string`, `number`)
+- `timeout`: Maximale Ausfuehrungszeit mit SIGKILL-Fallback
+- `maxOutputSize`: Output-Truncation
+
+Built-in Rezepte: `pandoc-pdf`, `pandoc-docx`, `pandoc-convert`, `check-dependency`.
+
+**Parameter-Validierung**
+
+- Shell-Metazeichen (`;&|`$(){}[]<>\!#~*?\n\r\0`) in ALLEN Parametern verboten
+- `vault-file`/`vault-output`: kein `..`, keine absoluten Pfade, `startsWith(vaultRoot)` Check
+- `safe-string`: Pattern-Match, max 200 Zeichen
+- `enum`: Exact-Match gegen erlaubte Werte
+- `number`: Range-Check
+
+**Konsequenzen**
+
+- `recipes.enabled` ist default `false` (Opt-in)
+- Jedes Rezept muss einzeln aktiviert werden (`recipeToggles`)
+- User kann eigene Rezepte hinzufuegen (validiert beim Laden)
+- Kein PATH-Hijacking: Binary-Pfad wird via `which`/`where` zu absolutem Pfad resolved
+- Minimale Env-Vars: nur `PATH`, `HOME`, `LANG` (kein `LD_PRELOAD`, `DYLD_*`)
+- Output-Streams gecapped, stdin geschlossen
+- NexusIQ/SonarQube S-01 bis S-13 abgedeckt (siehe Security-Checkliste im Plan)

@@ -23,9 +23,10 @@ import type {
 } from '../tools/types';
 import type { IgnoreService } from '../governance/IgnoreService';
 import type { OperationLogger } from '../governance/OperationLogger';
+import { findAllowedMethod } from '../tools/agent/pluginApiAllowlist';
 
 /** Tool group classification for auto-approval checks */
-type ToolGroup = 'read' | 'note-edit' | 'vault-change' | 'web' | 'agent' | 'mode' | 'subtask' | 'mcp' | 'skill';
+type ToolGroup = 'read' | 'note-edit' | 'vault-change' | 'web' | 'agent' | 'mode' | 'subtask' | 'mcp' | 'skill' | 'plugin-api' | 'recipe';
 
 const TOOL_GROUPS: Record<string, ToolGroup> = {
     // Read-only vault tools
@@ -68,6 +69,9 @@ const TOOL_GROUPS: Record<string, ToolGroup> = {
     execute_command: 'skill',
     resolve_capability_gap: 'skill',
     enable_plugin: 'skill',
+    // Plugin API + Recipe Shell (PAS-1.5)
+    call_plugin_api: 'plugin-api',
+    execute_recipe: 'recipe',
 };
 
 /** Result of an approval check — may include user-edited content */
@@ -260,6 +264,13 @@ export class ToolExecutionPipeline {
             if (group === 'mode' && cfg.mode) return { decision: 'auto' };
             if (group === 'subtask' && cfg.subtasks) return { decision: 'auto' };
             if (group === 'skill' && cfg.skills) return { decision: 'auto' };
+            if (group === 'plugin-api') {
+                // Differentiate read vs write for plugin API calls
+                const isWriteCall = this.isPluginApiWriteCall(toolCall);
+                if (!isWriteCall && cfg.pluginApiRead) return { decision: 'auto' };
+                if (isWriteCall && cfg.pluginApiWrite) return { decision: 'auto' };
+            }
+            if (group === 'recipe' && cfg.recipes) return { decision: 'auto' };
         }
 
         // No auto-approve config AND no approval callback — fail-closed.
@@ -303,6 +314,27 @@ export class ToolExecutionPipeline {
                 console.log(`[Pipeline] ${toolCall.name} — ${success ? 'ok' : 'error'} (${durationMs}ms)`);
             }
         }
+    }
+
+    /**
+     * Determine if a call_plugin_api invocation is a write operation.
+     * Built-in allowlist: use isWrite flag. Dynamic discovery: always write
+     * unless user marked as safe.
+     */
+    private isPluginApiWriteCall(toolCall: ToolUse): boolean {
+        const pluginId = (toolCall.input?.plugin_id as string ?? '').trim();
+        const method = (toolCall.input?.method as string ?? '').trim();
+
+        // Check built-in allowlist first
+        const entry = findAllowedMethod(pluginId, method);
+        if (entry) return entry.isWrite;
+
+        // Dynamic discovery: check user overrides
+        const overrideKey = `${pluginId}:${method}`;
+        const overrides = this.plugin.settings.pluginApi?.safeMethodOverrides ?? {};
+        if (overrides[overrideKey]) return false; // User marked as safe read
+
+        return true; // Default: treat as write
     }
 
     private errorResult(toolUseId: string, message: string): ToolResult {

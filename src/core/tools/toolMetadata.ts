@@ -230,6 +230,16 @@ export const TOOL_METADATA: Record<string, ToolMeta> = {
         signature: 'enable_plugin(plugin_id, enable?)',
         description: 'Enable or disable an installed Obsidian community plugin. Use when a disabled plugin could help with the task and the user agrees to activate it.',
     },
+    call_plugin_api: {
+        group: 'skill', label: 'Plugin API', icon: 'code',
+        signature: 'call_plugin_api(plugin_id, method, args?)',
+        description: 'Call a JavaScript API method on a plugin instance. Use for Dataview queries, Omnisearch searches, MetaEdit updates, and any plugin with a JS API.',
+    },
+    execute_recipe: {
+        group: 'skill', label: 'Recipe', icon: 'chef-hat',
+        signature: 'execute_recipe(recipe_id, params)',
+        description: 'Execute a pre-defined recipe for external tools (Pandoc PDF/DOCX export). No arbitrary shell — only validated recipes.',
+    },
 };
 
 /**

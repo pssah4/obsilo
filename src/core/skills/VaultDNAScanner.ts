@@ -240,8 +240,41 @@ export class VaultDNAScanner {
                     commands,
                     description: manifest.description ?? `Community plugin: ${manifest.name ?? id}`,
                 };
+
+                // API Discovery (PAS-1.5, ADR-108 Tier 2)
+                if (isEnabled) {
+                    const apiMethods = this.discoverPluginApi(id);
+                    if (apiMethods) {
+                        skill.hasApi = true;
+                        skill.apiMethods = apiMethods;
+                    }
+                }
+
                 results.push({ dna: entry, skill });
             } else {
+                // Even NONE-classified plugins might have a JS API
+                if (isEnabled) {
+                    const apiMethods = this.discoverPluginApi(id);
+                    if (apiMethods && apiMethods.length > 0) {
+                        // Plugin has no commands but has an API — promote to PARTIAL
+                        entry.classification = 'PARTIAL';
+                        entry.skillFile = `${id}.skill.md`;
+                        delete entry.reason;
+                        const skill: PluginSkillMeta = {
+                            id,
+                            name: manifest.name ?? id,
+                            source: 'vault-native',
+                            classification: 'PARTIAL',
+                            enabled: isEnabled,
+                            commands: [],
+                            description: manifest.description ?? `Community plugin: ${manifest.name ?? id}`,
+                            hasApi: true,
+                            apiMethods,
+                        };
+                        results.push({ dna: entry, skill });
+                        continue;
+                    }
+                }
                 results.push({ dna: entry });
             }
         }
@@ -272,6 +305,54 @@ export class VaultDNAScanner {
         }
 
         return result;
+    }
+
+    // ── API Discovery (PAS-1.5, ADR-108 Tier 2) ─────────────────────────
+
+    /**
+     * Methods that are ALWAYS blocked from API discovery.
+     * These are lifecycle, DOM, or code-execution methods.
+     */
+    private static readonly BLOCKED_API_METHODS = new Set([
+        'constructor', 'execute', 'executeJs', 'render',
+        'register', 'unregister', 'onload', 'onunload', 'destroy', 'eval',
+    ]);
+
+    /**
+     * Discover plugin JavaScript API methods via Reflection.
+     * Returns method names if the plugin has an .api property, null otherwise.
+     */
+    private discoverPluginApi(pluginId: string): string[] | null {
+        try {
+            const plugins = (this.app as any).plugins?.plugins;
+            if (!plugins) return null;
+
+            const instance = plugins[pluginId];
+            if (!instance) return null;
+
+            // Try plugin.api first, then the plugin instance itself
+            const api = instance.api;
+            if (!api || typeof api !== 'object') return null;
+
+            // Get method names from the prototype chain
+            const proto = Object.getPrototypeOf(api);
+            if (!proto) return null;
+
+            const methods = Object.getOwnPropertyNames(proto)
+                .filter((m) =>
+                    !VaultDNAScanner.BLOCKED_API_METHODS.has(m) &&
+                    typeof api[m] === 'function' &&
+                    !m.startsWith('_'), // skip private-by-convention methods
+                );
+
+            if (methods.length === 0) return null;
+
+            console.log(`[VaultDNA] API discovered for ${pluginId}: ${methods.length} methods (${methods.slice(0, 5).join(', ')}${methods.length > 5 ? '...' : ''})`);
+            return methods;
+        } catch (e) {
+            console.warn(`[VaultDNA] API discovery failed for ${pluginId}:`, e);
+            return null;
+        }
     }
 
     // ── Plugin Settings ─────────────────────────────────────────────────
@@ -533,6 +614,19 @@ export class VaultDNAScanner {
             }
         }
 
+        // Plugin API section (PAS-1.5)
+        if (skill.hasApi && skill.apiMethods && skill.apiMethods.length > 0) {
+            lines.push('');
+            lines.push('## Plugin API');
+            lines.push('');
+            lines.push('This plugin exposes a JavaScript API. Use call_plugin_api to call these methods:');
+            for (const method of skill.apiMethods) {
+                lines.push(`- \`${method}\` -- call via call_plugin_api("${skill.id}", "${method}", [args])`);
+            }
+            lines.push('');
+            lines.push('Note: Dynamically discovered methods require user approval for each call unless marked as safe in settings.');
+        }
+
         // Configuration File section
         const configPath = skill.source === 'core'
             ? `.obsidian/${skill.id}.json`
@@ -754,6 +848,9 @@ export class VaultDNAScanner {
             }
         }
 
+        // API Discovery for newly enabled plugin
+        const apiMethods = this.discoverPluginApi(pluginId);
+
         // Find or create skill entry
         const skillIdx = this.pluginSkills.findIndex((s) => s.id === pluginId);
         if (skillIdx >= 0) {
@@ -761,20 +858,31 @@ export class VaultDNAScanner {
             this.pluginSkills[skillIdx].enabled = true;
             this.pluginSkills[skillIdx].commands = this.getPluginCommands(pluginId);
             this.pluginSkills[skillIdx].classification = classification;
+            if (apiMethods) {
+                this.pluginSkills[skillIdx].hasApi = true;
+                this.pluginSkills[skillIdx].apiMethods = apiMethods;
+            }
             await this.writeSkillFile(this.pluginSkills[skillIdx]);
-        } else if (classification !== 'NONE') {
-            // Was NONE during initial scan — promote to skill now that commands exist
+        } else if (classification !== 'NONE' || (apiMethods && apiMethods.length > 0)) {
+            // Was NONE during initial scan — promote to skill now that commands or API exist
             const manifests: Record<string, any> = (this.app as any).plugins?.manifests ?? {};
             const manifest = manifests[pluginId];
+            const effectiveClass = classification !== 'NONE' ? classification : 'PARTIAL';
             const newSkill: PluginSkillMeta = {
                 id: pluginId,
                 name: manifest?.name ?? pluginId,
                 source: 'vault-native',
-                classification,
+                classification: effectiveClass,
                 enabled: true,
                 commands: this.getPluginCommands(pluginId),
                 description: manifest?.description ?? `Community plugin: ${manifest?.name ?? pluginId}`,
+                ...(apiMethods ? { hasApi: true, apiMethods } : {}),
             };
+            if (entry && effectiveClass !== classification) {
+                entry.classification = effectiveClass;
+                entry.skillFile = `${pluginId}.skill.md`;
+                delete entry.reason;
+            }
             this.pluginSkills.push(newSkill);
             await this.writeSkillFile(newSkill);
         }
