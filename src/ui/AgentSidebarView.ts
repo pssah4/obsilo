@@ -87,7 +87,7 @@ export class AgentSidebarView extends ItemView {
     }
 
     getIcon(): string {
-        return 'message-square-more';
+        return 'obsilo-agent';
     }
 
     async onOpen(): Promise<void> {
