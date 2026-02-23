@@ -1,7 +1,7 @@
 /**
  * CorePluginLibrary — Static skill definitions for Obsidian Core Plugins (PAS-1)
  *
- * Hand-maintained definitions for 11 agentifiable core plugins.
+ * Hand-maintained definitions for 12 agentifiable core plugins.
  * These are bundled with the plugin (no network, no LLM).
  *
  * ADR-101: Core plugins have no public GitHub repo and no community registry
@@ -101,6 +101,26 @@ Use this skill when the user wants to reorganize notes: splitting long notes, me
     },
 
     // ── PARTIAL (1-2 meaningful commands) ──────────────────────────────
+
+    {
+        id: 'file',
+        name: 'File Export',
+        classification: 'PARTIAL',
+        commands: [
+            { id: 'file:export-to-pdf', name: 'Export current note to PDF' },
+        ],
+        description: 'Native PDF export using Obsidian built-in renderer',
+        instructions: `Plugin "File Export" provides native Obsidian file export.
+
+Available commands:
+- file:export-to-pdf -- Export the currently open note to PDF using Obsidian's built-in renderer
+
+This is a native Obsidian command -- zero external dependencies, always available.
+The export renders the note exactly as Obsidian displays it (theme, CSS, plugins applied).
+Note: Opens a system print/save dialog. The user must confirm the save location.
+
+Use this for quick PDF exports. For advanced conversion (custom LaTeX templates, bibliography, DOCX): use execute_recipe with Pandoc instead.`,
+    },
 
     {
         id: 'templates',

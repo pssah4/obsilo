@@ -608,7 +608,7 @@ export class VaultDNAScanner {
             lines.push('');
             lines.push('## Available Commands');
             lines.push('');
-            lines.push('Use these with execute_command(command_id):');
+            lines.push('Available command IDs (use execute_command for Obsidian-native commands):');
             for (const cmd of skill.commands) {
                 lines.push(`- \`${cmd.id}\` -- ${cmd.name}`);
             }
@@ -675,12 +675,15 @@ export class VaultDNAScanner {
             lines.push(`1. Read the plugin documentation (.readme.md) to understand capabilities and dependencies`);
             lines.push(`2. Read the config file (${configPath}). If it does not exist, that is normal -- create it with the required settings`);
             lines.push('3. Configure the plugin by writing data.json with the values needed for the task');
-            lines.push('4. Execute the appropriate command via execute_command');
-            lines.push('5. If the command opens a UI dialog, tell the user what to select');
+            lines.push('4. Execute the task using the appropriate tool:');
+            lines.push('   - For Obsidian-native commands (including file export): use execute_command');
+            lines.push('   - For CLI-based conversion needing Pandoc/LaTeX: use execute_recipe');
+            lines.push('   - For data queries: use call_plugin_api');
+            lines.push('5. If a command opens a UI dialog, tell the user what to click.');
             lines.push('');
             lines.push('CRITICAL RULES:');
-            lines.push('- ALWAYS use this plugin\'s own commands via execute_command. Do NOT substitute built-in tools.');
-            lines.push('- NEVER create fake output files. If the user asks for a PDF/DOCX/image export, use this plugin -- do NOT write content to a .pdf file yourself.');
+            lines.push('- Prefer native Obsidian commands over external tools when both can accomplish the task.');
+            lines.push('- NEVER create fake output files. If the user asks for a PDF/DOCX/image export, use execute_recipe -- do NOT write content to a .pdf file yourself.');
             lines.push('- If a dependency is missing (e.g. Pandoc), tell the user what to install.');
             lines.push('IMPORTANT: After reading this file, ALWAYS take action or respond. Never end silently.');
         } else {

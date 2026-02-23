@@ -735,38 +735,44 @@
     text-align: right;
 }
 
-/* Error message in chat (Feature 5) */
-.message-error {
+/* Error row inside steps block (Feature 5) */
+.tool-step-error {
     display: flex;
     align-items: flex-start;
     gap: 8px;
-    padding: 8px 12px;
+    padding: 6px 8px;
+    margin: 2px 0;
+    border-radius: 4px;
     background: var(--background-modifier-error);
-    border-radius: 6px;
-    color: var(--text-error);
-    font-size: 13px;
 }
 
-.message-error .error-icon svg {
-    width: 16px;
-    height: 16px;
+.tool-step-error .tool-step-icon {
     flex-shrink: 0;
-    margin-top: 2px;
+    color: var(--text-error);
+    display: flex;
+    align-items: center;
 }
 
-.message-error .error-body {
+.tool-step-error .tool-step-icon svg {
+    width: 14px;
+    height: 14px;
+}
+
+.tool-step-error .tool-step-text {
     display: flex;
     flex-direction: column;
     gap: 2px;
 }
 
-.message-error .error-title {
+.tool-step-error .error-title {
     font-weight: 600;
+    font-size: 12px;
+    color: var(--text-error);
 }
 
-.message-error .error-detail {
+.tool-step-error .error-detail {
     font-size: 11px;
-    opacity: 0.8;
+    color: var(--text-muted);
 }
 
 /* Markdown content reset for chat bubbles */

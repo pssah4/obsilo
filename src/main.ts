@@ -25,6 +25,7 @@ import { CapabilityGapResolver } from './core/skills/CapabilityGapResolver';
 import { buildApiHandler } from './api/index';
 import type { ApiHandler } from './api/types';
 import type { ToolUse, ToolCallbacks } from './core/tools/types';
+import { BUILT_IN_MODES } from './core/modes/builtinModes';
 
 /**
  * Obsidian Agent Plugin
@@ -353,12 +354,23 @@ export default class ObsidianAgentPlugin extends Plugin {
         this.settings.memory.memoryModelKey = this.settings.memory.memoryModelKey ?? memDefaults.memoryModelKey;
         this.settings.memory.extractionThreshold = this.settings.memory.extractionThreshold ?? memDefaults.extractionThreshold;
 
+        // Sync vault mode overrides with current built-in definitions.
+        // Vault modes that share a slug with a built-in get their roleDefinition,
+        // toolGroups, description, and whenToUse updated — customInstructions preserved.
+        this.migrateBuiltInModeOverrides();
+
         // Deep-merge VaultDNA settings (PAS-1)
         const dnaDefaults = DEFAULT_SETTINGS.vaultDNA;
         this.settings.vaultDNA = this.settings.vaultDNA ?? dnaDefaults;
         this.settings.vaultDNA.enabled = this.settings.vaultDNA.enabled ?? dnaDefaults.enabled;
         this.settings.vaultDNA.skillToggles = this.settings.vaultDNA.skillToggles ?? dnaDefaults.skillToggles;
         this.settings.vaultDNA.lastScanAt = this.settings.vaultDNA.lastScanAt ?? dnaDefaults.lastScanAt;
+
+        // Enable recipes for existing users — 6 other security layers remain active.
+        if (this.settings.recipes && !this.settings.recipes.enabled) {
+            this.settings.recipes.enabled = true;
+            this.saveData(this.settings);
+        }
 
         // Ensure new tools appear in default agent override list
         const agentOverride = this.settings.modeToolOverrides?.agent;
@@ -367,6 +379,38 @@ export default class ObsidianAgentPlugin extends Plugin {
         }
         if (agentOverride && !agentOverride.includes('enable_plugin')) {
             agentOverride.push('enable_plugin');
+        }
+    }
+
+    /**
+     * Sync vault custom modes that override a built-in slug.
+     * Copies roleDefinition, toolGroups, description, whenToUse from built-in;
+     * preserves user customInstructions.
+     */
+    private migrateBuiltInModeOverrides(): void {
+        const builtInBySlug = new Map(BUILT_IN_MODES.map(m => [m.slug, m]));
+        let changed = false;
+
+        for (const vm of this.settings.customModes) {
+            const bi = builtInBySlug.get(vm.slug);
+            if (!bi) continue;
+
+            const needsSync =
+                vm.roleDefinition !== bi.roleDefinition ||
+                JSON.stringify(vm.toolGroups) !== JSON.stringify(bi.toolGroups);
+
+            if (needsSync) {
+                vm.roleDefinition = bi.roleDefinition;
+                vm.toolGroups = [...bi.toolGroups];
+                vm.description = bi.description;
+                vm.whenToUse = bi.whenToUse;
+                changed = true;
+            }
+        }
+
+        if (changed) {
+            console.log('[Plugin] Synced vault mode overrides with built-in definitions');
+            this.saveData(this.settings);
         }
     }
 

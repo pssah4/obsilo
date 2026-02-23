@@ -60,6 +60,7 @@ import {
  * @param allowedMcpServers - Per-mode MCP server whitelist.
  * @param memoryContext - Pre-built memory context string.
  * @param pluginSkillsSection - Compact plugin skills list from VaultDNA.
+ * @param isSubtask - When true, build a leaner prompt for sub-agents (omits response format, skills, custom instructions).
  */
 export function buildSystemPromptForMode(
     mode: ModeConfig,
@@ -72,6 +73,7 @@ export function buildSystemPromptForMode(
     allowedMcpServers?: string[],
     memoryContext?: string,
     pluginSkillsSection?: string,
+    isSubtask = false,
 ): string {
     const sections: string[] = [
         // 1. Date/time + 2. Vault context (combined at top)
@@ -80,8 +82,8 @@ export function buildSystemPromptForMode(
         // 3. Capabilities (high-level summary)
         getCapabilitiesSection(),
 
-        // 4. User memory (conditional)
-        getMemorySection(memoryContext),
+        // 4. User memory (conditional — omit for subtasks, parent already applied)
+        isSubtask ? '' : getMemorySection(memoryContext),
 
         // 5. Tools (filtered by mode)
         getToolsSection(mode.toolGroups, mcpClient, allowedMcpServers),
@@ -101,8 +103,8 @@ export function buildSystemPromptForMode(
         getObjectiveSection(),
         '',
 
-        // 10. Response format
-        getResponseFormatSection(),
+        // 10. Response format (omit for subtasks — output goes to parent, not user)
+        isSubtask ? '' : getResponseFormatSection(),
         '',
 
         // 11. Explicit instructions
@@ -114,11 +116,11 @@ export function buildSystemPromptForMode(
         // 13. Mode role definition
         getModeDefinitionSection(mode),
 
-        // 14. Custom instructions (conditional)
-        getCustomInstructionsSection(globalCustomInstructions, mode.customInstructions),
+        // 14. Custom instructions (omit for subtasks — parent handles orchestration)
+        isSubtask ? '' : getCustomInstructionsSection(globalCustomInstructions, mode.customInstructions),
 
-        // 15. Skills — manual (conditional)
-        getSkillsSection(skillsSection),
+        // 15. Skills — manual (omit for subtasks)
+        isSubtask ? '' : getSkillsSection(skillsSection),
 
         // 16. Rules (conditional)
         getRulesSection(rulesContent),

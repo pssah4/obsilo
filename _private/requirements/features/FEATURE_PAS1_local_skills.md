@@ -644,6 +644,20 @@ Als Nutzer moechte ich, dass der Agent vordefinierte Rezepte fuer externe Tools 
 - Settings Tab "Shell" mit Rezept-Uebersicht und Toggles
 - Klare Fehlermeldung wenn Binary nicht installiert
 
+**US-09 · Workflow-Optimierung (Anti-Delegation, Depth-Limit, Lean Prompts)**
+Als Nutzer erwarte ich, dass der Agent einfache Tasks direkt ausfuehrt statt Sub-Agents zu spawnen — und dass Sub-Agent-Nesting begrenzt ist.
+
+*Akzeptanzkriterien:*
+- Anti-Delegations-Regel im System-Prompt: new_task nur bei 5+ Schritten oder Context-Isolation-Bedarf
+- Agent-Mode Role Definition priorisiert Direktausfuehrung ueber Delegation
+- NewTaskTool Description warnt vor unnoetigem Spawning
+- Code-Depth-Limit: `maxSubtaskDepth` (default: 2) verhindert rekursive Sub-Agent-Spirale
+- Explizite Fehlermeldung bei Tiefenlimit ("Maximum sub-agent nesting depth reached")
+- Sub-Agent Token-Accumulation: Kinder-Tokens an Parent-UI weitergereicht
+- Lean Sub-Agent System-Prompt: omits Response-Format, Skills, Custom Instructions, Memory (~20-30% Token-Einsparung)
+- Objective-Section erweitert: Verification-before-completion, Error-Recovery-Regel
+- Setting in Loop Tab: "Max sub-agent depth" Slider (1-3)
+
 ---
 
 ## Offene Fragen

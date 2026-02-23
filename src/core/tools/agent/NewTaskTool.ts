@@ -30,10 +30,12 @@ export class NewTaskTool extends BaseTool<'new_task'> {
         return {
             name: 'new_task',
             description:
-                'Spawn a sub-agent that executes a task and returns its complete response. ' +
-                'The sub-agent runs with a fresh conversation — pass all necessary context in the message. ' +
-                'Use this for agentic workflows: prompt chaining, parallel delegation, ' +
-                'orchestrator-worker patterns, or evaluator-optimizer loops. ' +
+                'Spawn a sub-agent for tasks that CANNOT be done directly with your tools. ' +
+                'ONLY use when: (a) task needs 5+ steps across specialties, ' +
+                '(b) context isolation helps (deep research into many files), ' +
+                'or (c) truly parallel independent subtasks. ' +
+                'For file conversion, plugin commands, or simple read/write: use your own tools directly. ' +
+                'The sub-agent runs with a fresh conversation — pass all context in the message. ' +
                 'Only available in Agent mode.',
             input_schema: {
                 type: 'object',
@@ -91,10 +93,19 @@ export class NewTaskTool extends BaseTool<'new_task'> {
             return;
         }
 
+        // Depth-guard: if spawnSubtask is not wired, we are at max nesting depth.
+        if (!context.spawnSubtask) {
+            callbacks.pushToolResult(
+                'Maximum sub-agent nesting depth reached. ' +
+                'Execute this task directly using your available tools.'
+            );
+            return;
+        }
+
         callbacks.log(`Spawning sub-agent in mode "${mode}": ${message.slice(0, 80)}…`);
 
         try {
-            const result = await context.spawnSubtask!(mode, message);
+            const result = await context.spawnSubtask(mode, message);
             callbacks.pushToolResult(
                 `[Sub-agent completed — mode: ${mode}]\n\n${result || '(No response from sub-agent)'}`
             );

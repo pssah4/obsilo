@@ -104,6 +104,20 @@ export class LoopTab {
                         await this.plugin.saveSettings();
                     }),
             );
+
+        new Setting(containerEl)
+            .setName('Max sub-agent depth')
+            .setDesc('Maximum nesting depth for sub-agents. 1 = children cannot spawn grandchildren. 2 = one level of grandchildren allowed. Default: 2.')
+            .addSlider((s) =>
+                s
+                    .setLimits(1, 3, 1)
+                    .setValue(this.plugin.settings.advancedApi.maxSubtaskDepth ?? 2)
+                    .setDynamicTooltip()
+                    .onChange(async (v) => {
+                        this.plugin.settings.advancedApi.maxSubtaskDepth = v;
+                        await this.plugin.saveSettings();
+                    }),
+            );
     }
 
 }

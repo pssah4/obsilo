@@ -305,3 +305,35 @@ Built-in Rezepte: `pandoc-pdf`, `pandoc-docx`, `pandoc-convert`, `check-dependen
 - Minimale Env-Vars: nur `PATH`, `HOME`, `LANG` (kein `LD_PRELOAD`, `DYLD_*`)
 - Output-Streams gecapped, stdin geschlossen
 - NexusIQ/SonarQube S-01 bis S-13 abgedeckt (siehe Security-Checkliste im Plan)
+
+## ADR-110: Workflow-Optimierung — Anti-Delegation + Depth-Limit
+
+**Datum:** 2026-02-23
+**Status:** ACCEPTED
+
+**Kontext**
+
+Beim Test "Erstelle eine PDF von dieser Note" spawnte der Agent 5 Ebenen rekursiver Sub-Agents statt `execute_recipe` direkt aufzurufen. Root-Causes: (1) System-Prompt ermutigt Delegation ohne klare Grenzen, (2) kein Code-Depth-Limit, (3) keine "einfache Task"-Heuristik, (4) neue PAS-1.5 Tools nicht vor Delegation priorisiert.
+
+**Entscheidung**
+
+Dreistufiger Fix basierend auf Anthropic "Building Effective Agents" und Claude Code Subagent-Patterns:
+
+1. **Prompt-Fixes (P0):** Anti-Delegations-Regel in toolDecisionGuidelines ("If you can do it in 1-4 tool calls, do it yourself"), Agent-Mode Role Definition umstrukturiert (Direktausfuehrung oben, Delegation unten), NewTaskTool Description verschaerft.
+
+2. **Code-Guardrails (P1):** `maxSubtaskDepth` Parameter in AgentTask (default: 2), Depth-Guard in spawnSubtask-Closure (Kind bekommt `spawnSubtask = undefined` bei Tiefenlimit), explizite Fehlermeldung in NewTaskTool.
+
+3. **Token-Optimierung (P2):** Sub-Agent-Tokens an Parent-UI forwarden, Lean Sub-Agent System-Prompt (omits Response-Format, Skills, Custom Instructions, Memory).
+
+**Abgelehnte Alternativen**
+
+- "Race to Success" (Voting): Nx Token-Kosten ohne Qualitaetsgewinn bei deterministischen Tasks
+- Separater Orchestrator-Mode: 2-Mode-System (Ask+Agent) ist einfacher
+- Parallele Sub-Agents: Rate-Limit-Risiko, keine Result-Aggregation
+
+**Konsequenzen**
+
+- Einfache Tasks (PDF, Plugin-API) werden direkt ausgefuehrt, keine Sub-Agents
+- Sub-Agent-Nesting auf maximal 2 Ebenen begrenzt (konfigurierbar)
+- Sub-Agent System-Prompts ~20-30% kleiner (Token-Einsparung)
+- Sub-Agent Kosten im Parent-Cost-Counter sichtbar

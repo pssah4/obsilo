@@ -52,20 +52,22 @@ export class SkillRegistry {
         const lines: string[] = [
             'PLUGIN SKILLS',
             '',
-            'CRITICAL RULE: When the user names a specific plugin (e.g., "DB Folder", "Dataview",',
-            '"Templater", "OneDrive Mirror"), you MUST use that plugin via execute_command.',
-            'NEVER substitute a built-in tool (like create_base, write_file, etc.) for a plugin',
-            'the user explicitly requested. Built-in tools and plugins are DIFFERENT things.',
+            'CRITICAL RULE: When the user names a plugin, use the right tool for its type:',
+            '- Plugin wraps CLI tool (Pandoc, Mermaid, ffmpeg, LaTeX): use execute_recipe — no UI dialog, verified output.',
+            '- Plugin provides Obsidian-native commands (Templater, Daily Notes): use execute_command.',
+            '- Plugin exposes JS API (Dataview, Omnisearch, MetaEdit): use call_plugin_api.',
+            'For file export: prefer native Obsidian commands (execute_command) over CLI recipes (execute_recipe). Use recipes only for advanced features (custom templates, DOCX, LaTeX).',
+            'NEVER substitute a built-in tool (like create_base, write_file) for a plugin the user requested.',
             '',
-            'Before using a plugin\'s commands, ALWAYS read its skill file first:',
+            'Before using a plugin, ALWAYS read its skill file first:',
             '  read_file(".obsidian-agent/plugin-skills/{plugin-id}.skill.md")',
-            'This tells you what the plugin does, its commands, its current configuration, and how to use them.',
+            'This tells you what the plugin does, its commands, its configuration, and how to use it.',
             '',
         ];
 
         // Active plugins with descriptions + commands
         if (active.length > 0) {
-            lines.push('ACTIVE PLUGINS (use execute_command to run):');
+            lines.push('ACTIVE PLUGINS:');
             for (const skill of active) {
                 const cmdList = skill.commands.map((c) => `${c.id}`).join(', ');
                 const type = skill.source === 'core' ? 'Core' : 'Community';
@@ -87,14 +89,15 @@ export class SkillRegistry {
 
         // Disambiguation examples — prevent common tool confusion
         lines.push('COMMON MISTAKES TO AVOID:');
+        lines.push('- WRONG: User says "export as PDF" -> you use execute_recipe even though file:export-to-pdf exists');
+        lines.push('  RIGHT: User says "export as PDF" -> execute_command("file:export-to-pdf") -- native, zero dependencies');
+        lines.push('  ALSO RIGHT: User needs custom template or DOCX -> execute_recipe("pandoc-pdf", {input, output})');
         lines.push('- WRONG: User says "DB Folder Tabelle" -> you use create_base');
-        lines.push('  RIGHT: User says "DB Folder Tabelle" -> read_file(".obsidian-agent/plugin-skills/dbfolder.skill.md") then execute_command("dbfolder:create-new-database-folder")');
+        lines.push('  RIGHT: User says "DB Folder Tabelle" -> read .skill.md then execute_command("dbfolder:create-new-database-folder")');
         lines.push('- WRONG: User says "Dataview query" -> you use query_base');
-        lines.push('  RIGHT: User says "Dataview query" -> read_file(".obsidian-agent/plugin-skills/dataview.skill.md") then execute_command with Dataview commands');
+        lines.push('  RIGHT: User says "Dataview query" -> use call_plugin_api("dataview", "query", ...)');
         lines.push('- WRONG: User mentions a disabled plugin -> you ask the user to enable it manually');
-        lines.push('  RIGHT: User mentions a disabled plugin -> you call enable_plugin(plugin_id) yourself');
-        lines.push('- WRONG: User mentions a disabled plugin -> you fall back to a built-in tool');
-        lines.push('  RIGHT: User mentions a disabled plugin -> enable_plugin first, then execute_command');
+        lines.push('  RIGHT: User mentions a disabled plugin -> enable_plugin(plugin_id) yourself, then use the plugin');
         lines.push('');
 
         // Disabled plugins — agent can enable them via enable_plugin tool
@@ -108,9 +111,8 @@ export class SkillRegistry {
             lines.push('1. Tell the user the plugin is installed but disabled');
             lines.push('2. Call enable_plugin(plugin_id) to activate it — do NOT ask the user to enable it manually');
             lines.push('3. After enabling, read its .skill.md file to learn the available commands');
-            lines.push('4. Then use execute_command to run the plugin\'s commands');
+            lines.push('4. Use the appropriate tool (execute_recipe for CLI tools, execute_command for native, call_plugin_api for APIs)');
             lines.push('NEVER ask the user to manually enable a plugin. NEVER fall back to a built-in tool.');
-            lines.push('ALWAYS use enable_plugin yourself, then execute_command.');
         }
 
         return lines.join('\n');

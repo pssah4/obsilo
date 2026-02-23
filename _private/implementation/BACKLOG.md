@@ -120,6 +120,8 @@
 | `[x]` | switch_mode | `src/core/tools/agent/SwitchModeTool.ts` |
 | `[x]` | update_todo_list | `src/core/tools/agent/UpdateTodoListTool.ts` |
 | `[x]` | new_task (multi-agent subtask delegation) | `src/core/tools/agent/NewTaskTool.ts` |
+| `[x]` | call_plugin_api (Plugin API Bridge) | `src/core/tools/agent/CallPluginApiTool.ts` |
+| `[x]` | execute_recipe (Recipe Shell) | `src/core/tools/agent/ExecuteRecipeTool.ts` |
 
 ### Tools: MCP
 | Status | Tool | Datei |
@@ -159,7 +161,8 @@
 | `[x]` | Web Search Tab (Brave / Tavily API-Key) | `src/ui/settings/WebSearchTab.ts` |
 | `[x]` | MCP Tab (Server-Config, stdio commands) | `src/ui/settings/McpTab.ts` |
 | `[x]` | Permissions Tab (Auto-Approve per Tool-Kategorie) | `src/ui/settings/PermissionsTab.ts` |
-| `[x]` | Loop Tab (Error-Limit, Rate-Limit, Context Condensing, Power Steering) | `src/ui/settings/LoopTab.ts` |
+| `[x]` | Loop Tab (Error-Limit, Rate-Limit, Context Condensing, Power Steering, Max Sub-Agent Depth) | `src/ui/settings/LoopTab.ts` |
+| `[x]` | Shell Tab (Plugin API Allowlist, Recipe Toggles) | `src/ui/settings/ShellTab.ts` |
 | `[x]` | Interface Tab (Auto-add active note, Welcome-Message) | `src/ui/settings/InterfaceTab.ts` |
 | `[x]` | Embeddings Tab (Semantic Index Konfiguration) | `src/ui/settings/EmbeddingsTab.ts` |
 | `[x]` | Vault Tab (Vault-Pfade) | `src/ui/settings/VaultTab.ts` |
@@ -184,11 +187,12 @@
 
 ## Tool-Zählung
 
-**30 Tools implementiert:**
+**32 Tools implementiert:**
 - read (3): read_file, list_files, search_files
 - vault (9): get_vault_stats, get_frontmatter, update_frontmatter, search_by_tag, get_linked_notes, open_note, get_daily_note, semantic_search, query_base
 - edit (9): write_file, edit_file, append_to_file, create_folder, delete_file, move_file, generate_canvas, create_base, update_base
 - web (2): web_fetch, web_search
-- agent (5): ask_followup_question, attempt_completion, switch_mode, update_todo_list, new_task
+- agent (7): ask_followup_question, attempt_completion, switch_mode, update_todo_list, new_task, call_plugin_api, execute_recipe
 - mcp (1): use_mcp_tool
+- skill (3): execute_command, resolve_capability_gap, enable_plugin
 - (update_frontmatter ist in vault + edit verfügbar)

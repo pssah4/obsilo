@@ -74,6 +74,10 @@ export class AgentTask {
     private powerSteeringFrequency: number;
     /** Maximum iterations per message (prevents runaway loops). */
     private maxIterations: number;
+    /** Current nesting depth (0 = root task, 1 = first child, etc.). */
+    private depth: number;
+    /** Maximum allowed sub-agent nesting depth. Children at this depth cannot spawn further. */
+    private maxSubtaskDepth: number;
 
     constructor(
         api: ApiHandler,
@@ -86,6 +90,8 @@ export class AgentTask {
         condensingThreshold = 80,
         powerSteeringFrequency = 0,
         maxIterations = 25,
+        depth = 0,
+        maxSubtaskDepth = 2,
     ) {
         this.api = api;
         this.toolRegistry = toolRegistry;
@@ -97,6 +103,8 @@ export class AgentTask {
         this.condensingThreshold = condensingThreshold;
         this.powerSteeringFrequency = powerSteeringFrequency;
         this.maxIterations = maxIterations;
+        this.depth = depth;
+        this.maxSubtaskDepth = maxSubtaskDepth;
     }
 
     /**
@@ -178,6 +186,10 @@ export class AgentTask {
         };
 
         // new_task: spawn a child AgentTask that runs in a fresh history and returns its result.
+        // Depth-guard: children at maxSubtaskDepth get spawnSubtask = undefined (cannot nest further).
+        const childDepth = this.depth + 1;
+        const childCanSpawn = childDepth < this.maxSubtaskDepth;
+
         const spawnSubtask = async (childMode: string, childMessage: string): Promise<string> => {
             const childHistory: MessageParam[] = [];
             let childText = '';
@@ -188,7 +200,6 @@ export class AgentTask {
                 {
                     onText: (chunk) => { childText += chunk; },
                     onToolStart: (name, input) => {
-                        // Forward subtask tool events to parent UI (prefixed)
                         this.taskCallbacks.onToolStart(`[subtask] ${name}`, input);
                     },
                     onToolResult: (name, content, isError) => {
@@ -197,8 +208,8 @@ export class AgentTask {
                     onComplete: () => { /* handled via Promise resolution */ },
                     onError: (err) => { throw err; },
                     onUsage: (i, o) => {
-                        // Accumulate subtask tokens into parent's total — forwarded here as noop
-                        // (parent already tracks its own via onUsage; subtask usage is additive)
+                        // Forward subtask token usage to parent for accurate cost tracking
+                        this.taskCallbacks.onUsage?.(i, o);
                     },
                     // K-1: Forward parent approval callback so subtask write ops are not
                     // auto-rejected by the fail-closed fallback in ToolExecutionPipeline.
@@ -209,6 +220,8 @@ export class AgentTask {
                 this.rateLimitMs,
                 // Subtasks don't condense or power-steer (keep child loops lean)
                 false, 80, 0, this.maxIterations,
+                childDepth,             // propagate nesting depth
+                this.maxSubtaskDepth,   // propagate limit
             );
 
             await childTask.run(
@@ -239,7 +252,7 @@ export class AgentTask {
 
         const rebuildPromptCache = () => {
             const allModes = this.modeService?.getAllModes();
-            cachedSystemPrompt = buildSystemPromptForMode(activeMode, allModes, globalCustomInstructions, includeTime, rulesContent, skillsSection, mcpClient, allowedMcpServers, memoryContext, pluginSkillsSection);
+            cachedSystemPrompt = buildSystemPromptForMode(activeMode, allModes, globalCustomInstructions, includeTime, rulesContent, skillsSection, mcpClient, allowedMcpServers, memoryContext, pluginSkillsSection, this.depth > 0);
             cachedTools = this.modeService
                 ? this.modeService.getToolDefinitions(activeMode, sessionToolOverride)
                 : this.toolRegistry.getToolDefinitions();
@@ -390,7 +403,8 @@ export class AgentTask {
                         askQuestion,
                         signalCompletion,
                         switchMode,
-                        spawnSubtask,
+                        // Depth-guard: only wire spawnSubtask if this child is allowed to spawn
+                        spawnSubtask: childCanSpawn ? spawnSubtask : undefined,
                         onApprovalRequired: this.taskCallbacks.onApprovalRequired,
                         updateTodos: this.taskCallbacks.onTodoUpdate,
                         onCheckpoint: this.taskCallbacks.onCheckpoint,

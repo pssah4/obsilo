@@ -23,7 +23,7 @@ export const TOOL_GROUP_MAP: Record<ToolGroup, string[]> = {
     web:   ['web_fetch', 'web_search'],
     agent: ['ask_followup_question', 'attempt_completion', 'update_todo_list', 'new_task', 'switch_mode'],
     mcp:   ['use_mcp_tool'],
-    skill: ['execute_command', 'resolve_capability_gap', 'enable_plugin'],
+    skill: ['execute_command', 'execute_recipe', 'call_plugin_api', 'resolve_capability_gap', 'enable_plugin'],
 };
 
 // ---------------------------------------------------------------------------
@@ -124,40 +124,30 @@ When the user picks an action that requires writing, use switch_mode to escalate
 - Headers: ## main sections, ### subsections
 - Callouts: > [!note], > [!tip], > [!warning]
 
-## Sub-agent workflows (new_task)
+## Direct execution (default)
 
-When a task is complex enough to benefit from delegation, use new_task to spawn sub-agents.
-Sub-agents are Agent clones that run with fresh conversation context and return their full response.
-**Always pass all necessary context in the message — the sub-agent cannot see this conversation.**
+You have all the tools needed for most tasks. Use them directly:
+- File conversion (PDF, DOCX) → execute_recipe (pandoc-pdf, pandoc-docx, pandoc-convert)
+- Plugin data (Dataview, Omnisearch, MetaEdit) → call_plugin_api
+- Plugin commands → execute_command
+- Vault read/write → read_file, write_file, edit_file
+- Web research → web_search + web_fetch
+- Knowledge queries → semantic_search
 
-Available sub-agent modes:
-- **agent** — full capabilities, for tasks that require reading and writing
-- **ask** — read-only, for information retrieval and vault queries
+NEVER delegate to a sub-agent what you can do directly in 1-4 tool calls.
 
-### Agentic patterns you can apply:
+## Sub-agent delegation (only when direct execution is insufficient)
 
-**Prompt Chaining** — Sequential steps, each building on the previous result:
-  Spawn agent for Step 1 → take result → spawn agent for Step 2 with result as context → ...
-  Best for: research → draft → publish pipelines, multi-stage analysis.
+Before spawning a sub-agent with new_task, verify ALL of these conditions:
+1. The task requires 5+ steps across different specialties
+2. Context isolation genuinely helps (e.g., deep research into many files where intermediate results would bloat your context)
+3. You cannot accomplish it with your current tools in a reasonable number of calls
 
-**Orchestrator-Worker** — You plan and coordinate, workers execute focused tasks:
-  Decompose the task → spawn a focused worker agent for each part → synthesize results.
-  Best for: large tasks with independent subtasks (e.g., process multiple documents).
+Available modes: agent (full capabilities), ask (read-only vault queries).
+Sub-agents must NOT spawn further sub-agents. Maximum nesting depth: 1.
+Always pass all necessary context in the message — the sub-agent cannot see this conversation.
 
-**Evaluator-Optimizer** — Generate → evaluate → refine loop:
-  Spawn a generator agent → evaluate its output against criteria → if not good enough,
-  spawn a refinement agent with the feedback → repeat until quality threshold is met.
-  Best for: content that needs to meet specific quality or format standards.
-
-**Routing** — Delegate to the right sub-agent based on subtask type:
-  Read-only lookups → new_task('ask', ...) | Writing/editing → new_task('agent', ...)
-  Best for: mixed workflows with distinct read and write phases.
-
-### When to use sub-agents vs. doing it directly:
-- Use sub-agents when a subtask benefits from isolated context (no context bleeding).
-- Use sub-agents when parallel processing would help (spawn multiple and aggregate results).
-- Do it directly when the task is simple or sequential without context isolation needs.
-- Avoid unnecessary nesting — sub-agents should not spawn further sub-agents unless clearly needed.`,
+Patterns: Prompt Chaining (sequential steps) | Orchestrator-Worker (parallel independent subtasks) | Routing (ask for reads, agent for writes).`,
     },
 ];
 

@@ -302,6 +302,8 @@ export interface AdvancedApiSettings {
     powerSteeringFrequency: number;
     /** Maximum iterations per message before the agent stops (5–50, default 25) */
     maxIterations: number;
+    /** Maximum sub-agent nesting depth (1 = no grandchildren, 2 = one level of grandchildren) */
+    maxSubtaskDepth: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -532,7 +534,7 @@ export const DEFAULT_SETTINGS: ObsidianAgentSettings = {
         skills: false,
         pluginApiRead: true,
         pluginApiWrite: false,
-        recipes: false,
+        recipes: true,
     },
     autoApprovalRules: {
         readOperations: true,
@@ -548,6 +550,7 @@ export const DEFAULT_SETTINGS: ObsidianAgentSettings = {
         condensingThreshold: 80,
         powerSteeringFrequency: 0,
         maxIterations: 25,
+        maxSubtaskDepth: 2,
     },
 
     enableSemanticIndex: false,
@@ -602,7 +605,7 @@ export const DEFAULT_SETTINGS: ObsidianAgentSettings = {
         safeMethodOverrides: {},
     },
     recipes: {
-        enabled: false,
+        enabled: true,
         recipeToggles: {},
         customRecipes: [],
     },

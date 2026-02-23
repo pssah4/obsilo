@@ -1234,14 +1234,26 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
                         }
                     }
                 },
-                // Feature 5: Styled error display with friendly messages
+                // Feature 5: Error display inside steps dialog
                 onError: (error) => {
-                    contentEl.empty();
-                    const errEl = messageEl.createDiv('message-error');
-                    setIcon(errEl.createSpan('error-icon'), 'alert-triangle');
-                    const errBody = errEl.createDiv('error-body');
-                    errBody.createDiv('error-title').setText(this.getErrorTitle(error));
-                    errBody.createDiv('error-detail').setText(error.message);
+                    // Clean up spinner and computing row
+                    removeLoading();
+
+                    // Show error inside the steps block (not as a separate red banner)
+                    ensureStepsBlock();
+                    const errorRow = (stepsBodyEl ?? toolsEl).createDiv('tool-step-row tool-step-error');
+                    const iconEl = errorRow.createSpan('tool-step-icon');
+                    setIcon(iconEl, 'x-circle');
+                    const textEl = errorRow.createDiv('tool-step-text');
+                    textEl.createDiv('error-title').setText(this.getErrorTitle(error));
+                    textEl.createDiv('error-detail').setText(error.message);
+
+                    // Update steps summary to error state
+                    stepsHasError = true;
+                    updateStepsSummary(true);
+                    if (stepsBlockEl) stepsBlockEl.open = true;
+
+                    // Clean up streaming/running state
                     messageEl.removeClass('message-streaming');
                     this.currentAbortController = null;
                     this.setRunningState(false);
@@ -1254,6 +1266,8 @@ Select a mode in the toolbar below and start chatting. The agent can read and wr
             this.plugin.settings.advancedApi.condensingThreshold ?? 80,
             this.plugin.settings.advancedApi.powerSteeringFrequency ?? 0,
             this.plugin.settings.advancedApi.maxIterations ?? 25,
+            0,  // depth: root task starts at 0
+            this.plugin.settings.advancedApi.maxSubtaskDepth ?? 2,
         );
 
         // Load enabled rules for this task (Sprint 3.2)
