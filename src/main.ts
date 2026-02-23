@@ -372,6 +372,23 @@ export default class ObsidianAgentPlugin extends Plugin {
             this.saveData(this.settings);
         }
 
+        // Migrate auto-approval: ensure newer keys have sensible defaults
+        {
+            const ap = this.settings.autoApproval;
+            let changed = false;
+            // skills: was false, now true — enable when master switch is on
+            if (ap.enabled && ap.skills === false) {
+                ap.skills = true;
+                changed = true;
+            }
+            // pluginApiRead: may be missing in older data.json — default true
+            if (ap.pluginApiRead === undefined) {
+                ap.pluginApiRead = true;
+                changed = true;
+            }
+            if (changed) this.saveData(this.settings);
+        }
+
         // Ensure new tools appear in default agent override list
         const agentOverride = this.settings.modeToolOverrides?.agent;
         if (agentOverride && !agentOverride.includes('execute_command')) {

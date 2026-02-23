@@ -39,6 +39,7 @@ const TOOL_GROUPS: Record<string, ToolGroup> = {
     search_by_tag: 'read',
     get_daily_note: 'read',
     query_base: 'read',
+    semantic_search: 'read',
     // Note content edits (write_file, edit_file, append_to_file, update_frontmatter)
     write_file: 'note-edit',
     edit_file: 'note-edit',

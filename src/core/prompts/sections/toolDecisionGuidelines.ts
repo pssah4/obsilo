@@ -29,7 +29,7 @@ export function getToolDecisionGuidelinesSection(): string {
 1d. PLUGIN API — When you need structured data from a plugin (Dataview queries, Omnisearch results, MetaEdit properties), use call_plugin_api instead of execute_command. It returns actual data. Check the PLUGIN SKILLS section for available API methods per plugin.
 1e. FILE EXPORT / CONVERSION — Confidence-based routing:
    TIER 1 (prefer): Native Obsidian commands via execute_command.
-     Zero dependencies, always available. Example: file:export-to-pdf.
+     Zero dependencies, always available. Example: workspace:export-pdf.
      Note: May open a system dialog the user must confirm.
    TIER 2 (fallback): CLI recipes via execute_recipe.
      Requires external tool (Pandoc, LaTeX). Use check-dependency first.

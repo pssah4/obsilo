@@ -169,7 +169,9 @@ export class VaultDNAScanner {
 
         for (const def of CORE_PLUGIN_DEFS) {
             const internal = internalPlugins[def.id];
-            const isEnabled = internal?.enabled === true;
+            // If the plugin is not in internalPlugins, its commands are always
+            // available (e.g. workspace, app, editor — core Obsidian functions).
+            const isEnabled = internal === undefined ? true : internal.enabled === true;
 
             const entry: VaultDNAEntry = {
                 id: def.id,

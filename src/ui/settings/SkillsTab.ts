@@ -78,7 +78,7 @@ export class SkillsTab {
             const skills: { path: string; name: string; description: string }[] =
                 await skillsManager.discoverSkills();
             if (skills.length === 0) {
-                listEl.createEl('p', { cls: 'agent-settings-desc', text: 'No skills yet. Create one above.' });
+                listEl.createEl('p', { cls: 'agent-empty-state', text: 'No skills yet. Create one above.' });
                 return;
             }
             for (const skill of skills) {
@@ -88,7 +88,10 @@ export class SkillsTab {
                 label.createSpan({ cls: 'agent-workflow-slug', text: skill.description });
 
                 const actions = row.createDiv({ cls: 'agent-rules-actions' });
-                const editBtn = actions.createEl('button', { text: 'Edit', cls: 'agent-rules-edit-btn' });
+
+                const editBtn = actions.createEl('button', { cls: 'agent-rules-edit-btn' });
+                setIcon(editBtn, 'pencil');
+                editBtn.setAttribute('aria-label', 'Edit');
                 editBtn.addEventListener('click', async () => {
                     const content = await this.app.vault.adapter.read(skill.path);
                     new ContentEditorModal(this.app, `Edit skill: ${skill.name}`, content, async (newContent) => {
@@ -96,7 +99,9 @@ export class SkillsTab {
                     }).open();
                 });
 
-                const exportSkillBtn = actions.createEl('button', { text: 'Export', cls: 'agent-rules-export-btn' });
+                const exportSkillBtn = actions.createEl('button', { cls: 'agent-rules-export-btn' });
+                setIcon(exportSkillBtn, 'download');
+                exportSkillBtn.setAttribute('aria-label', 'Export');
                 exportSkillBtn.addEventListener('click', async () => {
                     const content = await this.app.vault.adapter.read(skill.path);
                     const blob = new Blob([content], { type: 'text/markdown' });
@@ -108,14 +113,33 @@ export class SkillsTab {
                     URL.revokeObjectURL(url);
                 });
 
-                const delBtn = actions.createEl('button', { text: 'Delete', cls: 'agent-rules-delete-btn' });
+                const delBtn = actions.createEl('button', { cls: 'agent-rules-delete-btn' });
+                setIcon(delBtn, 'trash-2');
+                delBtn.setAttribute('aria-label', 'Delete');
                 delBtn.addEventListener('click', async () => {
                     try {
                         await this.app.vault.adapter.remove(skill.path);
+                        this.plugin.settings.manualSkillToggles ??= {};
+                        delete this.plugin.settings.manualSkillToggles[skill.path];
+                        await this.plugin.saveSettings();
                         await refreshList();
                     } catch {
                         new Notice('Could not delete skill file');
                     }
+                });
+
+                // Enable/disable toggle
+                this.plugin.settings.manualSkillToggles ??= {};
+                const isActive = this.plugin.settings.manualSkillToggles[skill.path] !== false;
+                const toggleEl = row.createDiv({
+                    cls: `checkbox-container agent-rules-toggle${isActive ? ' is-enabled' : ''}`,
+                });
+                toggleEl.addEventListener('click', async () => {
+                    this.plugin.settings.manualSkillToggles ??= {};
+                    const current = this.plugin.settings.manualSkillToggles[skill.path] !== false;
+                    this.plugin.settings.manualSkillToggles[skill.path] = !current;
+                    await this.plugin.saveSettings();
+                    toggleEl.toggleClass('is-enabled', !current);
                 });
             }
         };
@@ -191,19 +215,33 @@ export class SkillsTab {
             }
         });
 
-        // Core Skills section
+        // Core Skills section (collapsible)
         const coreSkills = allSkills.filter((s) => s.source === 'core');
         if (coreSkills.length > 0) {
-            containerEl.createEl('h4', { text: `Core Plugin Skills (${coreSkills.length})` });
-            this.buildCompactSkillList(containerEl, coreSkills);
+            this.buildCollapsibleSkillGroup(containerEl, `Core Plugin Skills (${coreSkills.length})`, coreSkills);
         }
 
-        // Community Skills section
+        // Community Skills section (collapsible)
         const communitySkills = allSkills.filter((s) => s.source !== 'core');
         if (communitySkills.length > 0) {
-            containerEl.createEl('h4', { text: `Community Plugin Skills (${communitySkills.length})` });
-            this.buildCompactSkillList(containerEl, communitySkills);
+            this.buildCollapsibleSkillGroup(containerEl, `Community Plugin Skills (${communitySkills.length})`, communitySkills);
         }
+    }
+
+    private buildCollapsibleSkillGroup(containerEl: HTMLElement, title: string, skills: PluginSkillMeta[]): void {
+        const header = containerEl.createDiv({ cls: 'agent-skill-group-header' });
+        const chevron = header.createSpan({ cls: 'agent-skill-group-chevron' });
+        setIcon(chevron, 'chevron-down');
+        header.createSpan({ text: title, cls: 'agent-skill-group-title' });
+
+        const content = containerEl.createDiv({ cls: 'agent-skill-group-content' });
+        this.buildCompactSkillList(content, skills);
+
+        header.addEventListener('click', () => {
+            const collapsed = content.classList.toggle('agent-skill-group-collapsed');
+            chevron.empty();
+            setIcon(chevron, collapsed ? 'chevron-right' : 'chevron-down');
+        });
     }
 
     private buildCompactSkillList(containerEl: HTMLElement, skills: PluginSkillMeta[]): void {

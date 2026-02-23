@@ -3142,16 +3142,20 @@
 .agent-rules-list {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 0;
 }
 
 .agent-rules-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 6px 8px;
-    background: var(--background-secondary);
-    border-radius: 6px;
+    padding: 3px 8px;
+    font-size: var(--font-ui-small);
+    border-bottom: 1px solid var(--background-modifier-border-hover);
+}
+
+.agent-rules-row:last-child {
+    border-bottom: none;
 }
 
 /* ── Plugin Skills compact table ── */
@@ -3159,6 +3163,42 @@
     display: flex;
     gap: 8px;
     margin-bottom: 12px;
+}
+
+/* Empty state text (no background box) */
+.agent-empty-state {
+    font-size: 12px;
+    color: var(--text-muted);
+    padding: 8px 0;
+    margin: 0;
+}
+
+/* Collapsible skill group headers */
+.agent-skill-group-header {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    padding: 6px 0;
+    font-weight: var(--font-semibold);
+    font-size: var(--font-ui-medium);
+    color: var(--text-normal);
+    user-select: none;
+}
+.agent-skill-group-header:hover {
+    color: var(--text-accent);
+}
+.agent-skill-group-chevron {
+    display: flex;
+    align-items: center;
+    color: var(--text-muted);
+}
+.agent-skill-group-chevron svg {
+    width: 16px;
+    height: 16px;
+}
+.agent-skill-group-collapsed {
+    display: none;
 }
 
 .agent-skill-table {
@@ -3279,9 +3319,10 @@
 .agent-rules-label {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     flex: 1;
-    cursor: pointer;
+    min-width: 0;
+    font-size: var(--font-ui-small);
 }
 
 .agent-rules-actions {
@@ -3289,19 +3330,41 @@
     gap: 4px;
 }
 
+.agent-rules-toggle.checkbox-container {
+    transform: scale(0.75);
+    flex-shrink: 0;
+    margin-left: 4px;
+}
+
 .agent-rules-edit-btn,
+.agent-rules-export-btn,
 .agent-rules-delete-btn {
-    font-size: 12px;
-    padding: 2px 8px;
+    background: none;
+    border: none;
+    padding: 4px;
+    cursor: pointer;
+    color: var(--text-muted);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+}
+.agent-rules-edit-btn:hover,
+.agent-rules-export-btn:hover {
+    color: var(--text-normal);
+    background: var(--background-modifier-hover);
+}
+.agent-rules-delete-btn:hover {
     color: var(--color-red);
+    background: var(--background-modifier-hover);
+}
+.agent-rules-edit-btn svg,
+.agent-rules-export-btn svg,
+.agent-rules-delete-btn svg {
+    width: 14px;
+    height: 14px;
 }
 
 .agent-rules-import-btn {
-    font-size: 12px;
-    padding: 2px 8px;
-}
-
-.agent-rules-export-btn {
     font-size: 12px;
     padding: 2px 8px;
 }
