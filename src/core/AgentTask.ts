@@ -243,21 +243,26 @@ export class AgentTask {
             return childText;
         };
 
-        // Cache system prompt + tool definitions — rebuilt only when the mode changes.
-        // Without this, buildSystemPromptForMode() and getToolDefinitions() are called
-        // on every agentic loop iteration even though nothing has changed.
+        // Cache system prompt + tool definitions — rebuilt only when the mode changes
+        // or when settings that affect tool availability change (e.g. webTools.enabled).
         let cachedPromptMode = '';
         let cachedSystemPrompt = '';
         let cachedTools: ToolDefinition[] = [];
+        let cacheInvalidated = false;
 
         const rebuildPromptCache = () => {
             const allModes = this.modeService?.getAllModes();
-            cachedSystemPrompt = buildSystemPromptForMode(activeMode, allModes, globalCustomInstructions, includeTime, rulesContent, skillsSection, mcpClient, allowedMcpServers, memoryContext, pluginSkillsSection, this.depth > 0);
+            const webEnabled = this.modeService?.isWebEnabled() ?? false;
+            cachedSystemPrompt = buildSystemPromptForMode(activeMode, allModes, globalCustomInstructions, includeTime, rulesContent, skillsSection, mcpClient, allowedMcpServers, memoryContext, pluginSkillsSection, this.depth > 0, webEnabled);
             cachedTools = this.modeService
                 ? this.modeService.getToolDefinitions(activeMode, sessionToolOverride)
                 : this.toolRegistry.getToolDefinitions();
             cachedPromptMode = activeMode.slug;
+            cacheInvalidated = false;
         };
+
+        /** Called by UpdateSettingsTool when settings that affect tool availability change */
+        const invalidateToolCache = () => { cacheInvalidated = true; };
 
         try {
             for (let iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
@@ -300,8 +305,8 @@ export class AgentTask {
                     });
                 }
 
-                // Rebuild system prompt + tool list only when mode has changed
-                if (activeMode.slug !== cachedPromptMode) {
+                // Rebuild system prompt + tool list when mode or tool availability changed
+                if (activeMode.slug !== cachedPromptMode || cacheInvalidated) {
                     rebuildPromptCache();
                 }
                 const systemPrompt = cachedSystemPrompt;
@@ -414,6 +419,7 @@ export class AgentTask {
                         onApprovalRequired: this.taskCallbacks.onApprovalRequired,
                         updateTodos: this.taskCallbacks.onTodoUpdate,
                         onCheckpoint: this.taskCallbacks.onCheckpoint,
+                        invalidateToolCache,
                     });
                 };
 

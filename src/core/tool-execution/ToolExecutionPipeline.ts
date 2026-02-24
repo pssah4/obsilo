@@ -102,6 +102,8 @@ export interface ContextExtensions {
     spawnSubtask?: (mode: string, message: string) => Promise<string>;
     /** Notify UI about a new checkpoint after a write operation */
     onCheckpoint?: (checkpoint: import('../checkpoints/GitCheckpointService').CheckpointInfo) => void;
+    /** Invalidate cached tool definitions (e.g. after webTools.enabled changes) */
+    invalidateToolCache?: () => void;
 }
 
 export class ToolExecutionPipeline {
@@ -196,6 +198,7 @@ export class ToolExecutionPipeline {
                 updateTodos: extensions?.updateTodos,
                 switchMode: extensions?.switchMode,
                 spawnSubtask: extensions?.spawnSubtask,
+                invalidateToolCache: extensions?.invalidateToolCache,
             };
 
             await tool.execute(toolCall.input, context);

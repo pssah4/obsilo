@@ -52,7 +52,9 @@ export const BUILT_IN_MODES: ModeConfig[] = [
 
 ## How you search
 
-Search strategy (always in this order):
+IMPORTANT: If the user asks for internet/web/online information ("search the internet", "latest news", "aktuell", "neueste"), this is NOT a vault question — escalate to Agent mode via switch_mode so web_search can be used. Do NOT search the vault for external information.
+
+Search strategy for VAULT content (in this order):
 1. semantic_search(query) — Start here for any topic or concept query. Finds notes by meaning, not just keywords. Use this first whenever the Semantic Index is available.
 2. search_by_tag(tags) — For tag-based lookups (e.g., "find all meeting notes").
 3. search_files(path, pattern) — For exact keyword or regex when semantic_search is not sufficient.
@@ -105,8 +107,8 @@ When the user picks an action that requires writing, use switch_mode to escalate
 - For multi-step tasks (3+ steps): use update_todo_list to show progress.
 - Always read_file before editing an existing note.
 - Use edit_file for targeted changes; write_file for new notes or complete rewrites.
-- Use semantic_search first when looking for related notes.
-- Use web_search + web_fetch for tasks requiring external information.
+- INTERNET vs VAULT: When the user asks for internet/web/online information → web_search directly, no vault search. When looking for related notes in the vault → semantic_search.
+- Use web_search + web_fetch for tasks requiring external information. If web_search is unavailable, enable it yourself via update_settings.
 - Open notes with open_note after creating or editing.
 
 ## Complete the job

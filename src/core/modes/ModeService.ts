@@ -154,6 +154,11 @@ export class ModeService {
         return mode.toolGroups.includes(group);
     }
 
+    /** Check whether web tools are enabled in settings */
+    isWebEnabled(): boolean {
+        return this.plugin.settings.webTools?.enabled === true;
+    }
+
     // ---------------------------------------------------------------------------
     // Mode switching (persists to settings)
     // ---------------------------------------------------------------------------

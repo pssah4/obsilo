@@ -74,19 +74,20 @@ export function buildSystemPromptForMode(
     memoryContext?: string,
     pluginSkillsSection?: string,
     isSubtask = false,
+    webEnabled?: boolean,
 ): string {
     const sections: string[] = [
         // 1. Date/time + 2. Vault context (combined at top)
         getDateTimeSection(includeTime) + getVaultContextSection(),
 
         // 3. Capabilities (high-level summary)
-        getCapabilitiesSection(),
+        getCapabilitiesSection(webEnabled),
 
         // 4. User memory (conditional — omit for subtasks, parent already applied)
         isSubtask ? '' : getMemorySection(memoryContext),
 
         // 5. Tools (filtered by mode)
-        getToolsSection(mode.toolGroups, mcpClient, allowedMcpServers),
+        getToolsSection(mode.toolGroups, mcpClient, allowedMcpServers, webEnabled),
 
         // 6. Plugin Skills — right after tools so agent sees plugins before planning
         getPluginSkillsSection(pluginSkillsSection),
