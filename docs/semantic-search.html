@@ -114,15 +114,15 @@
       <p data-i18n="pages.semanticSearch.enable.text" data-i18n-html>Go to Settings → Obsilo Agent → <strong>Semantic Index</strong> and toggle "Enable Semantic Index" on.</p>
 
       <h3 id="choose-model" data-i18n="pages.semanticSearch.chooseModel">Step 2: Choose an Embedding Model</h3>
-      <p data-i18n="pages.semanticSearch.chooseModel.text" data-i18n-html>Go to Settings → Providers → <strong>Embeddings</strong> and select an embedding model.</p>
+      <p data-i18n="pages.semanticSearch.chooseModel.text" data-i18n-html>Go to Settings → Providers → <strong>Embeddings</strong>, click "Add Embedding Model", and configure one:</p>
 
       <table data-i18n-html="pages.semanticSearch.chooseModel.table">
-        <thead><tr><th>Model</th><th>Type</th><th>Quality</th><th>Notes</th></tr></thead>
+        <thead><tr><th>Model</th><th>Provider</th><th>Quality</th><th>Notes</th></tr></thead>
         <tbody>
-          <tr><td><code>Xenova/all-MiniLM-L6-v2</code></td><td>Local (ONNX)</td><td>Good</td><td>Default. 384 dimensions. No API key needed. ~23MB download on first use.</td></tr>
-          <tr><td><code>Xenova/bge-small-en-v1.5</code></td><td>Local (ONNX)</td><td>Better</td><td>Small but strong. Good for English-heavy vaults.</td></tr>
-          <tr><td><code>Xenova/multilingual-e5-small</code></td><td>Local (ONNX)</td><td>Good</td><td>Multilingual support. Use if your vault contains multiple languages.</td></tr>
-          <tr><td>text-embedding-3-small</td><td>OpenAI API</td><td>Excellent</td><td>Requires OpenAI API key. 1536 dimensions. Higher quality, cloud-dependent.</td></tr>
+          <tr><td><code>text-embedding-3-small</code></td><td>OpenAI</td><td>Excellent</td><td>Recommended. Fast, cheap, 1536 dimensions. Requires OpenAI API key.</td></tr>
+          <tr><td><code>text-embedding-3-large</code></td><td>OpenAI</td><td>Best</td><td>Highest quality. 3072 dimensions. Requires OpenAI API key.</td></tr>
+          <tr><td><code>nomic-embed-text</code></td><td>Ollama</td><td>Very Good</td><td>Free, runs locally via Ollama. 768 dimensions. No API key needed.</td></tr>
+          <tr><td><code>mxbai-embed-large</code></td><td>Ollama</td><td>Excellent</td><td>Free, runs locally via Ollama. 1024 dimensions.</td></tr>
         </tbody>
       </table>
 
@@ -150,7 +150,7 @@
           <tr><td><code>never</code></td><td>Only build manually (default)</td></tr>
         </tbody>
       </table>
-      <p data-i18n="pages.semanticSearch.autoIndexing.text2" data-i18n-html>There's also <strong>Auto-index on change</strong> — when enabled, files are re-indexed as you edit them. This keeps the index fully up to date but adds background CPU work. Use with caution on large vaults with local embedding models, as it can cause UI lag.</p>
+      <p data-i18n="pages.semanticSearch.autoIndexing.text2" data-i18n-html>There's also <strong>Auto-index on change</strong> — when enabled, files are re-indexed as you edit them. This keeps the index fully up to date but adds background API calls.</p>
 
       <h2 id="configuration" data-i18n="pages.semanticSearch.configuration">Configuration</h2>
 

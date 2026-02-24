@@ -201,11 +201,11 @@ cp main.js styles.css manifest.json \
       </ul>
 
       <h2 id="semantic-search-setup" data-i18n="pages.gettingStarted.semanticSearchSetup">4. Set Up Semantic Search (Optional but Recommended)</h2>
-      <p data-i18n="pages.gettingStarted.semanticSearchSetup.text1">Semantic search lets the agent find notes by meaning rather than just keywords. It runs entirely locally — no cloud service needed.</p>
+      <p data-i18n="pages.gettingStarted.semanticSearchSetup.text1">Semantic search lets the agent find notes by meaning rather than just keywords. It requires an embedding model.</p>
       <ol class="steps">
-        <li data-i18n-html="pages.gettingStarted.semanticSearchSetup.step1">Go to Settings → Obsilo Agent → <strong>Semantic Index</strong></li>
-        <li data-i18n-html="pages.gettingStarted.semanticSearchSetup.step2">Toggle "Enable Semantic Index" on</li>
-        <li data-i18n-html="pages.gettingStarted.semanticSearchSetup.step3">Choose an embedding model. The default <code>Xenova/all-MiniLM-L6-v2</code> runs locally and requires no API key</li>
+        <li data-i18n-html="pages.gettingStarted.semanticSearchSetup.step1">Go to Settings → Obsilo Agent → <strong>Embeddings</strong></li>
+        <li data-i18n-html="pages.gettingStarted.semanticSearchSetup.step2">Add an embedding model (e.g. OpenAI <code>text-embedding-3-small</code> or Ollama <code>nomic-embed-text</code>)</li>
+        <li data-i18n-html="pages.gettingStarted.semanticSearchSetup.step3">Toggle "Enable Semantic Index" on</li>
         <li data-i18n-html="pages.gettingStarted.semanticSearchSetup.step4">Click <strong>Build Index</strong> and wait for indexing to complete (the first build may take a few minutes)</li>
       </ol>
       <p data-i18n-html="pages.gettingStarted.semanticSearchSetup.text2">Once built, the <code>semantic_search</code> tool is available to the agent in all modes.</p>

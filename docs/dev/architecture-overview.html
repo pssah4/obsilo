@@ -127,7 +127,7 @@
         <tbody>
           <tr><td>1</td><td>Data Security</td><td>Fail-closed approval, git checkpoints, <code>.obsidian-agentignore</code></td><td>Fail-closed approval means write operations are denied if no callback is registered. Git checkpoints create a snapshot before every write.</td></tr>
           <tr><td>2</td><td>Extensibility</td><td>Custom modes, rules, skills, workflows, MCP servers, plugin skills</td><td>Custom modes define tool access via JSON config. MCP servers extend the tool set without code changes. VaultDNA auto-discovers plugin capabilities.</td></tr>
-          <tr><td>3</td><td>Privacy</td><td>Local-first: embeddings, index, memory all on disk. No telemetry.</td><td>Xenova embeddings run in-browser via ONNX. No telemetry or external calls except to configured LLM providers.</td></tr>
+          <tr><td>3</td><td>Privacy</td><td>Local-first: index and memory stored on disk. No telemetry.</td><td>Embeddings are generated via the user's configured model (API or local via Ollama). No telemetry or external calls except to configured providers.</td></tr>
           <tr><td>4</td><td>Transparency</td><td>Diff preview, operation log (JSONL), tool cards in UI</td><td>Every tool call is logged to JSONL with sanitized parameters. DiffReviewModal shows exactly what changed.</td></tr>
           <tr><td>5</td><td>Performance</td><td>Streaming responses, parallel tool execution, incremental index builds</td><td>Parallel tool execution for read-only ops. Incremental semantic index builds. Rate limiting prevents API exhaustion.</td></tr>
         </tbody>
@@ -139,7 +139,7 @@
         <li><strong>Fail-closed approval</strong> &mdash; If no approval callback is registered, write operations are denied by default. <em>Why: Better to deny a safe operation than allow an unsafe one.</em></li>
         <li><strong>Shadow git repository</strong> &mdash; <code>isomorphic-git</code> maintains a hidden repo for checkpoint/restore without requiring system git. <em>Why: No external git dependency, works on any OS.</em></li>
         <li><strong>Mode-based tool filtering</strong> &mdash; Each mode defines which tool groups are accessible, preventing unintended operations. <em>Why: Reduces attack surface by limiting tool access per context.</em></li>
-        <li><strong>Local-only semantic index</strong> &mdash; Vectra HNSW with Xenova embeddings runs entirely on-device. <em>Why: Zero data leaves the device, full privacy.</em></li>
+        <li><strong>Semantic index</strong> &mdash; Vectra HNSW vector store with configurable embedding model (API or local via Ollama). <em>Why: Semantic search across the entire vault.</em></li>
         <li><strong>Sliding-window repetition detection</strong> &mdash; Prevents infinite tool loops by tracking recent calls in a 10-call window. <em>Why: Bounded memory prevents infinite loops without false positives.</em></li>
         <li><strong>Multi-provider API adapter</strong> &mdash; Unified <code>ApiHandler</code> interface normalizes Anthropic, OpenAI, Ollama, Azure, and custom providers. <em>Why: Users choose their preferred LLM without code changes.</em></li>
         <li><strong>3-tier memory architecture</strong> &mdash; Chat history &rarr; session extraction &rarr; long-term memory promotion via LLM pipeline. <em>Why: Balances detail (chat) with efficiency (promoted facts) across time.</em></li>
@@ -189,7 +189,6 @@
           <tr><td><code>openai</code></td><td>OpenAI-compatible API client</td></tr>
           <tr><td><code>@modelcontextprotocol/sdk</code></td><td>MCP client library</td></tr>
           <tr><td><code>vectra</code></td><td>Pure-TypeScript HNSW vector index</td></tr>
-          <tr><td><code>@xenova/transformers</code></td><td>Local ONNX embeddings</td></tr>
           <tr><td><code>isomorphic-git</code></td><td>Pure-JS git for checkpoints</td></tr>
         </tbody>
       </table>

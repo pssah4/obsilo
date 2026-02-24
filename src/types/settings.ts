@@ -41,9 +41,6 @@ export function getFirstEnabledModelKey(models: CustomModel[]): string {
     return first ? getModelKey(first) : '';
 }
 
-/** Sentinel key for the built-in local Xenova embedding model */
-export const LOCAL_EMBEDDING_KEY = '__local__xenova/all-MiniLM-L6-v2';
-
 /** Built-in models — shown in settings by default, user can add API keys & enable */
 export const BUILT_IN_MODELS: CustomModel[] = [
     // Anthropic
@@ -599,7 +596,7 @@ export const DEFAULT_SETTINGS: ObsidianAgentSettings = {
     },
 
     enableSemanticIndex: false,
-    embeddingModel: 'Xenova/all-MiniLM-L6-v2',
+    embeddingModel: '',
     embeddingModels: [],
     activeEmbeddingModelKey: '',
     semanticBatchSize: 20,

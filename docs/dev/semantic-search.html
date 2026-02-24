@@ -98,13 +98,9 @@
       <p>Obsilo implements hybrid search combining vector similarity (Vectra HNSW) with keyword matching (BM25/TF-IDF) via Reciprocal Rank Fusion, enhanced by HyDE expansion and wikilink graph augmentation.</p>
 
       <h2 id="vectra-localindex">Vectra LocalIndex</h2>
-      <p>Pure-TypeScript HNSW vector index. Storage: <code>.obsidian/plugins/obsidian-agent/semantic-index/</code>. Default model: <code>Xenova/all-MiniLM-L6-v2</code> (384 dimensions, runs locally via ONNX).</p>
-      <p>Two embedding paths are supported:</p>
+      <p>Pure-TypeScript HNSW vector index. Storage: <code>.obsidian/plugins/obsidian-agent/semantic-index/</code>. Requires a configured embedding model (e.g. OpenAI <code>text-embedding-3-small</code> or Ollama <code>nomic-embed-text</code>).</p>
 
-      <h3>Local Embeddings (Default)</h3>
-      <p>Model: <code>Xenova/all-MiniLM-L6-v2</code>, 384 dimensions, mean pooling, L2-normalized output. Zero configuration required &mdash; the ONNX runtime loads the model on first use and caches it locally. All computation stays on-device with no network calls.</p>
-
-      <h3>API-Based Embeddings</h3>
+      <h3>Embedding via API</h3>
       <p>Any OpenAI-compatible embedding endpoint. Requests are batched with a batch size of 16 embeddings per API call. Failures are handled with exponential backoff: 1s, 2s, 4s, 8s delays with a maximum of 4 retries. Each request has a 30-second timeout.</p>
       <p>Model key format: <code>{provider}:{modelName}</code> (e.g. <code>openai:text-embedding-3-small</code>). Changing the model key triggers a full index rebuild since embedding dimensions and vector spaces differ between models.</p>
 

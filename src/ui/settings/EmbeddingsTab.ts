@@ -4,7 +4,7 @@ import { ModelConfigModal } from './ModelConfigModal';
 import { addInfoButton } from './utils';
 import { EMBEDDING_SUGGESTIONS, PROVIDER_LABELS, PROVIDER_COLORS } from './constants';
 import type { CustomModel } from '../../types/settings';
-import { getModelKey, LOCAL_EMBEDDING_KEY } from '../../types/settings';
+import { getModelKey } from '../../types/settings';
 import type { SemanticIndexService } from '../../core/semantic/SemanticIndexService';
 
 export class EmbeddingsTab {
@@ -26,7 +26,13 @@ export class EmbeddingsTab {
         header.createDiv({ cls: 'mc-actions' });
 
         // Built-in local model (always first)
-        this.renderLocalEmbeddingRow(table);
+        if ((this.plugin.settings.embeddingModels ?? []).length === 0) {
+            const emptyRow = table.createDiv('model-row');
+            emptyRow.createDiv('mc-name').createSpan({
+                text: 'No embedding models configured',
+                cls: 'mc-name-text setting-item-description',
+            });
+        }
 
         // User-added API models
         const models = this.plugin.settings.embeddingModels ?? [];
@@ -57,12 +63,30 @@ export class EmbeddingsTab {
         const activeEmbModel = this.plugin.getActiveEmbeddingModel();
         const embModelDesc = activeEmbModel
             ? `Using ${activeEmbModel.displayName ?? activeEmbModel.name} (${activeEmbModel.provider}) for embeddings.`
-            : 'Using local all-MiniLM-L6-v2 for embeddings (no data leaves your device).';
+            : 'No embedding model configured. Add one above to enable semantic search.';
 
         containerEl.createEl('p', {
             cls: 'agent-settings-desc',
             text: `Builds a local vector index of all notes for semantic_search. ${embModelDesc}`,
         });
+
+        if (!activeEmbModel) {
+            const guide = containerEl.createDiv({ cls: 'setting-item-description' });
+            guide.style.marginBottom = '12px';
+            guide.style.padding = '8px 12px';
+            guide.style.borderLeft = '3px solid var(--interactive-accent)';
+            guide.style.background = 'var(--background-secondary)';
+            guide.style.borderRadius = '4px';
+            guide.innerHTML = [
+                '<strong>Quick setup:</strong>',
+                '1. Click "Add Embedding Model" above and choose a provider (e.g. OpenAI).',
+                '2. Select a model like <code>text-embedding-3-small</code> (fast, cheap, excellent quality).',
+                '3. Enter your API key, then enable the semantic index below.',
+                '',
+                '<strong>Free alternatives:</strong> Ollama or LM Studio run embedding models locally at no cost.',
+                'Install Ollama, pull <code>nomic-embed-text</code>, and add it as an Ollama embedding model above.',
+            ].join('<br>');
+        }
 
         const getIdx = () => (this.plugin as any).semanticIndex;
         // statusEl is created later inside the "Build index" setting — declared here for scope
@@ -280,12 +304,12 @@ export class EmbeddingsTab {
 
         const autoIndexOnChangeSetting = new Setting(containerEl)
             .setName('Auto-index on file changes [BETA]')
-            .setDesc('Re-index a note automatically when saved, created, renamed, or deleted. Keep OFF if using a local (Xenova) embedding model — runs on the main thread and slows Obsidian. Safe with an API embedding model (e.g. OpenAI text-embedding-3-small).');
+            .setDesc('Re-index a note automatically when saved, created, renamed, or deleted. Safe with API embedding models (e.g. OpenAI text-embedding-3-small).');
         autoIndexOnChangeSetting.descEl.createDiv({
             cls: 'setting-risk-note',
             text: 'Risk: This setting may slow down your vault performance or freeze Obsidian.',
         });
-        addInfoButton(autoIndexOnChangeSetting, this.app, 'Auto-Index on Change', 'When enabled, every file you edit is re-embedded 2 seconds after you stop typing. With a local Xenova model the embedding runs on the main JavaScript thread and will noticeably slow Obsidian. Only enable this if you have an API-based embedding model configured.');
+        addInfoButton(autoIndexOnChangeSetting, this.app, 'Auto-Index on Change', 'When enabled, every file you edit is re-embedded 2 seconds after you stop typing. This works well with API-based embedding models.');
         autoIndexOnChangeSetting.addToggle((t) =>
             t.setValue(this.plugin.settings.semanticAutoIndexOnChange ?? false).onChange(async (v) => {
                 this.plugin.settings.semanticAutoIndexOnChange = v;
@@ -384,54 +408,6 @@ export class EmbeddingsTab {
         );
     }
 
-    private renderLocalEmbeddingRow(table: HTMLElement): void {
-        const isActive = !this.plugin.settings.activeEmbeddingModelKey
-            || this.plugin.settings.activeEmbeddingModelKey === LOCAL_EMBEDDING_KEY;
-
-        const row = table.createDiv(`model-row${isActive ? ' model-row-active' : ''}`);
-
-        // Name
-        row.createDiv('mc-name').createSpan({ text: 'Local (all-MiniLM-L6-v2)', cls: 'mc-name-text' });
-
-        // Provider badge
-        const provEl = row.createDiv('mc-provider');
-        const badge = provEl.createSpan({ cls: 'provider-badge', text: 'Local' });
-        badge.style.background = '#4caf50';
-
-        // Key indicator — local needs no API key
-        const keyEl = row.createDiv('mc-key');
-        const keyIcon = keyEl.createSpan('mc-key-icon');
-        setIcon(keyIcon, 'check');
-        keyEl.addClass('mc-key-ok');
-
-        // Active radio
-        const enableEl = row.createDiv('mc-enable');
-        const toggle = enableEl.createEl('input', { attr: { type: 'radio', name: 'active-embedding' } });
-        toggle.checked = isActive;
-        toggle.addEventListener('change', async () => {
-            if (toggle.checked) {
-                this.plugin.settings.activeEmbeddingModelKey = LOCAL_EMBEDDING_KEY;
-                await this.plugin.saveSettings();
-                this.rerender();
-            }
-        });
-
-        // Actions — empty for built-in
-        row.createDiv('mc-actions');
-
-        // Hint: local model is a fallback, recommend API model
-        if (isActive) {
-            const hint = table.createDiv({ cls: 'setting-item-description' });
-            hint.style.marginTop = '4px';
-            hint.style.marginBottom = '8px';
-            hint.style.padding = '0 8px';
-            hint.setText(
-                'For best results, use an API embedding model (e.g. text-embedding-3-small). ' +
-                'The local model has limited quality and slower indexing — suitable as offline fallback only.'
-            );
-        }
-    }
-
     renderEmbeddingRow(table: HTMLElement, model: CustomModel): void {
         const key = getModelKey(model);
         const hasKey = !!model.apiKey || model.provider === 'ollama' || model.provider === 'lmstudio';
@@ -486,7 +462,7 @@ export class EmbeddingsTab {
             if (this.plugin.settings.activeEmbeddingModelKey === key) {
                 this.plugin.settings.activeEmbeddingModelKey = this.plugin.settings.embeddingModels[0]
                     ? getModelKey(this.plugin.settings.embeddingModels[0])
-                    : LOCAL_EMBEDDING_KEY;
+                    : '';
             }
             await this.plugin.saveSettings();
             this.rerender();

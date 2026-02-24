@@ -1,5 +1,5 @@
 import { Plugin, WorkspaceLeaf, Notice, TFile, addIcon } from 'obsidian';
-import { ObsidianAgentSettings, DEFAULT_SETTINGS, getModelKey, modelToLLMProvider, LOCAL_EMBEDDING_KEY } from './types/settings';
+import { ObsidianAgentSettings, DEFAULT_SETTINGS, getModelKey, modelToLLMProvider } from './types/settings';
 import type { CustomModel, AutoApprovalConfig } from './types/settings';
 import { AgentSidebarView, VIEW_TYPE_AGENT_SIDEBAR } from './ui/AgentSidebarView';
 import { OBSILO_ICON_SVG } from './ui/obsiloIcon';
@@ -177,8 +177,7 @@ export default class ObsidianAgentPlugin extends Plugin {
         }
 
         // Auto-index: keep semantic index current as vault files change.
-        // Only enabled when semanticAutoIndexOnChange is explicitly set — disabled by default
-        // because local Xenova embedding blocks the main thread and makes Obsidian sluggish.
+        // Only enabled when semanticAutoIndexOnChange is explicitly set.
         if (this.settings.enableSemanticIndex && this.semanticIndex && this.settings.semanticAutoIndexOnChange) {
             this.registerEvent(this.app.vault.on('modify', (file) => {
                 if (!(file instanceof TFile)) return;
@@ -482,10 +481,10 @@ export default class ObsidianAgentPlugin extends Plugin {
         return model;
     }
 
-    /** Return the active embedding CustomModel, or null if local Xenova, none configured, or disabled */
+    /** Return the active embedding CustomModel, or null if none configured or disabled */
     getActiveEmbeddingModel(): CustomModel | null {
         const key = this.settings.activeEmbeddingModelKey;
-        if (!key || key === LOCAL_EMBEDDING_KEY) return null;
+        if (!key) return null;
         const model = this.settings.embeddingModels.find((m) => getModelKey(m) === key);
         if (!model || !model.enabled) return null;
         return model;

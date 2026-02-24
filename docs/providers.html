@@ -222,20 +222,8 @@
       <h2 id="embedding-models" data-i18n="pages.providers.embeddingModels">Embedding Models</h2>
       <p data-i18n-html="pages.providers.embeddingModels.text">Embedding models are separate from chat models and are used for the Semantic Index. Configure them in Settings → Providers → <strong>Embeddings</strong>.</p>
 
-      <h3 data-i18n="pages.providers.localEmbeddings">Local Embedding Models (Xenova)</h3>
-      <p data-i18n="pages.providers.localEmbeddings.text">These run entirely locally using ONNX via Xenova/transformers. They download once (~23-90MB) and then run offline:</p>
-      <table data-i18n-html="pages.providers.localEmbeddings.table">
-        <thead><tr><th>Model</th><th>Dimensions</th><th>Languages</th><th>Notes</th></tr></thead>
-        <tbody>
-          <tr><td><code>Xenova/all-MiniLM-L6-v2</code></td><td>384</td><td>English</td><td>Default. Fast and good quality.</td></tr>
-          <tr><td><code>Xenova/bge-small-en-v1.5</code></td><td>384</td><td>English</td><td>Strong benchmark performance.</td></tr>
-          <tr><td><code>Xenova/multilingual-e5-small</code></td><td>384</td><td>Multi</td><td>For mixed-language vaults.</td></tr>
-          <tr><td><code>Xenova/all-mpnet-base-v2</code></td><td>768</td><td>English</td><td>Higher quality, slower.</td></tr>
-        </tbody>
-      </table>
-
-      <h3 data-i18n="pages.providers.apiEmbeddings">API Embedding Models</h3>
-      <p data-i18n="pages.providers.apiEmbeddings.text">Use OpenAI's or another provider's embedding API:</p>
+      <h3 data-i18n="pages.providers.apiEmbeddings">Embedding Models</h3>
+      <p data-i18n="pages.providers.apiEmbeddings.text">Semantic search requires an embedding model. You can use a cloud API or run one locally via Ollama:</p>
       <table data-i18n-html="pages.providers.apiEmbeddings.table">
         <thead><tr><th>Model</th><th>Provider</th><th>Dimensions</th><th>Notes</th></tr></thead>
         <tbody>

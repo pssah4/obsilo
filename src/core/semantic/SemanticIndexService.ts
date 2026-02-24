@@ -74,8 +74,6 @@ const CHECKPOINT_VERSION = 1;
 const DEFAULT_CHUNK_SIZE = 2000;   // chars — larger chunks → fewer API calls
 const DEFAULT_COMMIT_EVERY = 20;   // files between disk commits
 const DEFAULT_EMBED_BATCH = 16;    // texts per API request
-const LOCAL_MODEL_MAX_CHUNK = 800; // ~200 tokens — safe for MiniLM-L6-v2 (256 token limit)
-
 // ---------------------------------------------------------------------------
 // SemanticIndexService
 // ---------------------------------------------------------------------------
@@ -85,9 +83,6 @@ export class SemanticIndexService {
     private pluginDir: string;
     private indexDir: string;          // absolute FS path for vectra
     private index: LocalIndex<Record<string, string | number | boolean>>;
-    /** Local Xenova tokenizer + model (lazy-loaded). */
-    private xenovaTokenizer: any = null;
-    private xenovaModel: any = null;
 
     private isBuilding = false;
     private cancelled = false;
@@ -150,21 +145,9 @@ export class SemanticIndexService {
     get building(): boolean { return this.isBuilding; }
     get lastBuiltAt(): Date | null { return this.builtAt; }
 
-    /** Effective chunk size — auto-capped for local model to prevent silent token truncation. */
-    private effectiveChunkSize(): number {
-        if (!this.embeddingModel && this.chunkSize > LOCAL_MODEL_MAX_CHUNK) {
-            return LOCAL_MODEL_MAX_CHUNK;
-        }
-        return this.chunkSize;
-    }
-
-    setEmbeddingModel(model: CustomModel | null): void {
+    setEmbeddingModel(model: CustomModel): void {
         this.embeddingModel = model;
-        if (model) {
-            console.log(`[SemanticIndex] Using API model: ${model.name} (${model.provider})`);
-        } else {
-            console.log('[SemanticIndex] Using local Xenova pipeline');
-        }
+        console.log(`[SemanticIndex] Using embedding model: ${model.name} (${model.provider})`);
     }
 
     /** Stop an in-progress buildIndex(). Partial progress is saved to checkpoint. */
@@ -172,13 +155,8 @@ export class SemanticIndexService {
         this.cancelled = true;
     }
 
-    /** Pre-warm pipeline and restore state from checkpoint if available. */
+    /** Restore state from checkpoint if available. */
     async initialize(): Promise<void> {
-        if (!this.embeddingModel) {
-            try { await this.loadPipeline(); } catch (e) {
-                console.warn('[SemanticIndex] Pipeline warmup failed (non-fatal):', e);
-            }
-        }
         try {
             this.checkpoint = await this.loadCheckpoint();
             if (this.checkpoint) {
@@ -199,6 +177,12 @@ export class SemanticIndexService {
         force = false,
     ): Promise<BuildResult> {
         if (this.isBuilding) return { indexed: 0, total: 0, errors: 0, cancelled: false, skippedFiles: [], durationMs: 0 };
+        if (!this.embeddingModel) {
+            throw new Error(
+                'No embedding model configured. Go to Settings > Embeddings and add an ' +
+                'embedding model (e.g. OpenAI text-embedding-3-small) before building the index.',
+            );
+        }
         this.isBuilding = true;
         this.cancelled = false;
         const startTime = Date.now();
@@ -223,20 +207,6 @@ export class SemanticIndexService {
             const total = files.length;
 
             const modelKey = this.modelKey();
-
-            // ----------------------------------------------------------------
-            // 1b. Pre-validate local pipeline before committing to a build
-            // ----------------------------------------------------------------
-            if (!this.embeddingModel) {
-                try {
-                    await this.loadPipeline();
-                } catch (e) {
-                    throw new Error(
-                        `Local embedding model failed to load: ${(e as Error).message ?? e}. ` +
-                        `Consider using an API embedding model for reliable indexing.`
-                    );
-                }
-            }
 
             // ----------------------------------------------------------------
             // 2. Load checkpoint — detect model/chunkSize change
@@ -325,7 +295,7 @@ export class SemanticIndexService {
 
                 try {
                     const content = await this.readFileContent(file);
-                    const chunks = this.splitIntoChunks(content, this.effectiveChunkSize());
+                    const chunks = this.splitIntoChunks(content, this.chunkSize);
 
                     if (chunks.length > 0) {
                         // --- KEY IMPROVEMENT: batch all chunks of this file ---
@@ -423,7 +393,7 @@ export class SemanticIndexService {
 
             // Embed + insert new chunks
             const content = await this.readFileContent(file);
-            const chunks = this.splitIntoChunks(content, this.effectiveChunkSize());
+            const chunks = this.splitIntoChunks(content, this.chunkSize);
             if (chunks.length > 0) {
                 const vectors = await this.embedBatch(chunks);
                 for (let ci = 0; ci < chunks.length; ci++) {
@@ -687,7 +657,7 @@ export class SemanticIndexService {
     async indexSessionSummary(sessionId: string, content: string): Promise<void> {
         if (!await this.index.isIndexCreated().catch(() => false)) return;
         try {
-            const chunks = this.splitIntoChunks(content, this.effectiveChunkSize());
+            const chunks = this.splitIntoChunks(content, this.chunkSize);
             if (chunks.length === 0) return;
 
             const vectors = await this.embedBatch(chunks);
@@ -753,43 +723,25 @@ export class SemanticIndexService {
     // -----------------------------------------------------------------------
 
     /**
-     * Embed an array of texts.
-     *
-     * API path:   sends batches of `embeddingBatchSize` texts per request.
-     *             → 10-50x fewer API calls vs. one call per text.
-     * Xenova path: runs all texts in parallel (local, no rate limit concern).
+     * Embed an array of texts via the configured API embedding model.
+     * Sends batches of `embeddingBatchSize` texts per request (10-50x fewer API calls).
      */
     private async embedBatch(texts: string[]): Promise<number[][]> {
         if (texts.length === 0) return [];
-
-        if (this.embeddingModel) {
-            const results: number[][] = [];
-            for (let i = 0; i < texts.length; i += this.embeddingBatchSize) {
-                const batch = texts.slice(i, i + this.embeddingBatchSize);
-                const vectors = await this.embedBatchViaApiWithRetry(batch, this.embeddingModel);
-                results.push(...vectors);
-                // Throttle between requests (not within a batch)
-                if (i + this.embeddingBatchSize < texts.length) {
-                    await this.sleep(50);
-                }
-            }
-            return results;
+        if (!this.embeddingModel) {
+            throw new Error('No embedding model configured.');
         }
 
-        // Local Xenova — sequential to avoid OOM on long notes with many chunks.
-        // Single retry per text for transient WASM/memory errors.
-        await this.loadPipeline();
-        const out: number[][] = [];
-        for (const t of texts) {
-            try {
-                out.push(await this.embedXenova(t));
-            } catch (e) {
-                console.warn('[SemanticIndex] Local embed failed, retrying:', (e as Error).message ?? e);
-                await this.sleep(500);
-                out.push(await this.embedXenova(t));
+        const results: number[][] = [];
+        for (let i = 0; i < texts.length; i += this.embeddingBatchSize) {
+            const batch = texts.slice(i, i + this.embeddingBatchSize);
+            const vectors = await this.embedBatchViaApiWithRetry(batch, this.embeddingModel);
+            results.push(...vectors);
+            if (i + this.embeddingBatchSize < texts.length) {
+                await this.sleep(50);
             }
         }
-        return out;
+        return results;
     }
 
     private async embedBatchViaApiWithRetry(
@@ -875,58 +827,6 @@ export class SemanticIndexService {
         return data.map((d) => d.embedding);
     }
 
-    private async embedXenova(text: string): Promise<number[]> {
-        // Yield to the event loop before WASM inference so Obsidian can process
-        // pending UI events (paint, keyboard, etc.) before the CPU-heavy part.
-        await this.sleep(50);
-
-        const inputs = await this.xenovaTokenizer(text, { padding: true, truncation: true });
-        const output = await this.xenovaModel(inputs);
-
-        // Mean pooling over token embeddings, then L2 normalize
-        const embeddings = output.last_hidden_state;
-        const [, seqLen, hiddenSize] = embeddings.dims;
-        const data = embeddings.data as Float32Array;
-        const attentionMask = inputs.attention_mask.data as BigInt64Array;
-
-        // Compute mean over non-padding tokens
-        const result = new Float32Array(hiddenSize);
-        let count = 0;
-        for (let t = 0; t < seqLen; t++) {
-            if (Number(attentionMask[t]) === 0) continue;
-            count++;
-            for (let h = 0; h < hiddenSize; h++) {
-                result[h] += data[t * hiddenSize + h];
-            }
-        }
-        if (count > 0) {
-            for (let h = 0; h < hiddenSize; h++) result[h] /= count;
-        }
-
-        // L2 normalize
-        let norm = 0;
-        for (let h = 0; h < hiddenSize; h++) norm += result[h] * result[h];
-        norm = Math.sqrt(norm);
-        if (norm > 0) {
-            for (let h = 0; h < hiddenSize; h++) result[h] /= norm;
-        }
-
-        return Array.from(result);
-    }
-
-    /**
-     * Load the local Xenova tokenizer + model.
-     * Bypasses the `pipeline()` convenience function which has circular init
-     * issues when bundled by esbuild (TASK_ALIASES stays undefined).
-     */
-    private async loadPipeline(): Promise<void> {
-        if (this.xenovaTokenizer && this.xenovaModel) return;
-        const { AutoTokenizer, AutoModel } = await import('@xenova/transformers');
-        const modelId = 'Xenova/all-MiniLM-L6-v2';
-        this.xenovaTokenizer = await AutoTokenizer.from_pretrained(modelId);
-        this.xenovaModel = await AutoModel.from_pretrained(modelId);
-    }
-
     private sleep(ms: number): Promise<void> {
         return new Promise((resolve) => setTimeout(resolve, ms));
     }
@@ -977,9 +877,8 @@ export class SemanticIndexService {
     }
 
     private modelKey(): string {
-        return this.embeddingModel
-            ? `${this.embeddingModel.provider}:${this.embeddingModel.name}`
-            : 'xenova:all-MiniLM-L6-v2';
+        if (!this.embeddingModel) return 'none';
+        return `${this.embeddingModel.provider}:${this.embeddingModel.name}`;
     }
 
     // -----------------------------------------------------------------------
