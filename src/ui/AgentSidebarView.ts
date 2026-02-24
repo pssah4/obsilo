@@ -929,7 +929,8 @@ export class AgentSidebarView extends ItemView {
         this.setRunningState(true);
 
         // Prepare streaming message elements (thinking → tools → response text → footer)
-        const { messageEl, thinkingEl, toolsEl, contentEl, footerEl } = this.createStreamingMessageEl();
+        // `let` so onQuestion can create fresh elements for each onboarding turn.
+        let { messageEl, thinkingEl, toolsEl, contentEl, footerEl } = this.createStreamingMessageEl();
         let accumulatedText = '';       // text accumulated during/after tool phase
         let accumulatedThinking = '';   // full thinking text for collapse/expand
         let hasTools = false;           // have any tools been called in this task?
@@ -1322,7 +1323,40 @@ export class AgentSidebarView extends ItemView {
                         contentEl.empty();
                         MarkdownRenderer.render(this.app, accumulatedText, contentEl, '', this);
                     }
-                    this.showQuestionCard(question, options, resolve, allowMultiple);
+                    // Wrap resolve: after the user answers, show their answer as a
+                    // chat bubble and create a fresh message element for the next
+                    // agent response. This turns multi-turn flows (onboarding) into
+                    // a real back-and-forth conversation in the UI.
+                    const wrappedResolve = (answer: string) => {
+                        // Finalize current assistant message
+                        messageEl.removeClass('message-streaming');
+                        if (accumulatedText) {
+                            this.uiMessages.push({ role: 'assistant', text: accumulatedText, ts: new Date().toISOString() });
+                        }
+                        // Render user answer as a chat bubble
+                        const userMsg = this.chatContainer!.createDiv('message user-message');
+                        userMsg.createDiv('message-bubble').setText(answer);
+                        this.uiMessages.push({ role: 'user', text: answer, ts: new Date().toISOString() });
+                        // Create fresh assistant message element for the next response
+                        ({ messageEl, thinkingEl, toolsEl, contentEl, footerEl } = this.createStreamingMessageEl());
+                        // Reset per-turn state
+                        accumulatedText = '';
+                        hasTools = false;
+                        streamingPara = null;
+                        stepsBlockEl = null;
+                        stepsBodyEl = null;
+                        stepsSummaryIconEl = null;
+                        stepsSummaryLabelEl = null;
+                        stepsTotal = 0;
+                        stepsCompleted = 0;
+                        stepsHasError = false;
+                        loadingRemoved = false;
+                        activeToolGroup = null;
+                        // Scroll and continue agent loop
+                        scheduleScroll();
+                        resolve(answer);
+                    };
+                    this.showQuestionCard(question, options, wrappedResolve, allowMultiple);
                 },
                 onApprovalRequired: async (toolName, input) => {
                     return this.showApprovalCard(toolName, input, toolsEl);
