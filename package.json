@@ -9,7 +9,10 @@
     "deploy": "npm run build && ./deploy-local.sh",
     "version": "node version-bump.mjs && git add manifest.json versions.json",
     "lint": "eslint src --ext .ts",
-    "format": "prettier --write 'src/**/*.ts'"
+    "format": "prettier --write 'src/**/*.ts'",
+    "codeql:db": "codeql database create codeql-db --language=javascript --source-root=src/ --overwrite",
+    "codeql:analyze": "codeql database analyze codeql-db --format=sarif-latest --output=codeql-results.sarif codeql/javascript-queries:codeql-suites/javascript-security-and-quality.qls",
+    "codeql:scan": "npm run codeql:db && npm run codeql:analyze"
   },
   "keywords": [
     "obsidian",

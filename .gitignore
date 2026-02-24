@@ -74,4 +74,9 @@ temp/
 .claude
 forked-kilocode/
 
+# CodeQL
+codeql-db/
+*.sarif
+codeql-results.*
+
 # Private / internal files — only tracked in dev branch, filtered out by CI for test/main
