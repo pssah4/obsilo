@@ -196,6 +196,8 @@ export interface CustomPrompt {
     enabled: boolean;
     /** Optional: restrict this prompt to a specific mode slug. If unset, appears in all modes. */
     mode?: string;
+    /** True for prompts shipped with the plugin (cannot be deleted, only disabled) */
+    isBuiltIn?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -387,10 +389,16 @@ export interface ObsidianAgentSettings {
      */
     activeMcpServers: string[];
     /**
+     * @deprecated Use modeSkillAllowList instead.
      * Permanent per-mode forced skill names: maps mode slug → skill names to always inject.
-     * When set, these skills are included in the system prompt regardless of keyword matching.
      */
     forcedSkills: Record<string, string[]>;
+    /**
+     * Per-mode skill allow-list: maps mode slug → allowed skill names.
+     * Missing entry or empty array = all skills allowed (default).
+     * Non-empty array = only listed skills are available in that mode.
+     */
+    modeSkillAllowList: Record<string, string[]>;
     /**
      * Permanent per-mode forced workflow slug: maps mode slug → workflow slug.
      * When set, this workflow is applied to each message (unless message starts with /).
@@ -552,6 +560,7 @@ export const DEFAULT_SETTINGS: ObsidianAgentSettings = {
     modeToolOverrides: {},
     activeMcpServers: [],
     forcedSkills: {},
+    modeSkillAllowList: {},
     forcedWorkflow: {},
     modeMcpServers: {},
 

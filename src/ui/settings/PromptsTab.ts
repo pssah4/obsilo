@@ -1,6 +1,5 @@
 import { App, Notice, Setting, setIcon } from 'obsidian';
 import type ObsidianAgentPlugin from '../../main';
-import { ContentEditorModal } from './ContentEditorModal';
 import type { CustomPrompt } from '../../types/settings';
 import { BUILT_IN_MODES } from '../../core/modes/builtinModes';
 

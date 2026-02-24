@@ -2,7 +2,7 @@ import { App, Notice, setIcon } from 'obsidian';
 import type ObsidianAgentPlugin from '../../main';
 import { ContentEditorModal } from './ContentEditorModal';
 import type { PluginSkillMeta } from '../../core/skills/types';
-import { BUILT_IN_MODES } from '../../core/modes/builtinModes';
+
 
 export class SkillsTab {
     private readonly skillsDir = '.obsidian-agent/plugin-skills';
@@ -12,12 +12,6 @@ export class SkillsTab {
     build(containerEl: HTMLElement): void {
         // -- Manual Skills (first) --
         this.buildManualSkillsSection(containerEl);
-
-        // -- Separator --
-        containerEl.createEl('hr');
-
-        // -- Skills per Mode --
-        this.buildSkillsPerModeSection(containerEl);
 
         // -- Separator --
         containerEl.createEl('hr');
@@ -73,7 +67,7 @@ export class SkillsTab {
             fileInput.click();
         });
 
-        // -- Skill list --
+        // -- Skill list (table layout matching Plugin Skills) --
         const listEl = containerEl.createDiv({ cls: 'agent-rules-list' });
 
         const refreshList = async () => {
@@ -88,17 +82,44 @@ export class SkillsTab {
                 listEl.createEl('p', { cls: 'agent-empty-state', text: 'No skills yet. Create one above.' });
                 return;
             }
+
+            const table = listEl.createEl('table', { cls: 'agent-skill-table' });
+            const thead = table.createEl('thead');
+            const hr = thead.createEl('tr');
+            hr.createEl('th', { text: '', cls: 'agent-skill-th-status' });
+            hr.createEl('th', { text: 'Skill' });
+            hr.createEl('th', { text: '', cls: 'agent-skill-th-actions' });
+            hr.createEl('th', { text: 'Agent', cls: 'agent-skill-th-toggle' });
+
+            const tbody = table.createEl('tbody');
+
             for (const skill of skills) {
-                const row = listEl.createDiv({ cls: 'agent-rules-row' });
-                const label = row.createSpan({ cls: 'agent-rules-label' });
-                label.createSpan({ text: skill.name });
-                label.createSpan({ cls: 'agent-workflow-slug', text: skill.description });
+                this.plugin.settings.manualSkillToggles ??= {};
+                const isActive = this.plugin.settings.manualSkillToggles[skill.path] !== false;
 
-                const actions = row.createDiv({ cls: 'agent-rules-actions' });
+                const tr = tbody.createEl('tr', {
+                    cls: isActive ? '' : 'agent-skill-disabled',
+                });
 
-                const editBtn = actions.createEl('button', { cls: 'agent-rules-edit-btn' });
+                // Status dot
+                const statusTd = tr.createEl('td', { cls: 'agent-skill-status-cell' });
+                const dot = statusTd.createSpan({ cls: 'agent-skill-dot' });
+                dot.addClass(isActive ? 'agent-skill-dot-on' : 'agent-skill-dot-off');
+
+                // Name + description
+                const nameTd = tr.createEl('td', { cls: 'agent-skill-name-cell' });
+                nameTd.createDiv({ text: skill.name, cls: 'agent-skill-name' });
+                if (skill.description) {
+                    nameTd.createDiv({ text: skill.description, cls: 'agent-skill-desc' });
+                }
+
+                // Actions (edit, export, delete)
+                const actionsTd = tr.createEl('td', { cls: 'agent-skill-actions-cell' });
+
+                const editBtn = actionsTd.createEl('button', {
+                    cls: 'agent-skill-action-btn', attr: { 'aria-label': 'Edit' },
+                });
                 setIcon(editBtn, 'pencil');
-                editBtn.setAttribute('aria-label', 'Edit');
                 editBtn.addEventListener('click', async () => {
                     const content = await this.app.vault.adapter.read(skill.path);
                     new ContentEditorModal(this.app, `Edit skill: ${skill.name}`, content, async (newContent) => {
@@ -106,9 +127,10 @@ export class SkillsTab {
                     }).open();
                 });
 
-                const exportSkillBtn = actions.createEl('button', { cls: 'agent-rules-export-btn' });
+                const exportSkillBtn = actionsTd.createEl('button', {
+                    cls: 'agent-skill-action-btn', attr: { 'aria-label': 'Export' },
+                });
                 setIcon(exportSkillBtn, 'download');
-                exportSkillBtn.setAttribute('aria-label', 'Export');
                 exportSkillBtn.addEventListener('click', async () => {
                     const content = await this.app.vault.adapter.read(skill.path);
                     const blob = new Blob([content], { type: 'text/markdown' });
@@ -120,9 +142,10 @@ export class SkillsTab {
                     URL.revokeObjectURL(url);
                 });
 
-                const delBtn = actions.createEl('button', { cls: 'agent-rules-delete-btn' });
+                const delBtn = actionsTd.createEl('button', {
+                    cls: 'agent-skill-action-btn', attr: { 'aria-label': 'Delete' },
+                });
                 setIcon(delBtn, 'trash-2');
-                delBtn.setAttribute('aria-label', 'Delete');
                 delBtn.addEventListener('click', async () => {
                     try {
                         await this.app.vault.adapter.remove(skill.path);
@@ -135,18 +158,20 @@ export class SkillsTab {
                     }
                 });
 
-                // Enable/disable toggle
-                this.plugin.settings.manualSkillToggles ??= {};
-                const isActive = this.plugin.settings.manualSkillToggles[skill.path] !== false;
-                const toggleEl = row.createDiv({
-                    cls: `checkbox-container agent-rules-toggle${isActive ? ' is-enabled' : ''}`,
+                // Toggle
+                const toggleTd = tr.createEl('td', { cls: 'agent-skill-toggle-cell' });
+                const toggleContainer = toggleTd.createDiv({
+                    cls: `checkbox-container agent-skill-toggle${isActive ? ' is-enabled' : ''}`,
                 });
-                toggleEl.addEventListener('click', async () => {
+                toggleContainer.addEventListener('click', async () => {
                     this.plugin.settings.manualSkillToggles ??= {};
                     const current = this.plugin.settings.manualSkillToggles[skill.path] !== false;
                     this.plugin.settings.manualSkillToggles[skill.path] = !current;
                     await this.plugin.saveSettings();
-                    toggleEl.toggleClass('is-enabled', !current);
+                    toggleContainer.toggleClass('is-enabled', !current);
+                    dot.removeClass(current ? 'agent-skill-dot-on' : 'agent-skill-dot-off');
+                    dot.addClass(current ? 'agent-skill-dot-off' : 'agent-skill-dot-on');
+                    tr.toggleClass('agent-skill-disabled', current);
                 });
             }
         };
@@ -173,75 +198,6 @@ export class SkillsTab {
         });
 
         refreshList();
-    }
-
-    // -- Skills per Mode --
-
-    private buildSkillsPerModeSection(containerEl: HTMLElement): void {
-        containerEl.createEl('h3', { text: 'Skills per Mode' });
-        containerEl.createEl('p', {
-            cls: 'agent-settings-desc',
-            text: 'Force specific skills to always be injected into the system prompt for a mode, regardless of keyword matching.',
-        });
-
-        const skillsManager = (this.plugin as any).skillsManager;
-        if (!skillsManager) {
-            containerEl.createEl('p', { cls: 'agent-settings-desc', text: 'Skills manager not available.' });
-            return;
-        }
-
-        const listEl = containerEl.createDiv({ cls: 'agent-skills-per-mode-list' });
-        listEl.createEl('span', { cls: 'modes-loading-hint', text: 'Loading...' });
-
-        (async () => {
-            listEl.empty();
-            const allSkills: { path: string; name: string; description: string }[] =
-                await skillsManager.discoverSkills();
-
-            if (allSkills.length === 0) {
-                listEl.createEl('p', { cls: 'agent-empty-state', text: 'No manual skills found. Create skills above first.' });
-                return;
-            }
-
-            // Collect all modes: built-in + custom
-            const allModes = [...BUILT_IN_MODES, ...(this.plugin.settings.customModes ?? [])];
-
-            for (const mode of allModes) {
-                const modeWrap = listEl.createDiv({ cls: 'agent-skills-mode-block' });
-                const header = modeWrap.createDiv({ cls: 'agent-skill-group-header' });
-                const chevron = header.createSpan({ cls: 'agent-skill-group-chevron' });
-                setIcon(chevron, 'chevron-down');
-                header.createSpan({ text: `${mode.name} (${mode.slug})`, cls: 'agent-skill-group-title' });
-
-                const content = modeWrap.createDiv({ cls: 'agent-skill-group-content' });
-
-                const forcedSet = new Set<string>(this.plugin.settings.forcedSkills?.[mode.slug] ?? []);
-
-                for (const skill of allSkills) {
-                    const row = content.createDiv({ cls: 'modes-skills-row' });
-                    const cb = row.createEl('input', { type: 'checkbox' }) as HTMLInputElement;
-                    cb.checked = forcedSet.has(skill.name);
-                    const lbl = row.createEl('label', { cls: 'modes-skills-label' });
-                    lbl.createSpan({ text: skill.name });
-                    if (skill.description) lbl.createSpan({ cls: 'modes-skills-desc', text: skill.description });
-                    cb.addEventListener('change', async () => {
-                        if (!this.plugin.settings.forcedSkills) this.plugin.settings.forcedSkills = {};
-                        const cur = new Set<string>(this.plugin.settings.forcedSkills[mode.slug] ?? []);
-                        if (cb.checked) cur.add(skill.name);
-                        else cur.delete(skill.name);
-                        this.plugin.settings.forcedSkills[mode.slug] = [...cur];
-                        await this.plugin.saveSettings();
-                    });
-                }
-
-                // Collapsible toggle
-                header.addEventListener('click', () => {
-                    const collapsed = content.classList.toggle('agent-skill-group-collapsed');
-                    chevron.empty();
-                    setIcon(chevron, collapsed ? 'chevron-right' : 'chevron-down');
-                });
-            }
-        })();
     }
 
     // -- Obsidian Plugin Skills (PAS-1) --
@@ -364,12 +320,12 @@ export class SkillsTab {
             // Actions (view buttons)
             const actionsTd = tr.createEl('td', { cls: 'agent-skill-actions-cell' });
 
-            // View skill file
-            const viewBtn = actionsTd.createEl('button', {
-                cls: 'agent-skill-action-btn', attr: { 'aria-label': 'View skill file' },
+            // Edit skill file
+            const editSkillBtn = actionsTd.createEl('button', {
+                cls: 'agent-skill-action-btn', attr: { 'aria-label': 'Edit skill file' },
             });
-            setIcon(viewBtn, 'file-text');
-            viewBtn.addEventListener('click', () => this.openSkillFile(skill));
+            setIcon(editSkillBtn, 'pencil');
+            editSkillBtn.addEventListener('click', () => this.openSkillFile(skill));
 
             // View README (if exists)
             const docsBtn = actionsTd.createEl('button', {

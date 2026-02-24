@@ -585,59 +585,26 @@ export class AgentSidebarView extends ItemView {
         }
     }
 
-    private async buildSkillsSection(userMessage: string, forcedSkillNames: string[]): Promise<string | undefined> {
+    private async buildSkillsSection(userMessage: string, allowedSkillNames?: string[]): Promise<string | undefined> {
         const skillsManager = (this.plugin as any).skillsManager;
         if (!skillsManager) return undefined;
 
-        // For keyword-matched skills, use getRelevantSkills() which inlines full SKILL.md content.
-        // This eliminates the read_file round-trip the agent would otherwise need.
-        const toggles = this.plugin.settings.manualSkillToggles ?? {};
-        let section = await skillsManager.getRelevantSkills(userMessage, toggles) as string;
-
-        // Also inject any forced skills that weren't keyword-matched
-        if (forcedSkillNames.length > 0) {
-            const allSkillsRaw = await skillsManager.discoverSkills() as any[];
-            const allSkills = allSkillsRaw.filter((s: any) => toggles[s.path] !== false);
-            const keywordSection = section; // already built above
-            const keywordNames = new Set(
-                allSkills
-                    .filter((s: any) => {
-                        const msgWords = new Set((userMessage.toLowerCase().match(/\b\w{3,}\b/g) ?? []));
-                        const descWords: string[] = s.description.toLowerCase().match(/\b\w{3,}\b/g) ?? [];
-                        return descWords.some((w: string) => msgWords.has(w));
-                    })
-                    .map((s: any) => s.name as string)
-            );
-            const extraForced = allSkills.filter(
-                (s: any) => forcedSkillNames.includes(s.name) && !keywordNames.has(s.name)
-            );
-            if (extraForced.length > 0) {
-                // Build inline XML for forced-only skills
-                const xmlEscape = (v: string) => v.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-                const forcedLines: string[] = keywordSection ? [] : ['<available_skills>'];
-                for (const s of extraForced) {
-                    let fullContent = '';
-                    try {
-                        const raw = await this.app.vault.adapter.read(s.path);
-                        fullContent = raw.replace(/^---\n[\s\S]*?\n---\n?/, '').trim();
-                        if (fullContent.length > 4000) fullContent = fullContent.slice(0, 4000) + '\n…(truncated)';
-                    } catch { /* skip */ }
-                    forcedLines.push(`  <skill>`);
-                    forcedLines.push(`    <name>${xmlEscape(s.name)}</name>`);
-                    forcedLines.push(`    <description>${xmlEscape(s.description)}</description>`);
-                    if (fullContent) forcedLines.push(`    <instructions>${xmlEscape(fullContent)}</instructions>`);
-                    forcedLines.push(`  </skill>`);
-                }
-                if (keywordSection) {
-                    // Insert forced skills before the closing tag
-                    section = keywordSection.replace('</available_skills>', forcedLines.join('\n') + '\n</available_skills>');
-                } else {
-                    forcedLines.push('</available_skills>');
-                    section = forcedLines.join('\n');
+        // Build effective toggles: combine manual toggles with per-mode allow-list
+        const toggles = { ...(this.plugin.settings.manualSkillToggles ?? {}) };
+        if (allowedSkillNames) {
+            // If mode has an explicit allow-list, disable any skill not in it
+            const allSkills: { path: string; name: string }[] = await skillsManager.discoverSkills();
+            const allowedSet = new Set(allowedSkillNames);
+            for (const skill of allSkills) {
+                if (!allowedSet.has(skill.name)) {
+                    toggles[skill.path] = false;
                 }
             }
         }
 
+        // For keyword-matched skills, use getRelevantSkills() which inlines full SKILL.md content.
+        // This eliminates the read_file round-trip the agent would otherwise need.
+        const section = await skillsManager.getRelevantSkills(userMessage, toggles) as string;
         return section || undefined;
     }
 
@@ -1606,10 +1573,10 @@ export class AgentSidebarView extends ItemView {
             const userMessageText = typeof messageToSend === 'string'
                 ? messageToSend
                 : (messageToSend as any[]).find((b: any) => b.type === 'text')?.text ?? '';
-            const forcedSkillNames = [
-                ...(this.plugin.settings.forcedSkills?.[activeMode.slug] ?? []),
-            ];
-            skillsSection = await this.buildSkillsSection(userMessageText, forcedSkillNames);
+            const modeAllowed = this.plugin.settings.modeSkillAllowList?.[activeMode.slug];
+            // empty/undefined = all allowed; non-empty = only those skill names
+            const allowedSkillNames = modeAllowed && modeAllowed.length > 0 ? modeAllowed : undefined;
+            skillsSection = await this.buildSkillsSection(userMessageText, allowedSkillNames);
         }
 
         // Apply forced workflow from tool picker (when message doesn't start with slash command)

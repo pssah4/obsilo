@@ -331,23 +331,31 @@ export class ToolPickerPopover {
                         skillsGroupCb.disabled = true;
                     } else {
                         const skillCbs: HTMLInputElement[] = [];
-                        const activeForcedSkills = new Set(
-                            this.plugin.settings.forcedSkills?.[slug] ?? []
+                        const modeAllowed = this.plugin.settings.modeSkillAllowList?.[slug];
+                        // empty/undefined = all allowed
+                        const allowedSet = new Set<string>(
+                            modeAllowed && modeAllowed.length > 0 ? modeAllowed : skills.map((s: any) => s.name),
                         );
                         skillsCatRow.addClass('is-open');
                         skillsCatBody.style.display = '';
                         for (const skill of skills) {
                             const cb = makeItemRow(
                                 skillsCatBody, skill.name, skill.description ?? '', 'wand-2',
-                                activeForcedSkills.has(skill.name), 'tp-item-row tp-item-indent-cat',
+                                allowedSet.has(skill.name), 'tp-item-row tp-item-indent-cat',
                             );
                             skillCbs.push(cb);
                             cb.addEventListener('change', async () => {
-                                const cur = new Set(this.plugin.settings.forcedSkills?.[slug] ?? []);
+                                if (!this.plugin.settings.modeSkillAllowList) this.plugin.settings.modeSkillAllowList = {};
+                                const cur = new Set<string>(
+                                    this.plugin.settings.modeSkillAllowList[slug]?.length
+                                        ? this.plugin.settings.modeSkillAllowList[slug]
+                                        : skills.map((s: any) => s.name),
+                                );
                                 if (cb.checked) cur.add(skill.name);
                                 else cur.delete(skill.name);
-                                if (!this.plugin.settings.forcedSkills) this.plugin.settings.forcedSkills = {};
-                                this.plugin.settings.forcedSkills[slug] = [...cur];
+                                const next = [...cur];
+                                this.plugin.settings.modeSkillAllowList[slug] =
+                                    next.length === skills.length ? [] : next;
                                 await this.plugin.saveSettings();
                                 const allSk = skillCbs.every((c) => c.checked);
                                 const someSk = skillCbs.some((c) => c.checked);
@@ -363,9 +371,11 @@ export class ToolPickerPopover {
                         skillsGroupCb.addEventListener('change', async () => {
                             for (const c of skillCbs) c.checked = skillsGroupCb.checked;
                             skillsGroupCb.indeterminate = false;
+                            if (!this.plugin.settings.modeSkillAllowList) this.plugin.settings.modeSkillAllowList = {};
+                            // all checked → [] (no restriction); none checked → [] (same, no restriction)
                             const next = skillsGroupCb.checked ? skills.map((s: any) => s.name) : [];
-                            if (!this.plugin.settings.forcedSkills) this.plugin.settings.forcedSkills = {};
-                            this.plugin.settings.forcedSkills[slug] = next;
+                            this.plugin.settings.modeSkillAllowList[slug] =
+                                next.length === skills.length ? [] : next;
                             await this.plugin.saveSettings();
                             updateCount();
                         });

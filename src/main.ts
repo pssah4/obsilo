@@ -27,6 +27,7 @@ import { buildApiHandler } from './api/index';
 import type { ApiHandler } from './api/types';
 import type { ToolUse, ToolCallbacks } from './core/tools/types';
 import { BUILT_IN_MODES } from './core/modes/builtinModes';
+import { mergeDefaultPrompts } from './core/prompts/defaultPrompts';
 
 /**
  * Obsidian Agent Plugin
@@ -376,6 +377,9 @@ export default class ObsidianAgentPlugin extends Plugin {
         this.settings.memory.autoUpdateLongTerm = this.settings.memory.autoUpdateLongTerm ?? memDefaults.autoUpdateLongTerm;
         this.settings.memory.memoryModelKey = this.settings.memory.memoryModelKey ?? memDefaults.memoryModelKey;
         this.settings.memory.extractionThreshold = this.settings.memory.extractionThreshold ?? memDefaults.extractionThreshold;
+
+        // Seed / update built-in default prompts (preserves user enabled state)
+        this.settings.customPrompts = mergeDefaultPrompts(this.settings.customPrompts ?? []);
 
         // Sync vault mode overrides with current built-in definitions.
         // Vault modes that share a slug with a built-in get their roleDefinition,

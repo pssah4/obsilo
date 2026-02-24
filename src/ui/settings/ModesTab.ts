@@ -358,6 +358,100 @@ export class ModesTab {
                 }
             }
 
+            // ── Allowed Skills ────────────────────────────────────────────────
+            const skillsManager = (this.plugin as any).skillsManager;
+            if (skillsManager) {
+                const skillsWrap = formArea.createDiv('modes-field');
+                const skillsHeaderRow = skillsWrap.createDiv('modes-tools-header');
+                skillsHeaderRow.createEl('div', { cls: 'modes-field-label', text: 'Allowed Skills' });
+
+                let skillsEditMode = false;
+                const skillsBody = skillsWrap.createDiv('modes-tools-body');
+
+                // Cache discovered skills for both views
+                let cachedSkills: { path: string; name: string; description: string }[] = [];
+
+                const getSkillAllowedSet = (): Set<string> => {
+                    const modeAllowed = this.plugin.settings.modeSkillAllowList?.[slug];
+                    return new Set<string>(
+                        modeAllowed && modeAllowed.length > 0 ? modeAllowed : cachedSkills.map((s) => s.name),
+                    );
+                };
+
+                const renderSkillsReadOnly = () => {
+                    skillsBody.empty();
+                    if (cachedSkills.length === 0) {
+                        skillsBody.createEl('span', { cls: 'modes-tools-none', text: 'No skills found' });
+                        return;
+                    }
+                    const allowedSet = getSkillAllowedSet();
+                    const allowed = cachedSkills.filter((s) => allowedSet.has(s.name));
+                    if (allowed.length === cachedSkills.length) {
+                        skillsBody.createEl('span', {
+                            cls: 'modes-tools-list',
+                            text: `All skills (${cachedSkills.length})`,
+                        });
+                    } else if (allowed.length === 0) {
+                        skillsBody.createEl('span', { cls: 'modes-tools-none', text: 'None' });
+                    } else {
+                        skillsBody.createEl('span', {
+                            cls: 'modes-tools-list',
+                            text: allowed.map((s) => s.name).join(', '),
+                        });
+                    }
+                };
+
+                const renderSkillsEdit = () => {
+                    skillsBody.empty();
+                    if (cachedSkills.length === 0) {
+                        skillsBody.createEl('span', { cls: 'modes-tools-none', text: 'No skills found' });
+                        return;
+                    }
+                    const allowedSet = getSkillAllowedSet();
+                    for (const skill of cachedSkills) {
+                        const row = skillsBody.createDiv('modes-skills-row');
+                        const cb = row.createEl('input', { type: 'checkbox' }) as HTMLInputElement;
+                        cb.checked = allowedSet.has(skill.name);
+                        const lbl = row.createEl('label', { cls: 'modes-skills-label' });
+                        lbl.createSpan({ text: skill.name });
+                        if (skill.description) lbl.createSpan({ cls: 'modes-skills-desc', text: skill.description });
+                        cb.addEventListener('change', async () => {
+                            if (!this.plugin.settings.modeSkillAllowList) this.plugin.settings.modeSkillAllowList = {};
+                            const cur = new Set<string>(
+                                this.plugin.settings.modeSkillAllowList[slug]?.length
+                                    ? this.plugin.settings.modeSkillAllowList[slug]
+                                    : cachedSkills.map((s) => s.name),
+                            );
+                            if (cb.checked) cur.add(skill.name);
+                            else cur.delete(skill.name);
+                            const next = [...cur];
+                            this.plugin.settings.modeSkillAllowList[slug] =
+                                next.length === cachedSkills.length ? [] : next;
+                            await this.plugin.saveSettings();
+                        });
+                    }
+                };
+
+                // Show loading, then render read-only once skills are loaded
+                skillsBody.createEl('span', { cls: 'modes-loading-hint', text: 'Loading...' });
+                (async () => {
+                    cachedSkills = await skillsManager.discoverSkills();
+                    renderSkillsReadOnly();
+                })();
+
+                // "Edit skills" button
+                const editSkillsBtn = skillsHeaderRow.createEl('button', {
+                    text: 'Edit skills',
+                    cls: 'modes-edit-tools-btn',
+                });
+                editSkillsBtn.addEventListener('click', () => {
+                    skillsEditMode = !skillsEditMode;
+                    editSkillsBtn.setText(skillsEditMode ? 'Done' : 'Edit skills');
+                    if (skillsEditMode) renderSkillsEdit();
+                    else renderSkillsReadOnly();
+                });
+            }
+
             // ── Role Definition ───────────────────────────────────────────────
             const roleWrap = formArea.createDiv('modes-field');
             roleWrap.createEl('div', { cls: 'modes-field-label', text: 'Role Definition' });

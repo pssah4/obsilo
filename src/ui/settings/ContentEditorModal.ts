@@ -42,4 +42,3 @@ export class ContentEditorModal extends Modal {
         this.contentEl.empty();
     }
 }
-
