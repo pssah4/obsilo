@@ -664,16 +664,15 @@ a.hero-badge:hover { background: var(--bg-4); border-color: var(--accent-light);
   border-top: 1px solid var(--border);
   padding: 2rem 1.5rem;
   text-align: center;
-  color: var(--text-dim);
+  color: var(--text-muted);
   font-size: 0.85rem;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1rem;
+  gap: 0.25rem;
   margin-top: auto;
 }
-.footer a { color: var(--text-muted); }
-.footer a:hover { color: var(--text); }
+.footer p, .footer a, .footer a:hover { color: var(--text-muted); text-decoration: none; }
 .footer-bmc a { display: inline-block; }
 .bmc-btn { height: 40px; width: auto; display: block; }
 .footer-links {
@@ -683,9 +682,9 @@ a.hero-badge:hover { background: var(--bg-4); border-color: var(--accent-light);
   flex-wrap: wrap;
   justify-content: center;
 }
-.footer-sep { color: var(--text-dim); }
-.footer-credits { margin: 0; color: var(--text-dim); }
-.footer-disclaimer { margin: 0.15rem 0 0; font-size: 0.75rem; }
+.footer-sep { color: var(--text-muted); }
+.footer-credits { margin: 0; }
+.footer-disclaimer { margin: 0; font-size: 0.75rem; }
 
 /* ── Imprint page ── */
 .imprint-layout {

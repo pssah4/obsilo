@@ -157,6 +157,12 @@ export interface ToolExecutionContext {
      * Used by new_task tool for multi-agent delegation.
      */
     spawnSubtask?: (mode: string, message: string) => Promise<string>;
+
+    /**
+     * Invalidate the cached system prompt and tool definitions.
+     * Called when settings that affect tool availability change (e.g. webTools.enabled).
+     */
+    invalidateToolCache?: () => void;
 }
 
 /**

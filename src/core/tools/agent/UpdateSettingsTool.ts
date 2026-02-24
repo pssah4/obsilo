@@ -178,7 +178,7 @@ export class UpdateSettingsTool extends BaseTool<'update_settings'> {
 
         try {
             if (action === 'set') {
-                await this.handleSet(input, callbacks);
+                await this.handleSet(input, callbacks, context);
             } else if (action === 'apply_preset') {
                 await this.handlePreset(input, callbacks);
             } else if (action === 'open_tab') {
@@ -194,7 +194,7 @@ export class UpdateSettingsTool extends BaseTool<'update_settings'> {
         }
     }
 
-    private async handleSet(input: Record<string, any>, callbacks: import('../types').ToolCallbacks): Promise<void> {
+    private async handleSet(input: Record<string, any>, callbacks: import('../types').ToolCallbacks, context?: ToolExecutionContext): Promise<void> {
         const path = (input.path as string ?? '').trim();
         const value = input.value;
 
@@ -231,6 +231,11 @@ export class UpdateSettingsTool extends BaseTool<'update_settings'> {
         const oldValue = target[key];
         target[key] = value;
         await this.plugin.saveSettings();
+
+        // Invalidate tool cache when settings that affect tool availability change
+        if (path.startsWith('webTools')) {
+            context?.invalidateToolCache?.();
+        }
 
         callbacks.pushToolResult(this.formatSuccess(
             `Setting "${path}" changed: ${JSON.stringify(oldValue)} -> ${JSON.stringify(value)}`
