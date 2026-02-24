@@ -3,7 +3,7 @@ import type ObsidianAgentPlugin from '../main';
 import { AgentTask } from '../core/AgentTask';
 import { ModeService } from '../core/modes/ModeService';
 import type { MessageParam, ContentBlock, ImageMediaType } from '../api/types';
-import { getModelKey, modelToLLMProvider, BUILT_IN_MODELS } from '../types/settings';
+import { getModelKey, getFirstEnabledModelKey, modelToLLMProvider, BUILT_IN_MODELS } from '../types/settings';
 import type { CustomModel, ProviderType } from '../types/settings';
 import { buildApiHandler, buildApiHandlerForModel } from '../api/index';
 import { resolvePromptContent } from '../core/context/SupportPrompts';
@@ -370,10 +370,31 @@ export class AgentSidebarView extends ItemView {
         }
     }
 
+    /** Resolve a model key for a mode, skipping disabled models: mode override → global → first enabled */
+    private resolveEnabledModelKey(modeSlug: string): string {
+        const models = this.plugin.settings.activeModels;
+
+        // Check mode override — skip if model is disabled
+        const modeOverrideKey = this.plugin.settings.modeModelKeys?.[modeSlug];
+        if (modeOverrideKey) {
+            const m = models.find((m) => getModelKey(m) === modeOverrideKey);
+            if (m?.enabled) return modeOverrideKey;
+        }
+
+        // Check global default — skip if model is disabled
+        const globalKey = this.plugin.settings.activeModelKey;
+        if (globalKey) {
+            const m = models.find((m) => getModelKey(m) === globalKey);
+            if (m?.enabled) return globalKey;
+        }
+
+        // Fallback: first enabled model
+        return getFirstEnabledModelKey(models);
+    }
+
     /** Returns the effective model key for the current mode (mode override → global fallback) */
     private getEffectiveModelKey(): string {
-        const modeSlug = this.plugin.settings.currentMode;
-        return this.plugin.settings.modeModelKeys?.[modeSlug] || this.plugin.settings.activeModelKey;
+        return this.resolveEnabledModelKey(this.plugin.settings.currentMode);
     }
 
     private updateModelButton(): void {
@@ -859,7 +880,7 @@ export class AgentSidebarView extends ItemView {
         // Create a new conversation on first message (if history enabled)
         if (!this.activeConversationId && this.plugin.conversationStore) {
             const mode = this.modeService.getActiveMode().slug;
-            const modelKey = this.plugin.settings.modeModelKeys?.[mode] || this.plugin.settings.activeModelKey;
+            const modelKey = this.resolveEnabledModelKey(mode);
             const model = this.plugin.settings.activeModels.find((m) => getModelKey(m) === modelKey);
             this.activeConversationId = await this.plugin.conversationStore.create(
                 mode,
@@ -934,9 +955,8 @@ export class AgentSidebarView extends ItemView {
 
         // Resolve mode-specific model (Sticky Models: each mode remembers its last-used model)
         const currentModeSlug = this.modeService.getActiveMode().slug;
-        const modeModelKey = this.plugin.settings.modeModelKeys?.[currentModeSlug] || this.plugin.settings.activeModelKey;
-        const resolvedModel = this.plugin.settings.activeModels.find((m) => getModelKey(m) === modeModelKey)
-            ?? this.plugin.settings.activeModels.find((m) => getModelKey(m) === this.plugin.settings.activeModelKey);
+        const modeModelKey = this.resolveEnabledModelKey(currentModeSlug);
+        const resolvedModel = this.plugin.settings.activeModels.find((m) => getModelKey(m) === modeModelKey);
 
         let resolvedApiHandler = this.plugin.apiHandler;
         if (resolvedModel && modeModelKey !== this.plugin.settings.activeModelKey) {

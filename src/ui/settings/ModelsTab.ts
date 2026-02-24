@@ -3,7 +3,7 @@ import type ObsidianAgentPlugin from '../../main';
 import { ModelConfigModal } from './ModelConfigModal';
 import { CodeImportModal } from './CodeImportModal';
 import type { CustomModel } from '../../types/settings';
-import { getModelKey } from '../../types/settings';
+import { getModelKey, getFirstEnabledModelKey } from '../../types/settings';
 import { PROVIDER_LABELS, PROVIDER_COLORS } from './constants';
 
 export class ModelsTab {
@@ -79,7 +79,7 @@ export class ModelsTab {
         const hasKey = !!model.apiKey || model.provider === 'ollama' || model.provider === 'lmstudio';
         const isActive = this.plugin.settings.activeModelKey === key;
 
-        const row = table.createDiv(`model-row${isActive ? ' model-row-active' : ''}`);
+        const row = table.createDiv(`model-row${isActive ? ' model-row-active' : ''}${!model.enabled ? ' model-row-disabled' : ''}`);
 
         // Name
         const nameEl = row.createDiv('mc-name');
@@ -105,14 +105,30 @@ export class ModelsTab {
         toggleInput.addEventListener('change', async () => {
             const idx = this.plugin.settings.activeModels.findIndex((m) => getModelKey(m) === key);
             if (idx !== -1) this.plugin.settings.activeModels[idx].enabled = toggleInput.checked;
+
+            // If disabling the current default, fall back to first enabled model
+            if (!toggleInput.checked && this.plugin.settings.activeModelKey === key) {
+                this.plugin.settings.activeModelKey = getFirstEnabledModelKey(this.plugin.settings.activeModels);
+            }
+
+            // Clean up mode overrides pointing to this now-disabled model
+            if (!toggleInput.checked && this.plugin.settings.modeModelKeys) {
+                for (const [modeSlug, modeKey] of Object.entries(this.plugin.settings.modeModelKeys)) {
+                    if (modeKey === key) {
+                        delete this.plugin.settings.modeModelKeys[modeSlug];
+                    }
+                }
+            }
+
             await this.plugin.saveSettings();
-            row.toggleClass('model-row-disabled', !toggleInput.checked);
+            this.rerender();
         });
 
         // Default — radio button (single selection)
         const defaultEl = row.createDiv('mc-default');
         const defaultRadio = defaultEl.createEl('input', { attr: { type: 'radio', name: 'active-model' } });
         defaultRadio.checked = isActive;
+        defaultRadio.disabled = !model.enabled;
         defaultRadio.addEventListener('change', async () => {
             if (defaultRadio.checked) {
                 this.plugin.settings.activeModelKey = key;

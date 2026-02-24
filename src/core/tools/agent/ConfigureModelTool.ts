@@ -185,6 +185,17 @@ export class ConfigureModelTool extends BaseTool<'configure_model'> {
             return;
         }
 
+        if (!model.enabled) {
+            const available = this.plugin.settings.activeModels
+                .filter((m) => m.enabled)
+                .map((m) => `${getModelKey(m)} (${m.displayName ?? m.name})`)
+                .join(', ');
+            callbacks.pushToolResult(this.formatError(new Error(
+                `Model "${model.displayName ?? model.name}" is disabled. Enable it in Settings first, or choose from: ${available || 'none configured'}`
+            )));
+            return;
+        }
+
         this.plugin.settings.activeModelKey = modelKey;
         await this.plugin.saveSettings();
 

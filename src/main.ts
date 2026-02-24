@@ -1,5 +1,5 @@
 import { Plugin, WorkspaceLeaf, Notice, TFile, addIcon } from 'obsidian';
-import { ObsidianAgentSettings, DEFAULT_SETTINGS, getModelKey, modelToLLMProvider } from './types/settings';
+import { ObsidianAgentSettings, DEFAULT_SETTINGS, getModelKey, modelToLLMProvider, LOCAL_EMBEDDING_KEY } from './types/settings';
 import type { CustomModel, AutoApprovalConfig } from './types/settings';
 import { AgentSidebarView, VIEW_TYPE_AGENT_SIDEBAR } from './ui/AgentSidebarView';
 import { OBSILO_ICON_SVG } from './ui/obsiloIcon';
@@ -460,24 +460,28 @@ export default class ObsidianAgentPlugin extends Plugin {
         }
     }
 
-    /** Return the currently active CustomModel, or null if none configured */
+    /** Return the currently active CustomModel, or null if none configured or disabled */
     getActiveModel(): CustomModel | null {
         const key = this.settings.activeModelKey;
         if (!key) return null;
-        return this.settings.activeModels.find((m) => getModelKey(m) === key) ?? null;
+        const model = this.settings.activeModels.find((m) => getModelKey(m) === key);
+        if (!model || !model.enabled) return null;
+        return model;
     }
 
-    /** Return the memory extraction CustomModel, or null if none configured */
+    /** Return the memory extraction CustomModel, or null if none configured or disabled */
     getMemoryModel(): CustomModel | null {
         const key = this.settings.memory.memoryModelKey;
         if (!key) return null;
-        return this.settings.activeModels.find((m) => getModelKey(m) === key) ?? null;
+        const model = this.settings.activeModels.find((m) => getModelKey(m) === key);
+        if (!model || !model.enabled) return null;
+        return model;
     }
 
-    /** Return the active embedding CustomModel, or null if none configured */
+    /** Return the active embedding CustomModel, or null if local Xenova or none configured */
     getActiveEmbeddingModel(): CustomModel | null {
         const key = this.settings.activeEmbeddingModelKey;
-        if (!key) return null;
+        if (!key || key === LOCAL_EMBEDDING_KEY) return null;
         return this.settings.embeddingModels.find((m) => getModelKey(m) === key) ?? null;
     }
 

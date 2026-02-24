@@ -4,7 +4,7 @@ import { ModelConfigModal } from './ModelConfigModal';
 import { addInfoButton } from './utils';
 import { EMBEDDING_SUGGESTIONS, PROVIDER_LABELS, PROVIDER_COLORS } from './constants';
 import type { CustomModel } from '../../types/settings';
-import { getModelKey } from '../../types/settings';
+import { getModelKey, LOCAL_EMBEDDING_KEY } from '../../types/settings';
 import type { SemanticIndexService } from '../../core/semantic/SemanticIndexService';
 
 export class EmbeddingsTab {
@@ -25,12 +25,12 @@ export class EmbeddingsTab {
         header.createDiv({ cls: 'mc-enable', text: 'Active' });
         header.createDiv({ cls: 'mc-actions' });
 
+        // Built-in local model (always first)
+        this.renderLocalEmbeddingRow(table);
+
+        // User-added API models
         const models = this.plugin.settings.embeddingModels ?? [];
-        if (models.length === 0) {
-            table.createDiv({ cls: 'model-table-empty', text: 'No embedding models added yet. Click "+ Add Embedding Model" to get started.' });
-        } else {
-            models.forEach((model) => this.renderEmbeddingRow(table, model));
-        }
+        models.forEach((model) => this.renderEmbeddingRow(table, model));
 
         const footer = containerEl.createDiv('model-table-footer');
         const addBtn = footer.createEl('button', { cls: 'mod-cta model-add-btn', text: '+ Add Embedding Model' });
@@ -57,7 +57,7 @@ export class EmbeddingsTab {
         const activeEmbModel = this.plugin.getActiveEmbeddingModel();
         const embModelDesc = activeEmbModel
             ? `Using ${activeEmbModel.displayName ?? activeEmbModel.name} (${activeEmbModel.provider}) for embeddings.`
-            : 'No API model active above — falls back to local all-MiniLM-L6-v2 (no data leaves your device).';
+            : 'Using local all-MiniLM-L6-v2 for embeddings (no data leaves your device).';
 
         containerEl.createEl('p', {
             cls: 'agent-settings-desc',
@@ -372,6 +372,42 @@ export class EmbeddingsTab {
         );
     }
 
+    private renderLocalEmbeddingRow(table: HTMLElement): void {
+        const isActive = !this.plugin.settings.activeEmbeddingModelKey
+            || this.plugin.settings.activeEmbeddingModelKey === LOCAL_EMBEDDING_KEY;
+
+        const row = table.createDiv(`model-row${isActive ? ' model-row-active' : ''}`);
+
+        // Name
+        row.createDiv('mc-name').createSpan({ text: 'Local (all-MiniLM-L6-v2)', cls: 'mc-name-text' });
+
+        // Provider badge
+        const provEl = row.createDiv('mc-provider');
+        const badge = provEl.createSpan({ cls: 'provider-badge', text: 'Local' });
+        badge.style.background = '#4caf50';
+
+        // Key indicator — local needs no API key
+        const keyEl = row.createDiv('mc-key');
+        const keyIcon = keyEl.createSpan('mc-key-icon');
+        setIcon(keyIcon, 'check');
+        keyEl.addClass('mc-key-ok');
+
+        // Active radio
+        const enableEl = row.createDiv('mc-enable');
+        const toggle = enableEl.createEl('input', { attr: { type: 'radio', name: 'active-embedding' } });
+        toggle.checked = isActive;
+        toggle.addEventListener('change', async () => {
+            if (toggle.checked) {
+                this.plugin.settings.activeEmbeddingModelKey = LOCAL_EMBEDDING_KEY;
+                await this.plugin.saveSettings();
+                this.rerender();
+            }
+        });
+
+        // Actions — empty for built-in
+        row.createDiv('mc-actions');
+    }
+
     renderEmbeddingRow(table: HTMLElement, model: CustomModel): void {
         const key = getModelKey(model);
         const hasKey = !!model.apiKey || model.provider === 'ollama' || model.provider === 'lmstudio';
@@ -426,7 +462,7 @@ export class EmbeddingsTab {
             if (this.plugin.settings.activeEmbeddingModelKey === key) {
                 this.plugin.settings.activeEmbeddingModelKey = this.plugin.settings.embeddingModels[0]
                     ? getModelKey(this.plugin.settings.embeddingModels[0])
-                    : '';
+                    : LOCAL_EMBEDDING_KEY;
             }
             await this.plugin.saveSettings();
             this.rerender();

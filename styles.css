@@ -1093,6 +1093,7 @@
 }
 
 .model-row:not(.model-row-header):hover { background: var(--background-modifier-hover); }
+.model-row-disabled { opacity: 0.5; }
 
 .mc-name { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; min-width: 0; }
 .mc-name-text { font-size: 12px; color: var(--text-normal); }
@@ -1145,9 +1146,49 @@
     transform: translateX(12px);
 }
 
-/* ── Default column — radio button ──────────── */
+/* ── Radio buttons (Models "Default" + Embeddings "Active") ── */
 .mc-default { display: flex; justify-content: center; align-items: center; }
-.mc-default input[type='radio'] { cursor: pointer; width: 14px; height: 14px; accent-color: var(--interactive-accent); }
+.mc-default input[type='radio'],
+.mc-enable input[type='radio'] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--text-faint);
+    border-radius: 50%;
+    background: transparent;
+    cursor: pointer;
+    position: relative;
+    margin: 0;
+    flex-shrink: 0;
+    transition: border-color 0.15s;
+}
+.mc-default input[type='radio']::before,
+.mc-enable input[type='radio']::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--interactive-accent);
+    transition: transform 0.15s;
+}
+.mc-default input[type='radio']:checked,
+.mc-enable input[type='radio']:checked {
+    border-color: var(--interactive-accent);
+}
+.mc-default input[type='radio']:checked::before,
+.mc-enable input[type='radio']:checked::before {
+    transform: translate(-50%, -50%) scale(1);
+}
+.mc-default input[type='radio']:disabled,
+.mc-enable input[type='radio']:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
 
 .mc-actions { display: flex; gap: 4px; justify-content: flex-end; align-items: center; }
 .mc-actions button { padding: 3px 5px; border-radius: 4px; }
