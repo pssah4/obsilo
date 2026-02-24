@@ -27,7 +27,7 @@ export function getToolsSection(
     let nonMcpGroups = toolGroups.filter((g) => g !== 'mcp');
     if (!webEnabled && nonMcpGroups.includes('web')) {
         nonMcpGroups = nonMcpGroups.filter((g) => g !== 'web');
-        parts.push('**Web:** Disabled. When the user asks for internet search, the ONLY reason is webTools.enabled=false. Fix: call update_settings(action:"set", path:"webTools.enabled", value:true), then use web_search. Do NOT mention API keys or providers — that is a separate issue handled at runtime. Do NOT fall back to vault search.\n');
+        parts.push('**Web:** Disabled. When the user asks for internet search, the ONLY reason is webTools.enabled=false. Ask the user for permission first: "Web search is currently disabled. Shall I enable it?" If they agree, call update_settings(action:"set", path:"webTools.enabled", value:true), then use web_search. Do NOT enable without asking. Do NOT mention API keys or providers — that is handled at runtime. Do NOT fall back to vault search.\n');
     }
     if (nonMcpGroups.length > 0) {
         parts.push(buildToolPromptSection(nonMcpGroups));

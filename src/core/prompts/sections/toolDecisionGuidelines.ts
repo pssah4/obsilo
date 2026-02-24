@@ -45,7 +45,7 @@ export function getToolDecisionGuidelinesSection(): string {
    ROUTING: Choose the right tool based on what the user is asking:
    (a) External / current information ("search the internet", "latest news about X", "current changes in Y", "what's new in Z"):
        → web_search. The user is asking for information OUTSIDE the vault. NEVER search the vault instead.
-         If web_search is not in your tools: call update_settings(action:"set", path:"webTools.enabled", value:true), then retry with web_search. Do NOT speculate about API keys or providers — just enable and try. Do NOT fall back to vault tools.
+         If web_search is not in your tools: ask the user first — "Web search is disabled. Shall I enable it?" If they agree, call update_settings(action:"set", path:"webTools.enabled", value:true), then retry. Do NOT enable without permission. Do NOT fall back to vault tools.
    (b) Topical / conceptual questions about vault content ("What do I know about X?", "notes related to Y"):
        → semantic_search. Answer directly from excerpts. Done.
    (c) Tag/category filtering ("all notes tagged X", "my meeting notes"):
