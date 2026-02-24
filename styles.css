@@ -2012,6 +2012,104 @@
     border-color: var(--interactive-accent);
 }
 
+/* ── Setup tab bar (free / own key switcher) ────────────────────────── */
+.setup-tab-bar {
+    display: flex;
+    gap: 0;
+    margin: 12px 0 0;
+    border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.setup-tab {
+    flex: 1;
+    padding: 7px 0;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+}
+
+.setup-tab:hover {
+    color: var(--text-normal);
+}
+
+.setup-tab-active {
+    color: var(--interactive-accent);
+    border-bottom-color: var(--interactive-accent);
+    font-weight: 600;
+}
+
+/* ── Setup panels (shown/hidden by active class) ────────────────────── */
+.setup-panel {
+    display: none;
+    padding: 10px 0 0;
+}
+
+.setup-panel-active {
+    display: block;
+}
+
+/* ── Key input field ────────────────────────────────────────────────── */
+.setup-key-input {
+    width: 100%;
+    padding: 6px 10px;
+    margin: 8px 0 4px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
+    background: var(--background-primary);
+    color: var(--text-normal);
+    font-size: 12px;
+    font-family: var(--font-monospace);
+    box-sizing: border-box;
+}
+
+.setup-key-input:focus {
+    outline: none;
+    border-color: var(--interactive-accent);
+}
+
+/* ── Key status feedback ────────────────────────────────────────────── */
+.setup-key-status {
+    font-size: 11px;
+    min-height: 16px;
+    padding: 2px 0;
+}
+
+.setup-key-status:empty { display: none; }
+
+.setup-key-error   { color: var(--color-red); }
+.setup-key-success { color: var(--color-green); font-weight: 500; }
+.setup-key-testing { color: var(--text-muted); font-style: italic; }
+
+/* ── Provider selector row ──────────────────────────────────────────── */
+.setup-provider-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+    font-size: 12px;
+}
+
+.setup-provider-select {
+    flex: 1;
+    padding: 5px 8px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
+    background: var(--background-primary);
+    color: var(--text-normal);
+    font-size: 12px;
+}
+
+/* ── Start row (appears after successful key test) ──────────────────── */
+.setup-start-row {
+    margin-top: 8px;
+    text-align: center;
+}
+
 .question-input-row {
     display: flex;
     gap: 5px;
