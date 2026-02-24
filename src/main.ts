@@ -482,11 +482,13 @@ export default class ObsidianAgentPlugin extends Plugin {
         return model;
     }
 
-    /** Return the active embedding CustomModel, or null if local Xenova or none configured */
+    /** Return the active embedding CustomModel, or null if local Xenova, none configured, or disabled */
     getActiveEmbeddingModel(): CustomModel | null {
         const key = this.settings.activeEmbeddingModelKey;
         if (!key || key === LOCAL_EMBEDDING_KEY) return null;
-        return this.settings.embeddingModels.find((m) => getModelKey(m) === key) ?? null;
+        const model = this.settings.embeddingModels.find((m) => getModelKey(m) === key);
+        if (!model || !model.enabled) return null;
+        return model;
     }
 
     /**
