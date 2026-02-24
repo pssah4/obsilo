@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>System Prompt Architecture — Obsilo Developer Docs</title>
+  <title>System Prompt Architecture — Obsilo Architecture</title>
   <link rel="icon" type="image/png" href="../assets/OBSILO_ICON50x50_lila.png">
   <link rel="stylesheet" href="../assets/style.css">
   <script>(function(){var t=localStorage.getItem('theme')||'dark';document.documentElement.setAttribute('data-theme',t)})();(function(){var l=localStorage.getItem('lang');if(l)document.documentElement.setAttribute('lang',l)})()</script>
@@ -11,23 +11,35 @@
 <body>
 
 <header class="site-header">
-  <a href="../index.html" class="logo"><img src="../assets/OBSILO_LOGOFULL_SW_v2.png" alt="Obsilo" class="logo-img"></a>
+  <a href="../index.html" class="logo">
+    <img src="../assets/OBSILO_LOGOFULL_SW_v2.png" alt="Obsilo" class="logo-img">
+  </a>
   <nav class="header-links">
     <a href="../getting-started.html" data-i18n="header.docs">Guide</a>
     <a href="index.html" data-i18n="header.devDocs">Architecture</a>
     <a href="../about.html" data-i18n="header.about">About</a>
     <a href="https://github.com/pssah4/obsilo-public" class="github-btn"><svg aria-hidden="true" height="16" viewBox="0 0 16 16" width="16" class="github-icon"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg> <span data-i18n="header.github">GitHub</span></a>
+    <a href="https://buymeacoffee.com/sebastianhanke" target="_blank" rel="noopener noreferrer"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" class="bmc-header-btn"></a>
   </nav>
   <div class="spacer"></div>
-  <button class="theme-toggle" aria-label="Toggle theme" onclick="toggleTheme()"><svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg><svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></button>
-  <div class="lang-switcher"><button class="lang-toggle" onclick="toggleLangDropdown(event)" aria-label="Switch language"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg><span class="lang-toggle-label">EN</span></button><div class="lang-dropdown"></div></div>
-  <button class="search-btn" onclick="openDocsSearch()" aria-label="Search docs"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span data-i18n="header.search">Search</span></button>
+  <button class="theme-toggle" aria-label="Toggle theme" data-i18n-aria="header.toggleTheme" onclick="toggleTheme()">
+    <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+  </button>
+  <div class="lang-switcher">
+    <button class="lang-toggle" onclick="toggleLangDropdown(event)" aria-label="Switch language" data-i18n-aria="header.switchLang">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+      <span class="lang-toggle-label">EN</span>
+    </button>
+    <div class="lang-dropdown"></div>
+  </div>
+  <button class="search-btn" onclick="openDocsSearch()" aria-label="Search docs" data-i18n-aria="header.search"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span data-i18n="header.search">Search</span></button>
 </header>
 <script>function toggleTheme(){var h=document.documentElement,n=h.getAttribute('data-theme')==='light'?'dark':'light';h.setAttribute('data-theme',n);localStorage.setItem('theme',n);document.querySelectorAll('.logo-img').forEach(function(i){i.src=n==='light'?'../assets/OBSILO_LOGOFULL_v2.png':'../assets/OBSILO_LOGOFULL_SW_v2.png'})}(function(){var t=document.documentElement.getAttribute('data-theme');if(t==='light'){document.querySelectorAll('.logo-img').forEach(function(i){i.src='../assets/OBSILO_LOGOFULL_v2.png'})}})()</script>
 
 <div class="docs-layout">
   <aside class="docs-sidebar">
-    <div class="sidebar-section"><div class="sidebar-section-title">Developer Docs</div><nav class="sidebar-nav"><a href="index.html">Overview</a></nav></div>
+    <div class="sidebar-section"><div class="sidebar-section-title">Architecture</div><nav class="sidebar-nav"><a href="index.html">Overview</a></nav></div>
     <div class="sidebar-section"><div class="sidebar-section-title">Core Architecture</div><nav class="sidebar-nav"><a href="architecture-overview.html">Architecture Overview</a><a href="agent-loop.html">Agent Loop</a><a href="system-prompt.html" class="active">System Prompt</a></nav></div>
     <div class="sidebar-section"><div class="sidebar-section-title">Tool System</div><nav class="sidebar-nav"><a href="tool-system.html">Tool Execution Pipeline</a><a href="governance.html">Governance &amp; Safety</a></nav></div>
     <div class="sidebar-section"><div class="sidebar-section-title">Knowledge &amp; Memory</div><nav class="sidebar-nav"><a href="semantic-search.html">Semantic Search Pipeline</a><a href="memory-system.html">Memory Architecture</a></nav></div>
@@ -39,7 +51,7 @@
     <article class="docs-content">
       <div class="breadcrumb">
         <a href="../index.html">Home</a><span class="breadcrumb-sep">&rsaquo;</span>
-        <a href="index.html">Dev Docs</a><span class="breadcrumb-sep">&rsaquo;</span>
+        <a href="index.html">Architecture</a><span class="breadcrumb-sep">&rsaquo;</span>
         <span>System Prompt</span>
       </div>
 
@@ -85,20 +97,77 @@
       <h3 id="section-memory">4. memory</h3>
       <p>Injects up to 4000 characters from 5 memory files (800 chars each max): <code>soul.md</code>, <code>user-profile.md</code>, <code>projects.md</code>, <code>patterns.md</code>, <code>learnings.md</code>. Each wrapped in XML tags like <code>&lt;agent_identity&gt;</code>, <code>&lt;user_profile&gt;</code>.</p>
 
+      <p>Each file is read from <code>.obsidian-agent/memory/</code> and truncated to a hard limit of <strong>800 characters</strong>. If a file exceeds this limit, it is cut at the nearest word boundary and an ellipsis is appended. The total budget for the memory section is 5 x 800 = 4000 characters.</p>
+
+      <p>The XML wrapping strategy uses semantic tag names per file:</p>
+      <table>
+        <thead><tr><th>File</th><th>XML Tag</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td><code>soul.md</code></td><td><code>&lt;agent_identity&gt;</code></td><td>Agent persona and personality traits</td></tr>
+          <tr><td><code>user-profile.md</code></td><td><code>&lt;user_profile&gt;</code></td><td>User preferences, language, workflows</td></tr>
+          <tr><td><code>projects.md</code></td><td><code>&lt;projects&gt;</code></td><td>Active projects and their context</td></tr>
+          <tr><td><code>patterns.md</code></td><td><code>&lt;patterns&gt;</code></td><td>Architecture patterns and conventions</td></tr>
+          <tr><td><code>learnings.md</code></td><td><code>&lt;learnings&gt;</code></td><td>Accumulated insights from past sessions</td></tr>
+        </tbody>
+      </table>
+
+      <p>Note: <code>knowledge.md</code> is <strong>not</strong> included in the system prompt. Knowledge files are intended for the semantic search index and are retrieved on-demand via <code>semantic_search</code>, not injected into every prompt. This is a deliberate design choice to keep the memory section within its token budget. Files that do not exist are silently skipped -- no placeholder or empty tag is emitted.</p>
+
       <h3 id="section-tools">5. tools</h3>
-      <p>The complete JSON schema definitions for all tools accessible in the current mode. Tools are filtered by mode's tool group configuration. This is the largest section.</p>
+      <p>The complete JSON schema definitions for all tools accessible in the current mode. Tools are filtered by mode's tool group configuration. This is typically the <strong>largest single section</strong> in the prompt.</p>
+
+      <p>Each tool definition is emitted as a JSON schema object containing the tool's <code>name</code>, <code>description</code>, and <code>input_schema</code> (with <code>type</code>, <code>properties</code>, and <code>required</code> fields). This follows the standard Anthropic/OpenAI function-calling format so the LLM can generate valid <code>tool_use</code> blocks.</p>
+
+      <p>The set of tools included is determined at prompt assembly time by <code>ModeService.getEffectiveToolNames()</code>. This method resolves the active mode's <code>toolGroups</code> array (e.g., <code>["edit", "web", "agent"]</code>) into a flat list of individual tool names using <code>expandToolGroups()</code>, then filters the ToolRegistry to only include matching tools. Custom modes can also specify <code>customTools</code> to add or remove individual tools beyond their group defaults.</p>
+
+      <p>With all 36+ tools enabled (as in Agent mode), this section alone can consume <strong>8,000-12,000 tokens</strong>. Read-only modes like Ask mode include only the <code>read</code> and <code>agent</code> groups, reducing this significantly.</p>
 
       <h3 id="section-pluginskills">6. pluginSkills</h3>
       <p>Compact listing of VaultDNA-discovered plugin skills. One line per plugin with available commands and API methods.</p>
 
       <h3 id="section-toolrules">7. toolRules</h3>
-      <p>Specific usage rules for tools, e.g., "Always use <code>search_files</code> before <code>read_file</code> for unknown paths" or "Use <code>semantic_search</code> for conceptual queries".</p>
+      <p>Specific usage rules for tools that constrain and guide the LLM's tool selection behavior. These are hard rules the agent must follow, not suggestions. Examples include:</p>
+      <ul>
+        <li><strong>"Use <code>search_files</code> before <code>read_file</code> for unknown paths"</strong> -- When the user asks about a file or concept but the exact path is unknown, the agent must first search to discover the path rather than guessing and risking a hallucinated path.</li>
+        <li><strong>"Prefer <code>semantic_search</code> for conceptual queries"</strong> -- When the user asks a meaning-based question (e.g., "Where did I write about project goals?"), the agent should use the vector-based semantic search rather than keyword-based <code>search_files</code>.</li>
+        <li><strong>"Always show diffs before write operations"</strong> -- Before using <code>write_to_file</code> or <code>apply_diff</code>, the agent should explain what changes will be made so the user can review them in the approval dialog.</li>
+        <li><strong>"Use <code>list_files</code> to orient before deep-reading"</strong> -- For broad exploration tasks, list directory contents first to understand the structure before reading individual files.</li>
+      </ul>
+      <p>Tool rules are static strings defined in the prompt builder. They are always included regardless of mode, ensuring consistent behavior across Ask, Agent, and custom modes.</p>
 
       <h3 id="section-tooldecision">8. toolDecisionGuidelines</h3>
-      <p>Decision tree for choosing between similar tools. Helps the LLM pick the right tool for each scenario.</p>
+      <p>A structured decision tree that helps the LLM choose between tools with overlapping capabilities. While section [7] provides hard rules, section [8] provides nuanced guidance for ambiguous situations.</p>
+
+      <p>The key decision paths include:</p>
+      <table>
+        <thead><tr><th>Scenario</th><th>Recommended Tool</th><th>Rationale</th></tr></thead>
+        <tbody>
+          <tr><td>Know the exact file path</td><td><code>read_file</code></td><td>Direct read is fastest, no search overhead</td></tr>
+          <tr><td>Know a keyword, need file paths</td><td><code>search_files</code></td><td>Regex-based content search across vault</td></tr>
+          <tr><td>Conceptual/meaning-based query</td><td><code>semantic_search</code></td><td>Vector similarity finds related content even without keyword match</td></tr>
+          <tr><td>Need structural context (links, tags)</td><td><code>get_linked_notes</code> / <code>search_by_tag</code></td><td>Graph-aware queries that follow Obsidian's link structure</td></tr>
+          <tr><td>Explore an unfamiliar directory</td><td><code>list_files</code></td><td>Directory listing before targeted reads</td></tr>
+          <tr><td>Tabular data operations</td><td><code>query_base</code></td><td>SQL-like queries on Obsidian Bases</td></tr>
+        </tbody>
+      </table>
+      <p>This section also instructs the LLM to prefer read-only tools when the task only requires information retrieval, and to escalate to write tools only when modification is explicitly requested or clearly implied by the user's intent.</p>
 
       <h3 id="section-objective">9. objective</h3>
-      <p>An 11-point task decomposition framework that structures how the agent approaches complex tasks: understand, plan, execute, verify, iterate.</p>
+      <p>An 11-point task decomposition framework that structures how the agent approaches complex tasks. The full framework instructs the agent to follow these steps:</p>
+      <ol>
+        <li><strong>Understand the request</strong> -- Parse the user's intent; identify explicit and implicit requirements.</li>
+        <li><strong>Assess current state</strong> -- Use read tools to understand what already exists before making changes.</li>
+        <li><strong>Plan the approach</strong> -- Break the task into discrete, ordered sub-steps before executing anything.</li>
+        <li><strong>Validate assumptions</strong> -- Confirm file paths, structures, and data formats before acting on them.</li>
+        <li><strong>Execute incrementally</strong> -- Make one logical change at a time; avoid large batch operations.</li>
+        <li><strong>Verify each step</strong> -- After each write operation, confirm the result matches expectations.</li>
+        <li><strong>Handle errors gracefully</strong> -- If a tool call fails, diagnose the cause before retrying with corrections.</li>
+        <li><strong>Maintain context</strong> -- Reference previous findings and decisions; do not re-read files unnecessarily.</li>
+        <li><strong>Communicate progress</strong> -- Keep the user informed of what was done, what was found, and what comes next.</li>
+        <li><strong>Know when to ask</strong> -- If the task is ambiguous or risky, use <code>ask_followup_question</code> rather than guessing.</li>
+        <li><strong>Signal completion</strong> -- Use <code>attempt_completion</code> with a clear summary when the task is fully done.</li>
+      </ol>
+      <p>This framework is the core behavioral contract between the system prompt and the LLM. It ensures the agent acts methodically rather than impulsively, reducing hallucinated paths and unnecessary write operations.</p>
 
       <h3 id="section-response">10. responseFormat</h3>
       <p>Guidelines for how the agent should structure its responses: use markdown, be concise, cite sources, format code blocks.</p>
@@ -118,11 +187,76 @@
       <h3 id="section-skills">15. skills</h3>
       <p>Content from matched skill files. Skills are activated by keyword matching against the user's message. When a skill matches, its full content is injected into this section.</p>
 
+      <p>The matching algorithm uses a <strong>bag-of-words</strong> approach:</p>
+      <ol>
+        <li>The user's message is tokenized into lowercase words.</li>
+        <li>Tokens shorter than 3 characters are discarded (prepositions, articles, etc.).</li>
+        <li>Each skill file defines a <code>keywords</code> array in its YAML frontmatter.</li>
+        <li>A skill matches if <strong>any</strong> of its keywords appears as a token in the user's message.</li>
+        <li>No stemming is applied -- keywords must match exactly (e.g., "canvas" matches but "canvases" does not).</li>
+      </ol>
+
+      <p>When a skill matches, its content (everything below the YAML frontmatter) is injected into the prompt, capped at <strong>4000 characters per skill</strong>. If multiple skills match, all are included, each wrapped in <code>&lt;skill name="..."&gt;</code> XML tags. Skill files are stored in <code>.obsidian-agent/skills/</code> as Markdown files with YAML frontmatter containing the <code>keywords</code> and <code>enabled</code> fields.</p>
+
       <h3 id="section-rules">16. rules</h3>
       <p>Active rules from <code>.obsidian-agent/rules/</code> and global rules. Each enabled rule file's content is injected wrapped in <code>&lt;rule&gt;</code> tags.</p>
 
+      <p>Rule files are Markdown files stored in the vault-local directory <code>.obsidian-agent/rules/</code>. Each rule file has a YAML frontmatter with an <code>enabled</code> boolean toggle. Only rules with <code>enabled: true</code> are included in the prompt. Global rules (from the plugin's global settings directory) follow the same format and are merged with vault-local rules.</p>
+
+      <p>Each individual rule file is capped at <strong>50,000 characters</strong>. Content beyond this limit is truncated. The rule content is wrapped in <code>&lt;rule name="filename"&gt;...&lt;/rule&gt;</code> XML tags, similar to the skill injection pattern. Rules are always injected regardless of the user's message content (unlike skills, which require keyword matching).</p>
+
+      <p>Typical use cases for rules include: coding conventions, naming standards, vault organization policies, and project-specific instructions that should apply to every conversation in the vault.</p>
+
+      <h2 id="token-budget">Token Budget</h2>
+      <p>The assembled system prompt must fit within the model's context window alongside the full conversation history (user messages, assistant messages, and tool results). Since the context window is finite (typically 128k or 200k tokens depending on the provider), the system prompt competes directly with conversation length.</p>
+
+      <p>The largest sections by token count are typically:</p>
+      <table>
+        <thead><tr><th>Section</th><th>Typical Size</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>[5] tools</td><td>8,000-12,000 tokens</td><td>Scales with number of enabled tool groups</td></tr>
+          <tr><td>[4] memory</td><td>1,000-2,000 tokens</td><td>Hard-capped at 4000 chars (5 files x 800)</td></tr>
+          <tr><td>[15] skills</td><td>0-3,000 tokens</td><td>Only present when keywords match; 4000 chars/skill</td></tr>
+          <tr><td>[16] rules</td><td>0-5,000+ tokens</td><td>Depends on number and size of active rule files</td></tr>
+          <tr><td>[9] objective</td><td>~500 tokens</td><td>Fixed static content</td></tr>
+          <tr><td>All others</td><td>~200-400 tokens each</td><td>Relatively small static or semi-static sections</td></tr>
+        </tbody>
+      </table>
+      <p>A fully loaded system prompt (Agent mode, all tools, memory populated, rules and skills active) can reach <strong>15,000-25,000 tokens</strong>. This is why read-only modes and subtask prompts deliberately exclude sections -- to preserve context window budget for the actual conversation.</p>
+
       <h2 id="subtask-prompt">Subtask Mode</h2>
-      <p>When a child task is spawned via <code>new_task</code>, it receives a leaner prompt: sections 1-5, 7, 12, and the parent's task description. Skills, rules, and custom instructions are not inherited to keep the subtask focused.</p>
+      <p>When a child task is spawned via <code>new_task</code>, it receives a deliberately leaner prompt to maximize context window budget for the subtask's focused work. The subtask prompt includes only the sections essential for tool execution and safety.</p>
+
+      <p><strong>Included sections:</strong></p>
+      <table>
+        <thead><tr><th>Section</th><th>Reason for Inclusion</th></tr></thead>
+        <tbody>
+          <tr><td>[1] dateTime</td><td>Time-awareness is always needed</td></tr>
+          <tr><td>[2] vaultContext</td><td>Subtask needs to know vault name and active file</td></tr>
+          <tr><td>[3] capabilities</td><td>Agent must know what it can do</td></tr>
+          <tr><td>[4] memory</td><td>User preferences and project context apply to subtasks</td></tr>
+          <tr><td>[5] tools</td><td>Tool definitions are required for tool use</td></tr>
+          <tr><td>[7] toolRules</td><td>Safety rules must always apply</td></tr>
+          <tr><td>[12] securityBoundary</td><td>Guardrails are non-negotiable in any context</td></tr>
+        </tbody>
+      </table>
+
+      <p><strong>Excluded sections and rationale:</strong></p>
+      <table>
+        <thead><tr><th>Section</th><th>Reason for Exclusion</th></tr></thead>
+        <tbody>
+          <tr><td>[6] pluginSkills</td><td>Subtasks do not discover plugins independently</td></tr>
+          <tr><td>[8] toolDecisionGuidelines</td><td>Subtasks have a clear objective; no ambiguity in tool choice</td></tr>
+          <tr><td>[9] objective</td><td>Replaced by the parent's task description</td></tr>
+          <tr><td>[10] responseFormat</td><td>Subtask output goes to parent, not to the user</td></tr>
+          <tr><td>[11] explicitInstructions</td><td>Reduces prompt size; parent handles user-facing concerns</td></tr>
+          <tr><td>[13] modeDefinition</td><td>Subtask mode is defined by the parent's <code>new_task</code> call</td></tr>
+          <tr><td>[14] customInstructions</td><td>Not inherited to keep subtask focused on its specific task</td></tr>
+          <tr><td>[15] skills</td><td>Not inherited; subtask operates on explicit instructions only</td></tr>
+          <tr><td>[16] rules</td><td>Not inherited to reduce prompt size and avoid rule conflicts</td></tr>
+        </tbody>
+      </table>
+      <p>The parent's task description is appended as a dedicated <code>&lt;task&gt;</code> section, replacing the objective framework. This keeps subtask prompts at roughly <strong>40-60% of the size</strong> of a full prompt.</p>
 
       <div class="callout callout-crosslink">
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14L21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>

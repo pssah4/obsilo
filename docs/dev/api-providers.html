@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>API Providers — Obsilo Developer Docs</title>
+  <title>API Providers — Obsilo Architecture</title>
   <link rel="icon" type="image/png" href="../assets/OBSILO_ICON50x50_lila.png">
   <link rel="stylesheet" href="../assets/style.css">
   <script>(function(){var t=localStorage.getItem('theme')||'dark';document.documentElement.setAttribute('data-theme',t)})();(function(){var l=localStorage.getItem('lang');if(l)document.documentElement.setAttribute('lang',l)})()</script>
@@ -11,23 +11,35 @@
 <body>
 
 <header class="site-header">
-  <a href="../index.html" class="logo"><img src="../assets/OBSILO_LOGOFULL_SW_v2.png" alt="Obsilo" class="logo-img"></a>
+  <a href="../index.html" class="logo">
+    <img src="../assets/OBSILO_LOGOFULL_SW_v2.png" alt="Obsilo" class="logo-img">
+  </a>
   <nav class="header-links">
     <a href="../getting-started.html" data-i18n="header.docs">Guide</a>
     <a href="index.html" data-i18n="header.devDocs">Architecture</a>
     <a href="../about.html" data-i18n="header.about">About</a>
     <a href="https://github.com/pssah4/obsilo-public" class="github-btn"><svg aria-hidden="true" height="16" viewBox="0 0 16 16" width="16" class="github-icon"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg> <span data-i18n="header.github">GitHub</span></a>
+    <a href="https://buymeacoffee.com/sebastianhanke" target="_blank" rel="noopener noreferrer"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" class="bmc-header-btn"></a>
   </nav>
   <div class="spacer"></div>
-  <button class="theme-toggle" aria-label="Toggle theme" onclick="toggleTheme()"><svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg><svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></button>
-  <div class="lang-switcher"><button class="lang-toggle" onclick="toggleLangDropdown(event)" aria-label="Switch language"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg><span class="lang-toggle-label">EN</span></button><div class="lang-dropdown"></div></div>
-  <button class="search-btn" onclick="openDocsSearch()" aria-label="Search docs"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span data-i18n="header.search">Search</span></button>
+  <button class="theme-toggle" aria-label="Toggle theme" data-i18n-aria="header.toggleTheme" onclick="toggleTheme()">
+    <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+  </button>
+  <div class="lang-switcher">
+    <button class="lang-toggle" onclick="toggleLangDropdown(event)" aria-label="Switch language" data-i18n-aria="header.switchLang">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+      <span class="lang-toggle-label">EN</span>
+    </button>
+    <div class="lang-dropdown"></div>
+  </div>
+  <button class="search-btn" onclick="openDocsSearch()" aria-label="Search docs" data-i18n-aria="header.search"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span data-i18n="header.search">Search</span></button>
 </header>
 <script>function toggleTheme(){var h=document.documentElement,n=h.getAttribute('data-theme')==='light'?'dark':'light';h.setAttribute('data-theme',n);localStorage.setItem('theme',n);document.querySelectorAll('.logo-img').forEach(function(i){i.src=n==='light'?'../assets/OBSILO_LOGOFULL_v2.png':'../assets/OBSILO_LOGOFULL_SW_v2.png'})}(function(){var t=document.documentElement.getAttribute('data-theme');if(t==='light'){document.querySelectorAll('.logo-img').forEach(function(i){i.src='../assets/OBSILO_LOGOFULL_v2.png'})}})()</script>
 
 <div class="docs-layout">
   <aside class="docs-sidebar">
-    <div class="sidebar-section"><div class="sidebar-section-title">Developer Docs</div><nav class="sidebar-nav"><a href="index.html">Overview</a></nav></div>
+    <div class="sidebar-section"><div class="sidebar-section-title">Architecture</div><nav class="sidebar-nav"><a href="index.html">Overview</a></nav></div>
     <div class="sidebar-section"><div class="sidebar-section-title">Core Architecture</div><nav class="sidebar-nav"><a href="architecture-overview.html">Architecture Overview</a><a href="agent-loop.html">Agent Loop</a><a href="system-prompt.html">System Prompt</a></nav></div>
     <div class="sidebar-section"><div class="sidebar-section-title">Tool System</div><nav class="sidebar-nav"><a href="tool-system.html">Tool Execution Pipeline</a><a href="governance.html">Governance &amp; Safety</a></nav></div>
     <div class="sidebar-section"><div class="sidebar-section-title">Knowledge &amp; Memory</div><nav class="sidebar-nav"><a href="semantic-search.html">Semantic Search Pipeline</a><a href="memory-system.html">Memory Architecture</a></nav></div>
@@ -39,7 +51,7 @@
     <article class="docs-content">
       <div class="breadcrumb">
         <a href="../index.html">Home</a><span class="breadcrumb-sep">&rsaquo;</span>
-        <a href="index.html">Dev Docs</a><span class="breadcrumb-sep">&rsaquo;</span>
+        <a href="index.html">Architecture</a><span class="breadcrumb-sep">&rsaquo;</span>
         <span>API Providers</span>
       </div>
 
@@ -72,13 +84,14 @@
       <h2 id="providers">Provider Types</h2>
 
       <h3 id="anthropic">AnthropicProvider</h3>
-      <p>Uses the official <code>@anthropic-ai/sdk</code> with <code>dangerouslyAllowBrowser: true</code> (required for Electron renderer).</p>
+      <p>Uses the official <code>@anthropic-ai/sdk</code> with <code>dangerouslyAllowBrowser: true</code> -- this flag is required because Obsilo runs inside the Electron renderer process, not a Node.js server environment.</p>
       <ul>
-        <li><strong>Streaming</strong>: Native SDK streaming with content block events</li>
-        <li><strong>Tool accumulation</strong>: <code>Map&lt;number, { id, name, inputJson }&gt;</code> keyed by content block index, yielded as complete objects</li>
-        <li><strong>Thinking blocks</strong>: Mapped to separate accumulator, yielded incrementally as <code>thinking</code> chunks</li>
-        <li><strong>Temperature</strong>: Default 0.2, clamped to max 1.0</li>
-        <li><strong>Token limit</strong>: <code>max_tokens</code> parameter</li>
+        <li><strong>Streaming</strong>: Native SDK streaming with content block events (<code>content_block_start</code>, <code>content_block_delta</code>, <code>content_block_stop</code>).</li>
+        <li><strong>Tool accumulation</strong>: A <code>Map&lt;number, { id, name, inputJson }&gt;</code> keyed by content block index. Each <code>content_block_delta</code> of type <code>input_json_delta</code> appends to the <code>inputJson</code> string. The full JSON is parsed on the <code>content_block_stop</code> event, and the complete tool call is yielded as a single <code>tool_use</code> chunk.</li>
+        <li><strong>Thinking blocks</strong>: Tracked in a separate <code>Map&lt;number, { text }&gt;</code>. Each thinking delta is yielded incrementally as a <code>thinking</code> chunk so the UI can display reasoning in real time.</li>
+        <li><strong>Usage tracking</strong>: <code>inputTokens</code> are extracted from the <code>message_start</code> event, <code>outputTokens</code> from the <code>message_delta</code> event. Both are yielded as a final <code>usage</code> chunk.</li>
+        <li><strong>Temperature</strong>: Default 0.2, clamped to max 1.0.</li>
+        <li><strong>Token limit</strong>: <code>max_tokens</code> parameter.</li>
       </ul>
 
       <h3 id="openai">OpenAiProvider</h3>
@@ -95,9 +108,12 @@
         </tbody>
       </table>
       <ul>
-        <li><strong>SSE stream parsing</strong>: Manual parsing of <code>data:</code> lines from the response stream</li>
-        <li><strong>Temperature</strong>: Omitted for O-series models (they don't support it)</li>
-        <li><strong>Token limit</strong>: Azure uses <code>max_completion_tokens</code> instead of <code>max_tokens</code></li>
+        <li><strong>SSE stream parsing</strong>: Manual parsing of <code>data:</code> lines from the raw response stream. Each line is trimmed and checked for the <code>[DONE]</code> sentinel. Parsed JSON chunks are processed to extract delta content.</li>
+        <li><strong>Tool accumulation</strong>: A <code>Map&lt;number, ToolCallAccumulator&gt;</code> collects streaming function call fragments. Each SSE delta may contain a partial function name or argument JSON. The accumulated tool call is finalized and yielded as a complete <code>tool_use</code> chunk when the stream moves to the next tool or ends.</li>
+        <li><strong>Temperature</strong>: Omitted entirely for O-series models (they do not support the parameter). Azure default temperature is also omitted to use the deployment's configured default.</li>
+        <li><strong>Token limit</strong>: Azure uses <code>max_completion_tokens</code> instead of <code>max_tokens</code>. All other providers use <code>max_tokens</code>.</li>
+        <li><strong>Message conversion</strong>: Internally all messages use Anthropic's content block format. The <code>OpenAiProvider</code> converts these to OpenAI's expected format: Anthropic <code>tool_use</code> content blocks become OpenAI <code>tool_calls</code> on the assistant message, and Anthropic <code>tool_result</code> blocks become separate messages with <code>role: 'tool'</code>.</li>
+        <li><strong>Auth specifics</strong>: Azure uses the <code>api-key</code> HTTP header (not Bearer). OpenRouter adds <code>HTTP-Referer</code> and <code>X-Title</code> headers for attribution tracking. Local providers (Ollama, LM Studio) send no authentication.</li>
       </ul>
 
       <h2 id="message-format">Internal Message Format</h2>
@@ -111,6 +127,31 @@
 
       <h2 id="factory">Provider Factory</h2>
       <p><code>buildApiHandlerForModel()</code> reads the model configuration to determine the provider type and instantiates the appropriate handler. Each model can have custom temperature, API version, and base URL overrides.</p>
+
+      <h2 id="custom-model-config">Custom Model Configuration</h2>
+      <p>Every model -- both built-in and user-defined -- is represented by the <code>CustomModel</code> interface:</p>
+      <pre><code><span class="code-keyword">interface</span> <span class="code-type">CustomModel</span> {
+  name: <span class="code-type">string</span>;           <span class="code-comment">// Model ID for API calls (e.g. "claude-sonnet-4-20250514")</span>
+  provider: <span class="code-type">ProviderType</span>; <span class="code-comment">// 'anthropic' | 'openai' | 'ollama' | 'lmstudio' | 'openrouter' | 'azure' | 'custom'</span>
+  displayName?: <span class="code-type">string</span>;
+  apiKey?: <span class="code-type">string</span>;
+  baseUrl?: <span class="code-type">string</span>;
+  enabled: <span class="code-type">boolean</span>;
+  isBuiltIn?: <span class="code-type">boolean</span>;
+  maxTokens?: <span class="code-type">number</span>;
+  temperature?: <span class="code-type">number</span>;
+  apiVersion?: <span class="code-type">string</span>;    <span class="code-comment">// Azure only</span>
+}</code></pre>
+      <p>Built-in models come pre-configured with sensible defaults (provider endpoint, max tokens, temperature) and have <code>isBuiltIn: true</code>. Users can add custom models through the settings UI to connect to any OpenAI-compatible endpoint or to override defaults on built-in models. The <code>provider</code> field determines which handler class is instantiated by the factory.</p>
+
+      <h2 id="error-handling">Error Handling</h2>
+      <p>Both providers implement defensive error handling for the inherently unreliable nature of streaming LLM APIs:</p>
+      <ul>
+        <li><strong>Stream interrupts:</strong> SSE connection drops (network timeouts, server errors) are caught at the stream reader level. Any partial content accumulated before the interruption is preserved and yielded so the user sees what was generated before the failure.</li>
+        <li><strong>Rate limiting:</strong> Provider-specific <code>Retry-After</code> headers are respected. When a 429 response is received, the provider waits the indicated duration before retrying.</li>
+        <li><strong>Tool JSON parse errors:</strong> Because tool call arguments arrive as incremental JSON fragments, the accumulated string may be malformed if the stream is interrupted. Parsing is performed inside a <code>try-catch</code> on the <code>content_block_stop</code> event (Anthropic) or stream completion (OpenAI). Malformed tool calls are dropped with a warning rather than crashing the agent loop.</li>
+        <li><strong>Abort signal:</strong> An <code>AbortController</code> is passed to all API calls. When the user clicks "Stop" in the UI, the controller's <code>abort()</code> is called, which cancels the in-flight HTTP request and terminates the async generator mid-stream.</li>
+      </ul>
 
       <div class="callout callout-crosslink">
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14L21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>

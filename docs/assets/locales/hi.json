@@ -40,6 +40,8 @@
   "pages.chatInterface.title": "चैट इंटरफ़ेस",
   "pages.checkpoints.subtitle": "चेकपॉइंट हर एजेंट कार्य के लिए एक सुरक्षा जाल प्रदान करते हैं। किसी कार्य में पहले राइट ऑपरेशन से पहले, Obsilo स्वचालित रूप से सभी ट्रैक की गई फ़ाइलों का स्नैपशॉट लेता है। यदि कुछ गलत हो जाए, तो आप एक क्लिक से उस स्नैपशॉट पर वापस जा सकते हैं।",
   "pages.checkpoints.title": "चेकपॉइंट",
+  "pages.gettingStarted.apiKeyWarning": "<strong>API Key संग्रहण</strong> API Keys Obsidian में अनएन्क्रिप्टेड स्टोर होती हैं। यदि आप Obsidian को सिंक करने के लिए क्लाउड सेवाओं का उपयोग करते हैं, तो आपकी API Keys भी अनएन्क्रिप्टेड सिंक होंगी।",
+  "pages.gettingStarted.backupWarning": "<strong>पहले बैकअप बनाएं!</strong> Obsilo के साथ काम शुरू करने से पहले अपने Vault का बैकअप बनाएं।",
   "pages.gettingStarted.subtitle": "Obsilo अर्ली बीटा में है और परीक्षण के लिए खुला है। इसे अभी तक कम्युनिटी प्लगइन के रूप में प्रकाशित नहीं किया गया है, इसलिए आपको नीचे वर्णित दो अन्य विकल्पों में से एक का उपयोग करना होगा। <br/> Obsilo Agent इंस्टॉल करें, अपना पहला AI मॉडल कनेक्ट करें, और 5 मिनट से कम समय में अपना पहला कार्य चलाएँ।",
   "pages.gettingStarted.title": "शुरुआत",
   "pages.imprint.contact": "संपर्क",

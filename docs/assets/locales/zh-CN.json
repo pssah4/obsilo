@@ -150,6 +150,8 @@
   "pages.gettingStarted.semanticSearchSetup.step4": "点击<strong>构建索引</strong>并等待索引完成（首次构建可能需要几分钟）",
   "pages.gettingStarted.semanticSearchSetup.text1": "语义搜索让代理能够按含义而非仅按关键词查找笔记。它完全在本地运行——无需云服务。",
   "pages.gettingStarted.semanticSearchSetup.text2": "索引构建完成后，<code>semantic_search</code> 工具将在所有模式下对代理可用。",
+  "pages.gettingStarted.apiKeyWarning": "<strong>API 密钥存储</strong> API 密钥以未加密形式存储在 Obsidian 中。如果您使用云服务同步 Obsidian，您的 API 密钥也将以未加密形式同步。",
+  "pages.gettingStarted.backupWarning": "<strong>请先备份!</strong> 在开始使用 Obsilo 之前，请创建 Vault 的备份。",
   "pages.gettingStarted.subtitle": "Obsilo 目前处于早期测试阶段，对外开放测试。它尚未作为社区插件发布，因此您需要使用下面描述的两种方式之一进行安装。安装 Obsilo Agent，连接您的第一个 AI 模型，并在 5 分钟内运行您的第一个任务。",
   "pages.gettingStarted.title": "快速入门",
   "pages.imprint.contact": "联系方式",

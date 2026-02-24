@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Memory Architecture — Obsilo Developer Docs</title>
+  <title>Memory Architecture — Obsilo Architecture</title>
   <link rel="icon" type="image/png" href="../assets/OBSILO_ICON50x50_lila.png">
   <link rel="stylesheet" href="../assets/style.css">
   <script>(function(){var t=localStorage.getItem('theme')||'dark';document.documentElement.setAttribute('data-theme',t)})();(function(){var l=localStorage.getItem('lang');if(l)document.documentElement.setAttribute('lang',l)})()</script>
@@ -19,27 +19,28 @@
     <a href="index.html" data-i18n="header.devDocs">Architecture</a>
     <a href="../about.html" data-i18n="header.about">About</a>
     <a href="https://github.com/pssah4/obsilo-public" class="github-btn"><svg aria-hidden="true" height="16" viewBox="0 0 16 16" width="16" class="github-icon"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg> <span data-i18n="header.github">GitHub</span></a>
+    <a href="https://buymeacoffee.com/sebastianhanke" target="_blank" rel="noopener noreferrer"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" class="bmc-header-btn"></a>
   </nav>
   <div class="spacer"></div>
-  <button class="theme-toggle" aria-label="Toggle theme" onclick="toggleTheme()">
+  <button class="theme-toggle" aria-label="Toggle theme" data-i18n-aria="header.toggleTheme" onclick="toggleTheme()">
     <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
     <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
   </button>
   <div class="lang-switcher">
-    <button class="lang-toggle" onclick="toggleLangDropdown(event)" aria-label="Switch language">
+    <button class="lang-toggle" onclick="toggleLangDropdown(event)" aria-label="Switch language" data-i18n-aria="header.switchLang">
       <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
       <span class="lang-toggle-label">EN</span>
     </button>
     <div class="lang-dropdown"></div>
   </div>
-  <button class="search-btn" onclick="openDocsSearch()" aria-label="Search docs"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span data-i18n="header.search">Search</span></button>
+  <button class="search-btn" onclick="openDocsSearch()" aria-label="Search docs" data-i18n-aria="header.search"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span data-i18n="header.search">Search</span></button>
 </header>
 <script>function toggleTheme(){var h=document.documentElement,n=h.getAttribute('data-theme')==='light'?'dark':'light';h.setAttribute('data-theme',n);localStorage.setItem('theme',n);document.querySelectorAll('.logo-img').forEach(function(i){i.src=n==='light'?'../assets/OBSILO_LOGOFULL_v2.png':'../assets/OBSILO_LOGOFULL_SW_v2.png'})}(function(){var t=document.documentElement.getAttribute('data-theme');if(t==='light'){document.querySelectorAll('.logo-img').forEach(function(i){i.src='../assets/OBSILO_LOGOFULL_v2.png'})}})()</script>
 
 <div class="docs-layout">
   <aside class="docs-sidebar">
     <div class="sidebar-section">
-      <div class="sidebar-section-title">Developer Docs</div>
+      <div class="sidebar-section-title">Architecture</div>
       <nav class="sidebar-nav">
         <a href="index.html">Overview</a>
       </nav>
@@ -88,7 +89,7 @@
       <div class="breadcrumb">
         <a href="../index.html">Home</a>
         <span class="breadcrumb-sep">&rsaquo;</span>
-        <a href="index.html">Dev Docs</a>
+        <a href="index.html">Architecture</a>
         <span class="breadcrumb-sep">&rsaquo;</span>
         <span>Memory Architecture</span>
       </div>
@@ -134,11 +135,103 @@ Tier 3: Long-Term Memory (LongTermExtractor)
       <p>Queue items: conversationId, transcript, title, queuedAt, type (<code>'session'</code> | <code>'long-term'</code>).</p>
       <p>Two async LLM calls per conversation: session extraction + long-term promotion.</p>
 
+      <h3 id="extraction-pipeline">Full Extraction Pipeline</h3>
+      <ol>
+        <li>The conversation transcript is packaged as a <code>PendingExtraction</code> with <code>type='session'</code>.</li>
+        <li><code>ExtractionQueue.enqueue()</code> serializes the item and writes it to <code>pending-extractions.json</code>.</li>
+        <li><code>processQueue()</code> picks the next item from the front of the queue.</li>
+        <li><strong>SessionExtractor</strong> generates a 7-section summary via LLM call:
+          <ul>
+            <li><strong>Summary</strong> -- what the conversation accomplished</li>
+            <li><strong>Decisions</strong> -- choices made during the session</li>
+            <li><strong>User Preferences Observed</strong> -- behavioral signals from the user</li>
+            <li><strong>Task Outcome</strong> -- success/failure/partial result</li>
+            <li><strong>Tool Effectiveness</strong> -- which tools worked well or poorly</li>
+            <li><strong>Learnings</strong> -- insights for future interactions</li>
+            <li><strong>Open Questions</strong> -- unresolved items</li>
+          </ul>
+        </li>
+        <li>Output format: YAML frontmatter + Markdown body, hard-capped at &lt;400 words.</li>
+        <li>The summary is saved to <code>sessions/{conversationId}.md</code> and indexed in the semantic index with <code>source='session'</code>.</li>
+        <li>If <code>autoUpdateLongTerm</code> is enabled in settings: the queue automatically enqueues a follow-up item with <code>type='long-term'</code>.</li>
+        <li><strong>LongTermExtractor</strong> reads the current memory files and identifies facts worth promoting from the session summary.</li>
+        <li>Output: JSON with <code>{ file, action, section, content }</code> -- where <code>action</code> is either <code>'append'</code> (add new fact) or <code>'replace'</code> (update existing section).</li>
+      </ol>
+      <p><strong>Processing behavior:</strong> The queue is a sequential processor with a 2-second delay between items to avoid rate-limit pressure. Crash recovery is built in: an item is only dequeued from <code>pending-extractions.json</code> after successful processing, so if Obsidian crashes mid-extraction the item will be retried on next startup.</p>
+
       <h2 id="memory-context-injection">Memory Context Injection</h2>
       <p>Each memory file is injected into the system prompt wrapped in its XML tag. The <code>buildMemoryContext()</code> method reads all files, truncates to limits, and concatenates.</p>
 
+      <h3 id="build-memory-context">buildMemoryContext() Details</h3>
+      <ul>
+        <li>Reads all 5 memory files: <code>soul.md</code>, <code>user-profile.md</code>, <code>projects.md</code>, <code>patterns.md</code>, <code>learnings.md</code>. Note that <code>knowledge.md</code> is <strong>not</strong> included -- it is only accessible on-demand via semantic search.</li>
+        <li>Each file is truncated to a maximum of <strong>800 characters</strong>.</li>
+        <li>Total budget for all memory context: <strong>4000 characters</strong>.</li>
+        <li>Each file's content is wrapped in a descriptive XML tag:
+          <ul>
+            <li><code>&lt;agent_identity&gt;</code> -- soul.md</li>
+            <li><code>&lt;user_profile&gt;</code> -- user-profile.md</li>
+            <li><code>&lt;active_projects&gt;</code> -- projects.md</li>
+            <li><code>&lt;behavioral_patterns&gt;</code> -- patterns.md</li>
+            <li><code>&lt;task_learnings&gt;</code> -- learnings.md</li>
+          </ul>
+        </li>
+        <li>The concatenated XML block is injected as <strong>system prompt section [4]</strong>, after mode instructions and before tool definitions.</li>
+      </ul>
+
+      <h2 id="memory-retriever">MemoryRetriever</h2>
+      <p>The <code>MemoryRetriever</code> provides on-demand access to past session summaries for agent tools that need to recall previous conversations.</p>
+      <ul>
+        <li><strong>Primary strategy -- semantic search:</strong> Calls <code>semanticIndex.searchSessions(query, topK)</code> with a <code>source='session'</code> filter. This finds the most relevant past sessions based on vector similarity to the current query.</li>
+        <li><strong>Fallback strategy -- recency-based:</strong> If the semantic index is unavailable or returns no results, falls back to loading the most recent <em>N</em> session files sorted by modification date.</li>
+        <li><strong>Output format:</strong> Returns an XML block with a <code>&lt;relevant_sessions&gt;</code> wrapper containing one entry per matched session. Each session summary is truncated to <strong>600 characters</strong> to fit within context budgets.</li>
+        <li><strong>Usage:</strong> Called by agent tools (e.g., <code>recall_memory</code>) when the LLM needs to reference information from past interactions that is not present in the current conversation history or long-term memory files.</li>
+      </ul>
+
       <h2 id="onboarding-service">OnboardingService</h2>
-      <p>5-step setup flow for new users. Creates default <code>soul.md</code> with name "Obsilo", language "Deutsch", and anti-patterns.</p>
+      <p>Interactive 8-step setup flow for new users. Initializes the agent's identity and the user's preferences on first launch.</p>
+
+      <h3 id="onboarding-steps">8-Step Onboarding Flow</h3>
+      <ol>
+        <li><strong>Greeting</strong> -- Welcome message introducing the agent and the onboarding process.</li>
+        <li><strong>Naming</strong> -- The user chooses a name for the agent (default: "Obsilo").</li>
+        <li><strong>Backup import</strong> -- Optional import of a previous memory backup to restore agent state.</li>
+        <li><strong>Language selection</strong> -- The user selects their preferred language for all agent interactions.</li>
+        <li><strong>Vault usage description</strong> -- The user describes how they use their Obsidian vault (personal notes, research, work, etc.). Stored in <code>projects.md</code>.</li>
+        <li><strong>Tone preferences</strong> -- The user indicates their preferred communication style (formal, casual, concise, etc.). Stored in <code>user-profile.md</code>.</li>
+        <li><strong>Permission preset selection</strong> -- The user picks one of three governance presets:
+          <ul>
+            <li><strong>"Freie Hand"</strong> (permissive) -- the agent can act freely with minimal confirmations</li>
+            <li><strong>"Ausgewogen"</strong> (balanced) -- standard confirmation prompts for destructive actions</li>
+            <li><strong>"Vorsichtig"</strong> (restrictive) -- the agent asks for confirmation before most tool executions</li>
+          </ul>
+        </li>
+        <li><strong>Completion</strong> -- Settings are applied and <code>soul.md</code> is written with the configured identity.</li>
+      </ol>
+      <p><strong>Interaction rules:</strong> The onboarding always uses text responses before tool calls and calls <code>ask_followup_question</code> after each step (except the final completion step) to advance to the next phase.</p>
+
+      <h2 id="soul-identity">Soul Identity</h2>
+      <p>The agent's core identity is defined in <code>soul.md</code>, the first memory file loaded into every system prompt.</p>
+      <ul>
+        <li><strong>File:</strong> <code>.obsidian/plugins/obsidian-agent/memory/soul.md</code></li>
+        <li><strong>Default language:</strong> Determined during the onboarding flow (step 4). All subsequent agent responses use this language unless overridden.</li>
+        <li><strong>Contains:</strong> Personality description, core values, and explicit anti-patterns.</li>
+        <li><strong>Values (priority order):</strong>
+          <ul>
+            <li>Usefulness over politeness -- the agent prioritizes giving genuinely helpful answers over being agreeable</li>
+            <li>Honesty -- the agent admits uncertainty rather than guessing</li>
+            <li>Respect -- the agent treats the user as a competent peer</li>
+            <li>Learn from mistakes -- the agent acknowledges and corrects its errors</li>
+          </ul>
+        </li>
+        <li><strong>Anti-patterns (explicitly forbidden):</strong>
+          <ul>
+            <li>No empty phrases or filler ("Sure!", "Great question!")</li>
+            <li>No unnecessary apologies</li>
+            <li>No emojis in any output</li>
+          </ul>
+        </li>
+      </ul>
 
       <div class="callout callout-crosslink">
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14L21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>

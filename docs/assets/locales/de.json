@@ -150,6 +150,8 @@
   "pages.gettingStarted.semanticSearchSetup.step4": "Klicken Sie auf <strong>Index erstellen</strong> und warten Sie, bis die Indexierung abgeschlossen ist (der erste Aufbau kann einige Minuten dauern)",
   "pages.gettingStarted.semanticSearchSetup.text1": "Die semantische Suche ermöglicht es dem Agenten, Notizen nach Bedeutung statt nur nach Stichwörtern zu finden. Sie läuft vollständig lokal — kein Cloud-Dienst erforderlich.",
   "pages.gettingStarted.semanticSearchSetup.text2": "Nach dem Aufbau steht das <code>semantic_search</code>-Tool dem Agenten in allen Modi zur Verfügung.",
+  "pages.gettingStarted.apiKeyWarning": "<strong>API Key Speicherung</strong> Die API Keys werden in Obsidian unverschlüsselt gespeichert. Wenn du Cloudservices zum Sync von Obsidian nutzt, werden deine API Keys ebenfalls unverschlüsselt synchronisiert.",
+  "pages.gettingStarted.backupWarning": "<strong>Erst ein Backup erstellen!</strong> Erstelle ein Backup von deinem Vault, bevor du beginnst mit Obsilo zu arbeiten.",
   "pages.gettingStarted.subtitle": "Obsilo befindet sich in der frühen Beta-Phase und ist zum Testen verfügbar. Es wurde noch nicht als Community Plugin veröffentlicht, daher müssen Sie eine der beiden unten beschriebenen Optionen verwenden. Installieren Sie Obsilo Agent, verbinden Sie Ihr erstes KI-Modell und führen Sie Ihre erste Aufgabe in unter 5 Minuten aus.",
   "pages.gettingStarted.title": "Erste Schritte",
   "pages.imprint.contact": "Kontakt",

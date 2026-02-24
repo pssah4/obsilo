@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MCP Client — Obsilo Developer Docs</title>
+  <title>MCP Client — Obsilo Architecture</title>
   <link rel="icon" type="image/png" href="../assets/OBSILO_ICON50x50_lila.png">
   <link rel="stylesheet" href="../assets/style.css">
   <script>(function(){var t=localStorage.getItem('theme')||'dark';document.documentElement.setAttribute('data-theme',t)})();(function(){var l=localStorage.getItem('lang');if(l)document.documentElement.setAttribute('lang',l)})()</script>
@@ -11,23 +11,35 @@
 <body>
 
 <header class="site-header">
-  <a href="../index.html" class="logo"><img src="../assets/OBSILO_LOGOFULL_SW_v2.png" alt="Obsilo" class="logo-img"></a>
+  <a href="../index.html" class="logo">
+    <img src="../assets/OBSILO_LOGOFULL_SW_v2.png" alt="Obsilo" class="logo-img">
+  </a>
   <nav class="header-links">
     <a href="../getting-started.html" data-i18n="header.docs">Guide</a>
     <a href="index.html" data-i18n="header.devDocs">Architecture</a>
     <a href="../about.html" data-i18n="header.about">About</a>
     <a href="https://github.com/pssah4/obsilo-public" class="github-btn"><svg aria-hidden="true" height="16" viewBox="0 0 16 16" width="16" class="github-icon"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg> <span data-i18n="header.github">GitHub</span></a>
+    <a href="https://buymeacoffee.com/sebastianhanke" target="_blank" rel="noopener noreferrer"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" class="bmc-header-btn"></a>
   </nav>
   <div class="spacer"></div>
-  <button class="theme-toggle" aria-label="Toggle theme" onclick="toggleTheme()"><svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg><svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></button>
-  <div class="lang-switcher"><button class="lang-toggle" onclick="toggleLangDropdown(event)" aria-label="Switch language"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg><span class="lang-toggle-label">EN</span></button><div class="lang-dropdown"></div></div>
-  <button class="search-btn" onclick="openDocsSearch()" aria-label="Search docs"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span data-i18n="header.search">Search</span></button>
+  <button class="theme-toggle" aria-label="Toggle theme" data-i18n-aria="header.toggleTheme" onclick="toggleTheme()">
+    <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+  </button>
+  <div class="lang-switcher">
+    <button class="lang-toggle" onclick="toggleLangDropdown(event)" aria-label="Switch language" data-i18n-aria="header.switchLang">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+      <span class="lang-toggle-label">EN</span>
+    </button>
+    <div class="lang-dropdown"></div>
+  </div>
+  <button class="search-btn" onclick="openDocsSearch()" aria-label="Search docs" data-i18n-aria="header.search"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span data-i18n="header.search">Search</span></button>
 </header>
 <script>function toggleTheme(){var h=document.documentElement,n=h.getAttribute('data-theme')==='light'?'dark':'light';h.setAttribute('data-theme',n);localStorage.setItem('theme',n);document.querySelectorAll('.logo-img').forEach(function(i){i.src=n==='light'?'../assets/OBSILO_LOGOFULL_v2.png':'../assets/OBSILO_LOGOFULL_SW_v2.png'})}(function(){var t=document.documentElement.getAttribute('data-theme');if(t==='light'){document.querySelectorAll('.logo-img').forEach(function(i){i.src='../assets/OBSILO_LOGOFULL_v2.png'})}})()</script>
 
 <div class="docs-layout">
   <aside class="docs-sidebar">
-    <div class="sidebar-section"><div class="sidebar-section-title">Developer Docs</div><nav class="sidebar-nav"><a href="index.html">Overview</a></nav></div>
+    <div class="sidebar-section"><div class="sidebar-section-title">Architecture</div><nav class="sidebar-nav"><a href="index.html">Overview</a></nav></div>
     <div class="sidebar-section"><div class="sidebar-section-title">Core Architecture</div><nav class="sidebar-nav"><a href="architecture-overview.html">Architecture Overview</a><a href="agent-loop.html">Agent Loop</a><a href="system-prompt.html">System Prompt</a></nav></div>
     <div class="sidebar-section"><div class="sidebar-section-title">Tool System</div><nav class="sidebar-nav"><a href="tool-system.html">Tool Execution Pipeline</a><a href="governance.html">Governance &amp; Safety</a></nav></div>
     <div class="sidebar-section"><div class="sidebar-section-title">Knowledge &amp; Memory</div><nav class="sidebar-nav"><a href="semantic-search.html">Semantic Search Pipeline</a><a href="memory-system.html">Memory Architecture</a></nav></div>
@@ -39,7 +51,7 @@
     <article class="docs-content">
       <div class="breadcrumb">
         <a href="../index.html">Home</a><span class="breadcrumb-sep">&rsaquo;</span>
-        <a href="index.html">Dev Docs</a><span class="breadcrumb-sep">&rsaquo;</span>
+        <a href="index.html">Architecture</a><span class="breadcrumb-sep">&rsaquo;</span>
         <span>MCP Client</span>
       </div>
 
@@ -47,6 +59,7 @@
       <p>The <code>McpClient</code> manages connections to external MCP (Model Context Protocol) servers, providing the agent with access to tools beyond the built-in set. It supports three transport mechanisms and includes security validation for command execution.</p>
 
       <h2 id="architecture">Architecture</h2>
+      <p>The MCP client follows a lean design: no OAuth, no file-watching, no auto-reconnect. Each configured server gets exactly one SDK Client instance from <code>@modelcontextprotocol/sdk</code>. Connections are managed explicitly through connect/disconnect calls rather than reactive file watchers.</p>
       <div class="arch-diagram">McpClient
     |
     +-- Map&lt;serverId, McpConnection&gt;
@@ -59,6 +72,27 @@
     +-- connectAll(configs[]) --------> Parallel connections
     +-- callTool(server, tool, args) -> Tool execution
     +-- disconnect(serverId) ---------> Cleanup</div>
+
+      <h2 id="transport-config">Transport Configuration</h2>
+      <p>Each server entry in settings specifies a transport type and its connection parameters. Below are concrete configuration examples for each supported transport.</p>
+      <p><strong>stdio</strong> &mdash; spawns a child process and communicates via stdin/stdout:</p>
+      <pre><code>{
+  transport: <span class="code-string">'stdio'</span>,
+  command: <span class="code-string">'npx'</span>,
+  args: [<span class="code-string">'-y'</span>, <span class="code-string">'@modelcontextprotocol/server-filesystem'</span>, <span class="code-string">'/path/to/dir'</span>]
+}</code></pre>
+      <p><strong>sse</strong> &mdash; connects to a remote server via HTTP Server-Sent Events:</p>
+      <pre><code>{
+  transport: <span class="code-string">'sse'</span>,
+  url: <span class="code-string">'http://localhost:3000/sse'</span>,
+  headers: { <span class="code-string">'Authorization'</span>: <span class="code-string">'Bearer ...'</span> }
+}</code></pre>
+      <p><strong>streamable-http</strong> &mdash; uses the newer MCP streaming HTTP protocol:</p>
+      <pre><code>{
+  transport: <span class="code-string">'streamable-http'</span>,
+  url: <span class="code-string">'http://localhost:3000/mcp'</span>,
+  headers: {}
+}</code></pre>
 
       <h2 id="transports">Transport Types</h2>
       <table>
@@ -85,6 +119,7 @@
         <li><strong>Discover tools</strong> &mdash; Call <code>listTools()</code> on the connected server to get available tools.</li>
         <li><strong>Store connection</strong> &mdash; Save the connection with status, client, and discovered tools.</li>
       </ol>
+      <p><code>connectAll()</code> runs all server connections in parallel via <code>Promise.all()</code>, so slow or failing servers do not block others. The default timeout is 60 seconds per connection. <code>disconnect(serverId)</code> calls <code>client.close()</code> on the SDK instance and clears all internal references (client, tools, status).</p>
 
       <h2 id="use-mcp-tool">UseMcpToolTool (LLM Bridge)</h2>
       <p>The <code>use_mcp_tool</code> tool bridges LLM tool calls to MCP server invocations:</p>
@@ -94,7 +129,7 @@
   tool_name: <span class="code-type">string</span>,    <span class="code-comment">// Tool on that server</span>
   arguments?: <span class="code-type">object</span>   <span class="code-comment">// Tool-specific input</span>
 }</code></pre>
-      <p>Write operation classification: if the tool name contains "write", "create", "delete", "update", "edit", "modify", "remove", "insert", or "set", it's treated as a write operation requiring approval.</p>
+      <p>The tool sets <code>isWriteOperation = true</code> as a conservative default &mdash; all MCP tool calls are treated as write operations unless the name proves otherwise. Write detection uses keyword matching: if the tool name contains any of <code>write</code>, <code>create</code>, <code>delete</code>, <code>update</code>, <code>edit</code>, <code>modify</code>, <code>remove</code>, <code>insert</code>, or <code>set</code>, the call requires user approval before execution.</p>
 
       <h2 id="per-mode-whitelist">Per-Mode Server Whitelist</h2>
       <p>Each mode can define which MCP servers are accessible via <code>settings.activeMcpServers</code>. An empty array means all servers are accessible. Custom modes can restrict access to specific servers via <code>mcpWhitelist</code>.</p>
@@ -110,6 +145,23 @@
           <tr><td>Tool call error</td><td>Returns <code>'Error calling {tool} on {server}: {message}'</code></td></tr>
         </tbody>
       </table>
+
+      <h2 id="introspection">Introspection API</h2>
+      <p>The McpClient exposes several methods for querying the current state of MCP connections:</p>
+      <ul>
+        <li><code>getConnections()</code> &mdash; returns all connection entries regardless of their status (connected, connecting, disconnected, error). Useful for displaying the full server list in the UI.</li>
+        <li><code>getConnection(name)</code> &mdash; returns a single connection entry by server name, or <code>undefined</code> if not found.</li>
+        <li><code>getAllTools()</code> &mdash; returns a flat list of all discovered tools from <strong>connected servers only</strong>. Disconnected or errored servers are excluded from the tool list.</li>
+      </ul>
+
+      <h2 id="lifecycle">Lifecycle</h2>
+      <p>The MCP client follows the plugin lifecycle:</p>
+      <ol class="steps">
+        <li><strong>Startup</strong> &mdash; <code>mcpClient.connectAll(settings.mcpServers)</code> is called during plugin initialization. All configured servers connect in parallel.</li>
+        <li><strong>Tool discovery</strong> &mdash; Each successfully connected server reports its tools via <code>client.listTools()</code>. These are cached in the connection entry.</li>
+        <li><strong>Runtime</strong> &mdash; Tools are available for the agent to invoke via <code>use_mcp_tool</code>. Connection status is checked before each call.</li>
+        <li><strong>Plugin unload</strong> &mdash; <code>mcpClient.disconnectAll()</code> is called, closing all SDK clients and clearing all connection state.</li>
+      </ol>
 
       <div class="callout callout-crosslink">
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14L21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>

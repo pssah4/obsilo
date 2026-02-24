@@ -85,6 +85,11 @@
       <p data-i18n="pages.gettingStarted.subtitle" data-i18n-html>Obsilo is in early beta and open for testing. It has not been published as Community Plugin yet, hence you'll need to use one of the two other options described below.
       <br/> Install Obsilo Agent, connect your first AI model, and run your first task in under 5 minutes.</p>
 
+      <div class="callout callout-danger" style="display:flex;align-items:center;gap:0.75rem;" data-i18n-html="pages.gettingStarted.backupWarning">
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:var(--danger)"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <span><strong>Backup first!</strong> Create a backup of your vault before you start working with Obsilo.</span>
+      </div>
+
       <div class="callout callout-tip" data-i18n-html="pages.gettingStarted.intro.callout">
         <strong>What you'll be able to do</strong>
         Ask questions about your vault, create and edit notes with AI assistance, research topics on the web and save the results, organize notes in bulk — all from a sidebar inside Obsidian, with a diff preview and approval step before anything changes.
@@ -171,6 +176,11 @@ cp main.js styles.css manifest.json \
         </tbody>
       </table>
       <p data-i18n-html="pages.gettingStarted.addModel.text3">After entering the key, click <strong>Test Connection</strong> to verify it works. Then enable the model to make it available in the chat.</p>
+
+      <div class="callout callout-warning" style="display:flex;align-items:center;gap:0.75rem;" data-i18n-html="pages.gettingStarted.apiKeyWarning">
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:var(--warning)"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <span><strong>API Key Storage</strong> API keys are stored unencrypted in Obsidian. If you use cloud services to sync Obsidian, your API keys will also be synced unencrypted.</span>
+      </div>
 
       <h3 id="open-sidebar" data-i18n="pages.gettingStarted.openSidebar">2. Open the Sidebar</h3>
       <p data-i18n-html="pages.gettingStarted.openSidebar.text1">Click the Obsilo Agent icon in the Obsidian ribbon (left or right edge of the window). If you don't see it, use the Command Palette (<kbd>Ctrl/Cmd+P</kbd>) and search for "Open Agent Sidebar".</p>
