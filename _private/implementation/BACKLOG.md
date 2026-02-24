@@ -1,7 +1,7 @@
 # Obsidian Agent — Backlog
 
 > Status: `[x]` fertig · `[~]` in Arbeit · `[ ]` offen · `[-]` zurückgestellt
-> Letzte Aktualisierung: 2026-02-24 (Keyword Search Upgrade — Stemming + TF-IDF)
+> Letzte Aktualisierung: 2026-02-24 (Dokumentations-Komplett-Ueberarbeitung Pre-Release)
 
 ---
 
@@ -183,13 +183,13 @@
 | Niedrig | Settings Reset (Factory Reset) | — | BackupTab hat Export/Import, nur Reset fehlt |
 | Niedrig | Custom Tools (`.ts` Dateien laden) | — | Experimental |
 | Niedrig | Speech-to-Text (Whisper) | — | Zurückgestellt |
-| Geplant | **Obsilo Gateway** (LLM-Relay, OpenRouter, Stripe) | `FEATURE-obsilo-gateway.md` | Post-Stabilisierung, Monetarisierung |
+| Geplant | **Obsilo Gateway** (LLM-Relay, OpenRouter, Stripe) | archiviert | Post-Stabilisierung, Monetarisierung |
 
 ---
 
-## Tool-Zählung
+## Tool-Zaehlung
 
-**34 Tools implementiert:**
+**36 Tools implementiert** (inkl. skill group):
 - read (3): read_file, list_files, search_files
 - vault (9): get_vault_stats, get_frontmatter, update_frontmatter, search_by_tag, get_linked_notes, open_note, get_daily_note, semantic_search, query_base
 - edit (9): write_file, edit_file, append_to_file, create_folder, delete_file, move_file, generate_canvas, create_base, update_base
@@ -197,4 +197,46 @@
 - agent (9): ask_followup_question, attempt_completion, switch_mode, update_todo_list, new_task, call_plugin_api, execute_recipe, update_settings, configure_model
 - mcp (1): use_mcp_tool
 - skill (3): execute_command, resolve_capability_gap, enable_plugin
-- (update_frontmatter ist in vault + edit verfügbar)
+
+---
+
+## Dokumentation
+
+### Feature-Specs (42 Dateien in `_private/requirements/features/`)
+
+Alle implementierten Features haben eine `FEATURE-*.md` Spec.
+
+### Architecture (15 ADRs + arc42)
+
+| ADR | Entscheidung |
+|-----|-------------|
+| ADR-001 | Zentrale ToolExecutionPipeline |
+| ADR-002 | isomorphic-git Checkpoints |
+| ADR-003 | vectra + Xenova Semantic Index |
+| ADR-004 | Mode-basierte Tool-Filterung |
+| ADR-005 | Fail-Closed Approval |
+| ADR-006 | Sliding Window Repetition Detection |
+| ADR-007 | Event Separation |
+| ADR-008 | Modulare Prompt-Sections & Tool Metadata |
+| ADR-009 | Local Skills (VaultDNA PAS-1) |
+| ADR-010 | Permissions Audit |
+| ADR-011 | Multi-Provider API Architecture |
+| ADR-012 | Context Condensing Strategy |
+| ADR-013 | 3-Tier Memory Architecture |
+| ADR-014 | VaultDNA Plugin Discovery |
+| ADR-015 | Hybrid Search (Semantic + BM25 + RRF) |
+
+### Technische Dokumentation (10 Dateien in `_private/implementation/`)
+
+| Datei | Inhalt |
+|-------|--------|
+| `AGENT-INTERNALS.md` | Agent Loop, Tool Calls, System Prompt, Modes, Multi-Agent, Skills, Memory, Soul |
+| `TECH-tool-system.md` | ToolRegistry, BaseTool, Pipeline, Metadata, Parallel Execution, Repetition Detection |
+| `TECH-semantic-search.md` | SemanticIndex, Vectra, BM25, RRF, HyDE, Graph Augmentation |
+| `TECH-memory-system.md` | MemoryService, Extraction Pipeline, Soul, Onboarding |
+| `TECH-modes-prompts.md` | ModeService, Built-in Modes, Rules, Workflows, Skills, Support Prompts |
+| `TECH-governance-safety.md` | IgnoreService, Approval, Checkpoints, OperationLogger, Defense in Depth |
+| `TECH-providers-api.md` | ApiHandler, Anthropic/OpenAI Provider, Stream Processing |
+| `TECH-mcp-integration.md` | McpClient, Transports, Tool Discovery, Per-Mode Whitelist |
+| `TECH-ui-architecture.md` | AgentSidebarView, Autocomplete, HistoryPanel, DiffReview, Settings Tabs |
+| `TECH-plugin-skills.md` | VaultDNA, execute_command, call_plugin_api, execute_recipe |

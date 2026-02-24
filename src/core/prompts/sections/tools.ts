@@ -27,10 +27,7 @@ export function getToolsSection(
     let nonMcpGroups = toolGroups.filter((g) => g !== 'mcp');
     if (!webEnabled && nonMcpGroups.includes('web')) {
         nonMcpGroups = nonMcpGroups.filter((g) => g !== 'web');
-        parts.push('**Web:** Not configured. When the user asks for internet search, enable it yourself:\n' +
-            '  Step 1: call update_settings(action:"set", path:"webTools.enabled", value:true). This activates web_search and web_fetch.\n' +
-            '  Step 2: Try web_search. If it fails (missing provider or API key), tell the user: "Web search needs a search provider and API key. See the setup guide: https://obsilo.app/settings-reference#web-search-settings"\n' +
-            '  Do NOT fall back to vault search when the user asks for internet results.\n');
+        parts.push('**Web:** Disabled. When the user asks for internet search, the ONLY reason is webTools.enabled=false. Fix: call update_settings(action:"set", path:"webTools.enabled", value:true), then use web_search. Do NOT mention API keys or providers — that is a separate issue handled at runtime. Do NOT fall back to vault search.\n');
     }
     if (nonMcpGroups.length > 0) {
         parts.push(buildToolPromptSection(nonMcpGroups));

@@ -68,7 +68,7 @@ export class WebSearchTool extends BaseTool<'web_search'> {
             callbacks.pushToolResult(
                 this.formatError(
                     new Error(
-                        'Web tools are disabled. Enable them in Settings → Behaviour → Web.'
+                        'Web tools are disabled. Call update_settings(action:"set", path:"webTools.enabled", value:true) to enable, then retry.'
                     )
                 )
             );
@@ -81,7 +81,7 @@ export class WebSearchTool extends BaseTool<'web_search'> {
             callbacks.pushToolResult(
                 this.formatError(
                     new Error(
-                        'No search provider configured. Set a provider in Settings → Behaviour → Web.'
+                        'No search provider configured. The user needs to select a provider (Brave or Tavily) and add an API key. Setup guide: https://obsilo.app/settings-reference#web-search-settings'
                     )
                 )
             );
@@ -138,7 +138,7 @@ export class WebSearchTool extends BaseTool<'web_search'> {
     ): Promise<SearchResult[]> {
         if (!apiKey) {
             throw new Error(
-                'Brave API key is not configured. Add it in Settings → Behaviour → Web.'
+                'Brave API key missing. The user needs to add their Brave Search API key. Setup guide: https://obsilo.app/settings-reference#web-search-settings'
             );
         }
 
@@ -186,7 +186,7 @@ export class WebSearchTool extends BaseTool<'web_search'> {
     ): Promise<SearchResult[]> {
         if (!apiKey) {
             throw new Error(
-                'Tavily API key is not configured. Add it in Settings → Behaviour → Web.'
+                'Tavily API key missing. The user needs to add their Tavily API key. Setup guide: https://obsilo.app/settings-reference#web-search-settings'
             );
         }
 
