@@ -1,0 +1,263 @@
+[
+  {
+    "url": "chat-interface.html",
+    "title": "Chat Interface",
+    "sections": [
+      "Overview",
+      "Sending Messages",
+      "Context Injection",
+      "Active File Context",
+      "Attaching Files",
+      "Autocomplete",
+      "Activity Block",
+      "Task Checklist",
+      "Approval Flow",
+      "Token Usage",
+      "Mode and Model Selector",
+      "Chat Controls",
+      "Chat History",
+      "Tool Picker (Session Overrides)",
+      "Keyboard Shortcuts"
+    ],
+    "content": "Docs \u203a Using Obsilo \u203a Chat Interface Chat Interface Everything you do in Obsilo starts in the sidebar. Here's how to get the most out of it \u2014 from sending your first message to attaching files, using autocomplete, and reading the activity log. Overview The sidebar has three main zones: Header \u2014 mode selector, model selector, new chat button Messages area \u2014 conversation history with real-time streaming Input area \u2014 text input with toolbar (attachments, tools, send) Sending Messages Type your message in the input area at the bottom of the sidebar. Enter \u2014 send the message (default) Shift+Enter \u2014 insert a newline Ctrl/Cmd+Enter \u2014 alternative send key (configurable in Settings \u2192 Interface) You can change the send key behavior in Settings \u2192 Interface \u2192 \"Press Enter to send\". Context Injection Active File Context Enable \"Auto-add active file context\" in Settings \u2192 Interface to automatically include the note you're currently viewing in every message. A badge in the input area shows the filename. This lets you ask questions like \"Summarize this note\" or \"Find related notes\" without having to attach the file manually. Attaching Files Type @ in the input to open the Vault File Picker \u2014 a live-search list of all your vault files. Select one (or several) to include their content as context. Attached files appear as chips in the input area and can be removed individually. This is useful when you want the agent to reference a specific note without switching to it. Autocomplete Two shortcut triggers are available in the input: / \u2014 opens a list of your workflows and custom prompts. Select one to expand it as a message template. For example, type /daily-review to run your review workflow. @ \u2014 opens the vault file picker to attach notes as context. Activity Block When the agent is working, an expandable activity block appears below the spinner. It shows every tool call in real time \u2014 the tool name, its inputs, and the result (success or error). You can expand it at any time while the agent is still running. Each tool call shows: Tool name in a monospace badge Key parameters (e.g., the file path for read_file) Diff badge for write operations: +N / -N lines changed Result shown on expansion Task Checklist When the agent calls update_todo_list to plan a complex task, a checklist card appears in the conversation. It updates live as the agent completes steps: [ ] \u2014 pending [~] \u2014 in progress (highlighted) [x] \u2014 complete Approval Flow When the agent wants to create, edit, or delete a file, an approval card appears: Tool name and file path \u2014 what will change Diff preview \u2014 added (green) and removed (red) lines for edits Approve \u2014 execute the operation and continue Reject \u2014 block this operation (the agent will be told it was rejected) Auto-approve \u2014 approve this operation type for the rest of the session Tip Configure permanent auto-approval in Settings \u2192 Permissions to skip the approval card for operations you always trust (e.g., read operations are auto-approved by defau"
+  },
+  {
+    "url": "checkpoints.html",
+    "title": "Checkpoints",
+    "sections": [
+      "How It Works",
+      "Checkpoint Lifecycle",
+      "What Gets Tracked",
+      "Restoring from a Checkpoint",
+      "Configuration",
+      "Checkpoints vs. Your Vault's Git",
+      "Disk Usage"
+    ],
+    "content": "Docs \u203a Reference \u203a Checkpoints Checkpoints Checkpoints give you a safety net for every agent task. Before the first write operation in a task, Obsilo automatically takes a snapshot of all tracked files. If something goes wrong, you can restore to that snapshot with one click. How It Works Obsilo maintains a shadow git repository at: .obsidian/plugins/obsidian-agent/checkpoints/ This is separate from your vault's own git history (if you use git for your vault). It uses isomorphic-git \u2014 a pure JavaScript git implementation that requires no native git binary. Checkpoint Lifecycle Task starts \u2014 you send a message and the agent begins working First write detected \u2014 before executing the first write_file , edit_file , delete_file , or similar operation, Obsilo takes a snapshot of all currently-tracked files Task completes \u2014 the checkpoint is retained and listed in Settings \u2192 Backup Auto-cleanup (if enabled) \u2014 old checkpoints beyond the retention limit are removed What Gets Tracked The shadow repo tracks all files that the agent has read or written in previous tasks. On the first snapshot, it also includes all files in the vault root (excluding ignored paths). This means: Any file the agent has touched can be restored Files in .obsidian-agentignore are not tracked The checkpoint doesn't restore files to a vault-wide snapshot \u2014 it restores only the files changed in that task Restoring from a Checkpoint Go to Settings \u2192 Advanced \u2192 Backup You'll see a list of checkpoints, ordered by date, with the task that created them Click Preview on a checkpoint to see a diff of what changed Click Restore to revert the files changed in that task back to their pre-task state Restore only affects changed files Restoring a checkpoint reverts only the files that were modified in that specific task \u2014 not the entire vault. Files created by the task are moved to trash; files edited are restored to their pre-edit content. Configuration In Settings \u2192 Vault \u2192 Checkpoints : Setting Default Description Enable Checkpoints On Master toggle. When off, no snapshots are taken and restore is unavailable. Checkpoint Timeout 30 seconds Maximum time to wait for a snapshot to complete. If exceeded, the task continues without a checkpoint. Auto-cleanup On Automatically remove old checkpoints to save disk space. Checkpoints vs. Your Vault's Git If you already use git for your vault, you might wonder why Obsilo has its own checkpoint system. The reasons: Non-invasive : Checkpoints don't pollute your vault's git history with agent commits No git required : Works even if you don't use git for your vault at all Automatic : Happens without any user action \u2014 no need to remember to commit before each agent task Scoped : Restores only the files a specific task touched, not the whole vault Task-linked : Each checkpoint is linked to the conversation that created it, making it easy to understand what changed and why Disk Usage The shadow repo uses standard git compression. For most vaults, each checkpoin"
+  },
+  {
+    "url": "getting-started.html",
+    "title": "Getting Started",
+    "sections": [
+      "Requirements",
+      "Installation",
+      "Install via BRAT (Recommended)",
+      "Manual Installation (from source)",
+      "First Setup",
+      "1. Add an AI Model",
+      "2. Open the Sidebar",
+      "3. Your First Task",
+      "4. Set Up Semantic Search (Optional but Recommended)",
+      "Next Steps"
+    ],
+    "content": "Docs \u203a Getting Started Getting Started Obsilo is in early beta and open for testing. It has not been published as Community Plugin yet, hence you'll need to use one of the two other options described below. Install Obsilo Agent, connect your first AI model, and run your first task in under 5 minutes. What you'll be able to do Ask questions about your vault, create and edit notes with AI assistance, research topics on the web and save the results, organize notes in bulk \u2014 all from a sidebar inside Obsidian, with a diff preview and approval step before anything changes. Requirements Obsidian Version 1.4.0 or later Platform Desktop only (macOS, Windows, Linux). Not available on mobile. Node.js 18 or later (for building from source) API Key Anthropic, OpenAI, OpenRouter, or a running Ollama instance Installation Install via BRAT (Recommended) BRAT (Beta Reviewers Auto-update Tool) lets you install Obsilo Agent directly from GitHub without building from source, and keeps it up to date automatically. Install BRAT In Obsidian: Settings \u2192 Community Plugins \u2192 Browse \u2192 search for \"BRAT\" \u2192 Install and Enable. Add Obsilo Agent Open BRAT settings \u2192 Add Beta Plugin \u2192 paste: https://github.com/pssah4/obsilo-public Click Add Plugin . BRAT downloads and installs the latest release. Enable the plugin Go to Settings \u2192 Community Plugins \u2192 scroll to \"Obsilo Agent\" \u2192 toggle on. Manual Installation (from source) Clone the repository git clone https://github.com/pssah4/obsilo-public.git cd obsidian-agent Install dependencies and build npm install npm run build This produces main.js in the project root. Copy to your vault Create the plugin directory and copy the three required files: mkdir -p \"/path/to/your-vault/.obsidian/plugins/obsidian-agent\" cp main.js styles.css manifest.json \\ \"/path/to/your-vault/.obsidian/plugins/obsidian-agent/\" Enable in Obsidian Open Obsidian \u2192 Settings \u2192 Community Plugins \u2192 scroll to \"Obsilo Agent\" \u2192 toggle it on. Note If you don't see the plugin, make sure \"Safe Mode\" is turned off in Community Plugins settings. Development mode Run npm run dev to watch for changes and hot-deploy on every save. Set the target vault path in esbuild.config.mjs ( VAULT_PLUGIN_DIR ) to auto-deploy on each build. First Setup 1. Add an AI Model Open Obsidian Settings \u2192 Obsilo Agent \u2192 Providers \u2192 Models . You'll see pre-configured built-in models. Click Edit on any model to add your API key and enable it: Provider Where to get key Recommended model Anthropic console.anthropic.com Claude Sonnet 4.5 OpenAI platform.openai.com GPT-4o OpenRouter openrouter.ai Llama 3.2 3B (free tier) Ollama Run locally: ollama serve llama3.2 or qwen2.5:7b After entering the key, click Test Connection to verify it works. Then enable the model to make it available in the chat. 2. Open the Sidebar Click the Obsilo Agent icon in the Obsidian ribbon (left or right edge of the window). If you don't see it, use the Command Palette ( Ctrl/Cmd+P ) and search for \"Open Agent Sidebar\". The sideb"
+  },
+  {
+    "url": "mcp-servers.html",
+    "title": "MCP Servers",
+    "sections": [
+      "What is MCP?",
+      "Supported Transports",
+      "Adding an MCP Server",
+      "stdio Server (Local Process)",
+      "SSE Server (Remote)",
+      "Streamable HTTP Server",
+      "Configuration Fields",
+      "Popular MCP Servers",
+      "Filesystem",
+      "Fetch (Web)",
+      "GitHub",
+      "Sqlite",
+      "Tool Discovery",
+      "Per-Mode Server Whitelisting",
+      "Always-Allow Lists",
+      "Security Considerations"
+    ],
+    "content": "Docs \u203a Reference \u203a MCP Servers MCP Servers The Model Context Protocol (MCP) lets you connect external tools and data sources to Obsilo Agent. MCP servers expose tools that the agent can call just like built-in tools. What is MCP? MCP is an open protocol for connecting AI models to external tools and resources. An MCP server is a small program that exposes a set of tools (with JSON schemas) and executes them when called. Obsilo connects to MCP servers and makes their tools available to the agent via the use_mcp_tool tool. Examples of what MCP servers can provide: Calendar and task management (Google Calendar, Todoist) Code execution and analysis Database access File system operations outside the vault External API integrations (GitHub, Slack, Notion) Custom automation scripts Supported Transports Transport How it works Use case stdio Obsilo launches a local process and communicates via stdin/stdout Local tools, scripts, CLI programs SSE Connects to a remote server via Server-Sent Events (HTTP GET) Remote services, hosted tools streamable-http Bidirectional HTTP streaming Modern remote MCP servers Adding an MCP Server Go to Settings \u2192 Agent Behaviour \u2192 MCP and click Add Server . Fill in the server configuration: stdio Server (Local Process) { \"type\": \"stdio\", \"command\": \"npx\", \"args\": [\"-y\", \"@modelcontextprotocol/server-filesystem\", \"/Users/me/Documents\"], \"env\": { \"MY_SECRET\": \"value\" }, \"timeout\": 30000, \"alwaysAllow\": [\"read_file\", \"list_directory\"] } SSE Server (Remote) { \"type\": \"sse\", \"url\": \"https://my-mcp-server.example.com/sse\", \"headers\": { \"Authorization\": \"Bearer my-token\" }, \"timeout\": 30000 } Streamable HTTP Server { \"type\": \"streamable-http\", \"url\": \"https://my-mcp-server.example.com/mcp\", \"headers\": { \"Authorization\": \"Bearer my-token\" } } Configuration Fields Field Type Description type string Transport: \"stdio\", \"sse\", or \"streamable-http\" command string (stdio only) The command to run (e.g., \"node\", \"npx\", \"python\") args string[] (stdio only) Command arguments env object (stdio only) Environment variables injected into the process url string (sse/http) Server URL headers object (sse/http) HTTP headers (e.g., Authorization) timeout number Connection timeout in ms (default: 30000) alwaysAllow string[] Tool names on this server that never require user approval disabled boolean Temporarily disable this server without removing it Popular MCP Servers Filesystem Access files outside the vault: name: \"filesystem\" type: stdio command: npx args: [\"-y\", \"@modelcontextprotocol/server-filesystem\", \"/path/to/allow\"] Fetch (Web) Enhanced web fetching with cookie support: name: \"fetch\" type: stdio command: npx args: [\"-y\", \"@modelcontextprotocol/server-fetch\"] GitHub Access GitHub repositories, issues, and PRs: name: \"github\" type: stdio command: npx args: [\"-y\", \"@modelcontextprotocol/server-github\"] env: GITHUB_PERSONAL_ACCESS_TOKEN: \"ghp_...\" Sqlite Query and update SQLite databases: name: \"sqlite\" type: stdio command: npx args: [\"-y\", \"@mod"
+  },
+  {
+    "url": "memory.html",
+    "title": "Memory &amp; Chat History",
+    "sections": [
+      "Chat History",
+      "History Panel",
+      "Restoring a Conversation",
+      "Auto-Titling",
+      "Memory System",
+      "How It Works",
+      "Memory Files",
+      "Session Context Retrieval",
+      "Onboarding",
+      "Settings"
+    ],
+    "content": "Docs &rsaquo; Using Obsilo &rsaquo; Memory &amp; Chat History Memory &amp; Chat History Obsilo remembers your conversations and learns your preferences over time. Chat history stores every conversation for browsing and restore. The memory system automatically extracts knowledge from your conversations and personalizes the agent across sessions. Privacy first All memory data is stored locally in your plugin directory. Memory extraction uses a dedicated model you choose (ideally a small, cheap model like Haiku). No data leaves your machine except for the LLM API calls you configure. Chat History Chat history is enabled by default. Every conversation is saved automatically as a JSON file inside the plugin directory ( .obsidian/plugins/obsidian-agent/history/ ). History Panel Click the history icon in the sidebar header (left of the New Chat button) to open the history panel. It slides in from the left and shows your conversations grouped by date: Today / Yesterday / This Week / Older Each entry shows the conversation title, date, and message count Use the text filter at the top to search through titles Hover over an entry to reveal the delete button Restoring a Conversation Click any conversation in the history panel to restore it. The full message history is loaded back into the sidebar \u2014 including assistant messages, tool calls, and the internal conversation state. You can continue the conversation exactly where you left off. Auto-Titling After the first assistant response, Obsilo generates a short title (3-8 words) for the conversation using the active model. This title appears in the history panel and helps you find conversations later. Memory System The memory system has two layers: Session memory \u2014 a summary of each conversation, stored as a Markdown file Long-term memory \u2014 your profile, active projects, and behavioral patterns, distilled from session summaries How It Works You have a conversation with the agent as usual When the conversation ends (new chat or close), if it had enough messages (configurable, default: 6), a background extraction job is queued The extraction model (a separate, cheap model you configure) processes the queue: First, it creates a session summary (key topics, decisions, preferences observed) Then, it checks if any new facts should be promoted to long-term memory (your profile, projects, or patterns) Next time you start a conversation , the agent has your profile, projects, and patterns in its system prompt \u2014 plus relevant session summaries retrieved via semantic search Zero impact on chat speed Memory extraction runs entirely in the background after the conversation ends. It never blocks or slows down your active conversation. If Obsidian closes before extraction finishes, the queue is processed on next startup. Memory Files Memory is stored as editable Markdown files in .obsidian/plugins/obsidian-agent/memory/ : File Contains Loaded into context user-profile.md Your name, language, communication style, agent prefer"
+  },
+  {
+    "url": "modes.html",
+    "title": "Modes",
+    "sections": [
+      "Built-in Modes",
+      "Ask Mode",
+      "Agent Mode",
+      "Tool Groups",
+      "Custom Modes",
+      "Creating a Custom Mode",
+      "Example Custom Modes",
+      "Per-Mode Overrides",
+      "Model Override",
+      "Tool Overrides",
+      "MCP Server Whitelist",
+      "Forced Skills",
+      "Forced Workflow",
+      "Multi-Agent Workflows"
+    ],
+    "content": "Docs \u203a Using Obsilo \u203a Modes Modes Switch between modes to get the right kind of help for each task \u2014 from a read-only question-answering assistant to a fully autonomous agent that can create, edit, and organize your notes. You can also build your own custom modes with their own persona, tool access, and instructions. Built-in Modes Ask Mode Ask is a read-only knowledge assistant. Use it to explore your vault, get synthesized answers from your notes, and find connections \u2014 without any risk of changing your files. Try: \"What do I know about machine learning?\" / \"Find notes I haven't updated in 30 days\" / \"What links to my Project X note?\" Access: read, vault intelligence, and semantic search tools. No write access. Agent Mode Agent is a fully autonomous agent with access to all tools. It reads, writes, edits, browses the web, and can spawn sub-agents to parallelize complex tasks. Try: \"Create a weekly review template\" / \"Research X on the web and summarize it to a new note\" / \"Add a 'status' frontmatter field to all notes in my Projects folder\" Access: All tool groups \u2014 read, vault, edit, web, MCP, and agent control. Which mode should I use? Start with Ask for exploration and questions. Switch to Agent when you want the AI to take action \u2014 create files, edit content, or run complex workflows. Tool Groups Each mode is configured with one or more tool groups . This controls which tools the agent has access to: Group Tools included read read_file , list_files , search_files vault get_frontmatter , search_by_tag , get_vault_stats , get_linked_notes , get_daily_note , open_note , semantic_search , query_base edit write_file , edit_file , append_to_file , create_folder , delete_file , move_file , update_frontmatter , generate_canvas , create_base , update_base web web_fetch , web_search agent ask_followup_question , attempt_completion , update_todo_list , new_task mcp use_mcp_tool Custom Modes Create your own modes in Settings \u2192 Agent Behaviour \u2192 Modes. Custom modes can be: Vault-scoped \u2014 stored in this vault's plugin settings, only available in this vault Global \u2014 stored at ~/.obsidian-agent/modes.json , available in all vaults Creating a Custom Mode Click New Mode in the Modes settings tab. Configure: Field Description Slug URL-safe identifier, e.g. researcher or daily-writer Name Display name shown in the mode selector, e.g. \"Researcher\" Icon Lucide icon name, e.g. search , pen , book Description Short description shown in the mode selector tooltip Role Definition Core system prompt for this mode \u2014 defines the agent's persona and behavior Custom Instructions User-editable additional instructions appended to the role definition Tool Groups Which tool categories are available in this mode Scope Vault (this vault only) or Global (all vaults) Example Custom Modes Researcher Slug: researcher Tool Groups: read, vault, web, agent Role Definition: You are a research assistant focused on gathering and synthesizing information. Use semantic_search to find exist"
+  },
+  {
+    "url": "permissions.html",
+    "title": "Permissions &amp; Safety",
+    "sections": [
+      "Safety Layers",
+      "Auto-Approval Settings",
+      "Quick-Toggle Bar",
+      "Approval Modal",
+      "Vault Access Control",
+      ".obsidian-agentignore",
+      ".obsidian-agentprotected",
+      "Always-Blocked Paths",
+      "Audit Log",
+      "Prompt Injection Guard",
+      "Other Safety Controls",
+      "Tool Repetition Detection",
+      "Consecutive Error Limit",
+      "Max Iterations"
+    ],
+    "content": "Docs \u203a Using Obsilo \u203a Permissions &amp; Safety Permissions &amp; Safety You stay in control of every change. By default, Obsilo asks for your approval before creating or editing any file \u2014 with a diff preview so you can see exactly what will change before confirming. You can auto-approve trusted operations and protect sensitive folders from access entirely. Safety Layers Approval system \u2014 all writes require consent (manual or auto) Checkpoints \u2014 automatic git snapshots before first write per task Ignore &amp; protect files \u2014 path-based access control Audit log \u2014 complete JSONL record of all operations Tool repetition detection \u2014 aborts infinite loops Rate limiting &amp; error limits \u2014 stop runaway agents Auto-Approval Settings Configure in Settings \u2192 Agent Behaviour \u2192 Permissions . The master toggle enables or disables the auto-approval system. When disabled, every operation requires manual approval. When enabled, individual categories can be auto-approved: Category Tools covered Default Read read_file , list_files , search_files , and all vault intelligence tools Auto-approved Note Edits write_file , edit_file , append_to_file , update_frontmatter Manual approval Vault Changes create_folder , delete_file , move_file Manual approval Web web_fetch , web_search Manual approval MCP use_mcp_tool Manual approval Mode Switching switch_mode Manual approval Subtasks new_task Manual approval Questions ask_followup_question Auto-approved (shows question directly) Todos update_todo_list Auto-approved Skills Skill injection into system prompt Auto-approved Quick-Toggle Bar A compact permission toggle bar is shown at the top of the chat view. It lets you quickly flip auto-approval on/off for the current session without opening settings. The bar can be hidden in Settings \u2192 Permissions \u2192 \"Show quick-toggle bar in chat\". Approval Modal When a write operation requires approval, an approval card appears in the chat: Tool name and file path Diff preview for file edits \u2014 added lines in green, removed in red Approve \u2014 proceed with the operation Reject \u2014 block this operation (the agent is told it was denied) Auto-approve [category] \u2014 approve this category for the rest of the session Tip: Trusted workflows If you're running a routine task you trust (like daily note creation), toggle auto-approval for Note Edits on for that session. It will reset when you start a new chat. Vault Access Control Two special files control which paths the agent can access. Place them at the vault root. .obsidian-agentignore Paths matching these gitignore-style patterns are completely off-limits \u2014 the agent cannot read or write them. # .obsidian-agentignore # Sensitive personal folders Private/ Finances/** # Old archive \u2014 don't touch Archive/2020/ # Specific files Secret-Project.md .obsidian-agentprotected Paths matching these patterns can be read but never written or deleted . # .obsidian-agentprotected # Templates should never be overwritten Templates/ _templates/** # Core reference notes "
+  },
+  {
+    "url": "providers.html",
+    "title": "Providers &amp; Models",
+    "sections": [
+      "Supported Providers",
+      "Built-in Models",
+      "Anthropic",
+      "OpenAI",
+      "Ollama (Local)",
+      "OpenRouter (Free Tier Available)",
+      "Adding a Model",
+      "Provider-Specific Setup",
+      "Anthropic",
+      "OpenAI",
+      "OpenRouter",
+      "Ollama (Local)",
+      "LM Studio",
+      "Azure OpenAI",
+      "Custom (OpenAI-Compatible)",
+      "Per-Model Settings",
+      "Embedding Models",
+      "Local Embedding Models (Xenova)",
+      "API Embedding Models",
+      "Global Custom Instructions"
+    ],
+    "content": "Docs \u203a Reference \u203a Providers &amp; Models Providers &amp; Models Configure the AI models that power Obsilo. You can add multiple models from different providers and switch between them per-chat or per-mode. Supported Providers Provider Type API Key Required Local Anthropic Cloud Yes No OpenAI Cloud Yes No OpenRouter Gateway Yes No Azure OpenAI Cloud (Enterprise) Yes No Ollama Local No Yes LM Studio Local No Yes Custom Any OpenAI-compatible Optional Either Built-in Models Obsilo ships with pre-configured entries for popular models. Enable them in Settings \u2192 Providers \u2192 Models and add your API key: Anthropic Model ID Display Name Best for claude-opus-4-6 Claude Opus 4.6 Complex reasoning, long tasks claude-sonnet-4-5-20250929 Claude Sonnet 4.5 Balanced capability and speed claude-haiku-4-5-20251001 Claude Haiku 4.5 Fast, lightweight tasks OpenAI Model ID Display Name Best for gpt-4o GPT-4o General purpose, multimodal gpt-4o-mini GPT-4o mini Fast, cost-effective tasks gpt-4.1 GPT-4.1 Latest GPT-4 generation Ollama (Local) Model ID Display Name Notes llama3.2 Llama 3.2 (local) Good general-purpose local model qwen2.5:7b Qwen 2.5 7B (local) Strong at reasoning, multilingual OpenRouter (Free Tier Available) Model ID Display Name Notes anthropic/claude-3.5-sonnet Claude 3.5 Sonnet Via OpenRouter openai/gpt-4o GPT-4o Via OpenRouter meta-llama/llama-3.2-3b-instruct:free Llama 3.2 3B (free) Free tier, no cost Adding a Model Go to Settings \u2192 Providers \u2192 Models Find the model in the list and click Edit , or click Add Custom Model for a new one Enter your API Key Optionally adjust Temperature (0.0\u20131.0) and Max Tokens Click Test Connection to verify it works Toggle the model Enabled to make it available in the model selector Provider-Specific Setup Anthropic Get your API key at console.anthropic.com Key format: sk-ant-api03-... No base URL needed (uses default Anthropic endpoint) OpenAI Get your API key at platform.openai.com/api-keys Key format: sk-proj-... or sk-... No base URL needed (uses default OpenAI endpoint) OpenRouter Get your API key at openrouter.ai/keys Base URL is pre-configured: https://openrouter.ai/api/v1 Model IDs follow the format provider/model-name Free models are available \u2014 check the OpenRouter catalog Ollama (Local) Install Ollama from ollama.ai Pull a model: ollama pull llama3.2 Start the server: ollama serve (usually starts automatically) In Obsilo: Base URL = http://localhost:11434 , no API key needed Model ID format for Ollama Use the exact model name as shown in ollama list \u2014 e.g., llama3.2 , qwen2.5:7b , codellama . LM Studio Download LM Studio from lmstudio.ai Start the local server in LM Studio (usually port 1234) Base URL: http://localhost:1234/v1 Model ID: use the model name shown in LM Studio (e.g., Meta-Llama-3.1-8B-Instruct-GGUF ) Azure OpenAI Base URL format: https://YOUR-RESOURCE.openai.azure.com/openai/deployments/YOUR-DEPLOYMENT API Version: e.g., 2024-10-21 (required for Azure) API Key: your Azure OpenAI key Model ID: "
+  },
+  {
+    "url": "rules-skills-workflows.html",
+    "title": "Rules, Skills &amp; Workflows",
+    "sections": [
+      "Rules",
+      "Location",
+      "Example Rules",
+      "Managing Rules",
+      "Skills",
+      "Location",
+      "SKILL.md Format",
+      "Keyword Matching",
+      "Forced Skills",
+      "Managing Skills",
+      "Workflows",
+      "Location",
+      "Workflow Format",
+      "Using Workflows",
+      "Forced Workflow (Per Mode)",
+      "Managing Workflows",
+      "Custom Prompts",
+      "Variables",
+      "Example",
+      "Managing Prompts"
+    ],
+    "content": "Docs \u203a Context &amp; Knowledge \u203a Rules, Skills &amp; Workflows Rules, Skills &amp; Workflows Tailor Obsilo to your vault, writing style, and daily routines. Set permanent conventions the agent always follows, activate context-specific instructions for particular task types, and invoke step-by-step procedures on demand \u2014 all without touching the agent's core settings. Mechanism When it applies Best for Rules Always (every message) Permanent conventions the agent must always follow Skills When keywords match user message Context-specific instructions for particular task types Workflows When user types /workflow-name Step-by-step procedures invoked on demand Custom Prompts When user types /prompt-slug Message templates with dynamic variables Rules Rules are Markdown files that are always injected into the agent's system prompt as a RULES section. The agent must follow them in every response. Location &lt;vault&gt;/.obsidian-agent/rules/ Any .md or .txt file in this folder is treated as a rule file. Example Rules Create .obsidian-agent/rules/formatting.md : ## Formatting Conventions - Always use ISO 8601 dates (YYYY-MM-DD) in frontmatter, not natural language dates - Use [[wikilinks]] for internal note references, not markdown links - Every new note must have at least: title, tags, and created date in frontmatter - Headers: ## for main sections, ### for subsections \u2014 never use # (reserved for note title) - Tag style: lowercase, hyphenated \u2014 use #machine-learning not #MachineLearning Create .obsidian-agent/rules/language.md : Always respond in German. When creating note content, use German unless the existing note content is in another language. Managing Rules Go to Settings \u2192 Agent Behaviour \u2192 Rules : Create new rule files with the inline editor Toggle individual rules on/off (disabled rules are not injected) Edit existing rule files Delete rule files New rules are enabled by default . Disable them without deleting by toggling them off. Size limit Each rule file is capped at 50,000 characters to prevent unintentionally large system prompts. Skills Skills are modular instruction sets that the agent can apply for specific task types. Unlike rules (which are always active), skills are automatically matched to each message by keyword overlap. Location &lt;vault&gt;/.obsidian-agent/skills/ meeting-notes/ SKILL.md literature-review/ SKILL.md project-planning/ SKILL.md Each skill is a folder containing a SKILL.md file. SKILL.md Format --- name: meeting-notes description: taking meeting notes, capturing action items, agenda, attendees, follow-up --- When writing meeting notes, follow this structure: ## Standard Meeting Note Template Use these sections: - **## Attendees** \u2014 list all participants - **## Agenda** \u2014 planned topics - **## Notes** \u2014 what was discussed - **## Decisions** \u2014 explicit decisions made - **## Action Items** \u2014 format: `- [ ] @person: task (due: YYYY-MM-DD)` Always link to related projects with [[wikilinks]]. Create a separate action item "
+  },
+  {
+    "url": "semantic-search.html",
+    "title": "Semantic Search",
+    "sections": [
+      "How It Works",
+      "Hybrid Search",
+      "Graph Augmentation",
+      "HyDE (Hypothetical Document Embeddings)",
+      "Setting Up the Index",
+      "Step 1: Enable Semantic Index",
+      "Step 2: Choose an Embedding Model",
+      "Step 3: Build the Index",
+      "Auto-Indexing",
+      "Configuration",
+      "Using Semantic Search",
+      "Basic Search",
+      "Filtered Search",
+      "The RAG Pattern"
+    ],
+    "content": "Docs \u203a Context &amp; Knowledge \u203a Semantic Search Semantic Search Obsilo's semantic search finds notes by meaning , not just keywords \u2014 using a local vector index that stays entirely on your machine. How It Works When you build the semantic index, Obsilo: Reads each note in your vault Splits it into chunks (default: ~2000 characters, split at headings) Generates an embedding (a vector of numbers representing the chunk's meaning) for each chunk Stores the vectors in a local HNSW index (Vectra) When you (or the agent) run a search, the query is embedded using the same model, and the nearest vectors are retrieved \u2014 finding notes with similar meaning even if they share no keywords with the query. Hybrid Search Obsilo doesn't rely on semantic search alone. Every semantic_search call runs two searches in parallel: Semantic search \u2014 vector similarity via Vectra (finds conceptual matches) Keyword search \u2014 full-text search via Orama (finds exact word matches) The results are combined using Reciprocal Rank Fusion (RRF) \u2014 notes appearing in both lists rise to the top. This means exact names, tags, dates, and codes are found reliably alongside conceptual matches. Graph Augmentation After ranking the top results, Obsilo scans the excerpts for [[wikilinks]] and fetches the first indexed chunk of each linked note that isn't already in the results. These are appended as \"linked context\" \u2014 notes that are intentionally connected to the results but may not have matched semantically themselves. This surfaces the structure of your knowledge graph, not just individual note matches. HyDE (Hypothetical Document Embeddings) HyDE is an optional technique that improves recall for conceptual queries. When enabled, before embedding the user's query, Obsilo asks the LLM to write a short 2-3 sentence note excerpt that would answer the query. That hypothetical excerpt is then embedded instead of the raw query \u2014 giving the embedding model a much richer signal to match against. Trade-off: HyDE costs one extra LLM call per search. It's off by default but can improve results noticeably for complex, conceptual questions. Enable it in Settings \u2192 Semantic Index \u2192 HyDE. Setting Up the Index Step 1: Enable Semantic Index Go to Settings \u2192 Obsilo Agent \u2192 Semantic Index and toggle \"Enable Semantic Index\" on. Step 2: Choose an Embedding Model Go to Settings \u2192 Providers \u2192 Embeddings and select an embedding model. Model Type Quality Notes Xenova/all-MiniLM-L6-v2 Local (ONNX) Good Default. 384 dimensions. No API key needed. ~23MB download on first use. Xenova/bge-small-en-v1.5 Local (ONNX) Better Small but strong. Good for English-heavy vaults. Xenova/multilingual-e5-small Local (ONNX) Good Multilingual support. Use if your vault contains multiple languages. text-embedding-3-small OpenAI API Excellent Requires OpenAI API key. 1536 dimensions. Higher quality, cloud-dependent. Changing the embedding model invalidates the index. If you switch models, rebuild the index from scratch \u2014 vectors from d"
+  },
+  {
+    "url": "settings-reference.html",
+    "title": "Settings Reference",
+    "sections": [
+      "Providers",
+      "Models",
+      "Embeddings",
+      "Agent Behaviour",
+      "Modes",
+      "Permissions",
+      "Loop",
+      "Rules",
+      "Workflows",
+      "Skills",
+      "Prompts",
+      "MCP",
+      "Vault",
+      "Semantic Index",
+      "Checkpoints",
+      "Chat History",
+      "Web Search",
+      "Advanced",
+      "Interface",
+      "Logs",
+      "Backup",
+      "Debug"
+    ],
+    "content": "Docs \u203a Reference \u203a Settings Reference Settings Reference Complete reference for every setting in Obsilo Agent. Open via Obsidian Settings \u2192 Obsilo Agent. Providers Models Setting Description Active Models list List of all configured models. Each entry shows provider, name, and enabled status. Add Custom Model Add a new model with any provider type. Set name, provider, API key, base URL, temperature, max tokens. Global Custom Instructions Text appended to the system prompt for ALL modes. Use for universal formatting rules, language preferences, etc. Default Model The model selected by default in new chats. Set by enabling and selecting a model. Embeddings Setting Description Embedding Model Model used to generate vectors for semantic search. Changing this requires rebuilding the index. Add Custom Embedding Model Add a Xenova/transformers model by name or an API-based embedding model. Agent Behaviour Modes Setting Description Built-in modes Ask and Agent modes are always present. Their role definitions can be viewed but not edited. Custom Modes list User-created modes (vault or global scope). New Mode Create a custom mode with slug, name, icon, description, role definition, custom instructions, tool groups, and scope. Per-mode Model Override the default model for a specific mode. Per-mode Tools Restrict available tools to a subset of the mode's tool groups. Per-mode MCP Servers Whitelist specific MCP servers for this mode. Forced Skills Skills always injected for this mode regardless of keyword matching. Forced Workflow Workflow applied to every message in this mode (unless message starts with /). Permissions Setting Default Description Enable Auto-Approval Off Master toggle. When off, every operation requires manual approval. Show quick-toggle bar in chat On Display permission toggles at the top of the chat view. Read operations Auto-approved read_file, list_files, search_files, and vault intelligence tools. Note edits Manual write_file, edit_file, append_to_file, update_frontmatter. Vault changes Manual create_folder, delete_file, move_file. Web operations Manual web_fetch, web_search. MCP tools Manual use_mcp_tool. Mode switching Manual switch_mode. Subtasks Manual new_task (spawn sub-agents). Questions Auto-approved ask_followup_question (shows question card directly without approval step). Todo updates Auto-approved update_todo_list. Loop Setting Default Description Consecutive Mistake Limit 3 Stop the agent after N consecutive tool errors. 0 = disabled. Rate Limit (ms) 0 Minimum milliseconds between API iterations. 0 = no limit. Use to avoid rate limit errors. Context Condensing Off Automatically summarize conversation when estimated tokens exceed the threshold. Condensing Threshold 80% % of the model's context window at which to trigger condensing (50\u201395). Power Steering Frequency 0 Inject a mode-role reminder every N iterations to keep the agent on task. 0 = disabled. Rules Setting Description Rules list All .md and .txt files in .obsidian-"
+  },
+  {
+    "url": "tools.html",
+    "title": "Tools Reference",
+    "sections": [
+      "Read Tools",
+      "Parameters: read_file",
+      "Parameters: list_files",
+      "Parameters: search_files",
+      "Vault Intelligence Tools",
+      "Parameters: semantic_search",
+      "Writing &amp; Editing Tools",
+      "Parameters: edit_file",
+      "Advanced Vault Tools",
+      "Parameters: generate_canvas",
+      "Web Tools",
+      "Agent Control Tools",
+      "Parameters: new_task",
+      "MCP Tool",
+      "Parameters: use_mcp_tool"
+    ],
+    "content": "Docs \u203a Reference \u203a Tools Reference Tools Reference Complete reference for all 30+ tools available to Obsilo Agent. Tools are grouped by category, which maps to the tool group permission system. Read Tools These tools are read-only and are in the read tool group. Auto-approved by default. read read_file Read the complete content of a file. Always call this before editing an existing file. read list_files List files and folders in a directory. Use \"/\" for the vault root. Optional recursive parameter. read search_files Full-text and regex search across files. Returns matching lines with file path and line number. Supports file_pattern glob filter. Parameters: read_file Parameter Type Required Description path string yes Vault-relative path to the file (e.g., \"Projects/plan.md\") Parameters: list_files Parameter Type Required Description path string yes Directory path. Use \"/\" for vault root recursive boolean no Include subdirectory contents (default: false) Parameters: search_files Parameter Type Required Description path string yes Directory to search in pattern string yes Text or regex pattern to search for file_pattern string no Glob pattern to filter files (e.g., \"*.md\") Vault Intelligence Tools These tools are read-only metadata and search operations. In the vault tool group. Auto-approved by default. vault get_vault_stats Returns a vault overview: total notes, folder tree, top tags, recently modified files. No parameters needed. vault get_frontmatter Read all YAML frontmatter fields of a note (tags, aliases, dates, custom properties). vault search_by_tag Find all notes with given tags. Supports AND or OR matching. Tags with or without # both work. vault get_linked_notes Get forward links and backlinks for a note. Direction: \"both\" (default), \"forward\", or \"backlinks\". vault get_daily_note Read a daily note. offset=0 (today), -1 (yesterday), 1 (tomorrow). create=true creates it if missing. vault open_note Open a note in the Obsidian editor view. Use after creating or editing a note to bring it into focus. vault semantic_search Hybrid semantic + keyword search. Finds notes by meaning. Requires Semantic Index to be built. Supports folder, tag, and date filters. vault query_base Query an Obsidian Bases (.base) file. Returns the notes matching the view's filter conditions. Parameters: semantic_search Parameter Type Required Description query string yes Natural language search query top_k number no Max results to return (default: 8, max: 20) folder string no Restrict results to notes in this folder (prefix match) tags string[] no Only return notes that have ANY of these tags since string no Only return notes modified on or after this date (ISO format: \"2025-01-01\") Writing &amp; Editing Tools These tools modify vault files and require approval (or auto-approval). In the edit tool group. edit write_file Create a new file or completely replace an existing file's content. Preferred for new notes or full rewrites. edit edit_file Replace a specific string"
+  }
+]
