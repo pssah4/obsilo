@@ -33,6 +33,8 @@
     "builtin-modules": "3.3.0",
     "esbuild": "0.19.12",
     "eslint": "^8.56.0",
+    "eslint-plugin-no-unsanitized": "^4.0.2",
+    "eslint-plugin-security": "^4.0.0",
     "obsidian": "latest",
     "prettier": "^3.2.4",
     "tslib": "2.6.2",
