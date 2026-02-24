@@ -63,6 +63,8 @@ body {
   color: var(--text);
   line-height: 1.6;
   min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 /* ── Typography ── */
@@ -469,9 +471,9 @@ a.hero-badge:hover { background: var(--bg-4); border-color: var(--accent-light);
   line-height: 1.15;
 }
 .hero-sub {
-  font-size: clamp(1.05rem, 2.2vw, 1.2rem);
+  font-size: clamp(1.15rem, 2.5vw, 1.35rem);
   color: var(--text-muted);
-  max-width: 680px;
+  max-width: 720px;
   margin-bottom: 0.4rem;
   line-height: 1.7;
 }
@@ -657,6 +659,7 @@ a.hero-badge:hover { background: var(--bg-4); border-color: var(--accent-light);
   flex-direction: column;
   align-items: center;
   gap: 1rem;
+  margin-top: auto;
 }
 .footer a { color: var(--text-muted); }
 .footer a:hover { color: var(--text); }
@@ -853,6 +856,7 @@ a.hero-badge:hover { background: var(--bg-4); border-color: var(--accent-light);
   display: flex;
   align-items: flex-start;
   gap: 0.5rem;
+  position: relative;
 }
 .chat-mockup-prompt {
   color: var(--accent-light);
@@ -884,6 +888,47 @@ a.hero-badge:hover { background: var(--bg-4); border-color: var(--accent-light);
   50% { opacity: 0; }
 }
 
+/* ── Mention autocomplete animation ── */
+.mention-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 2rem;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.2rem;
+  min-width: 180px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+  display: none;
+  z-index: 10;
+}
+.mention-dropdown.visible { display: block; }
+.mention-item {
+  padding: 0.3rem 0.6rem;
+  font-size: 0.78rem;
+  color: var(--text);
+  background: var(--accent-glow);
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+.mention-pill {
+  background: var(--accent-glow);
+  color: var(--accent-light);
+  padding: 0.1rem 0.3rem;
+  border-radius: 4px;
+  font-size: inherit;
+  font-family: inherit;
+}
+.slash-pill {
+  color: var(--accent-light);
+  font-size: inherit;
+  font-family: inherit;
+  font-weight: 600;
+}
+@media (max-width: 600px) {
+  .mention-dropdown { left: 1rem; min-width: 150px; }
+}
 
 /* ── Theme toggle ── */
 .theme-toggle {
