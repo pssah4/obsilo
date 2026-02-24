@@ -148,9 +148,10 @@ export class ToolExecutionPipeline {
                 return this.errorResult(toolCall.id, validation.reason ?? 'Operation denied');
             }
 
-            // 3. Auto-approve or request approval for write/web/mcp/mode/subtask operations
+            // 3. Auto-approve or request approval for write/mcp/mode/subtask operations
+            // Web tools are always auto-approved when webTools.enabled is true (the only way they appear).
             const toolGroup = TOOL_GROUPS[toolCall.name];
-            if (tool.isWriteOperation || toolGroup === 'web' || toolGroup === 'mcp' || toolGroup === 'mode' || toolGroup === 'subtask') {
+            if (tool.isWriteOperation || toolGroup === 'mcp' || toolGroup === 'mode' || toolGroup === 'subtask') {
                 const approval = await this.checkApproval(toolCall, extensions);
                 if (approval.decision === 'rejected') {
                     return this.errorResult(toolCall.id, 'Operation denied by user');
@@ -266,7 +267,6 @@ export class ToolExecutionPipeline {
             if (group === 'read' && cfg.read) return { decision: 'auto' };
             if (group === 'note-edit' && cfg.noteEdits) return { decision: 'auto' };
             if (group === 'vault-change' && cfg.vaultChanges) return { decision: 'auto' };
-            if (group === 'web' && cfg.web) return { decision: 'auto' };
             if (group === 'mcp' && cfg.mcp) return { decision: 'auto' };
             if (group === 'mode' && cfg.mode) return { decision: 'auto' };
             if (group === 'subtask' && cfg.subtasks) return { decision: 'auto' };

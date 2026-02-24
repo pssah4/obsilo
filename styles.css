@@ -434,6 +434,14 @@
     color: var(--text-normal);
 }
 
+/* Web search toggle — active state */
+.web-toggle-button.web-toggle-active {
+    color: var(--interactive-accent);
+}
+.web-toggle-button.web-toggle-active:hover {
+    color: var(--interactive-accent-hover);
+}
+
 .toolbar-icon {
     display: flex;
     align-items: center;

@@ -1,0 +1,14 @@
+import { readFileSync } from "fs";
+const en = JSON.parse(readFileSync("./docs/assets/locales/en.json","utf8"));
+const fr = JSON.parse(readFileSync("./docs/assets/locales/fr.json","utf8"));
+const es = JSON.parse(readFileSync("./docs/assets/locales/es.json","utf8"));
+const enKeys = Object.keys(en).sort();
+const missingFr = enKeys.filter(k => fr[k] === undefined);
+const missingEs = enKeys.filter(k => es[k] === undefined);
+console.log("Total en keys:", enKeys.length);
+console.log("Missing in fr:", missingFr.length);
+console.log("Missing in es:", missingEs.length);
+console.log("--- Missing FR ---");
+missingFr.forEach(k => console.log(k));
+console.log("--- Missing ES ---");
+missingEs.forEach(k => console.log(k));

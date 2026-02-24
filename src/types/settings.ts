@@ -435,7 +435,6 @@ export interface ObsidianAgentSettings {
     chatHistoryFolder: string;
 
     // UI
-    sidebarPosition: 'left' | 'right';
     autoAddActiveFileContext: boolean;
     /** Press Enter to send (Shift+Enter for newline). When false, Ctrl/Cmd+Enter sends. */
     sendWithEnter: boolean;
@@ -541,21 +540,7 @@ export const DEFAULT_SETTINGS: ObsidianAgentSettings = {
     customModes: [],
     modeModelKeys: {},
     globalCustomInstructions: '',
-    modeToolOverrides: {
-        // Agent: all tools enabled EXCEPT delete_file and use_mcp_tool (safe defaults)
-        agent: [
-            'read_file', 'list_files', 'search_files',
-            'get_vault_stats', 'get_frontmatter', 'search_by_tag', 'get_linked_notes',
-            'get_daily_note', 'open_note', 'semantic_search', 'query_base',
-            'write_file', 'edit_file', 'append_to_file', 'create_folder',
-            'move_file', 'update_frontmatter', 'generate_canvas', 'create_base', 'update_base',
-            'web_fetch', 'web_search',
-            'ask_followup_question', 'attempt_completion', 'update_todo_list', 'new_task',
-            'execute_command', 'resolve_capability_gap', 'enable_plugin',
-            'call_plugin_api', 'execute_recipe',
-            'update_settings', 'configure_model',
-        ],
-    },
+    modeToolOverrides: {},
     activeMcpServers: [],
     forcedSkills: {},
     forcedWorkflow: {},
@@ -629,7 +614,6 @@ export const DEFAULT_SETTINGS: ObsidianAgentSettings = {
     },
     chatHistoryFolder: '',
 
-    sidebarPosition: 'right',
     autoAddActiveFileContext: true,
     sendWithEnter: true,
     includeCurrentTimeInContext: true,

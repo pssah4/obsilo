@@ -6,7 +6,7 @@
   <title>Checkpoints — Obsilo Agent Docs</title>
   <link rel="icon" type="image/png" href="assets/OBSILO_ICON50x50_lila.png">
   <link rel="stylesheet" href="assets/style.css">
-  <script>(function(){var t=localStorage.getItem('theme')||'dark';document.documentElement.setAttribute('data-theme',t)})()</script>
+  <script>(function(){var t=localStorage.getItem('theme')||'dark';document.documentElement.setAttribute('data-theme',t)})();(function(){var l=localStorage.getItem('lang');if(l)document.documentElement.setAttribute('lang',l)})()</script>
 </head>
 <body>
 
@@ -15,50 +15,57 @@
     <img src="assets/OBSILO_LOGOFULL_SW_v2.png" alt="Obsilo" class="logo-img">
   </a>
   <nav class="header-links">
-    <a href="getting-started.html">Docs</a>
-    <a href="about.html">About</a>
-    <a href="https://github.com/pssah4/obsilo-public" class="github-btn"><svg aria-hidden="true" height="16" viewBox="0 0 16 16" width="16" class="github-icon"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg> GitHub</a>
+    <a href="getting-started.html" data-i18n="header.docs">Docs</a>
+    <a href="about.html" data-i18n="header.about">About</a>
+    <a href="https://github.com/pssah4/obsilo-public" class="github-btn"><svg aria-hidden="true" height="16" viewBox="0 0 16 16" width="16" class="github-icon"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg> <span data-i18n="header.github">GitHub</span></a>
     <a href="https://buymeacoffee.com/sebastianhanke" target="_blank" rel="noopener noreferrer"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" class="bmc-header-btn"></a>
   </nav>
   <div class="spacer"></div>
-  <button class="theme-toggle" aria-label="Toggle theme" onclick="toggleTheme()">
+  <button class="theme-toggle" aria-label="Toggle theme" data-i18n-aria="header.toggleTheme" onclick="toggleTheme()">
     <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
     <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
   </button>
-  <button class="search-btn" onclick="openDocsSearch()" aria-label="Search docs"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Search</button>
+  <div class="lang-switcher">
+    <button class="lang-toggle" onclick="toggleLangDropdown(event)" aria-label="Switch language" data-i18n-aria="header.switchLang">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+      <span class="lang-toggle-label">EN</span>
+    </button>
+    <div class="lang-dropdown"></div>
+  </div>
+  <button class="search-btn" onclick="openDocsSearch()" aria-label="Search docs" data-i18n-aria="header.search"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span data-i18n="header.search">Search</span></button>
 </header>
 <script>function toggleTheme(){var h=document.documentElement,n=h.getAttribute('data-theme')==='light'?'dark':'light';h.setAttribute('data-theme',n);localStorage.setItem('theme',n);document.querySelectorAll('.logo-img').forEach(function(i){i.src=n==='light'?'assets/OBSILO_LOGOFULL_v2.png':'assets/OBSILO_LOGOFULL_SW_v2.png'})}(function(){var t=document.documentElement.getAttribute('data-theme');if(t==='light'){document.querySelectorAll('.logo-img').forEach(function(i){i.src='assets/OBSILO_LOGOFULL_v2.png'})}})()</script>
 
 <div class="docs-layout">
   <aside class="docs-sidebar">
     <div class="sidebar-section">
-      <div class="sidebar-section-title">Get Started</div>
-      <nav class="sidebar-nav"><a href="getting-started.html">Getting Started</a></nav>
+      <div class="sidebar-section-title" data-i18n="sidebar.getStarted">Get Started</div>
+      <nav class="sidebar-nav"><a href="getting-started.html" data-i18n="sidebar.gettingStarted">Getting Started</a></nav>
     </div>
     <div class="sidebar-section">
-      <div class="sidebar-section-title">Using Obsilo</div>
+      <div class="sidebar-section-title" data-i18n="sidebar.usingObsilo">Using Obsilo</div>
       <nav class="sidebar-nav">
-        <a href="chat-interface.html">Chat Interface</a>
-        <a href="memory.html">Memory &amp; Chat History</a>
-        <a href="modes.html">Modes</a>
-        <a href="permissions.html">Permissions &amp; Safety</a>
+        <a href="chat-interface.html" data-i18n="sidebar.chatInterface">Chat Interface</a>
+        <a href="memory.html" data-i18n="sidebar.memoryHistory">Memory &amp; Chat History</a>
+        <a href="modes.html" data-i18n="sidebar.modes">Modes</a>
+        <a href="permissions.html" data-i18n="sidebar.permissionsSafety">Permissions &amp; Safety</a>
       </nav>
     </div>
     <div class="sidebar-section">
-      <div class="sidebar-section-title">Context &amp; Knowledge</div>
+      <div class="sidebar-section-title" data-i18n="sidebar.contextKnowledge">Context &amp; Knowledge</div>
       <nav class="sidebar-nav">
-        <a href="rules-skills-workflows.html">Rules, Skills &amp; Workflows</a>
-        <a href="semantic-search.html">Semantic Search</a>
+        <a href="rules-skills-workflows.html" data-i18n="sidebar.rulesSkillsWorkflows">Rules, Skills &amp; Workflows</a>
+        <a href="semantic-search.html" data-i18n="sidebar.semanticSearch">Semantic Search</a>
       </nav>
     </div>
     <div class="sidebar-section">
-      <div class="sidebar-section-title">Reference</div>
+      <div class="sidebar-section-title" data-i18n="sidebar.reference">Reference</div>
       <nav class="sidebar-nav">
-        <a href="tools.html">Tools Reference</a>
-        <a href="providers.html">Providers &amp; Models</a>
-        <a href="mcp-servers.html">MCP Servers</a>
-        <a href="checkpoints.html" class="active">Checkpoints</a>
-        <a href="settings-reference.html">Settings Reference</a>
+        <a href="tools.html" data-i18n="sidebar.toolsRef">Tools Reference</a>
+        <a href="providers.html" data-i18n="sidebar.providersModels">Providers &amp; Models</a>
+        <a href="mcp-servers.html" data-i18n="sidebar.mcpServers">MCP Servers</a>
+        <a href="checkpoints.html" class="active" data-i18n="sidebar.checkpoints">Checkpoints</a>
+        <a href="settings-reference.html" data-i18n="sidebar.settingsRef">Settings Reference</a>
       </nav>
     </div>
   </aside>
@@ -66,21 +73,21 @@
   <main class="docs-main">
     <article class="docs-content">
       <div class="breadcrumb">
-        <a href="index.html">Docs</a> <span class="breadcrumb-sep">›</span>
-        Reference <span class="breadcrumb-sep">›</span>
-        Checkpoints
+        <a href="index.html" data-i18n="breadcrumb.docs">Docs</a> <span class="breadcrumb-sep">&rsaquo;</span>
+        <span data-i18n="sidebar.reference">Reference</span> <span class="breadcrumb-sep">&rsaquo;</span>
+        <span data-i18n="sidebar.checkpoints">Checkpoints</span>
       </div>
 
-      <h1>Checkpoints</h1>
-      <p>Checkpoints give you a safety net for every agent task. Before the first write operation in a task, Obsilo automatically takes a snapshot of all tracked files. If something goes wrong, you can restore to that snapshot with one click.</p>
+      <h1 data-i18n="pages.checkpoints.title">Checkpoints</h1>
+      <p data-i18n="pages.checkpoints.subtitle">Checkpoints give you a safety net for every agent task. Before the first write operation in a task, Obsilo automatically takes a snapshot of all tracked files. If something goes wrong, you can restore to that snapshot with one click.</p>
 
-      <h2 id="how-it-works">How It Works</h2>
-      <p>Obsilo maintains a <strong>shadow git repository</strong> at:</p>
+      <h2 id="how-it-works" data-i18n="pages.checkpoints.howItWorks">How It Works</h2>
+      <p data-i18n-html="pages.checkpoints.howItWorks.text">Obsilo maintains a <strong>shadow git repository</strong> at:</p>
       <pre><code>.obsidian/plugins/obsidian-agent/checkpoints/</code></pre>
-      <p>This is separate from your vault's own git history (if you use git for your vault). It uses <strong>isomorphic-git</strong> — a pure JavaScript git implementation that requires no native git binary.</p>
+      <p data-i18n-html="pages.checkpoints.howItWorks.text2">This is separate from your vault's own git history (if you use git for your vault). It uses <strong>isomorphic-git</strong> — a pure JavaScript git implementation that requires no native git binary.</p>
 
-      <h3>Checkpoint Lifecycle</h3>
-      <ol class="steps">
+      <h3 data-i18n="pages.checkpoints.lifecycle">Checkpoint Lifecycle</h3>
+      <ol class="steps" data-i18n-html="pages.checkpoints.lifecycle.list">
         <li>
           <strong>Task starts</strong> — you send a message and the agent begins working
         </li>
@@ -95,31 +102,31 @@
         </li>
       </ol>
 
-      <h2 id="what-is-tracked">What Gets Tracked</h2>
-      <p>The shadow repo tracks all files that the agent has read or written in previous tasks. On the first snapshot, it also includes all files in the vault root (excluding ignored paths). This means:</p>
-      <ul>
+      <h2 id="what-is-tracked" data-i18n="pages.checkpoints.whatIsTracked">What Gets Tracked</h2>
+      <p data-i18n="pages.checkpoints.whatIsTracked.text">The shadow repo tracks all files that the agent has read or written in previous tasks. On the first snapshot, it also includes all files in the vault root (excluding ignored paths). This means:</p>
+      <ul data-i18n-html="pages.checkpoints.whatIsTracked.list">
         <li>Any file the agent has touched can be restored</li>
         <li>Files in <code>.obsidian-agentignore</code> are not tracked</li>
         <li>The checkpoint doesn't restore files to a vault-wide snapshot — it restores <em>only the files changed in that task</em></li>
       </ul>
 
-      <h2 id="restoring">Restoring from a Checkpoint</h2>
-      <ol class="steps">
+      <h2 id="restoring" data-i18n="pages.checkpoints.restoring">Restoring from a Checkpoint</h2>
+      <ol class="steps" data-i18n-html="pages.checkpoints.restoring.list">
         <li>Go to Settings → Advanced → <strong>Backup</strong></li>
         <li>You'll see a list of checkpoints, ordered by date, with the task that created them</li>
         <li>Click <strong>Preview</strong> on a checkpoint to see a diff of what changed</li>
         <li>Click <strong>Restore</strong> to revert the files changed in that task back to their pre-task state</li>
       </ol>
 
-      <div class="callout callout-warning">
+      <div class="callout callout-warning" data-i18n-html="pages.checkpoints.restoring.callout">
         <strong>Restore only affects changed files</strong>
         Restoring a checkpoint reverts <em>only the files that were modified in that specific task</em> — not the entire vault. Files created by the task are moved to trash; files edited are restored to their pre-edit content.
       </div>
 
-      <h2 id="configuration">Configuration</h2>
-      <p>In Settings → Vault → <strong>Checkpoints</strong>:</p>
+      <h2 id="configuration" data-i18n="pages.checkpoints.configuration">Configuration</h2>
+      <p data-i18n-html="pages.checkpoints.configuration.text">In Settings → Vault → <strong>Checkpoints</strong>:</p>
 
-      <table>
+      <table data-i18n-html="pages.checkpoints.configuration.table">
         <thead><tr><th>Setting</th><th>Default</th><th>Description</th></tr></thead>
         <tbody>
           <tr><td>Enable Checkpoints</td><td>On</td><td>Master toggle. When off, no snapshots are taken and restore is unavailable.</td></tr>
@@ -128,9 +135,9 @@
         </tbody>
       </table>
 
-      <h2 id="vs-vault-git">Checkpoints vs. Your Vault's Git</h2>
-      <p>If you already use git for your vault, you might wonder why Obsilo has its own checkpoint system. The reasons:</p>
-      <ul>
+      <h2 id="vs-vault-git" data-i18n="pages.checkpoints.vsVaultGit">Checkpoints vs. Your Vault's Git</h2>
+      <p data-i18n="pages.checkpoints.vsVaultGit.text">If you already use git for your vault, you might wonder why Obsilo has its own checkpoint system. The reasons:</p>
+      <ul data-i18n-html="pages.checkpoints.vsVaultGit.list">
         <li><strong>Non-invasive</strong>: Checkpoints don't pollute your vault's git history with agent commits</li>
         <li><strong>No git required</strong>: Works even if you don't use git for your vault at all</li>
         <li><strong>Automatic</strong>: Happens without any user action — no need to remember to commit before each agent task</li>
@@ -138,17 +145,17 @@
         <li><strong>Task-linked</strong>: Each checkpoint is linked to the conversation that created it, making it easy to understand what changed and why</li>
       </ul>
 
-      <h2 id="disk-usage">Disk Usage</h2>
-      <p>The shadow repo uses standard git compression. For most vaults, each checkpoint adds a few kilobytes. With auto-cleanup enabled, old checkpoints are pruned automatically. You can also manually clear checkpoints from Settings → Backup.</p>
+      <h2 id="disk-usage" data-i18n="pages.checkpoints.diskUsage">Disk Usage</h2>
+      <p data-i18n="pages.checkpoints.diskUsage.text">The shadow repo uses standard git compression. For most vaults, each checkpoint adds a few kilobytes. With auto-cleanup enabled, old checkpoints are pruned automatically. You can also manually clear checkpoints from Settings → Backup.</p>
 
       <div class="page-nav">
         <a href="mcp-servers.html" class="page-nav-item">
-          <span class="page-nav-label">Previous</span>
-          <span class="page-nav-title">← MCP Servers</span>
+          <span class="page-nav-label" data-i18n="nav.previous">Previous</span>
+          <span class="page-nav-title">&larr; <span data-i18n="sidebar.mcpServers">MCP Servers</span></span>
         </a>
         <a href="settings-reference.html" class="page-nav-item next">
-          <span class="page-nav-label">Next</span>
-          <span class="page-nav-title">Settings Reference →</span>
+          <span class="page-nav-label" data-i18n="nav.next">Next</span>
+          <span class="page-nav-title"><span data-i18n="sidebar.settingsRef">Settings Reference</span> &rarr;</span>
         </a>
       </div>
     </article>
@@ -156,9 +163,10 @@
 </div>
 
 <footer class="footer">
-  <p class="footer-credits">Obsilo Agent <script>document.write(new Date().getFullYear())</script> &middot; <a href="https://github.com/pssah4/obsilo-public/blob/main/LICENSE">Apache 2.0</a> &middot; <a href="https://github.com/pssah4/obsilo-public/blob/main/NOTICE.md">Notice</a> &middot; <a href="imprint.html">Imprint</a></p>
-  <p class="footer-disclaimer">Provided as-is, without any warranty or liability.</p>
+  <p class="footer-credits">Obsilo Agent <script>document.write(new Date().getFullYear())</script> &middot; <a href="https://github.com/pssah4/obsilo-public/blob/main/LICENSE" data-i18n="footer.license">Apache 2.0</a> &middot; <a href="https://github.com/pssah4/obsilo-public/blob/main/NOTICE.md" data-i18n="footer.notice">Notice</a> &middot; <a href="imprint.html" data-i18n="footer.imprint">Imprint</a></p>
+  <p class="footer-disclaimer" data-i18n="footer.disclaimer">Provided as-is, without any warranty or liability.</p>
 </footer>
+<script src="assets/i18n.js"></script>
 <script src="assets/search.js" defer></script>
 </body>
 </html>

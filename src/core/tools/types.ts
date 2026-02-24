@@ -173,17 +173,3 @@ export interface ValidationResult {
     reason?: string;
     requiresExplicitApproval?: boolean;
 }
-
-/**
- * Approval decision
- */
-export type ApprovalDecision = 'approve' | 'deny' | 'ask' | 'timeout';
-
-/**
- * Approval result
- */
-export interface ApprovalResult {
-    decision: ApprovalDecision;
-    timeout?: number;
-    fn?: () => any;
-}

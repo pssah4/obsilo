@@ -6,7 +6,7 @@
   <title>Modes — Obsilo Agent Docs</title>
   <link rel="icon" type="image/png" href="assets/OBSILO_ICON50x50_lila.png">
   <link rel="stylesheet" href="assets/style.css">
-  <script>(function(){var t=localStorage.getItem('theme')||'dark';document.documentElement.setAttribute('data-theme',t)})()</script>
+  <script>(function(){var t=localStorage.getItem('theme')||'dark';document.documentElement.setAttribute('data-theme',t)})();(function(){var l=localStorage.getItem('lang');if(l)document.documentElement.setAttribute('lang',l)})()</script>
 </head>
 <body>
 
@@ -15,50 +15,57 @@
     <img src="assets/OBSILO_LOGOFULL_SW_v2.png" alt="Obsilo" class="logo-img">
   </a>
   <nav class="header-links">
-    <a href="getting-started.html">Docs</a>
-    <a href="about.html">About</a>
-    <a href="https://github.com/pssah4/obsilo-public" class="github-btn"><svg aria-hidden="true" height="16" viewBox="0 0 16 16" width="16" class="github-icon"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg> GitHub</a>
+    <a href="getting-started.html" data-i18n="header.docs">Docs</a>
+    <a href="about.html" data-i18n="header.about">About</a>
+    <a href="https://github.com/pssah4/obsilo-public" class="github-btn"><svg aria-hidden="true" height="16" viewBox="0 0 16 16" width="16" class="github-icon"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg> <span data-i18n="header.github">GitHub</span></a>
     <a href="https://buymeacoffee.com/sebastianhanke" target="_blank" rel="noopener noreferrer"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" class="bmc-header-btn"></a>
   </nav>
   <div class="spacer"></div>
-  <button class="theme-toggle" aria-label="Toggle theme" onclick="toggleTheme()">
+  <button class="theme-toggle" aria-label="Toggle theme" data-i18n-aria="header.toggleTheme" onclick="toggleTheme()">
     <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
     <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
   </button>
-  <button class="search-btn" onclick="openDocsSearch()" aria-label="Search docs"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Search</button>
+  <div class="lang-switcher">
+    <button class="lang-toggle" onclick="toggleLangDropdown(event)" aria-label="Switch language" data-i18n-aria="header.switchLang">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+      <span class="lang-toggle-label">EN</span>
+    </button>
+    <div class="lang-dropdown"></div>
+  </div>
+  <button class="search-btn" onclick="openDocsSearch()" aria-label="Search docs" data-i18n-aria="header.search"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span data-i18n="header.search">Search</span></button>
 </header>
 <script>function toggleTheme(){var h=document.documentElement,n=h.getAttribute('data-theme')==='light'?'dark':'light';h.setAttribute('data-theme',n);localStorage.setItem('theme',n);document.querySelectorAll('.logo-img').forEach(function(i){i.src=n==='light'?'assets/OBSILO_LOGOFULL_v2.png':'assets/OBSILO_LOGOFULL_SW_v2.png'})}(function(){var t=document.documentElement.getAttribute('data-theme');if(t==='light'){document.querySelectorAll('.logo-img').forEach(function(i){i.src='assets/OBSILO_LOGOFULL_v2.png'})}})()</script>
 
 <div class="docs-layout">
   <aside class="docs-sidebar">
     <div class="sidebar-section">
-      <div class="sidebar-section-title">Get Started</div>
-      <nav class="sidebar-nav"><a href="getting-started.html">Getting Started</a></nav>
+      <div class="sidebar-section-title" data-i18n="sidebar.getStarted">Get Started</div>
+      <nav class="sidebar-nav"><a href="getting-started.html" data-i18n="sidebar.gettingStarted">Getting Started</a></nav>
     </div>
     <div class="sidebar-section">
-      <div class="sidebar-section-title">Using Obsilo</div>
+      <div class="sidebar-section-title" data-i18n="sidebar.usingObsilo">Using Obsilo</div>
       <nav class="sidebar-nav">
-        <a href="chat-interface.html">Chat Interface</a>
-        <a href="memory.html">Memory &amp; Chat History</a>
-        <a href="modes.html" class="active">Modes</a>
-        <a href="permissions.html">Permissions &amp; Safety</a>
+        <a href="chat-interface.html" data-i18n="sidebar.chatInterface">Chat Interface</a>
+        <a href="memory.html" data-i18n="sidebar.memoryHistory">Memory &amp; Chat History</a>
+        <a href="modes.html" class="active" data-i18n="sidebar.modes">Modes</a>
+        <a href="permissions.html" data-i18n="sidebar.permissionsSafety">Permissions &amp; Safety</a>
       </nav>
     </div>
     <div class="sidebar-section">
-      <div class="sidebar-section-title">Context &amp; Knowledge</div>
+      <div class="sidebar-section-title" data-i18n="sidebar.contextKnowledge">Context &amp; Knowledge</div>
       <nav class="sidebar-nav">
-        <a href="rules-skills-workflows.html">Rules, Skills &amp; Workflows</a>
-        <a href="semantic-search.html">Semantic Search</a>
+        <a href="rules-skills-workflows.html" data-i18n="sidebar.rulesSkillsWorkflows">Rules, Skills &amp; Workflows</a>
+        <a href="semantic-search.html" data-i18n="sidebar.semanticSearch">Semantic Search</a>
       </nav>
     </div>
     <div class="sidebar-section">
-      <div class="sidebar-section-title">Reference</div>
+      <div class="sidebar-section-title" data-i18n="sidebar.reference">Reference</div>
       <nav class="sidebar-nav">
-        <a href="tools.html">Tools Reference</a>
-        <a href="providers.html">Providers &amp; Models</a>
-        <a href="mcp-servers.html">MCP Servers</a>
-        <a href="checkpoints.html">Checkpoints</a>
-        <a href="settings-reference.html">Settings Reference</a>
+        <a href="tools.html" data-i18n="sidebar.toolsRef">Tools Reference</a>
+        <a href="providers.html" data-i18n="sidebar.providersModels">Providers &amp; Models</a>
+        <a href="mcp-servers.html" data-i18n="sidebar.mcpServers">MCP Servers</a>
+        <a href="checkpoints.html" data-i18n="sidebar.checkpoints">Checkpoints</a>
+        <a href="settings-reference.html" data-i18n="sidebar.settingsRef">Settings Reference</a>
       </nav>
     </div>
   </aside>
@@ -66,35 +73,35 @@
   <main class="docs-main">
     <article class="docs-content">
       <div class="breadcrumb">
-        <a href="index.html">Docs</a> <span class="breadcrumb-sep">›</span>
+        <a href="index.html" data-i18n="breadcrumb.docs">Docs</a> <span class="breadcrumb-sep">›</span>
         Using Obsilo <span class="breadcrumb-sep">›</span>
-        Modes
+        <span data-i18n="breadcrumb.modes">Modes</span>
       </div>
 
-      <h1>Modes</h1>
-      <p>Switch between modes to get the right kind of help for each task — from a read-only question-answering assistant to a fully autonomous agent that can create, edit, and organize your notes. You can also build your own custom modes with their own persona, tool access, and instructions.</p>
+      <h1 data-i18n="pages.modes.title">Modes</h1>
+      <p data-i18n="pages.modes.subtitle">Switch between modes to get the right kind of help for each task — from a read-only question-answering assistant to a fully autonomous agent that can create, edit, and organize your notes. You can also build your own custom modes with their own persona, tool access, and instructions.</p>
 
-      <h2 id="built-in-modes">Built-in Modes</h2>
+      <h2 id="built-in-modes" data-i18n="pages.modes.builtInModes">Built-in Modes</h2>
 
-      <h3 id="ask-mode">Ask Mode</h3>
-      <p><strong>Ask</strong> is a read-only knowledge assistant. Use it to explore your vault, get synthesized answers from your notes, and find connections — without any risk of changing your files.</p>
-      <p><strong>Try:</strong> <em>"What do I know about machine learning?"</em> / <em>"Find notes I haven't updated in 30 days"</em> / <em>"What links to my Project X note?"</em></p>
-      <p><strong>Access:</strong> read, vault intelligence, and semantic search tools. No write access.</p>
+      <h3 id="ask-mode" data-i18n="pages.modes.askMode">Ask Mode</h3>
+      <p data-i18n-html="pages.modes.askMode.text1"><strong>Ask</strong> is a read-only knowledge assistant. Use it to explore your vault, get synthesized answers from your notes, and find connections — without any risk of changing your files.</p>
+      <p data-i18n-html="pages.modes.askMode.text2"><strong>Try:</strong> <em>"What do I know about machine learning?"</em> / <em>"Find notes I haven't updated in 30 days"</em> / <em>"What links to my Project X note?"</em></p>
+      <p data-i18n-html="pages.modes.askMode.text3"><strong>Access:</strong> read, vault intelligence, and semantic search tools. No write access.</p>
 
-      <h3 id="agent-mode">Agent Mode</h3>
-      <p><strong>Agent</strong> is a fully autonomous agent with access to all tools. It reads, writes, edits, browses the web, and can spawn sub-agents to parallelize complex tasks.</p>
-      <p><strong>Try:</strong> <em>"Create a weekly review template"</em> / <em>"Research X on the web and summarize it to a new note"</em> / <em>"Add a 'status' frontmatter field to all notes in my Projects folder"</em></p>
-      <p><strong>Access:</strong> All tool groups — read, vault, edit, web, MCP, and agent control.</p>
+      <h3 id="agent-mode" data-i18n="pages.modes.agentMode">Agent Mode</h3>
+      <p data-i18n-html="pages.modes.agentMode.text1"><strong>Agent</strong> is a fully autonomous agent with access to all tools. It reads, writes, edits, browses the web, and can spawn sub-agents to parallelize complex tasks.</p>
+      <p data-i18n-html="pages.modes.agentMode.text2"><strong>Try:</strong> <em>"Create a weekly review template"</em> / <em>"Research X on the web and summarize it to a new note"</em> / <em>"Add a 'status' frontmatter field to all notes in my Projects folder"</em></p>
+      <p data-i18n-html="pages.modes.agentMode.text3"><strong>Access:</strong> All tool groups — read, vault, edit, web, MCP, and agent control.</p>
 
-      <div class="callout callout-tip">
+      <div class="callout callout-tip" data-i18n-html="pages.modes.builtInModes.callout">
         <strong>Which mode should I use?</strong>
         Start with <strong>Ask</strong> for exploration and questions. Switch to <strong>Agent</strong> when you want the AI to take action — create files, edit content, or run complex workflows.
       </div>
 
-      <h2 id="tool-groups">Tool Groups</h2>
-      <p>Each mode is configured with one or more <strong>tool groups</strong>. This controls which tools the agent has access to:</p>
+      <h2 id="tool-groups" data-i18n="pages.modes.toolGroups">Tool Groups</h2>
+      <p data-i18n-html="pages.modes.toolGroups.text">Each mode is configured with one or more <strong>tool groups</strong>. This controls which tools the agent has access to:</p>
 
-      <table>
+      <table data-i18n-html="pages.modes.toolGroups.table">
         <thead><tr><th>Group</th><th>Tools included</th></tr></thead>
         <tbody>
           <tr><td><code>read</code></td><td><code>read_file</code>, <code>list_files</code>, <code>search_files</code></td></tr>
@@ -106,16 +113,16 @@
         </tbody>
       </table>
 
-      <h2 id="custom-modes">Custom Modes</h2>
-      <p>Create your own modes in Settings → Agent Behaviour → Modes. Custom modes can be:</p>
-      <ul>
+      <h2 id="custom-modes" data-i18n="pages.modes.customModes">Custom Modes</h2>
+      <p data-i18n="pages.modes.customModes.text">Create your own modes in Settings → Agent Behaviour → Modes. Custom modes can be:</p>
+      <ul data-i18n-html="pages.modes.customModes.list">
         <li><strong>Vault-scoped</strong> — stored in this vault's plugin settings, only available in this vault</li>
         <li><strong>Global</strong> — stored at <code>~/.obsidian-agent/modes.json</code>, available in all vaults</li>
       </ul>
 
-      <h3 id="create-mode">Creating a Custom Mode</h3>
-      <p>Click <strong>New Mode</strong> in the Modes settings tab. Configure:</p>
-      <table>
+      <h3 id="create-mode" data-i18n="pages.modes.createMode">Creating a Custom Mode</h3>
+      <p data-i18n-html="pages.modes.createMode.text">Click <strong>New Mode</strong> in the Modes settings tab. Configure:</p>
+      <table data-i18n-html="pages.modes.createMode.table">
         <thead><tr><th>Field</th><th>Description</th></tr></thead>
         <tbody>
           <tr><td><strong>Slug</strong></td><td>URL-safe identifier, e.g. <code>researcher</code> or <code>daily-writer</code></td></tr>
@@ -129,9 +136,9 @@
         </tbody>
       </table>
 
-      <h3 id="mode-examples">Example Custom Modes</h3>
+      <h3 id="mode-examples" data-i18n="pages.modes.modeExamples">Example Custom Modes</h3>
 
-      <h4>Researcher</h4>
+      <h4 data-i18n="pages.modes.modeExamples.researcher">Researcher</h4>
       <pre><code>Slug: researcher
 Tool Groups: read, vault, web, agent
 Role Definition:
@@ -140,7 +147,7 @@ information. Use semantic_search to find existing knowledge first,
 then use web_search and web_fetch to fill gaps with external information.
 Always cite your sources and cross-reference with existing vault notes.</code></pre>
 
-      <h4>Daily Writer</h4>
+      <h4 data-i18n="pages.modes.modeExamples.dailyWriter">Daily Writer</h4>
       <pre><code>Slug: daily-writer
 Tool Groups: read, vault, edit, agent
 Role Definition:
@@ -149,33 +156,33 @@ Focus on: reading today's daily note, summarizing recent notes,
 drafting new entries. Write in a personal, reflective tone.
 Use get_daily_note first to understand the current context.</code></pre>
 
-      <h2 id="mode-overrides">Per-Mode Overrides</h2>
+      <h2 id="mode-overrides" data-i18n="pages.modes.modeOverrides">Per-Mode Overrides</h2>
 
-      <h3 id="model-override">Model Override</h3>
-      <p>Each mode can use a different AI model. Set a model override in Settings → Modes → (edit mode) → Model. When set, this model is used whenever the mode is active, overriding the global default.</p>
-      <p><strong>Use case:</strong> Use a fast, cheap model (e.g., Claude Haiku or GPT-4o mini) for Ask mode, and a more capable model (e.g., Claude Sonnet) for Agent mode.</p>
+      <h3 id="model-override" data-i18n="pages.modes.modelOverride">Model Override</h3>
+      <p data-i18n="pages.modes.modelOverride.text1">Each mode can use a different AI model. Set a model override in Settings → Modes → (edit mode) → Model. When set, this model is used whenever the mode is active, overriding the global default.</p>
+      <p data-i18n-html="pages.modes.modelOverride.text2"><strong>Use case:</strong> Use a fast, cheap model (e.g., Claude Haiku or GPT-4o mini) for Ask mode, and a more capable model (e.g., Claude Sonnet) for Agent mode.</p>
 
-      <h3 id="tool-overrides">Tool Overrides</h3>
-      <p>Restrict a mode to a specific subset of tools within its tool groups. For example, give Agent mode all edit tools <em>except</em> <code>delete_file</code>. Configured in Settings → Modes → (edit mode) → Tool Overrides.</p>
+      <h3 id="tool-overrides" data-i18n="pages.modes.toolOverrides">Tool Overrides</h3>
+      <p data-i18n-html="pages.modes.toolOverrides.text">Restrict a mode to a specific subset of tools within its tool groups. For example, give Agent mode all edit tools <em>except</em> <code>delete_file</code>. Configured in Settings → Modes → (edit mode) → Tool Overrides.</p>
 
-      <h3 id="mcp-whitelist">MCP Server Whitelist</h3>
-      <p>Limit which MCP servers a mode can access. Useful for restricting a sensitive mode from accessing powerful external tools. Set in Settings → Modes → (edit mode) → Allowed MCP Servers.</p>
+      <h3 id="mcp-whitelist" data-i18n="pages.modes.mcpWhitelist">MCP Server Whitelist</h3>
+      <p data-i18n="pages.modes.mcpWhitelist.text">Limit which MCP servers a mode can access. Useful for restricting a sensitive mode from accessing powerful external tools. Set in Settings → Modes → (edit mode) → Allowed MCP Servers.</p>
 
-      <h3 id="forced-skills">Forced Skills</h3>
-      <p>Specify skills that are always injected into the system prompt for this mode, regardless of keyword matching. Useful for skills that should always be active in a mode (e.g., always inject a "meeting-notes" skill in a "meeting" mode).</p>
+      <h3 id="forced-skills" data-i18n="pages.modes.forcedSkills">Forced Skills</h3>
+      <p data-i18n="pages.modes.forcedSkills.text">Specify skills that are always injected into the system prompt for this mode, regardless of keyword matching. Useful for skills that should always be active in a mode (e.g., always inject a "meeting-notes" skill in a "meeting" mode).</p>
 
-      <h3 id="forced-workflow">Forced Workflow</h3>
-      <p>Attach a workflow that runs automatically for every message in this mode (unless the message starts with <code>/</code>). The workflow content is prepended as explicit instructions to each message.</p>
+      <h3 id="forced-workflow" data-i18n="pages.modes.forcedWorkflow">Forced Workflow</h3>
+      <p data-i18n-html="pages.modes.forcedWorkflow.text">Attach a workflow that runs automatically for every message in this mode (unless the message starts with <code>/</code>). The workflow content is prepended as explicit instructions to each message.</p>
 
-      <h2 id="multi-agent">Multi-Agent Workflows</h2>
-      <p>In Agent mode, the <code>new_task</code> tool lets the agent spawn sub-agents. Sub-agents run with a fresh conversation context in the specified mode:</p>
-      <ul>
+      <h2 id="multi-agent" data-i18n="pages.modes.multiAgent">Multi-Agent Workflows</h2>
+      <p data-i18n-html="pages.modes.multiAgent.text1">In Agent mode, the <code>new_task</code> tool lets the agent spawn sub-agents. Sub-agents run with a fresh conversation context in the specified mode:</p>
+      <ul data-i18n-html="pages.modes.multiAgent.list">
         <li><code>new_task('ask', 'message')</code> — spawn a read-only sub-agent</li>
         <li><code>new_task('agent', 'message')</code> — spawn a full-capability sub-agent</li>
       </ul>
-      <p>Sub-agents cannot see the parent conversation — pass all necessary context in the task message.</p>
+      <p data-i18n="pages.modes.multiAgent.text2">Sub-agents cannot see the parent conversation — pass all necessary context in the task message.</p>
 
-      <table>
+      <table data-i18n-html="pages.modes.multiAgent.table">
         <thead><tr><th>Pattern</th><th>When to use</th></tr></thead>
         <tbody>
           <tr><td><strong>Orchestrator-Worker</strong></td><td>Decompose a large task into independent subtasks, each handled by a worker sub-agent</td></tr>
@@ -187,12 +194,12 @@ Use get_daily_note first to understand the current context.</code></pre>
 
       <div class="page-nav">
         <a href="memory.html" class="page-nav-item">
-          <span class="page-nav-label">Previous</span>
-          <span class="page-nav-title">&larr; Memory &amp; Chat History</span>
+          <span class="page-nav-label" data-i18n="nav.previous">Previous</span>
+          <span class="page-nav-title">&larr; <span data-i18n="sidebar.memoryHistory">Memory &amp; Chat History</span></span>
         </a>
         <a href="permissions.html" class="page-nav-item next">
-          <span class="page-nav-label">Next</span>
-          <span class="page-nav-title">Permissions &amp; Safety →</span>
+          <span class="page-nav-label" data-i18n="nav.next">Next</span>
+          <span class="page-nav-title"><span data-i18n="sidebar.permissionsSafety">Permissions &amp; Safety</span> →</span>
         </a>
       </div>
     </article>
@@ -200,9 +207,10 @@ Use get_daily_note first to understand the current context.</code></pre>
 </div>
 
 <footer class="footer">
-  <p class="footer-credits">Obsilo Agent <script>document.write(new Date().getFullYear())</script> &middot; <a href="https://github.com/pssah4/obsilo-public/blob/main/LICENSE">Apache 2.0</a> &middot; <a href="https://github.com/pssah4/obsilo-public/blob/main/NOTICE.md">Notice</a> &middot; <a href="imprint.html">Imprint</a></p>
-  <p class="footer-disclaimer">Provided as-is, without any warranty or liability.</p>
+  <p class="footer-credits">Obsilo Agent <script>document.write(new Date().getFullYear())</script> &middot; <a href="https://github.com/pssah4/obsilo-public/blob/main/LICENSE" data-i18n="footer.license">Apache 2.0</a> &middot; <a href="https://github.com/pssah4/obsilo-public/blob/main/NOTICE.md" data-i18n="footer.notice">Notice</a> &middot; <a href="imprint.html" data-i18n="footer.imprint">Imprint</a></p>
+  <p class="footer-disclaimer" data-i18n="footer.disclaimer">Provided as-is, without any warranty or liability.</p>
 </footer>
+<script src="assets/i18n.js"></script>
 <script src="assets/search.js" defer></script>
 </body>
 </html>

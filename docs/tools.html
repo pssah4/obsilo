@@ -6,7 +6,7 @@
   <title>Tools Reference — Obsilo Agent Docs</title>
   <link rel="icon" type="image/png" href="assets/OBSILO_ICON50x50_lila.png">
   <link rel="stylesheet" href="assets/style.css">
-  <script>(function(){var t=localStorage.getItem('theme')||'dark';document.documentElement.setAttribute('data-theme',t)})()</script>
+  <script>(function(){var t=localStorage.getItem('theme')||'dark';document.documentElement.setAttribute('data-theme',t)})();(function(){var l=localStorage.getItem('lang');if(l)document.documentElement.setAttribute('lang',l)})()</script>
 </head>
 <body>
 
@@ -15,50 +15,57 @@
     <img src="assets/OBSILO_LOGOFULL_SW_v2.png" alt="Obsilo" class="logo-img">
   </a>
   <nav class="header-links">
-    <a href="getting-started.html">Docs</a>
-    <a href="about.html">About</a>
-    <a href="https://github.com/pssah4/obsilo-public" class="github-btn"><svg aria-hidden="true" height="16" viewBox="0 0 16 16" width="16" class="github-icon"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg> GitHub</a>
+    <a href="getting-started.html" data-i18n="header.docs">Docs</a>
+    <a href="about.html" data-i18n="header.about">About</a>
+    <a href="https://github.com/pssah4/obsilo-public" class="github-btn"><svg aria-hidden="true" height="16" viewBox="0 0 16 16" width="16" class="github-icon"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg> <span data-i18n="header.github">GitHub</span></a>
     <a href="https://buymeacoffee.com/sebastianhanke" target="_blank" rel="noopener noreferrer"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" class="bmc-header-btn"></a>
   </nav>
   <div class="spacer"></div>
-  <button class="theme-toggle" aria-label="Toggle theme" onclick="toggleTheme()">
+  <button class="theme-toggle" aria-label="Toggle theme" data-i18n-aria="header.toggleTheme" onclick="toggleTheme()">
     <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
     <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
   </button>
-  <button class="search-btn" onclick="openDocsSearch()" aria-label="Search docs"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Search</button>
+  <div class="lang-switcher">
+    <button class="lang-toggle" onclick="toggleLangDropdown(event)" aria-label="Switch language" data-i18n-aria="header.switchLang">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+      <span class="lang-toggle-label">EN</span>
+    </button>
+    <div class="lang-dropdown"></div>
+  </div>
+  <button class="search-btn" onclick="openDocsSearch()" aria-label="Search docs" data-i18n-aria="header.search"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span data-i18n="header.search">Search</span></button>
 </header>
 <script>function toggleTheme(){var h=document.documentElement,n=h.getAttribute('data-theme')==='light'?'dark':'light';h.setAttribute('data-theme',n);localStorage.setItem('theme',n);document.querySelectorAll('.logo-img').forEach(function(i){i.src=n==='light'?'assets/OBSILO_LOGOFULL_v2.png':'assets/OBSILO_LOGOFULL_SW_v2.png'})}(function(){var t=document.documentElement.getAttribute('data-theme');if(t==='light'){document.querySelectorAll('.logo-img').forEach(function(i){i.src='assets/OBSILO_LOGOFULL_v2.png'})}})()</script>
 
 <div class="docs-layout">
   <aside class="docs-sidebar">
     <div class="sidebar-section">
-      <div class="sidebar-section-title">Get Started</div>
-      <nav class="sidebar-nav"><a href="getting-started.html">Getting Started</a></nav>
+      <div class="sidebar-section-title" data-i18n="sidebar.getStarted">Get Started</div>
+      <nav class="sidebar-nav"><a href="getting-started.html" data-i18n="sidebar.gettingStarted">Getting Started</a></nav>
     </div>
     <div class="sidebar-section">
-      <div class="sidebar-section-title">Using Obsilo</div>
+      <div class="sidebar-section-title" data-i18n="sidebar.usingObsilo">Using Obsilo</div>
       <nav class="sidebar-nav">
-        <a href="chat-interface.html">Chat Interface</a>
-        <a href="memory.html">Memory &amp; Chat History</a>
-        <a href="modes.html">Modes</a>
-        <a href="permissions.html">Permissions &amp; Safety</a>
+        <a href="chat-interface.html" data-i18n="sidebar.chatInterface">Chat Interface</a>
+        <a href="memory.html" data-i18n="sidebar.memoryHistory">Memory &amp; Chat History</a>
+        <a href="modes.html" data-i18n="sidebar.modes">Modes</a>
+        <a href="permissions.html" data-i18n="sidebar.permissionsSafety">Permissions &amp; Safety</a>
       </nav>
     </div>
     <div class="sidebar-section">
-      <div class="sidebar-section-title">Context &amp; Knowledge</div>
+      <div class="sidebar-section-title" data-i18n="sidebar.contextKnowledge">Context &amp; Knowledge</div>
       <nav class="sidebar-nav">
-        <a href="rules-skills-workflows.html">Rules, Skills &amp; Workflows</a>
-        <a href="semantic-search.html">Semantic Search</a>
+        <a href="rules-skills-workflows.html" data-i18n="sidebar.rulesSkillsWorkflows">Rules, Skills &amp; Workflows</a>
+        <a href="semantic-search.html" data-i18n="sidebar.semanticSearch">Semantic Search</a>
       </nav>
     </div>
     <div class="sidebar-section">
-      <div class="sidebar-section-title">Reference</div>
+      <div class="sidebar-section-title" data-i18n="sidebar.reference">Reference</div>
       <nav class="sidebar-nav">
-        <a href="tools.html" class="active">Tools Reference</a>
-        <a href="providers.html">Providers &amp; Models</a>
-        <a href="mcp-servers.html">MCP Servers</a>
-        <a href="checkpoints.html">Checkpoints</a>
-        <a href="settings-reference.html">Settings Reference</a>
+        <a href="tools.html" class="active" data-i18n="sidebar.toolsRef">Tools Reference</a>
+        <a href="providers.html" data-i18n="sidebar.providersModels">Providers &amp; Models</a>
+        <a href="mcp-servers.html" data-i18n="sidebar.mcpServers">MCP Servers</a>
+        <a href="checkpoints.html" data-i18n="sidebar.checkpoints">Checkpoints</a>
+        <a href="settings-reference.html" data-i18n="sidebar.settingsRef">Settings Reference</a>
       </nav>
     </div>
   </aside>
@@ -66,46 +73,46 @@
   <main class="docs-main">
     <article class="docs-content">
       <div class="breadcrumb">
-        <a href="index.html">Docs</a> <span class="breadcrumb-sep">›</span>
+        <a href="index.html" data-i18n="breadcrumb.docs">Docs</a> <span class="breadcrumb-sep">›</span>
         Reference <span class="breadcrumb-sep">›</span>
-        Tools Reference
+        <span data-i18n="breadcrumb.toolsRef">Tools Reference</span>
       </div>
 
-      <h1>Tools Reference</h1>
-      <p>Complete reference for all 30+ tools available to Obsilo Agent. Tools are grouped by category, which maps to the tool group permission system.</p>
+      <h1 data-i18n="pages.tools.title">Tools Reference</h1>
+      <p data-i18n="pages.tools.subtitle">Complete reference for all 30+ tools available to Obsilo Agent. Tools are grouped by category, which maps to the tool group permission system.</p>
 
       <!-- READ -->
-      <h2 id="read">Read Tools</h2>
-      <p>These tools are read-only and are in the <code>read</code> tool group. Auto-approved by default.</p>
+      <h2 id="read" data-i18n="pages.tools.read">Read Tools</h2>
+      <p data-i18n="pages.tools.read.text" data-i18n-html>These tools are read-only and are in the <code>read</code> tool group. Auto-approved by default.</p>
 
       <div class="tool-grid">
         <div class="tool-card">
           <span class="tool-group-badge badge-read">read</span>
           <div class="tool-name">read_file</div>
-          <div class="tool-desc">Read the complete content of a file. Always call this before editing an existing file.</div>
+          <div class="tool-desc" data-i18n="pages.tools.readFile.desc">Read the complete content of a file. Always call this before editing an existing file.</div>
         </div>
         <div class="tool-card">
           <span class="tool-group-badge badge-read">read</span>
           <div class="tool-name">list_files</div>
-          <div class="tool-desc">List files and folders in a directory. Use "/" for the vault root. Optional recursive parameter.</div>
+          <div class="tool-desc" data-i18n="pages.tools.listFiles.desc">List files and folders in a directory. Use "/" for the vault root. Optional recursive parameter.</div>
         </div>
         <div class="tool-card">
           <span class="tool-group-badge badge-read">read</span>
           <div class="tool-name">search_files</div>
-          <div class="tool-desc">Full-text and regex search across files. Returns matching lines with file path and line number. Supports file_pattern glob filter.</div>
+          <div class="tool-desc" data-i18n="pages.tools.searchFiles.desc">Full-text and regex search across files. Returns matching lines with file path and line number. Supports file_pattern glob filter.</div>
         </div>
       </div>
 
-      <h3>Parameters: read_file</h3>
-      <table>
+      <h3 data-i18n-html="pages.tools.readFile.paramsHeading">Parameters: read_file</h3>
+      <table data-i18n-html="pages.tools.readFile.table">
         <thead><tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
         <tbody>
           <tr><td><code>path</code></td><td>string</td><td>yes</td><td>Vault-relative path to the file (e.g., "Projects/plan.md")</td></tr>
         </tbody>
       </table>
 
-      <h3>Parameters: list_files</h3>
-      <table>
+      <h3 data-i18n-html="pages.tools.listFiles.paramsHeading">Parameters: list_files</h3>
+      <table data-i18n-html="pages.tools.listFiles.table">
         <thead><tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
         <tbody>
           <tr><td><code>path</code></td><td>string</td><td>yes</td><td>Directory path. Use "/" for vault root</td></tr>
@@ -113,8 +120,8 @@
         </tbody>
       </table>
 
-      <h3>Parameters: search_files</h3>
-      <table>
+      <h3 data-i18n-html="pages.tools.searchFiles.paramsHeading">Parameters: search_files</h3>
+      <table data-i18n-html="pages.tools.searchFiles.table">
         <thead><tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
         <tbody>
           <tr><td><code>path</code></td><td>string</td><td>yes</td><td>Directory to search in</td></tr>
@@ -124,54 +131,54 @@
       </table>
 
       <!-- VAULT -->
-      <h2 id="vault">Vault Intelligence Tools</h2>
-      <p>These tools are read-only metadata and search operations. In the <code>vault</code> tool group. Auto-approved by default.</p>
+      <h2 id="vault" data-i18n="pages.tools.vault">Vault Intelligence Tools</h2>
+      <p data-i18n="pages.tools.vault.text" data-i18n-html>These tools are read-only metadata and search operations. In the <code>vault</code> tool group. Auto-approved by default.</p>
 
       <div class="tool-grid">
         <div class="tool-card">
           <span class="tool-group-badge badge-vault">vault</span>
           <div class="tool-name">get_vault_stats</div>
-          <div class="tool-desc">Returns a vault overview: total notes, folder tree, top tags, recently modified files. No parameters needed.</div>
+          <div class="tool-desc" data-i18n="pages.tools.getVaultStats.desc">Returns a vault overview: total notes, folder tree, top tags, recently modified files. No parameters needed.</div>
         </div>
         <div class="tool-card">
           <span class="tool-group-badge badge-vault">vault</span>
           <div class="tool-name">get_frontmatter</div>
-          <div class="tool-desc">Read all YAML frontmatter fields of a note (tags, aliases, dates, custom properties).</div>
+          <div class="tool-desc" data-i18n="pages.tools.getFrontmatter.desc">Read all YAML frontmatter fields of a note (tags, aliases, dates, custom properties).</div>
         </div>
         <div class="tool-card">
           <span class="tool-group-badge badge-vault">vault</span>
           <div class="tool-name">search_by_tag</div>
-          <div class="tool-desc">Find all notes with given tags. Supports AND or OR matching. Tags with or without # both work.</div>
+          <div class="tool-desc" data-i18n="pages.tools.searchByTag.desc">Find all notes with given tags. Supports AND or OR matching. Tags with or without # both work.</div>
         </div>
         <div class="tool-card">
           <span class="tool-group-badge badge-vault">vault</span>
           <div class="tool-name">get_linked_notes</div>
-          <div class="tool-desc">Get forward links and backlinks for a note. Direction: "both" (default), "forward", or "backlinks".</div>
+          <div class="tool-desc" data-i18n="pages.tools.getLinkedNotes.desc">Get forward links and backlinks for a note. Direction: "both" (default), "forward", or "backlinks".</div>
         </div>
         <div class="tool-card">
           <span class="tool-group-badge badge-vault">vault</span>
           <div class="tool-name">get_daily_note</div>
-          <div class="tool-desc">Read a daily note. offset=0 (today), -1 (yesterday), 1 (tomorrow). create=true creates it if missing.</div>
+          <div class="tool-desc" data-i18n="pages.tools.getDailyNote.desc">Read a daily note. offset=0 (today), -1 (yesterday), 1 (tomorrow). create=true creates it if missing.</div>
         </div>
         <div class="tool-card">
           <span class="tool-group-badge badge-vault">vault</span>
           <div class="tool-name">open_note</div>
-          <div class="tool-desc">Open a note in the Obsidian editor view. Use after creating or editing a note to bring it into focus.</div>
+          <div class="tool-desc" data-i18n="pages.tools.openNote.desc">Open a note in the Obsidian editor view. Use after creating or editing a note to bring it into focus.</div>
         </div>
         <div class="tool-card">
           <span class="tool-group-badge badge-vault">vault</span>
           <div class="tool-name">semantic_search</div>
-          <div class="tool-desc">Hybrid semantic + keyword search. Finds notes by meaning. Requires Semantic Index to be built. Supports folder, tag, and date filters.</div>
+          <div class="tool-desc" data-i18n="pages.tools.semanticSearch.desc">Hybrid semantic + keyword search. Finds notes by meaning. Requires Semantic Index to be built. Supports folder, tag, and date filters.</div>
         </div>
         <div class="tool-card">
           <span class="tool-group-badge badge-vault">vault</span>
           <div class="tool-name">query_base</div>
-          <div class="tool-desc">Query an Obsidian Bases (.base) file. Returns the notes matching the view's filter conditions.</div>
+          <div class="tool-desc" data-i18n="pages.tools.queryBase.desc">Query an Obsidian Bases (.base) file. Returns the notes matching the view's filter conditions.</div>
         </div>
       </div>
 
-      <h3>Parameters: semantic_search</h3>
-      <table>
+      <h3 data-i18n-html="pages.tools.semanticSearch.paramsHeading">Parameters: semantic_search</h3>
+      <table data-i18n-html="pages.tools.semanticSearch.table">
         <thead><tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
         <tbody>
           <tr><td><code>query</code></td><td>string</td><td>yes</td><td>Natural language search query</td></tr>
@@ -183,49 +190,49 @@
       </table>
 
       <!-- EDIT -->
-      <h2 id="edit">Writing &amp; Editing Tools</h2>
-      <p>These tools modify vault files and require approval (or auto-approval). In the <code>edit</code> tool group.</p>
+      <h2 id="edit" data-i18n="pages.tools.edit">Writing &amp; Editing Tools</h2>
+      <p data-i18n="pages.tools.edit.text" data-i18n-html>These tools modify vault files and require approval (or auto-approval). In the <code>edit</code> tool group.</p>
 
       <div class="tool-grid">
         <div class="tool-card">
           <span class="tool-group-badge badge-edit">edit</span>
           <div class="tool-name">write_file</div>
-          <div class="tool-desc">Create a new file or completely replace an existing file's content. Preferred for new notes or full rewrites.</div>
+          <div class="tool-desc" data-i18n="pages.tools.writeFile.desc">Create a new file or completely replace an existing file's content. Preferred for new notes or full rewrites.</div>
         </div>
         <div class="tool-card">
           <span class="tool-group-badge badge-edit">edit</span>
           <div class="tool-name">edit_file</div>
-          <div class="tool-desc">Replace a specific string in an existing file. Safer than write_file for targeted changes — preserves surrounding content.</div>
+          <div class="tool-desc" data-i18n="pages.tools.editFile.desc">Replace a specific string in an existing file. Safer than write_file for targeted changes — preserves surrounding content.</div>
         </div>
         <div class="tool-card">
           <span class="tool-group-badge badge-edit">edit</span>
           <div class="tool-name">append_to_file</div>
-          <div class="tool-desc">Append content to the end of a file. Ideal for daily notes, logs, and additive entries. Optional separator before appended content.</div>
+          <div class="tool-desc" data-i18n="pages.tools.appendToFile.desc">Append content to the end of a file. Ideal for daily notes, logs, and additive entries. Optional separator before appended content.</div>
         </div>
         <div class="tool-card">
           <span class="tool-group-badge badge-edit">edit</span>
           <div class="tool-name">update_frontmatter</div>
-          <div class="tool-desc">Set or update YAML frontmatter fields. Preserves all existing fields. Creates frontmatter if none exists.</div>
+          <div class="tool-desc" data-i18n="pages.tools.updateFrontmatter.desc">Set or update YAML frontmatter fields. Preserves all existing fields. Creates frontmatter if none exists.</div>
         </div>
         <div class="tool-card">
           <span class="tool-group-badge badge-edit">edit</span>
           <div class="tool-name">create_folder</div>
-          <div class="tool-desc">Create a folder, including all parent folders in the path.</div>
+          <div class="tool-desc" data-i18n="pages.tools.createFolder.desc">Create a folder, including all parent folders in the path.</div>
         </div>
         <div class="tool-card">
           <span class="tool-group-badge badge-edit">edit</span>
           <div class="tool-name">delete_file</div>
-          <div class="tool-desc">Move a file or empty folder to the Obsidian trash (recoverable). Does not permanently delete.</div>
+          <div class="tool-desc" data-i18n="pages.tools.deleteFile.desc">Move a file or empty folder to the Obsidian trash (recoverable). Does not permanently delete.</div>
         </div>
         <div class="tool-card">
           <span class="tool-group-badge badge-edit">edit</span>
           <div class="tool-name">move_file</div>
-          <div class="tool-desc">Move or rename a file or folder. Updates wikilinks automatically via Obsidian's link resolver.</div>
+          <div class="tool-desc" data-i18n="pages.tools.moveFile.desc">Move or rename a file or folder. Updates wikilinks automatically via Obsidian's link resolver.</div>
         </div>
       </div>
 
-      <h3>Parameters: edit_file</h3>
-      <table>
+      <h3 data-i18n-html="pages.tools.editFile.paramsHeading">Parameters: edit_file</h3>
+      <table data-i18n-html="pages.tools.editFile.table">
         <thead><tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
         <tbody>
           <tr><td><code>path</code></td><td>string</td><td>yes</td><td>Vault-relative file path</td></tr>
@@ -236,28 +243,28 @@
       </table>
 
       <!-- ADVANCED VAULT -->
-      <h2 id="advanced">Advanced Vault Tools</h2>
+      <h2 id="advanced" data-i18n="pages.tools.advanced">Advanced Vault Tools</h2>
 
       <div class="tool-grid">
         <div class="tool-card">
           <span class="tool-group-badge badge-edit">edit</span>
           <div class="tool-name">generate_canvas</div>
-          <div class="tool-desc">Create an Obsidian Canvas (.canvas) file visualizing notes and their connections. Supports folder, tag, backlinks, and manual file list modes.</div>
+          <div class="tool-desc" data-i18n="pages.tools.generateCanvas.desc">Create an Obsidian Canvas (.canvas) file visualizing notes and their connections. Supports folder, tag, backlinks, and manual file list modes.</div>
         </div>
         <div class="tool-card">
           <span class="tool-group-badge badge-edit">edit</span>
           <div class="tool-name">create_base</div>
-          <div class="tool-desc">Create an Obsidian Bases (.base) database view file with configurable filters, columns, and sort order.</div>
+          <div class="tool-desc" data-i18n="pages.tools.createBase.desc">Create an Obsidian Bases (.base) database view file with configurable filters, columns, and sort order.</div>
         </div>
         <div class="tool-card">
           <span class="tool-group-badge badge-edit">edit</span>
           <div class="tool-name">update_base</div>
-          <div class="tool-desc">Add or replace a named view in an existing Bases file.</div>
+          <div class="tool-desc" data-i18n="pages.tools.updateBase.desc">Add or replace a named view in an existing Bases file.</div>
         </div>
       </div>
 
-      <h3>Parameters: generate_canvas</h3>
-      <table>
+      <h3 data-i18n-html="pages.tools.generateCanvas.paramsHeading">Parameters: generate_canvas</h3>
+      <table data-i18n-html="pages.tools.generateCanvas.table">
         <thead><tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
         <tbody>
           <tr><td><code>output_path</code></td><td>string</td><td>yes</td><td>Path for the output .canvas file</td></tr>
@@ -350,12 +357,12 @@
 
       <div class="page-nav">
         <a href="semantic-search.html" class="page-nav-item">
-          <span class="page-nav-label">Previous</span>
-          <span class="page-nav-title">← Semantic Search</span>
+          <span class="page-nav-label" data-i18n="nav.previous">Previous</span>
+          <span class="page-nav-title">← <span data-i18n="sidebar.semanticSearch">Semantic Search</span></span>
         </a>
         <a href="providers.html" class="page-nav-item next">
-          <span class="page-nav-label">Next</span>
-          <span class="page-nav-title">Providers &amp; Models →</span>
+          <span class="page-nav-label" data-i18n="nav.next">Next</span>
+          <span class="page-nav-title"><span data-i18n="sidebar.providersModels">Providers &amp; Models</span> →</span>
         </a>
       </div>
     </article>
@@ -363,9 +370,10 @@
 </div>
 
 <footer class="footer">
-  <p class="footer-credits">Obsilo Agent <script>document.write(new Date().getFullYear())</script> &middot; <a href="https://github.com/pssah4/obsilo-public/blob/main/LICENSE">Apache 2.0</a> &middot; <a href="https://github.com/pssah4/obsilo-public/blob/main/NOTICE.md">Notice</a> &middot; <a href="imprint.html">Imprint</a></p>
-  <p class="footer-disclaimer">Provided as-is, without any warranty or liability.</p>
+  <p class="footer-credits">Obsilo Agent <script>document.write(new Date().getFullYear())</script> &middot; <a href="https://github.com/pssah4/obsilo-public/blob/main/LICENSE" data-i18n="footer.license">Apache 2.0</a> &middot; <a href="https://github.com/pssah4/obsilo-public/blob/main/NOTICE.md" data-i18n="footer.notice">Notice</a> &middot; <a href="imprint.html" data-i18n="footer.imprint">Imprint</a></p>
+  <p class="footer-disclaimer" data-i18n="footer.disclaimer">Provided as-is, without any warranty or liability.</p>
 </footer>
+<script src="assets/i18n.js"></script>
 <script src="assets/search.js" defer></script>
 </body>
 </html>

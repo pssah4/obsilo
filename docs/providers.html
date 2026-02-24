@@ -6,7 +6,7 @@
   <title>Providers &amp; Models — Obsilo Agent Docs</title>
   <link rel="icon" type="image/png" href="assets/OBSILO_ICON50x50_lila.png">
   <link rel="stylesheet" href="assets/style.css">
-  <script>(function(){var t=localStorage.getItem('theme')||'dark';document.documentElement.setAttribute('data-theme',t)})()</script>
+  <script>(function(){var t=localStorage.getItem('theme')||'dark';document.documentElement.setAttribute('data-theme',t)})();(function(){var l=localStorage.getItem('lang');if(l)document.documentElement.setAttribute('lang',l)})()</script>
 </head>
 <body>
 
@@ -15,50 +15,57 @@
     <img src="assets/OBSILO_LOGOFULL_SW_v2.png" alt="Obsilo" class="logo-img">
   </a>
   <nav class="header-links">
-    <a href="getting-started.html">Docs</a>
-    <a href="about.html">About</a>
-    <a href="https://github.com/pssah4/obsilo-public" class="github-btn"><svg aria-hidden="true" height="16" viewBox="0 0 16 16" width="16" class="github-icon"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg> GitHub</a>
+    <a href="getting-started.html" data-i18n="header.docs">Docs</a>
+    <a href="about.html" data-i18n="header.about">About</a>
+    <a href="https://github.com/pssah4/obsilo-public" class="github-btn"><svg aria-hidden="true" height="16" viewBox="0 0 16 16" width="16" class="github-icon"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg> <span data-i18n="header.github">GitHub</span></a>
     <a href="https://buymeacoffee.com/sebastianhanke" target="_blank" rel="noopener noreferrer"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" class="bmc-header-btn"></a>
   </nav>
   <div class="spacer"></div>
-  <button class="theme-toggle" aria-label="Toggle theme" onclick="toggleTheme()">
+  <button class="theme-toggle" aria-label="Toggle theme" data-i18n-aria="header.toggleTheme" onclick="toggleTheme()">
     <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
     <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
   </button>
-  <button class="search-btn" onclick="openDocsSearch()" aria-label="Search docs"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Search</button>
+  <div class="lang-switcher">
+    <button class="lang-toggle" onclick="toggleLangDropdown(event)" aria-label="Switch language" data-i18n-aria="header.switchLang">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+      <span class="lang-toggle-label">EN</span>
+    </button>
+    <div class="lang-dropdown"></div>
+  </div>
+  <button class="search-btn" onclick="openDocsSearch()" aria-label="Search docs" data-i18n-aria="header.search"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span data-i18n="header.search">Search</span></button>
 </header>
 <script>function toggleTheme(){var h=document.documentElement,n=h.getAttribute('data-theme')==='light'?'dark':'light';h.setAttribute('data-theme',n);localStorage.setItem('theme',n);document.querySelectorAll('.logo-img').forEach(function(i){i.src=n==='light'?'assets/OBSILO_LOGOFULL_v2.png':'assets/OBSILO_LOGOFULL_SW_v2.png'})}(function(){var t=document.documentElement.getAttribute('data-theme');if(t==='light'){document.querySelectorAll('.logo-img').forEach(function(i){i.src='assets/OBSILO_LOGOFULL_v2.png'})}})()</script>
 
 <div class="docs-layout">
   <aside class="docs-sidebar">
     <div class="sidebar-section">
-      <div class="sidebar-section-title">Get Started</div>
-      <nav class="sidebar-nav"><a href="getting-started.html">Getting Started</a></nav>
+      <div class="sidebar-section-title" data-i18n="sidebar.getStarted">Get Started</div>
+      <nav class="sidebar-nav"><a href="getting-started.html" data-i18n="sidebar.gettingStarted">Getting Started</a></nav>
     </div>
     <div class="sidebar-section">
-      <div class="sidebar-section-title">Using Obsilo</div>
+      <div class="sidebar-section-title" data-i18n="sidebar.usingObsilo">Using Obsilo</div>
       <nav class="sidebar-nav">
-        <a href="chat-interface.html">Chat Interface</a>
-        <a href="memory.html">Memory &amp; Chat History</a>
-        <a href="modes.html">Modes</a>
-        <a href="permissions.html">Permissions &amp; Safety</a>
+        <a href="chat-interface.html" data-i18n="sidebar.chatInterface">Chat Interface</a>
+        <a href="memory.html" data-i18n="sidebar.memoryHistory">Memory &amp; Chat History</a>
+        <a href="modes.html" data-i18n="sidebar.modes">Modes</a>
+        <a href="permissions.html" data-i18n="sidebar.permissionsSafety">Permissions &amp; Safety</a>
       </nav>
     </div>
     <div class="sidebar-section">
-      <div class="sidebar-section-title">Context &amp; Knowledge</div>
+      <div class="sidebar-section-title" data-i18n="sidebar.contextKnowledge">Context &amp; Knowledge</div>
       <nav class="sidebar-nav">
-        <a href="rules-skills-workflows.html">Rules, Skills &amp; Workflows</a>
-        <a href="semantic-search.html">Semantic Search</a>
+        <a href="rules-skills-workflows.html" data-i18n="sidebar.rulesSkillsWorkflows">Rules, Skills &amp; Workflows</a>
+        <a href="semantic-search.html" data-i18n="sidebar.semanticSearch">Semantic Search</a>
       </nav>
     </div>
     <div class="sidebar-section">
-      <div class="sidebar-section-title">Reference</div>
+      <div class="sidebar-section-title" data-i18n="sidebar.reference">Reference</div>
       <nav class="sidebar-nav">
-        <a href="tools.html">Tools Reference</a>
-        <a href="providers.html" class="active">Providers &amp; Models</a>
-        <a href="mcp-servers.html">MCP Servers</a>
-        <a href="checkpoints.html">Checkpoints</a>
-        <a href="settings-reference.html">Settings Reference</a>
+        <a href="tools.html" data-i18n="sidebar.toolsRef">Tools Reference</a>
+        <a href="providers.html" class="active" data-i18n="sidebar.providersModels">Providers &amp; Models</a>
+        <a href="mcp-servers.html" data-i18n="sidebar.mcpServers">MCP Servers</a>
+        <a href="checkpoints.html" data-i18n="sidebar.checkpoints">Checkpoints</a>
+        <a href="settings-reference.html" data-i18n="sidebar.settingsRef">Settings Reference</a>
       </nav>
     </div>
   </aside>
@@ -66,17 +73,17 @@
   <main class="docs-main">
     <article class="docs-content">
       <div class="breadcrumb">
-        <a href="index.html">Docs</a> <span class="breadcrumb-sep">›</span>
+        <a href="index.html" data-i18n="breadcrumb.docs">Docs</a> <span class="breadcrumb-sep">›</span>
         Reference <span class="breadcrumb-sep">›</span>
-        Providers &amp; Models
+        <span data-i18n="breadcrumb.providersModels">Providers &amp; Models</span>
       </div>
 
-      <h1>Providers &amp; Models</h1>
-      <p>Configure the AI models that power Obsilo. You can add multiple models from different providers and switch between them per-chat or per-mode.</p>
+      <h1 data-i18n="pages.providers.title">Providers &amp; Models</h1>
+      <p data-i18n="pages.providers.subtitle">Configure the AI models that power Obsilo. You can add multiple models from different providers and switch between them per-chat or per-mode.</p>
 
-      <h2 id="supported-providers">Supported Providers</h2>
+      <h2 id="supported-providers" data-i18n="pages.providers.supportedProviders">Supported Providers</h2>
 
-      <table>
+      <table data-i18n-html="pages.providers.supportedProviders.table">
         <thead><tr><th>Provider</th><th>Type</th><th>API Key Required</th><th>Local</th></tr></thead>
         <tbody>
           <tr><td><strong>Anthropic</strong></td><td>Cloud</td><td>Yes</td><td>No</td></tr>
@@ -89,11 +96,11 @@
         </tbody>
       </table>
 
-      <h2 id="built-in-models">Built-in Models</h2>
-      <p>Obsilo ships with pre-configured entries for popular models. Enable them in Settings → Providers → Models and add your API key:</p>
+      <h2 id="built-in-models" data-i18n="pages.providers.builtInModels">Built-in Models</h2>
+      <p data-i18n-html="pages.providers.builtInModels.text">Obsilo ships with pre-configured entries for popular models. Enable them in Settings → Providers → Models and add your API key:</p>
 
-      <h3>Anthropic</h3>
-      <table>
+      <h3 data-i18n="pages.providers.builtInAnthropic">Anthropic</h3>
+      <table data-i18n-html="pages.providers.builtInAnthropic.table">
         <thead><tr><th>Model ID</th><th>Display Name</th><th>Best for</th></tr></thead>
         <tbody>
           <tr><td><code>claude-opus-4-6</code></td><td>Claude Opus 4.6</td><td>Complex reasoning, long tasks</td></tr>
@@ -102,8 +109,8 @@
         </tbody>
       </table>
 
-      <h3>OpenAI</h3>
-      <table>
+      <h3 data-i18n="pages.providers.builtInOpenai">OpenAI</h3>
+      <table data-i18n-html="pages.providers.builtInOpenai.table">
         <thead><tr><th>Model ID</th><th>Display Name</th><th>Best for</th></tr></thead>
         <tbody>
           <tr><td><code>gpt-4o</code></td><td>GPT-4o</td><td>General purpose, multimodal</td></tr>
@@ -112,8 +119,8 @@
         </tbody>
       </table>
 
-      <h3>Ollama (Local)</h3>
-      <table>
+      <h3 data-i18n="pages.providers.builtInOllama">Ollama (Local)</h3>
+      <table data-i18n-html="pages.providers.builtInOllama.table">
         <thead><tr><th>Model ID</th><th>Display Name</th><th>Notes</th></tr></thead>
         <tbody>
           <tr><td><code>llama3.2</code></td><td>Llama 3.2 (local)</td><td>Good general-purpose local model</td></tr>
@@ -121,8 +128,8 @@
         </tbody>
       </table>
 
-      <h3>OpenRouter (Free Tier Available)</h3>
-      <table>
+      <h3 data-i18n="pages.providers.builtInOpenrouter">OpenRouter (Free Tier Available)</h3>
+      <table data-i18n-html="pages.providers.builtInOpenrouter.table">
         <thead><tr><th>Model ID</th><th>Display Name</th><th>Notes</th></tr></thead>
         <tbody>
           <tr><td><code>anthropic/claude-3.5-sonnet</code></td><td>Claude 3.5 Sonnet</td><td>Via OpenRouter</td></tr>
@@ -131,8 +138,8 @@
         </tbody>
       </table>
 
-      <h2 id="adding-model">Adding a Model</h2>
-      <ol class="steps">
+      <h2 id="adding-model" data-i18n="pages.providers.addingModel">Adding a Model</h2>
+      <ol class="steps" data-i18n-html="pages.providers.addingModel.list">
         <li>Go to Settings → Providers → <strong>Models</strong></li>
         <li>Find the model in the list and click <strong>Edit</strong>, or click <strong>Add Custom Model</strong> for a new one</li>
         <li>Enter your <strong>API Key</strong></li>
@@ -141,68 +148,68 @@
         <li>Toggle the model <strong>Enabled</strong> to make it available in the model selector</li>
       </ol>
 
-      <h2 id="provider-setup">Provider-Specific Setup</h2>
+      <h2 id="provider-setup" data-i18n="pages.providers.providerSetup">Provider-Specific Setup</h2>
 
-      <h3 id="anthropic">Anthropic</h3>
-      <ul>
+      <h3 id="anthropic" data-i18n="pages.providers.anthropic">Anthropic</h3>
+      <ul data-i18n-html="pages.providers.anthropic.list">
         <li>Get your API key at <a href="https://console.anthropic.com">console.anthropic.com</a></li>
         <li>Key format: <code>sk-ant-api03-...</code></li>
         <li>No base URL needed (uses default Anthropic endpoint)</li>
       </ul>
 
-      <h3 id="openai">OpenAI</h3>
-      <ul>
+      <h3 id="openai" data-i18n="pages.providers.openai">OpenAI</h3>
+      <ul data-i18n-html="pages.providers.openai.list">
         <li>Get your API key at <a href="https://platform.openai.com/api-keys">platform.openai.com/api-keys</a></li>
         <li>Key format: <code>sk-proj-...</code> or <code>sk-...</code></li>
         <li>No base URL needed (uses default OpenAI endpoint)</li>
       </ul>
 
-      <h3 id="openrouter">OpenRouter</h3>
-      <ul>
+      <h3 id="openrouter" data-i18n="pages.providers.openrouter">OpenRouter</h3>
+      <ul data-i18n-html="pages.providers.openrouter.list">
         <li>Get your API key at <a href="https://openrouter.ai/keys">openrouter.ai/keys</a></li>
         <li>Base URL is pre-configured: <code>https://openrouter.ai/api/v1</code></li>
         <li>Model IDs follow the format <code>provider/model-name</code></li>
         <li>Free models are available — check the OpenRouter catalog</li>
       </ul>
 
-      <h3 id="ollama">Ollama (Local)</h3>
-      <ol class="steps">
+      <h3 id="ollama" data-i18n="pages.providers.ollama">Ollama (Local)</h3>
+      <ol class="steps" data-i18n-html="pages.providers.ollama.list">
         <li>Install Ollama from <a href="https://ollama.ai">ollama.ai</a></li>
         <li>Pull a model: <code>ollama pull llama3.2</code></li>
         <li>Start the server: <code>ollama serve</code> (usually starts automatically)</li>
         <li>In Obsilo: Base URL = <code>http://localhost:11434</code>, no API key needed</li>
       </ol>
-      <div class="callout callout-note">
+      <div class="callout callout-note" data-i18n-html="pages.providers.ollama.callout">
         <strong>Model ID format for Ollama</strong>
         Use the exact model name as shown in <code>ollama list</code> — e.g., <code>llama3.2</code>, <code>qwen2.5:7b</code>, <code>codellama</code>.
       </div>
 
-      <h3 id="lmstudio">LM Studio</h3>
-      <ul>
+      <h3 id="lmstudio" data-i18n="pages.providers.lmstudio">LM Studio</h3>
+      <ul data-i18n-html="pages.providers.lmstudio.list">
         <li>Download LM Studio from <a href="https://lmstudio.ai">lmstudio.ai</a></li>
         <li>Start the local server in LM Studio (usually port 1234)</li>
         <li>Base URL: <code>http://localhost:1234/v1</code></li>
         <li>Model ID: use the model name shown in LM Studio (e.g., <code>Meta-Llama-3.1-8B-Instruct-GGUF</code>)</li>
       </ul>
 
-      <h3 id="azure">Azure OpenAI</h3>
-      <ul>
+      <h3 id="azure" data-i18n="pages.providers.azure">Azure OpenAI</h3>
+      <ul data-i18n-html="pages.providers.azure.list">
         <li>Base URL format: <code>https://YOUR-RESOURCE.openai.azure.com/openai/deployments/YOUR-DEPLOYMENT</code></li>
         <li>API Version: e.g., <code>2024-10-21</code> (required for Azure)</li>
         <li>API Key: your Azure OpenAI key</li>
         <li>Model ID: your deployment name in Azure</li>
       </ul>
 
-      <h3 id="custom">Custom (OpenAI-Compatible)</h3>
-      <p>Use this for any server with an OpenAI-compatible API:</p>
-      <ul>
+      <h3 id="custom" data-i18n="pages.providers.custom">Custom (OpenAI-Compatible)</h3>
+      <p data-i18n="pages.providers.custom.text">Use this for any server with an OpenAI-compatible API:</p>
+      <ul data-i18n-html="pages.providers.custom.list">
         <li>Set the <strong>Base URL</strong> to your server's base (e.g., <code>http://my-server:8000/v1</code>)</li>
         <li>Set the <strong>Model ID</strong> to the model name your server expects</li>
         <li>Add an <strong>API Key</strong> if your server requires one</li>
       </ul>
 
-      <h2 id="model-settings">Per-Model Settings</h2>
-      <table>
+      <h2 id="model-settings" data-i18n="pages.providers.modelSettings">Per-Model Settings</h2>
+      <table data-i18n-html="pages.providers.modelSettings.table">
         <thead><tr><th>Setting</th><th>Default</th><th>Description</th></tr></thead>
         <tbody>
           <tr><td>Temperature</td><td>Provider default</td><td>Creativity/randomness (0.0 = deterministic, 1.0 = creative)</td></tr>
@@ -211,12 +218,12 @@
         </tbody>
       </table>
 
-      <h2 id="embedding-models">Embedding Models</h2>
-      <p>Embedding models are separate from chat models and are used for the Semantic Index. Configure them in Settings → Providers → <strong>Embeddings</strong>.</p>
+      <h2 id="embedding-models" data-i18n="pages.providers.embeddingModels">Embedding Models</h2>
+      <p data-i18n-html="pages.providers.embeddingModels.text">Embedding models are separate from chat models and are used for the Semantic Index. Configure them in Settings → Providers → <strong>Embeddings</strong>.</p>
 
-      <h3>Local Embedding Models (Xenova)</h3>
-      <p>These run entirely locally using ONNX via Xenova/transformers. They download once (~23-90MB) and then run offline:</p>
-      <table>
+      <h3 data-i18n="pages.providers.localEmbeddings">Local Embedding Models (Xenova)</h3>
+      <p data-i18n="pages.providers.localEmbeddings.text">These run entirely locally using ONNX via Xenova/transformers. They download once (~23-90MB) and then run offline:</p>
+      <table data-i18n-html="pages.providers.localEmbeddings.table">
         <thead><tr><th>Model</th><th>Dimensions</th><th>Languages</th><th>Notes</th></tr></thead>
         <tbody>
           <tr><td><code>Xenova/all-MiniLM-L6-v2</code></td><td>384</td><td>English</td><td>Default. Fast and good quality.</td></tr>
@@ -226,9 +233,9 @@
         </tbody>
       </table>
 
-      <h3>API Embedding Models</h3>
-      <p>Use OpenAI's or another provider's embedding API:</p>
-      <table>
+      <h3 data-i18n="pages.providers.apiEmbeddings">API Embedding Models</h3>
+      <p data-i18n="pages.providers.apiEmbeddings.text">Use OpenAI's or another provider's embedding API:</p>
+      <table data-i18n-html="pages.providers.apiEmbeddings.table">
         <thead><tr><th>Model</th><th>Provider</th><th>Dimensions</th><th>Notes</th></tr></thead>
         <tbody>
           <tr><td><code>text-embedding-3-small</code></td><td>OpenAI</td><td>1536</td><td>High quality, requires API key</td></tr>
@@ -236,25 +243,25 @@
         </tbody>
       </table>
 
-      <div class="callout callout-warning">
+      <div class="callout callout-warning" data-i18n-html="pages.providers.embeddingModels.callout">
         <strong>Changing the embedding model requires a full index rebuild.</strong>
         Vectors from different models are not compatible. If you switch models, go to Settings → Semantic Index and rebuild the index.
       </div>
 
-      <h2 id="global-instructions">Global Custom Instructions</h2>
-      <p>In Settings → Providers → Models, you can set <strong>Global Custom Instructions</strong>. These are appended to the system prompt for <em>every</em> mode. Use them for universal preferences that apply regardless of what the agent is doing:</p>
+      <h2 id="global-instructions" data-i18n="pages.providers.globalInstructions">Global Custom Instructions</h2>
+      <p data-i18n-html="pages.providers.globalInstructions.text">In Settings → Providers → Models, you can set <strong>Global Custom Instructions</strong>. These are appended to the system prompt for <em>every</em> mode. Use them for universal preferences that apply regardless of what the agent is doing:</p>
       <pre><code>Always respond in German.
 When creating frontmatter, include: title, tags, created, status.
 Prefer concise responses — use bullet points over prose.</code></pre>
 
       <div class="page-nav">
         <a href="tools.html" class="page-nav-item">
-          <span class="page-nav-label">Previous</span>
-          <span class="page-nav-title">← Tools Reference</span>
+          <span class="page-nav-label" data-i18n="nav.previous">Previous</span>
+          <span class="page-nav-title">← <span data-i18n="sidebar.toolsRef">Tools Reference</span></span>
         </a>
         <a href="mcp-servers.html" class="page-nav-item next">
-          <span class="page-nav-label">Next</span>
-          <span class="page-nav-title">MCP Servers →</span>
+          <span class="page-nav-label" data-i18n="nav.next">Next</span>
+          <span class="page-nav-title"><span data-i18n="sidebar.mcpServers">MCP Servers</span> →</span>
         </a>
       </div>
     </article>
@@ -262,9 +269,10 @@ Prefer concise responses — use bullet points over prose.</code></pre>
 </div>
 
 <footer class="footer">
-  <p class="footer-credits">Obsilo Agent <script>document.write(new Date().getFullYear())</script> &middot; <a href="https://github.com/pssah4/obsilo-public/blob/main/LICENSE">Apache 2.0</a> &middot; <a href="https://github.com/pssah4/obsilo-public/blob/main/NOTICE.md">Notice</a> &middot; <a href="imprint.html">Imprint</a></p>
-  <p class="footer-disclaimer">Provided as-is, without any warranty or liability.</p>
+  <p class="footer-credits">Obsilo Agent <script>document.write(new Date().getFullYear())</script> &middot; <a href="https://github.com/pssah4/obsilo-public/blob/main/LICENSE" data-i18n="footer.license">Apache 2.0</a> &middot; <a href="https://github.com/pssah4/obsilo-public/blob/main/NOTICE.md" data-i18n="footer.notice">Notice</a> &middot; <a href="imprint.html" data-i18n="footer.imprint">Imprint</a></p>
+  <p class="footer-disclaimer" data-i18n="footer.disclaimer">Provided as-is, without any warranty or liability.</p>
 </footer>
+<script src="assets/i18n.js"></script>
 <script src="assets/search.js" defer></script>
 </body>
 </html>

@@ -128,8 +128,6 @@ export class AgentTask {
         rulesContent?: string,
         skillsSection?: string,
         mcpClient?: McpClient,
-        /** Session-only tool override: list of enabled tool names for this task only */
-        sessionToolOverride?: string[],
         /** Per-mode MCP server whitelist — undefined = all servers allowed */
         allowedMcpServers?: string[],
         /** Pre-built memory context for system prompt injection */
@@ -235,7 +233,6 @@ export class AgentTask {
                 rulesContent,
                 skillsSection,
                 mcpClient,
-                undefined,          // no per-session tool override for subtasks
                 allowedMcpServers,
                 undefined,          // no per-subtask memory context
                 pluginSkillsSection,
@@ -255,7 +252,7 @@ export class AgentTask {
             const webEnabled = this.modeService?.isWebEnabled() ?? false;
             cachedSystemPrompt = buildSystemPromptForMode(activeMode, allModes, globalCustomInstructions, includeTime, rulesContent, skillsSection, mcpClient, allowedMcpServers, memoryContext, pluginSkillsSection, this.depth > 0, webEnabled);
             cachedTools = this.modeService
-                ? this.modeService.getToolDefinitions(activeMode, sessionToolOverride)
+                ? this.modeService.getToolDefinitions(activeMode)
                 : this.toolRegistry.getToolDefinitions();
             cachedPromptMode = activeMode.slug;
             cacheInvalidated = false;

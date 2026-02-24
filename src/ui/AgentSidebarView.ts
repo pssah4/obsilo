@@ -8,6 +8,7 @@ import type { CustomModel, ProviderType } from '../types/settings';
 import { buildApiHandler, buildApiHandlerForModel } from '../api/index';
 import { resolvePromptContent } from '../core/context/SupportPrompts';
 import { ToolPickerPopover } from './sidebar/ToolPickerPopover';
+import { TOOL_METADATA } from '../core/tools/toolMetadata';
 import { AttachmentHandler } from './sidebar/AttachmentHandler';
 import type { AttachmentItem } from './sidebar/AttachmentHandler';
 import { AutocompleteHandler } from './sidebar/AutocompleteHandler';
@@ -62,7 +63,9 @@ export class AgentSidebarView extends ItemView {
 
     // Tool picker (pocket-knife button)
     private toolPickerButton: HTMLElement | null = null;
-    /** Manages tool/skill/workflow picker and session overrides */
+    // Web search toggle button (globe icon)
+    private webToggleButton: HTMLElement | null = null;
+    /** Manages tool/skill/workflow picker */
     private toolPicker!: ToolPickerPopover;
     /** Manages pending attachments and chip bar UI */
     private attachments!: AttachmentHandler;
@@ -292,6 +295,15 @@ export class AgentSidebarView extends ItemView {
         this.toolPickerButton.addEventListener('click', (e) => this.toolPicker.show(e, this.toolPickerButton!, this.containerEl as HTMLElement));
         this.updateToolPickerButton();
 
+        // Web search toggle (globe icon) — quick toggle for webTools.enabled
+        this.webToggleButton = toolbarLeft.createEl('button', {
+            cls: 'toolbar-button toolbar-ghost web-toggle-button',
+            attr: { 'aria-label': 'Toggle web search' },
+        });
+        setIcon(this.webToggleButton.createSpan('toolbar-icon'), 'globe');
+        this.webToggleButton.addEventListener('click', () => this.toggleWebSearch());
+        this.updateWebToggleButton();
+
         // Attach file button (ghost style)
         const attachBtn = toolbarLeft.createEl('button', {
             cls: 'toolbar-button toolbar-ghost attach-button',
@@ -447,6 +459,37 @@ export class AgentSidebarView extends ItemView {
         if (!this.toolPickerButton) return;
         const isAsk = this.plugin.settings.currentMode === 'ask';
         this.toolPickerButton.style.display = isAsk ? 'none' : '';
+        this.updateWebToggleButton();
+    }
+
+    private async toggleWebSearch(): Promise<void> {
+        const isEnabled = this.plugin.settings.webTools?.enabled ?? false;
+        const newState = !isEnabled;
+        if (!this.plugin.settings.webTools) {
+            this.plugin.settings.webTools = { enabled: false, provider: 'none', braveApiKey: '', tavilyApiKey: '' };
+        }
+        this.plugin.settings.webTools.enabled = newState;
+        await this.plugin.saveSettings();
+        this.updateWebToggleButton();
+
+        // Check for missing provider/API key and show notice
+        if (newState) {
+            const provider = this.plugin.settings.webTools.provider;
+            if (!provider || provider === 'none') {
+                new Notice('Web search enabled. Set a search provider in Settings > Web Search.');
+            }
+        }
+    }
+
+    private updateWebToggleButton(): void {
+        if (!this.webToggleButton) return;
+        // Only show when the active mode supports web tools
+        const mode = this.modeService.getMode(this.plugin.settings.currentMode);
+        const modeHasWeb = mode?.toolGroups?.includes('web') ?? false;
+        this.webToggleButton.style.display = modeHasWeb ? '' : 'none';
+        // Visual state: active (highlighted) or inactive (ghost)
+        const isEnabled = this.plugin.settings.webTools?.enabled ?? false;
+        this.webToggleButton.classList.toggle('web-toggle-active', isEnabled);
     }
 
     private showModeMenu(event: MouseEvent): void {
@@ -1545,15 +1588,13 @@ export class AgentSidebarView extends ItemView {
                 ? messageToSend
                 : (messageToSend as any[]).find((b: any) => b.type === 'text')?.text ?? '';
             const forcedSkillNames = [
-                ...(this.toolPicker.sessionForcedSkills.get(activeMode.slug) ?? this.plugin.settings.forcedSkills?.[activeMode.slug] ?? []),
+                ...(this.plugin.settings.forcedSkills?.[activeMode.slug] ?? []),
             ];
             skillsSection = await this.buildSkillsSection(userMessageText, forcedSkillNames);
         }
 
         // Apply forced workflow from tool picker (when message doesn't start with slash command)
-        const forcedWorkflowSlug = this.toolPicker.sessionForcedWorkflow.get(activeMode.slug)
-            ?? this.plugin.settings.forcedWorkflow?.[activeMode.slug]
-            ?? '';
+        const forcedWorkflowSlug = this.plugin.settings.forcedWorkflow?.[activeMode.slug] ?? '';
         if (typeof messageToSend === 'string' && !text.startsWith('/') && forcedWorkflowSlug) {
             const workflowLoader = (this.plugin as any).workflowLoader;
             if (workflowLoader) {
@@ -1573,7 +1614,6 @@ export class AgentSidebarView extends ItemView {
         const pluginSkillsSection = isOnboarding ? undefined
             : (this.plugin as any).skillRegistry?.getPluginSkillsPromptSection() as string | undefined;
 
-        const sessionToolOverride = this.toolPicker.sessionToolOverrides.get(activeMode.slug);
         const allowedMcpServers = this.plugin.settings.modeMcpServers?.[activeMode.slug];
 
         // Load memory context for system prompt injection
@@ -1628,7 +1668,6 @@ export class AgentSidebarView extends ItemView {
             rulesContent || undefined,
             skillsSection || undefined,
             this.plugin.mcpClient,
-            sessionToolOverride,
             allowedMcpServers,
             memoryContext,
             pluginSkillsSection || undefined,
@@ -2017,45 +2056,11 @@ export class AgentSidebarView extends ItemView {
     // -------------------------------------------------------------------------
 
     private getToolIcon(toolName: string): string {
-        const icons: Record<string, string> = {
-            read_file: 'file-text',
-            write_file: 'file-edit',
-            edit_file: 'pencil',
-            append_to_file: 'file-plus',
-            list_files: 'list',
-            search_files: 'search',
-            create_folder: 'folder-plus',
-            delete_file: 'trash-2',
-            move_file: 'move',
-            web_fetch: 'globe',
-            web_search: 'search',
-            use_mcp_tool: 'plug',
-            ask_followup_question: 'help-circle',
-            attempt_completion: 'check-circle-2',
-            update_todo_list: 'list-checks',
-        };
-        return icons[toolName] ?? 'terminal';
+        return TOOL_METADATA[toolName]?.icon ?? 'terminal';
     }
 
     private formatToolLabel(toolName: string): string {
-        const labels: Record<string, string> = {
-            read_file: 'Read file',
-            write_file: 'Write file',
-            edit_file: 'Edit file',
-            append_to_file: 'Append',
-            list_files: 'List files',
-            search_files: 'Search',
-            create_folder: 'Create folder',
-            delete_file: 'Delete file',
-            move_file: 'Move file',
-            web_fetch: 'Fetch URL',
-            web_search: 'Web search',
-            use_mcp_tool: 'MCP tool',
-            ask_followup_question: 'Question',
-            attempt_completion: 'Complete',
-            update_todo_list: 'Update todos',
-        };
-        return labels[toolName] ?? toolName;
+        return TOOL_METADATA[toolName]?.label ?? toolName;
     }
 
     private getToolBriefParam(input: Record<string, any>): string {

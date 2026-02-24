@@ -6,7 +6,7 @@
   <title>Settings Reference — Obsilo Agent Docs</title>
   <link rel="icon" type="image/png" href="assets/OBSILO_ICON50x50_lila.png">
   <link rel="stylesheet" href="assets/style.css">
-  <script>(function(){var t=localStorage.getItem('theme')||'dark';document.documentElement.setAttribute('data-theme',t)})()</script>
+  <script>(function(){var t=localStorage.getItem('theme')||'dark';document.documentElement.setAttribute('data-theme',t)})();(function(){var l=localStorage.getItem('lang');if(l)document.documentElement.setAttribute('lang',l)})()</script>
 </head>
 <body>
 
@@ -15,50 +15,57 @@
     <img src="assets/OBSILO_LOGOFULL_SW_v2.png" alt="Obsilo" class="logo-img">
   </a>
   <nav class="header-links">
-    <a href="getting-started.html">Docs</a>
-    <a href="about.html">About</a>
-    <a href="https://github.com/pssah4/obsilo-public" class="github-btn"><svg aria-hidden="true" height="16" viewBox="0 0 16 16" width="16" class="github-icon"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg> GitHub</a>
+    <a href="getting-started.html" data-i18n="header.docs">Docs</a>
+    <a href="about.html" data-i18n="header.about">About</a>
+    <a href="https://github.com/pssah4/obsilo-public" class="github-btn"><svg aria-hidden="true" height="16" viewBox="0 0 16 16" width="16" class="github-icon"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg> <span data-i18n="header.github">GitHub</span></a>
     <a href="https://buymeacoffee.com/sebastianhanke" target="_blank" rel="noopener noreferrer"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" class="bmc-header-btn"></a>
   </nav>
   <div class="spacer"></div>
-  <button class="theme-toggle" aria-label="Toggle theme" onclick="toggleTheme()">
+  <button class="theme-toggle" aria-label="Toggle theme" data-i18n-aria="header.toggleTheme" onclick="toggleTheme()">
     <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
     <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
   </button>
-  <button class="search-btn" onclick="openDocsSearch()" aria-label="Search docs"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Search</button>
+  <div class="lang-switcher">
+    <button class="lang-toggle" onclick="toggleLangDropdown(event)" aria-label="Switch language" data-i18n-aria="header.switchLang">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+      <span class="lang-toggle-label">EN</span>
+    </button>
+    <div class="lang-dropdown"></div>
+  </div>
+  <button class="search-btn" onclick="openDocsSearch()" aria-label="Search docs" data-i18n-aria="header.search"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span data-i18n="header.search">Search</span></button>
 </header>
 <script>function toggleTheme(){var h=document.documentElement,n=h.getAttribute('data-theme')==='light'?'dark':'light';h.setAttribute('data-theme',n);localStorage.setItem('theme',n);document.querySelectorAll('.logo-img').forEach(function(i){i.src=n==='light'?'assets/OBSILO_LOGOFULL_v2.png':'assets/OBSILO_LOGOFULL_SW_v2.png'})}(function(){var t=document.documentElement.getAttribute('data-theme');if(t==='light'){document.querySelectorAll('.logo-img').forEach(function(i){i.src='assets/OBSILO_LOGOFULL_v2.png'})}})()</script>
 
 <div class="docs-layout">
   <aside class="docs-sidebar">
     <div class="sidebar-section">
-      <div class="sidebar-section-title">Get Started</div>
-      <nav class="sidebar-nav"><a href="getting-started.html">Getting Started</a></nav>
+      <div class="sidebar-section-title" data-i18n="sidebar.getStarted">Get Started</div>
+      <nav class="sidebar-nav"><a href="getting-started.html" data-i18n="sidebar.gettingStarted">Getting Started</a></nav>
     </div>
     <div class="sidebar-section">
-      <div class="sidebar-section-title">Using Obsilo</div>
+      <div class="sidebar-section-title" data-i18n="sidebar.usingObsilo">Using Obsilo</div>
       <nav class="sidebar-nav">
-        <a href="chat-interface.html">Chat Interface</a>
-        <a href="memory.html">Memory &amp; Chat History</a>
-        <a href="modes.html">Modes</a>
-        <a href="permissions.html">Permissions &amp; Safety</a>
+        <a href="chat-interface.html" data-i18n="sidebar.chatInterface">Chat Interface</a>
+        <a href="memory.html" data-i18n="sidebar.memoryHistory">Memory &amp; Chat History</a>
+        <a href="modes.html" data-i18n="sidebar.modes">Modes</a>
+        <a href="permissions.html" data-i18n="sidebar.permissionsSafety">Permissions &amp; Safety</a>
       </nav>
     </div>
     <div class="sidebar-section">
-      <div class="sidebar-section-title">Context &amp; Knowledge</div>
+      <div class="sidebar-section-title" data-i18n="sidebar.contextKnowledge">Context &amp; Knowledge</div>
       <nav class="sidebar-nav">
-        <a href="rules-skills-workflows.html">Rules, Skills &amp; Workflows</a>
-        <a href="semantic-search.html">Semantic Search</a>
+        <a href="rules-skills-workflows.html" data-i18n="sidebar.rulesSkillsWorkflows">Rules, Skills &amp; Workflows</a>
+        <a href="semantic-search.html" data-i18n="sidebar.semanticSearch">Semantic Search</a>
       </nav>
     </div>
     <div class="sidebar-section">
-      <div class="sidebar-section-title">Reference</div>
+      <div class="sidebar-section-title" data-i18n="sidebar.reference">Reference</div>
       <nav class="sidebar-nav">
-        <a href="tools.html">Tools Reference</a>
-        <a href="providers.html">Providers &amp; Models</a>
-        <a href="mcp-servers.html">MCP Servers</a>
-        <a href="checkpoints.html">Checkpoints</a>
-        <a href="settings-reference.html" class="active">Settings Reference</a>
+        <a href="tools.html" data-i18n="sidebar.toolsRef">Tools Reference</a>
+        <a href="providers.html" data-i18n="sidebar.providersModels">Providers &amp; Models</a>
+        <a href="mcp-servers.html" data-i18n="sidebar.mcpServers">MCP Servers</a>
+        <a href="checkpoints.html" data-i18n="sidebar.checkpoints">Checkpoints</a>
+        <a href="settings-reference.html" class="active" data-i18n="sidebar.settingsRef">Settings Reference</a>
       </nav>
     </div>
   </aside>
@@ -66,19 +73,19 @@
   <main class="docs-main">
     <article class="docs-content">
       <div class="breadcrumb">
-        <a href="index.html">Docs</a> <span class="breadcrumb-sep">›</span>
-        Reference <span class="breadcrumb-sep">›</span>
-        Settings Reference
+        <a href="index.html" data-i18n="breadcrumb.docs">Docs</a> <span class="breadcrumb-sep">&rsaquo;</span>
+        <span data-i18n="sidebar.reference">Reference</span> <span class="breadcrumb-sep">&rsaquo;</span>
+        <span data-i18n="sidebar.settingsRef">Settings Reference</span>
       </div>
 
-      <h1>Settings Reference</h1>
-      <p>Complete reference for every setting in Obsilo Agent. Open via Obsidian Settings → Obsilo Agent.</p>
+      <h1 data-i18n="pages.settingsRef.title">Settings Reference</h1>
+      <p data-i18n="pages.settingsRef.subtitle">Complete reference for every setting in Obsilo Agent. Open via Obsidian Settings → Obsilo Agent.</p>
 
       <!-- PROVIDERS -->
-      <h2 id="providers">Providers</h2>
+      <h2 id="providers" data-i18n="pages.settingsRef.providers">Providers</h2>
 
-      <h3 id="models-tab">Models</h3>
-      <table>
+      <h3 id="models-tab" data-i18n="pages.settingsRef.modelsTab">Models</h3>
+      <table data-i18n-html="pages.settingsRef.modelsTab.table">
         <thead><tr><th>Setting</th><th>Description</th></tr></thead>
         <tbody>
           <tr><td>Active Models list</td><td>List of all configured models. Each entry shows provider, name, and enabled status.</td></tr>
@@ -88,8 +95,8 @@
         </tbody>
       </table>
 
-      <h3 id="embeddings-tab">Embeddings</h3>
-      <table>
+      <h3 id="embeddings-tab" data-i18n="pages.settingsRef.embeddingsTab">Embeddings</h3>
+      <table data-i18n-html="pages.settingsRef.embeddingsTab.table">
         <thead><tr><th>Setting</th><th>Description</th></tr></thead>
         <tbody>
           <tr><td>Embedding Model</td><td>Model used to generate vectors for semantic search. Changing this requires rebuilding the index.</td></tr>
@@ -98,10 +105,10 @@
       </table>
 
       <!-- AGENT BEHAVIOUR -->
-      <h2 id="behaviour">Agent Behaviour</h2>
+      <h2 id="behaviour" data-i18n="pages.settingsRef.behaviour">Agent Behaviour</h2>
 
-      <h3 id="modes-tab">Modes</h3>
-      <table>
+      <h3 id="modes-tab" data-i18n="pages.settingsRef.modesTab">Modes</h3>
+      <table data-i18n-html="pages.settingsRef.modesTab.table">
         <thead><tr><th>Setting</th><th>Description</th></tr></thead>
         <tbody>
           <tr><td>Built-in modes</td><td>Ask and Agent modes are always present. Their role definitions can be viewed but not edited.</td></tr>
@@ -115,8 +122,8 @@
         </tbody>
       </table>
 
-      <h3 id="permissions-tab">Permissions</h3>
-      <table>
+      <h3 id="permissions-tab" data-i18n="pages.settingsRef.permissionsTab">Permissions</h3>
+      <table data-i18n-html="pages.settingsRef.permissionsTab.table">
         <thead><tr><th>Setting</th><th>Default</th><th>Description</th></tr></thead>
         <tbody>
           <tr><td>Enable Auto-Approval</td><td>Off</td><td>Master toggle. When off, every operation requires manual approval.</td></tr>
@@ -133,8 +140,8 @@
         </tbody>
       </table>
 
-      <h3 id="loop-tab">Loop</h3>
-      <table>
+      <h3 id="loop-tab" data-i18n="pages.settingsRef.loopTab">Loop</h3>
+      <table data-i18n-html="pages.settingsRef.loopTab.table">
         <thead><tr><th>Setting</th><th>Default</th><th>Description</th></tr></thead>
         <tbody>
           <tr><td>Consecutive Mistake Limit</td><td>3</td><td>Stop the agent after N consecutive tool errors. 0 = disabled.</td></tr>
@@ -145,8 +152,8 @@
         </tbody>
       </table>
 
-      <h3 id="rules-tab">Rules</h3>
-      <table>
+      <h3 id="rules-tab" data-i18n="pages.settingsRef.rulesTab">Rules</h3>
+      <table data-i18n-html="pages.settingsRef.rulesTab.table">
         <thead><tr><th>Setting</th><th>Description</th></tr></thead>
         <tbody>
           <tr><td>Rules list</td><td>All .md and .txt files in .obsidian-agent/rules/. Toggle each on/off.</td></tr>
@@ -155,8 +162,8 @@
         </tbody>
       </table>
 
-      <h3 id="workflows-tab">Workflows</h3>
-      <table>
+      <h3 id="workflows-tab" data-i18n="pages.settingsRef.workflowsTab">Workflows</h3>
+      <table data-i18n-html="pages.settingsRef.workflowsTab.table">
         <thead><tr><th>Setting</th><th>Description</th></tr></thead>
         <tbody>
           <tr><td>Workflows list</td><td>All .md and .txt files in .obsidian-agent/workflows/. Toggle each on/off. Shows the slash command slug.</td></tr>
@@ -165,8 +172,8 @@
         </tbody>
       </table>
 
-      <h3 id="skills-tab">Skills</h3>
-      <table>
+      <h3 id="skills-tab" data-i18n="pages.settingsRef.skillsTab">Skills</h3>
+      <table data-i18n-html="pages.settingsRef.skillsTab.table">
         <thead><tr><th>Setting</th><th>Description</th></tr></thead>
         <tbody>
           <tr><td>Skills list</td><td>All discovered SKILL.md files. Shows name, description (used for keyword matching), and match count.</td></tr>
@@ -175,8 +182,8 @@
         </tbody>
       </table>
 
-      <h3 id="prompts-tab">Prompts</h3>
-      <table>
+      <h3 id="prompts-tab" data-i18n="pages.settingsRef.promptsTab">Prompts</h3>
+      <table data-i18n-html="pages.settingsRef.promptsTab.table">
         <thead><tr><th>Setting</th><th>Description</th></tr></thead>
         <tbody>
           <tr><td>Custom Prompts list</td><td>All user-defined slash-command prompt templates.</td></tr>
@@ -188,8 +195,8 @@
         </tbody>
       </table>
 
-      <h3 id="mcp-tab">MCP</h3>
-      <table>
+      <h3 id="mcp-tab" data-i18n="pages.settingsRef.mcpTab">MCP</h3>
+      <table data-i18n-html="pages.settingsRef.mcpTab.table">
         <thead><tr><th>Setting</th><th>Description</th></tr></thead>
         <tbody>
           <tr><td>MCP Servers list</td><td>All configured servers with name, type, and connection status.</td></tr>
@@ -200,10 +207,10 @@
       </table>
 
       <!-- VAULT -->
-      <h2 id="vault">Vault</h2>
+      <h2 id="vault" data-i18n="pages.settingsRef.vault">Vault</h2>
 
-      <h3 id="semantic-index">Semantic Index</h3>
-      <table>
+      <h3 id="semantic-index" data-i18n="pages.settingsRef.semanticIndex">Semantic Index</h3>
+      <table data-i18n-html="pages.settingsRef.semanticIndex.table">
         <thead><tr><th>Setting</th><th>Default</th><th>Description</th></tr></thead>
         <tbody>
           <tr><td>Enable Semantic Index</td><td>Off</td><td>Master toggle for semantic search. Must be on for semantic_search tool to work.</td></tr>
@@ -219,8 +226,8 @@
         </tbody>
       </table>
 
-      <h3 id="checkpoints-settings">Checkpoints</h3>
-      <table>
+      <h3 id="checkpoints-settings" data-i18n="pages.settingsRef.checkpointsSettings">Checkpoints</h3>
+      <table data-i18n-html="pages.settingsRef.checkpointsSettings.table">
         <thead><tr><th>Setting</th><th>Default</th><th>Description</th></tr></thead>
         <tbody>
           <tr><td>Enable Checkpoints</td><td>On</td><td>Take automatic snapshots before task write operations.</td></tr>
@@ -229,16 +236,16 @@
         </tbody>
       </table>
 
-      <h3 id="chat-history-settings">Chat History</h3>
-      <table>
+      <h3 id="chat-history-settings" data-i18n="pages.settingsRef.chatHistorySettings">Chat History</h3>
+      <table data-i18n-html="pages.settingsRef.chatHistorySettings.table">
         <thead><tr><th>Setting</th><th>Default</th><th>Description</th></tr></thead>
         <tbody>
           <tr><td>Chat History Folder</td><td>(empty)</td><td>Vault folder to save conversations to. Empty = disabled. Creates JSON files per conversation.</td></tr>
         </tbody>
       </table>
 
-      <h3 id="web-search-settings">Web Search</h3>
-      <table>
+      <h3 id="web-search-settings" data-i18n="pages.settingsRef.webSearchSettings">Web Search</h3>
+      <table data-i18n-html="pages.settingsRef.webSearchSettings.table">
         <thead><tr><th>Setting</th><th>Default</th><th>Description</th></tr></thead>
         <tbody>
           <tr><td>Enable Web Tools</td><td>Off</td><td>Enable web_fetch and web_search tools.</td></tr>
@@ -249,10 +256,10 @@
       </table>
 
       <!-- ADVANCED -->
-      <h2 id="advanced">Advanced</h2>
+      <h2 id="advanced" data-i18n="pages.settingsRef.advanced">Advanced</h2>
 
-      <h3 id="interface-tab">Interface</h3>
-      <table>
+      <h3 id="interface-tab" data-i18n="pages.settingsRef.interfaceTab">Interface</h3>
+      <table data-i18n-html="pages.settingsRef.interfaceTab.table">
         <thead><tr><th>Setting</th><th>Default</th><th>Description</th></tr></thead>
         <tbody>
           <tr><td>Sidebar Position</td><td>right</td><td>"left" or "right" — which side the Obsilo panel appears on.</td></tr>
@@ -263,14 +270,14 @@
         </tbody>
       </table>
 
-      <h3 id="logs-tab">Logs</h3>
-      <p>View the operation audit trail. Logs are JSONL files at <code>.obsidian/plugins/obsidian-agent/logs/YYYY-MM-DD.jsonl</code>. Select a date to view that day's log. Retained for 30 days.</p>
+      <h3 id="logs-tab" data-i18n="pages.settingsRef.logsTab">Logs</h3>
+      <p data-i18n-html="pages.settingsRef.logsTab.text">View the operation audit trail. Logs are JSONL files at <code>.obsidian/plugins/obsidian-agent/logs/YYYY-MM-DD.jsonl</code>. Select a date to view that day's log. Retained for 30 days.</p>
 
-      <h3 id="backup-tab">Backup</h3>
-      <p>Browse and restore from task checkpoints. Each entry shows the task, timestamp, and files changed. Use Preview to see a diff and Restore to revert those files.</p>
+      <h3 id="backup-tab" data-i18n="pages.settingsRef.backupTab">Backup</h3>
+      <p data-i18n="pages.settingsRef.backupTab.text">Browse and restore from task checkpoints. Each entry shows the task, timestamp, and files changed. Use Preview to see a diff and Restore to revert those files.</p>
 
-      <h3 id="debug-tab">Debug</h3>
-      <table>
+      <h3 id="debug-tab" data-i18n="pages.settingsRef.debugTab">Debug</h3>
+      <table data-i18n-html="pages.settingsRef.debugTab.table">
         <thead><tr><th>Setting</th><th>Default</th><th>Description</th></tr></thead>
         <tbody>
           <tr><td>Debug Mode</td><td>Off</td><td>Enable verbose console logging for troubleshooting. Output visible in Obsidian developer tools (Ctrl+Shift+I).</td></tr>
@@ -279,8 +286,8 @@
 
       <div class="page-nav">
         <a href="checkpoints.html" class="page-nav-item">
-          <span class="page-nav-label">Previous</span>
-          <span class="page-nav-title">← Checkpoints</span>
+          <span class="page-nav-label" data-i18n="nav.previous">Previous</span>
+          <span class="page-nav-title">&larr; <span data-i18n="sidebar.checkpoints">Checkpoints</span></span>
         </a>
         <span></span>
       </div>
@@ -289,9 +296,10 @@
 </div>
 
 <footer class="footer">
-  <p class="footer-credits">Obsilo Agent <script>document.write(new Date().getFullYear())</script> &middot; <a href="https://github.com/pssah4/obsilo-public/blob/main/LICENSE">Apache 2.0</a> &middot; <a href="https://github.com/pssah4/obsilo-public/blob/main/NOTICE.md">Notice</a> &middot; <a href="imprint.html">Imprint</a></p>
-  <p class="footer-disclaimer">Provided as-is, without any warranty or liability.</p>
+  <p class="footer-credits">Obsilo Agent <script>document.write(new Date().getFullYear())</script> &middot; <a href="https://github.com/pssah4/obsilo-public/blob/main/LICENSE" data-i18n="footer.license">Apache 2.0</a> &middot; <a href="https://github.com/pssah4/obsilo-public/blob/main/NOTICE.md" data-i18n="footer.notice">Notice</a> &middot; <a href="imprint.html" data-i18n="footer.imprint">Imprint</a></p>
+  <p class="footer-disclaimer" data-i18n="footer.disclaimer">Provided as-is, without any warranty or liability.</p>
 </footer>
+<script src="assets/i18n.js"></script>
 <script src="assets/search.js" defer></script>
 </body>
 </html>

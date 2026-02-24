@@ -6,17 +6,10 @@ import { TOOL_METADATA, GROUP_META, getToolsForGroup } from '../../core/tools/to
 /**
  * ToolPickerPopover — manages the "pocket-knife" tool/skill/workflow picker.
  *
- * Extracted from AgentSidebarView to reduce file size.
- * Owns the three session-override Maps that are also read by handleSendMessage().
+ * All changes are immediately persisted to settings (no session-only state).
+ * Web tools are excluded — they are managed by a dedicated toggle in the toolbar.
  */
 export class ToolPickerPopover {
-    /** Session-only tool overrides: mode slug → enabled tool names (RAM only) */
-    readonly sessionToolOverrides = new Map<string, string[]>();
-    /** Session-only forced skill names: mode slug → skill names to force-include */
-    readonly sessionForcedSkills = new Map<string, string[]>();
-    /** Session-only forced workflow: mode slug → workflow slug ('' = none) */
-    readonly sessionForcedWorkflow = new Map<string, string>();
-
     private popoverEl: HTMLElement | null = null;
     private closeHandler: ((e: MouseEvent) => void) | null = null;
     private resizeHandler: (() => void) | null = null;
@@ -56,25 +49,13 @@ export class ToolPickerPopover {
         for (const [group] of Object.entries(GROUP_META)) {
             GROUP_TOOLS[group] = getToolsForGroup(group as any).map(([name]) => name);
         }
-        const GROUP_LABELS: Record<string, string> = {};
-        const GROUP_ICONS: Record<string, string> = {};
-        for (const [group, meta] of Object.entries(GROUP_META)) {
-            GROUP_LABELS[group] = meta.label;
-            GROUP_ICONS[group] = meta.icon;
-        }
-        const TOOL_LABELS: Record<string, string> = {};
-        const TOOL_ICONS: Record<string, string> = {};
-        const TOOL_DESCS: Record<string, string> = {};
-        for (const [name, meta] of Object.entries(TOOL_METADATA)) {
-            TOOL_LABELS[name] = meta.label;
-            TOOL_ICONS[name] = meta.icon;
-            TOOL_DESCS[name] = meta.description;
-        }
 
-        // Current effective tools (session → settings → defaults)
+        // Excluded groups: 'web' (dedicated toggle), 'mcp' (own section)
+        const EXCLUDED_GROUPS = new Set(['web', 'mcp']);
+
+        // Current effective tools (settings → defaults)
         const effectiveTools = new Set(
-            this.sessionToolOverrides.get(slug)
-            ?? this.plugin.settings.modeToolOverrides?.[slug]
+            this.plugin.settings.modeToolOverrides?.[slug]
             ?? this.modeService.getEffectiveToolNames(mode)
         );
         const toolChecks = new Map<string, HTMLInputElement>();
@@ -82,10 +63,12 @@ export class ToolPickerPopover {
 
         // ── Helpers ──────────────────────────────────────────────────────────
 
-        const applyToolOverride = () => {
-            const allGroupTools = mode.toolGroups.flatMap((g) => GROUP_TOOLS[g] ?? []);
+        const applyToolOverride = async () => {
+            const allGroupTools = mode.toolGroups
+                .filter((g) => !EXCLUDED_GROUPS.has(g))
+                .flatMap((g) => GROUP_TOOLS[g] ?? []);
             const selected = allGroupTools.filter((t) => toolChecks.get(t)?.checked ?? false);
-            this.sessionToolOverrides.set(slug, selected);
+            await this.modeService.setModeToolOverride(slug, selected);
         };
 
         const updateCount = () => {
@@ -151,22 +134,28 @@ export class ToolPickerPopover {
         const { catRow: builtInCatRow, catBody: builtInCatBody } = makeTopCat('Built-In');
         const builtInGroupCb = builtInCatRow.createEl('input', { type: 'checkbox' }) as HTMLInputElement;
         builtInGroupCb.className = 'tp-cat-group-cb';
-        const allBuiltInTools = mode.toolGroups.filter((g) => g !== 'mcp').flatMap((g) => GROUP_TOOLS[g] ?? []);
+        const allBuiltInTools = mode.toolGroups
+            .filter((g) => !EXCLUDED_GROUPS.has(g))
+            .flatMap((g) => GROUP_TOOLS[g] ?? []);
         const biAllEnabled = allBuiltInTools.every((t) => effectiveTools.has(t));
         const biSomeEnabled = allBuiltInTools.some((t) => effectiveTools.has(t));
         builtInGroupCb.checked = biAllEnabled;
         builtInGroupCb.indeterminate = !biAllEnabled && biSomeEnabled;
 
         for (const group of mode.toolGroups) {
-            if (group === 'mcp') continue;
+            if (EXCLUDED_GROUPS.has(group)) continue;
             const tools = (GROUP_TOOLS[group] ?? []).filter((t) => {
-                const modeTools = mode.toolGroups.flatMap((g) => GROUP_TOOLS[g] ?? []);
+                const modeTools = mode.toolGroups
+                    .filter((g) => !EXCLUDED_GROUPS.has(g))
+                    .flatMap((g) => GROUP_TOOLS[g] ?? []);
                 return modeTools.includes(t);
             });
             if (tools.length === 0) continue;
 
             const { subRow, subBody, subGroupCb } = makeSubCat(
-                builtInCatBody, GROUP_LABELS[group] ?? group, GROUP_ICONS[group] ?? 'tool',
+                builtInCatBody,
+                GROUP_META[group]?.label ?? group,
+                GROUP_META[group]?.icon ?? 'tool',
             );
             const grpAllEnabled = tools.every((t) => effectiveTools.has(t));
             const grpSomeEnabled = tools.some((t) => effectiveTools.has(t));
@@ -174,11 +163,12 @@ export class ToolPickerPopover {
             subGroupCb.indeterminate = !grpAllEnabled && grpSomeEnabled;
 
             for (const toolName of tools) {
+                const meta = TOOL_METADATA[toolName];
                 const cb = makeItemRow(
                     subBody,
-                    TOOL_LABELS[toolName] ?? toolName,
-                    TOOL_DESCS[toolName] ?? '',
-                    TOOL_ICONS[toolName] ?? 'tool',
+                    meta?.label ?? toolName,
+                    meta?.description ?? '',
+                    meta?.icon ?? 'tool',
                     effectiveTools.has(toolName),
                 );
                 toolChecks.set(toolName, cb);
@@ -272,30 +262,6 @@ export class ToolPickerPopover {
         wfGroupCb.className = 'tp-cat-group-cb';
         wfCatBody.createEl('span', { cls: 'tp-empty-hint', text: 'Loading…' });
 
-        // ── Footer ───────────────────────────────────────────────────────────
-        const footerEl = popover.createDiv('tool-picker-footer');
-        const saveBtn = footerEl.createEl('button', { cls: 'tool-picker-save-btn' });
-        const saveBtnIcon = saveBtn.createSpan('tp-save-icon');
-        setIcon(saveBtnIcon, 'save');
-        const saveBtnText = saveBtn.createSpan({ text: 'Save to Settings' });
-        saveBtn.addEventListener('click', async () => {
-            const sessionTools = this.sessionToolOverrides.get(slug);
-            if (sessionTools) await this.modeService.setModeToolOverride(slug, sessionTools);
-            const sessionSkills = this.sessionForcedSkills.get(slug);
-            if (sessionSkills !== undefined) {
-                if (!this.plugin.settings.forcedSkills) this.plugin.settings.forcedSkills = {};
-                this.plugin.settings.forcedSkills[slug] = sessionSkills;
-            }
-            const sessionWorkflow = this.sessionForcedWorkflow.get(slug);
-            if (sessionWorkflow !== undefined) {
-                if (!this.plugin.settings.forcedWorkflow) this.plugin.settings.forcedWorkflow = {};
-                this.plugin.settings.forcedWorkflow[slug] = sessionWorkflow;
-            }
-            await this.plugin.saveSettings();
-            saveBtnText.setText('Saved');
-            setTimeout(() => saveBtnText.setText('Save to Settings'), 1500);
-        });
-
         // ── Position (clamped to container bounds) ──────────────────────────
         const positionPopover = () => {
             const br = anchorBtn.getBoundingClientRect();
@@ -366,7 +332,7 @@ export class ToolPickerPopover {
                     } else {
                         const skillCbs: HTMLInputElement[] = [];
                         const activeForcedSkills = new Set(
-                            this.sessionForcedSkills.get(slug) ?? this.plugin.settings.forcedSkills?.[slug] ?? []
+                            this.plugin.settings.forcedSkills?.[slug] ?? []
                         );
                         skillsCatRow.addClass('is-open');
                         skillsCatBody.style.display = '';
@@ -376,11 +342,13 @@ export class ToolPickerPopover {
                                 activeForcedSkills.has(skill.name), 'tp-item-row tp-item-indent-cat',
                             );
                             skillCbs.push(cb);
-                            cb.addEventListener('change', () => {
-                                const cur = new Set(this.sessionForcedSkills.get(slug) ?? this.plugin.settings.forcedSkills?.[slug] ?? []);
+                            cb.addEventListener('change', async () => {
+                                const cur = new Set(this.plugin.settings.forcedSkills?.[slug] ?? []);
                                 if (cb.checked) cur.add(skill.name);
                                 else cur.delete(skill.name);
-                                this.sessionForcedSkills.set(slug, [...cur]);
+                                if (!this.plugin.settings.forcedSkills) this.plugin.settings.forcedSkills = {};
+                                this.plugin.settings.forcedSkills[slug] = [...cur];
+                                await this.plugin.saveSettings();
                                 const allSk = skillCbs.every((c) => c.checked);
                                 const someSk = skillCbs.some((c) => c.checked);
                                 skillsGroupCb.checked = allSk;
@@ -392,11 +360,13 @@ export class ToolPickerPopover {
                         const someSk = skillCbs.some((c) => c.checked);
                         skillsGroupCb.checked = allSk;
                         skillsGroupCb.indeterminate = !allSk && someSk;
-                        skillsGroupCb.addEventListener('change', () => {
+                        skillsGroupCb.addEventListener('change', async () => {
                             for (const c of skillCbs) c.checked = skillsGroupCb.checked;
                             skillsGroupCb.indeterminate = false;
                             const next = skillsGroupCb.checked ? skills.map((s: any) => s.name) : [];
-                            this.sessionForcedSkills.set(slug, next);
+                            if (!this.plugin.settings.forcedSkills) this.plugin.settings.forcedSkills = {};
+                            this.plugin.settings.forcedSkills[slug] = next;
+                            await this.plugin.saveSettings();
                             updateCount();
                         });
                     }
@@ -418,7 +388,7 @@ export class ToolPickerPopover {
                         wfGroupCb.disabled = true;
                     } else {
                         const wfCbs: HTMLInputElement[] = [];
-                        const activeWfSlug = this.sessionForcedWorkflow.get(slug) ?? this.plugin.settings.forcedWorkflow?.[slug] ?? '';
+                        const activeWfSlug = this.plugin.settings.forcedWorkflow?.[slug] ?? '';
                         wfCatRow.addClass('is-open');
                         wfCatBody.style.display = '';
                         for (const wf of workflows) {
@@ -427,23 +397,27 @@ export class ToolPickerPopover {
                                 activeWfSlug === wf.slug, 'tp-item-row tp-item-indent-cat',
                             );
                             wfCbs.push(cb);
-                            cb.addEventListener('change', () => {
+                            cb.addEventListener('change', async () => {
+                                if (!this.plugin.settings.forcedWorkflow) this.plugin.settings.forcedWorkflow = {};
                                 if (cb.checked) {
                                     for (const other of wfCbs) { if (other !== cb) other.checked = false; }
-                                    this.sessionForcedWorkflow.set(slug, wf.slug);
+                                    this.plugin.settings.forcedWorkflow[slug] = wf.slug;
                                 } else {
-                                    this.sessionForcedWorkflow.set(slug, '');
+                                    this.plugin.settings.forcedWorkflow[slug] = '';
                                 }
+                                await this.plugin.saveSettings();
                                 wfGroupCb.checked = wfCbs.some((c) => c.checked);
                                 wfGroupCb.indeterminate = false;
                                 updateCount();
                             });
                         }
                         wfGroupCb.checked = wfCbs.some((c) => c.checked);
-                        wfGroupCb.addEventListener('change', () => {
+                        wfGroupCb.addEventListener('change', async () => {
                             if (!wfGroupCb.checked) {
                                 for (const c of wfCbs) c.checked = false;
-                                this.sessionForcedWorkflow.set(slug, '');
+                                if (!this.plugin.settings.forcedWorkflow) this.plugin.settings.forcedWorkflow = {};
+                                this.plugin.settings.forcedWorkflow[slug] = '';
+                                await this.plugin.saveSettings();
                             }
                             updateCount();
                         });

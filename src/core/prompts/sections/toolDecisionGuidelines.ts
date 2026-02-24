@@ -41,11 +41,11 @@ export function getToolDecisionGuidelinesSection(): string {
 4. BATCH INDEPENDENT CALLS. Call multiple independent tools in one step (parallel execution).
 5. INTENTIONAL TOOL USE. Only call a tool when you genuinely need its result.
 6. SEARCH STRATEGY — Pick ONE tool, deliver an answer. Do NOT combine multiple search tools for the same question.
-   CRITICAL PRE-CHECK: Before choosing ANY search tool, check the user's message for internet/web signals: "im Internet", "online", "web", "aktuell", "neueste", "latest", "current". If ANY of these appear → go directly to (a). Do NOT call vault tools first.
+   CRITICAL PRE-CHECK: Before choosing ANY search tool, check the user's message for internet/web signals: "im Internet", "online", "web", "aktuell", "neueste", "latest", "current", "recherchiere". If ANY of these appear → go directly to (a). Do NOT call vault tools first.
    ROUTING: Choose the right tool based on what the user is asking:
    (a) External / current information ("search the internet", "latest news about X", "current changes in Y", "what's new in Z"):
        → web_search. The user is asking for information OUTSIDE the vault. NEVER search the vault instead.
-         If web_search is not in your tools: enable it yourself by calling update_settings(action: "set", path: "webTools.enabled", value: true). Then proceed with web_search. Do NOT fall back to vault tools — zero vault searches for internet requests.
+         If web_search is not in your tools: enable it by calling update_settings(action:"set", path:"webTools.enabled", value:true), then retry. If web_search then fails (missing provider/key), tell the user to set up a search provider: https://obsilo.app/settings-reference#web-search-settings. Do NOT fall back to vault tools.
    (b) Topical / conceptual questions about vault content ("What do I know about X?", "notes related to Y"):
        → semantic_search. Answer directly from excerpts. Done.
    (c) Tag/category filtering ("all notes tagged X", "my meeting notes"):

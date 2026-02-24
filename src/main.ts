@@ -420,16 +420,11 @@ export default class ObsidianAgentPlugin extends Plugin {
             if (changed) this.saveData(this.settings);
         }
 
-        // Ensure new tools appear in default agent override list
-        const agentOverride = this.settings.modeToolOverrides?.agent;
-        if (agentOverride && !agentOverride.includes('execute_command')) {
-            agentOverride.push('execute_command', 'resolve_capability_gap', 'enable_plugin');
-        }
-        if (agentOverride && !agentOverride.includes('enable_plugin')) {
-            agentOverride.push('enable_plugin');
-        }
-        if (agentOverride && !agentOverride.includes('update_settings')) {
-            agentOverride.push('update_settings', 'configure_model');
+        // Migration: remove old hardcoded modeToolOverrides.agent default.
+        // Empty object means "use all tools from mode's toolGroups" (new default).
+        if (this.settings.modeToolOverrides?.agent && this.settings.modeToolOverrides.agent.length > 20) {
+            delete this.settings.modeToolOverrides.agent;
+            this.saveData(this.settings);
         }
     }
 

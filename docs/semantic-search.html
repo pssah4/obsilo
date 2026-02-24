@@ -6,7 +6,7 @@
   <title>Semantic Search — Obsilo Agent Docs</title>
   <link rel="icon" type="image/png" href="assets/OBSILO_ICON50x50_lila.png">
   <link rel="stylesheet" href="assets/style.css">
-  <script>(function(){var t=localStorage.getItem('theme')||'dark';document.documentElement.setAttribute('data-theme',t)})()</script>
+  <script>(function(){var t=localStorage.getItem('theme')||'dark';document.documentElement.setAttribute('data-theme',t)})();(function(){var l=localStorage.getItem('lang');if(l)document.documentElement.setAttribute('lang',l)})()</script>
 </head>
 <body>
 
@@ -15,50 +15,57 @@
     <img src="assets/OBSILO_LOGOFULL_SW_v2.png" alt="Obsilo" class="logo-img">
   </a>
   <nav class="header-links">
-    <a href="getting-started.html">Docs</a>
-    <a href="about.html">About</a>
-    <a href="https://github.com/pssah4/obsilo-public" class="github-btn"><svg aria-hidden="true" height="16" viewBox="0 0 16 16" width="16" class="github-icon"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg> GitHub</a>
+    <a href="getting-started.html" data-i18n="header.docs">Docs</a>
+    <a href="about.html" data-i18n="header.about">About</a>
+    <a href="https://github.com/pssah4/obsilo-public" class="github-btn"><svg aria-hidden="true" height="16" viewBox="0 0 16 16" width="16" class="github-icon"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg> <span data-i18n="header.github">GitHub</span></a>
     <a href="https://buymeacoffee.com/sebastianhanke" target="_blank" rel="noopener noreferrer"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" class="bmc-header-btn"></a>
   </nav>
   <div class="spacer"></div>
-  <button class="theme-toggle" aria-label="Toggle theme" onclick="toggleTheme()">
+  <button class="theme-toggle" aria-label="Toggle theme" data-i18n-aria="header.toggleTheme" onclick="toggleTheme()">
     <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
     <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
   </button>
-  <button class="search-btn" onclick="openDocsSearch()" aria-label="Search docs"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Search</button>
+  <div class="lang-switcher">
+    <button class="lang-toggle" onclick="toggleLangDropdown(event)" aria-label="Switch language" data-i18n-aria="header.switchLang">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+      <span class="lang-toggle-label">EN</span>
+    </button>
+    <div class="lang-dropdown"></div>
+  </div>
+  <button class="search-btn" onclick="openDocsSearch()" aria-label="Search docs" data-i18n-aria="header.search"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span data-i18n="header.search">Search</span></button>
 </header>
 <script>function toggleTheme(){var h=document.documentElement,n=h.getAttribute('data-theme')==='light'?'dark':'light';h.setAttribute('data-theme',n);localStorage.setItem('theme',n);document.querySelectorAll('.logo-img').forEach(function(i){i.src=n==='light'?'assets/OBSILO_LOGOFULL_v2.png':'assets/OBSILO_LOGOFULL_SW_v2.png'})}(function(){var t=document.documentElement.getAttribute('data-theme');if(t==='light'){document.querySelectorAll('.logo-img').forEach(function(i){i.src='assets/OBSILO_LOGOFULL_v2.png'})}})()</script>
 
 <div class="docs-layout">
   <aside class="docs-sidebar">
     <div class="sidebar-section">
-      <div class="sidebar-section-title">Get Started</div>
-      <nav class="sidebar-nav"><a href="getting-started.html">Getting Started</a></nav>
+      <div class="sidebar-section-title" data-i18n="sidebar.getStarted">Get Started</div>
+      <nav class="sidebar-nav"><a href="getting-started.html" data-i18n="sidebar.gettingStarted">Getting Started</a></nav>
     </div>
     <div class="sidebar-section">
-      <div class="sidebar-section-title">Using Obsilo</div>
+      <div class="sidebar-section-title" data-i18n="sidebar.usingObsilo">Using Obsilo</div>
       <nav class="sidebar-nav">
-        <a href="chat-interface.html">Chat Interface</a>
-        <a href="memory.html">Memory &amp; Chat History</a>
-        <a href="modes.html">Modes</a>
-        <a href="permissions.html">Permissions &amp; Safety</a>
+        <a href="chat-interface.html" data-i18n="sidebar.chatInterface">Chat Interface</a>
+        <a href="memory.html" data-i18n="sidebar.memoryHistory">Memory &amp; Chat History</a>
+        <a href="modes.html" data-i18n="sidebar.modes">Modes</a>
+        <a href="permissions.html" data-i18n="sidebar.permissionsSafety">Permissions &amp; Safety</a>
       </nav>
     </div>
     <div class="sidebar-section">
-      <div class="sidebar-section-title">Context &amp; Knowledge</div>
+      <div class="sidebar-section-title" data-i18n="sidebar.contextKnowledge">Context &amp; Knowledge</div>
       <nav class="sidebar-nav">
-        <a href="rules-skills-workflows.html">Rules, Skills &amp; Workflows</a>
-        <a href="semantic-search.html" class="active">Semantic Search</a>
+        <a href="rules-skills-workflows.html" data-i18n="sidebar.rulesSkillsWorkflows">Rules, Skills &amp; Workflows</a>
+        <a href="semantic-search.html" class="active" data-i18n="sidebar.semanticSearch">Semantic Search</a>
       </nav>
     </div>
     <div class="sidebar-section">
-      <div class="sidebar-section-title">Reference</div>
+      <div class="sidebar-section-title" data-i18n="sidebar.reference">Reference</div>
       <nav class="sidebar-nav">
-        <a href="tools.html">Tools Reference</a>
-        <a href="providers.html">Providers &amp; Models</a>
-        <a href="mcp-servers.html">MCP Servers</a>
-        <a href="checkpoints.html">Checkpoints</a>
-        <a href="settings-reference.html">Settings Reference</a>
+        <a href="tools.html" data-i18n="sidebar.toolsRef">Tools Reference</a>
+        <a href="providers.html" data-i18n="sidebar.providersModels">Providers &amp; Models</a>
+        <a href="mcp-servers.html" data-i18n="sidebar.mcpServers">MCP Servers</a>
+        <a href="checkpoints.html" data-i18n="sidebar.checkpoints">Checkpoints</a>
+        <a href="settings-reference.html" data-i18n="sidebar.settingsRef">Settings Reference</a>
       </nav>
     </div>
   </aside>
@@ -66,49 +73,49 @@
   <main class="docs-main">
     <article class="docs-content">
       <div class="breadcrumb">
-        <a href="index.html">Docs</a> <span class="breadcrumb-sep">›</span>
+        <a href="index.html" data-i18n="breadcrumb.docs">Docs</a> <span class="breadcrumb-sep">›</span>
         Context &amp; Knowledge <span class="breadcrumb-sep">›</span>
-        Semantic Search
+        <span data-i18n="breadcrumb.semanticSearch">Semantic Search</span>
       </div>
 
-      <h1>Semantic Search</h1>
-      <p>Obsilo's semantic search finds notes by <em>meaning</em>, not just keywords — using a local vector index that stays entirely on your machine.</p>
+      <h1 data-i18n="pages.semanticSearch.title">Semantic Search</h1>
+      <p data-i18n="pages.semanticSearch.subtitle" data-i18n-html>Obsilo's semantic search finds notes by <em>meaning</em>, not just keywords — using a local vector index that stays entirely on your machine.</p>
 
-      <h2 id="overview">How It Works</h2>
-      <p>When you build the semantic index, Obsilo:</p>
-      <ol>
+      <h2 id="overview" data-i18n="pages.semanticSearch.overview">How It Works</h2>
+      <p data-i18n="pages.semanticSearch.overview.text">When you build the semantic index, Obsilo:</p>
+      <ol data-i18n-html="pages.semanticSearch.overview.list">
         <li>Reads each note in your vault</li>
         <li>Splits it into chunks (default: ~2000 characters, split at headings)</li>
         <li>Generates an embedding (a vector of numbers representing the chunk's meaning) for each chunk</li>
         <li>Stores the vectors in a local HNSW index (Vectra)</li>
       </ol>
-      <p>When you (or the agent) run a search, the query is embedded using the same model, and the nearest vectors are retrieved — finding notes with similar meaning even if they share no keywords with the query.</p>
+      <p data-i18n="pages.semanticSearch.overview.text2">When you (or the agent) run a search, the query is embedded using the same model, and the nearest vectors are retrieved — finding notes with similar meaning even if they share no keywords with the query.</p>
 
-      <h2 id="hybrid-search">Hybrid Search</h2>
-      <p>Obsilo doesn't rely on semantic search alone. Every <code>semantic_search</code> call runs two searches in parallel:</p>
-      <ul>
+      <h2 id="hybrid-search" data-i18n="pages.semanticSearch.hybridSearch">Hybrid Search</h2>
+      <p data-i18n="pages.semanticSearch.hybridSearch.text" data-i18n-html>Obsilo doesn't rely on semantic search alone. Every <code>semantic_search</code> call runs two searches in parallel:</p>
+      <ul data-i18n-html="pages.semanticSearch.hybridSearch.list">
         <li><strong>Semantic search</strong> — vector similarity via Vectra (finds conceptual matches)</li>
         <li><strong>Keyword search</strong> — full-text search via Orama (finds exact word matches)</li>
       </ul>
-      <p>The results are combined using <strong>Reciprocal Rank Fusion (RRF)</strong> — notes appearing in both lists rise to the top. This means exact names, tags, dates, and codes are found reliably alongside conceptual matches.</p>
+      <p data-i18n="pages.semanticSearch.hybridSearch.text2" data-i18n-html>The results are combined using <strong>Reciprocal Rank Fusion (RRF)</strong> — notes appearing in both lists rise to the top. This means exact names, tags, dates, and codes are found reliably alongside conceptual matches.</p>
 
-      <h2 id="graph-augmentation">Graph Augmentation</h2>
-      <p>After ranking the top results, Obsilo scans the excerpts for <code>[[wikilinks]]</code> and fetches the first indexed chunk of each linked note that isn't already in the results. These are appended as "linked context" — notes that are intentionally connected to the results but may not have matched semantically themselves.</p>
-      <p>This surfaces the structure of your knowledge graph, not just individual note matches.</p>
+      <h2 id="graph-augmentation" data-i18n="pages.semanticSearch.graphAugmentation">Graph Augmentation</h2>
+      <p data-i18n="pages.semanticSearch.graphAugmentation.text" data-i18n-html>After ranking the top results, Obsilo scans the excerpts for <code>[[wikilinks]]</code> and fetches the first indexed chunk of each linked note that isn't already in the results. These are appended as "linked context" — notes that are intentionally connected to the results but may not have matched semantically themselves.</p>
+      <p data-i18n="pages.semanticSearch.graphAugmentation.text2">This surfaces the structure of your knowledge graph, not just individual note matches.</p>
 
-      <h2 id="hyde">HyDE (Hypothetical Document Embeddings)</h2>
-      <p>HyDE is an optional technique that improves recall for conceptual queries. When enabled, before embedding the user's query, Obsilo asks the LLM to write a short 2-3 sentence note excerpt that would answer the query. That hypothetical excerpt is then embedded instead of the raw query — giving the embedding model a much richer signal to match against.</p>
-      <p><strong>Trade-off:</strong> HyDE costs one extra LLM call per search. It's off by default but can improve results noticeably for complex, conceptual questions. Enable it in Settings → Semantic Index → HyDE.</p>
+      <h2 id="hyde" data-i18n="pages.semanticSearch.hyde">HyDE (Hypothetical Document Embeddings)</h2>
+      <p data-i18n="pages.semanticSearch.hyde.text">HyDE is an optional technique that improves recall for conceptual queries. When enabled, before embedding the user's query, Obsilo asks the LLM to write a short 2-3 sentence note excerpt that would answer the query. That hypothetical excerpt is then embedded instead of the raw query — giving the embedding model a much richer signal to match against.</p>
+      <p data-i18n="pages.semanticSearch.hyde.text2" data-i18n-html><strong>Trade-off:</strong> HyDE costs one extra LLM call per search. It's off by default but can improve results noticeably for complex, conceptual questions. Enable it in Settings → Semantic Index → HyDE.</p>
 
-      <h2 id="setup">Setting Up the Index</h2>
+      <h2 id="setup" data-i18n="pages.semanticSearch.setup">Setting Up the Index</h2>
 
-      <h3 id="enable">Step 1: Enable Semantic Index</h3>
-      <p>Go to Settings → Obsilo Agent → <strong>Semantic Index</strong> and toggle "Enable Semantic Index" on.</p>
+      <h3 id="enable" data-i18n="pages.semanticSearch.enable">Step 1: Enable Semantic Index</h3>
+      <p data-i18n="pages.semanticSearch.enable.text" data-i18n-html>Go to Settings → Obsilo Agent → <strong>Semantic Index</strong> and toggle "Enable Semantic Index" on.</p>
 
-      <h3 id="choose-model">Step 2: Choose an Embedding Model</h3>
-      <p>Go to Settings → Providers → <strong>Embeddings</strong> and select an embedding model.</p>
+      <h3 id="choose-model" data-i18n="pages.semanticSearch.chooseModel">Step 2: Choose an Embedding Model</h3>
+      <p data-i18n="pages.semanticSearch.chooseModel.text" data-i18n-html>Go to Settings → Providers → <strong>Embeddings</strong> and select an embedding model.</p>
 
-      <table>
+      <table data-i18n-html="pages.semanticSearch.chooseModel.table">
         <thead><tr><th>Model</th><th>Type</th><th>Quality</th><th>Notes</th></tr></thead>
         <tbody>
           <tr><td><code>Xenova/all-MiniLM-L6-v2</code></td><td>Local (ONNX)</td><td>Good</td><td>Default. 384 dimensions. No API key needed. ~23MB download on first use.</td></tr>
@@ -118,23 +125,23 @@
         </tbody>
       </table>
 
-      <div class="callout callout-warning">
+      <div class="callout callout-warning" data-i18n-html="pages.semanticSearch.chooseModel.callout">
         <strong>Changing the embedding model invalidates the index.</strong>
         If you switch models, rebuild the index from scratch — vectors from different models are not compatible.
       </div>
 
-      <h3 id="build">Step 3: Build the Index</h3>
-      <p>Click <strong>Build Index</strong> in Settings → Semantic Index. The first build takes a few minutes for a large vault. Progress is shown in the settings panel.</p>
-      <p>The index is stored at:</p>
-      <ul>
+      <h3 id="build" data-i18n="pages.semanticSearch.build">Step 3: Build the Index</h3>
+      <p data-i18n="pages.semanticSearch.build.text" data-i18n-html>Click <strong>Build Index</strong> in Settings → Semantic Index. The first build takes a few minutes for a large vault. Progress is shown in the settings panel.</p>
+      <p data-i18n="pages.semanticSearch.build.text2">The index is stored at:</p>
+      <ul data-i18n-html="pages.semanticSearch.build.list">
         <li><strong>Obsidian sync (default):</strong> <code>.obsidian/plugins/obsidian-agent/semantic-index/</code></li>
         <li><strong>Local only:</strong> <code>.obsidian-agent/semantic-index/</code></li>
       </ul>
-      <p>Subsequent rebuilds are <strong>incremental</strong> — only files changed since the last build are re-indexed.</p>
+      <p data-i18n="pages.semanticSearch.build.text3" data-i18n-html>Subsequent rebuilds are <strong>incremental</strong> — only files changed since the last build are re-indexed.</p>
 
-      <h2 id="auto-indexing">Auto-Indexing</h2>
-      <p>Configure when the index is rebuilt automatically:</p>
-      <table>
+      <h2 id="auto-indexing" data-i18n="pages.semanticSearch.autoIndexing">Auto-Indexing</h2>
+      <p data-i18n="pages.semanticSearch.autoIndexing.text">Configure when the index is rebuilt automatically:</p>
+      <table data-i18n-html="pages.semanticSearch.autoIndexing.table">
         <thead><tr><th>Setting</th><th>Description</th></tr></thead>
         <tbody>
           <tr><td><code>startup</code></td><td>Rebuild when Obsidian opens (incremental — only changed files)</td></tr>
@@ -142,11 +149,11 @@
           <tr><td><code>never</code></td><td>Only build manually (default)</td></tr>
         </tbody>
       </table>
-      <p>There's also <strong>Auto-index on change</strong> — when enabled, files are re-indexed as you edit them. This keeps the index fully up to date but adds background CPU work. Use with caution on large vaults with local embedding models, as it can cause UI lag.</p>
+      <p data-i18n="pages.semanticSearch.autoIndexing.text2" data-i18n-html>There's also <strong>Auto-index on change</strong> — when enabled, files are re-indexed as you edit them. This keeps the index fully up to date but adds background CPU work. Use with caution on large vaults with local embedding models, as it can cause UI lag.</p>
 
-      <h2 id="configuration">Configuration</h2>
+      <h2 id="configuration" data-i18n="pages.semanticSearch.configuration">Configuration</h2>
 
-      <table>
+      <table data-i18n-html="pages.semanticSearch.configuration.table">
         <thead><tr><th>Setting</th><th>Default</th><th>Description</th></tr></thead>
         <tbody>
           <tr><td>Chunk Size</td><td>2000 chars</td><td>Target size for note chunks. Smaller = more precise, but more vectors. Changing this requires a full rebuild.</td></tr>
@@ -158,32 +165,32 @@
         </tbody>
       </table>
 
-      <h2 id="using-search">Using Semantic Search</h2>
-      <p>The agent uses <code>semantic_search</code> automatically when you ask questions. You can also use it with filters:</p>
+      <h2 id="using-search" data-i18n="pages.semanticSearch.usingSearch">Using Semantic Search</h2>
+      <p data-i18n="pages.semanticSearch.usingSearch.text" data-i18n-html>The agent uses <code>semantic_search</code> automatically when you ask questions. You can also use it with filters:</p>
 
-      <h3>Basic Search</h3>
-      <p><em>"Find my notes about meeting planning and agenda creation"</em></p>
+      <h3 data-i18n="pages.semanticSearch.basicSearch">Basic Search</h3>
+      <p data-i18n="pages.semanticSearch.basicSearch.text" data-i18n-html><em>"Find my notes about meeting planning and agenda creation"</em></p>
 
-      <h3>Filtered Search</h3>
-      <p><em>"Find notes about machine learning from the past month tagged with #research"</em></p>
-      <p>This maps to: <code>semantic_search(query, folder, tags, since)</code></p>
+      <h3 data-i18n="pages.semanticSearch.filteredSearch">Filtered Search</h3>
+      <p data-i18n="pages.semanticSearch.filteredSearch.text" data-i18n-html><em>"Find notes about machine learning from the past month tagged with #research"</em></p>
+      <p data-i18n="pages.semanticSearch.filteredSearch.text2" data-i18n-html>This maps to: <code>semantic_search(query, folder, tags, since)</code></p>
 
-      <h3>The RAG Pattern</h3>
-      <p>When the agent runs <code>semantic_search</code>, it receives excerpts with the most relevant content already extracted. The agent is instructed to synthesize answers directly from these excerpts — <em>not</em> to call <code>read_file</code> on each result. This keeps the context window manageable and responses fast.</p>
+      <h3 data-i18n="pages.semanticSearch.ragPattern">The RAG Pattern</h3>
+      <p data-i18n="pages.semanticSearch.ragPattern.text" data-i18n-html>When the agent runs <code>semantic_search</code>, it receives excerpts with the most relevant content already extracted. The agent is instructed to synthesize answers directly from these excerpts — <em>not</em> to call <code>read_file</code> on each result. This keeps the context window manageable and responses fast.</p>
 
-      <div class="callout callout-note">
+      <div class="callout callout-note" data-i18n-html="pages.semanticSearch.usingSearch.callout">
         <strong>Tip</strong>
         If the agent seems unable to find notes it should know about, rebuild the index (Settings → Semantic Index → Build Index) to ensure recently added notes are included.
       </div>
 
       <div class="page-nav">
         <a href="rules-skills-workflows.html" class="page-nav-item">
-          <span class="page-nav-label">Previous</span>
-          <span class="page-nav-title">← Rules, Skills &amp; Workflows</span>
+          <span class="page-nav-label" data-i18n="nav.previous">Previous</span>
+          <span class="page-nav-title">← <span data-i18n="sidebar.rulesSkillsWorkflows">Rules, Skills &amp; Workflows</span></span>
         </a>
         <a href="tools.html" class="page-nav-item next">
-          <span class="page-nav-label">Next</span>
-          <span class="page-nav-title">Tools Reference →</span>
+          <span class="page-nav-label" data-i18n="nav.next">Next</span>
+          <span class="page-nav-title"><span data-i18n="sidebar.toolsRef">Tools Reference</span> →</span>
         </a>
       </div>
     </article>
@@ -191,9 +198,10 @@
 </div>
 
 <footer class="footer">
-  <p class="footer-credits">Obsilo Agent <script>document.write(new Date().getFullYear())</script> &middot; <a href="https://github.com/pssah4/obsilo-public/blob/main/LICENSE">Apache 2.0</a> &middot; <a href="https://github.com/pssah4/obsilo-public/blob/main/NOTICE.md">Notice</a> &middot; <a href="imprint.html">Imprint</a></p>
-  <p class="footer-disclaimer">Provided as-is, without any warranty or liability.</p>
+  <p class="footer-credits">Obsilo Agent <script>document.write(new Date().getFullYear())</script> &middot; <a href="https://github.com/pssah4/obsilo-public/blob/main/LICENSE" data-i18n="footer.license">Apache 2.0</a> &middot; <a href="https://github.com/pssah4/obsilo-public/blob/main/NOTICE.md" data-i18n="footer.notice">Notice</a> &middot; <a href="imprint.html" data-i18n="footer.imprint">Imprint</a></p>
+  <p class="footer-disclaimer" data-i18n="footer.disclaimer">Provided as-is, without any warranty or liability.</p>
 </footer>
+<script src="assets/i18n.js"></script>
 <script src="assets/search.js" defer></script>
 </body>
 </html>

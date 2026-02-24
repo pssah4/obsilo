@@ -111,12 +111,14 @@
     var hits = search(query);
 
     if (query.trim() === '') {
-      results.innerHTML = '<div class="search-empty">Type to search across all documentation.</div>';
+      var emptyMsg = (window.i18nT && window.i18nT('search.empty')) || 'Type to search across all documentation.';
+      results.innerHTML = '<div class="search-empty">' + emptyMsg + '</div>';
       return;
     }
 
     if (hits.length === 0) {
-      results.innerHTML = '<div class="search-empty">No results for "' + escHtml(query) + '"</div>';
+      var noResultsMsg = (window.i18nT && window.i18nT('search.noResults', {query: escHtml(query)})) || ('No results for "' + escHtml(query) + '"');
+      results.innerHTML = '<div class="search-empty">' + noResultsMsg + '</div>';
       return;
     }
 
@@ -141,7 +143,7 @@
       '<div class="search-dialog">' +
         '<div class="search-input-wrap">' +
           '<svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>' +
-          '<input class="search-input" type="text" placeholder="Search docs..." autofocus />' +
+          '<input class="search-input" type="text" placeholder="' + ((window.i18nT && window.i18nT('search.placeholder')) || 'Search docs...') + '" autofocus />' +
           '<kbd class="search-kbd">Esc</kbd>' +
         '</div>' +
         '<div class="search-results"></div>' +
@@ -167,7 +169,9 @@
     if (!modal) createModal();
     modal.classList.add('visible');
     input.value = '';
-    results.innerHTML = '<div class="search-empty">Type to search across all documentation.</div>';
+    var openEmptyMsg = (window.i18nT && window.i18nT('search.empty')) || 'Type to search across all documentation.';
+    results.innerHTML = '<div class="search-empty">' + openEmptyMsg + '</div>';
+    if (window.i18nT) { input.placeholder = window.i18nT('search.placeholder') || 'Search docs...'; }
     setTimeout(function () { input.focus(); }, 50);
 
     // Lazy-load index
@@ -185,7 +189,8 @@
         .then(function (r) { return r.json(); })
         .then(function (data) { index = data; })
         .catch(function () {
-          results.innerHTML = '<div class="search-empty">Failed to load search index.</div>';
+          var failMsg = (window.i18nT && window.i18nT('search.failed')) || 'Failed to load search index.';
+          results.innerHTML = '<div class="search-empty">' + failMsg + '</div>';
         });
     }
   }

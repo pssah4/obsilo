@@ -66,16 +66,6 @@ export class PermissionsTab {
             );
 
         new Setting(containerEl)
-            .setName('Web access')
-            .setDesc('Fetching pages or running web searches. Disable if you want to review every external request.')
-            .addToggle((t) =>
-                t.setValue(this.plugin.settings.autoApproval.web).onChange(async (v) => {
-                    this.plugin.settings.autoApproval.web = v;
-                    await this.plugin.saveSettings();
-                }),
-            );
-
-        new Setting(containerEl)
             .setName('MCP tool calls')
             .setDesc('Calls to external tools connected via Model Context Protocol servers.')
             .addToggle((t) =>

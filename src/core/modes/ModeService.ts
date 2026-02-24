@@ -96,15 +96,14 @@ export class ModeService {
 
     /**
      * Get the effective list of tool names for a mode, applying overrides in priority order:
-     *   1. sessionOverride (passed from chat view for session-only selection)
-     *   2. settings.modeToolOverrides[slug] (permanent user override)
-     *   3. All tools in the mode's groups (default)
+     *   1. settings.modeToolOverrides[slug] (permanent user override)
+     *   2. All tools in the mode's groups (default)
      *
      * The result is always filtered to tools actually in the mode's groups.
      */
-    getEffectiveToolNames(mode: ModeConfig, sessionOverride?: string[]): string[] {
+    getEffectiveToolNames(mode: ModeConfig): string[] {
         const allInGroups = new Set(expandToolGroups(mode.toolGroups));
-        const override = sessionOverride ?? this.plugin.settings.modeToolOverrides?.[mode.slug];
+        const override = this.plugin.settings.modeToolOverrides?.[mode.slug];
         if (override && override.length > 0) {
             // Intersect with group-allowed tools (never escalate beyond what the mode allows)
             return override.filter((t) => allInGroups.has(t));
@@ -113,8 +112,8 @@ export class ModeService {
     }
 
     /** Get ToolDefinitions filtered to the effective tool set for a mode */
-    getToolDefinitions(mode: ModeConfig, sessionOverride?: string[]): ToolDefinition[] {
-        const allowed = new Set(this.getEffectiveToolNames(mode, sessionOverride));
+    getToolDefinitions(mode: ModeConfig): ToolDefinition[] {
+        const allowed = new Set(this.getEffectiveToolNames(mode));
         // Remove web tools from the definition set when web tools are disabled.
         // This prevents the LLM from calling them and hitting error loops.
         const webDisabled = !this.plugin.settings.webTools?.enabled;

@@ -6,7 +6,7 @@
   <title>Memory &amp; Chat History — Obsilo Agent Docs</title>
   <link rel="icon" type="image/png" href="assets/OBSILO_ICON50x50_lila.png">
   <link rel="stylesheet" href="assets/style.css">
-  <script>(function(){var t=localStorage.getItem('theme')||'dark';document.documentElement.setAttribute('data-theme',t)})()</script>
+  <script>(function(){var t=localStorage.getItem('theme')||'dark';document.documentElement.setAttribute('data-theme',t)})();(function(){var l=localStorage.getItem('lang');if(l)document.documentElement.setAttribute('lang',l)})()</script>
 </head>
 <body>
 
@@ -15,50 +15,57 @@
     <img src="assets/OBSILO_LOGOFULL_SW_v2.png" alt="Obsilo" class="logo-img">
   </a>
   <nav class="header-links">
-    <a href="getting-started.html">Docs</a>
-    <a href="about.html">About</a>
-    <a href="https://github.com/pssah4/obsilo-public" class="github-btn"><svg aria-hidden="true" height="16" viewBox="0 0 16 16" width="16" class="github-icon"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg> GitHub</a>
+    <a href="getting-started.html" data-i18n="header.docs">Docs</a>
+    <a href="about.html" data-i18n="header.about">About</a>
+    <a href="https://github.com/pssah4/obsilo-public" class="github-btn"><svg aria-hidden="true" height="16" viewBox="0 0 16 16" width="16" class="github-icon"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg> <span data-i18n="header.github">GitHub</span></a>
     <a href="https://buymeacoffee.com/sebastianhanke" target="_blank" rel="noopener noreferrer"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" class="bmc-header-btn"></a>
   </nav>
   <div class="spacer"></div>
-  <button class="theme-toggle" aria-label="Toggle theme" onclick="toggleTheme()">
+  <button class="theme-toggle" aria-label="Toggle theme" data-i18n-aria="header.toggleTheme" onclick="toggleTheme()">
     <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
     <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
   </button>
-  <button class="search-btn" onclick="openDocsSearch()" aria-label="Search docs"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Search</button>
+  <div class="lang-switcher">
+    <button class="lang-toggle" onclick="toggleLangDropdown(event)" aria-label="Switch language" data-i18n-aria="header.switchLang">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+      <span class="lang-toggle-label">EN</span>
+    </button>
+    <div class="lang-dropdown"></div>
+  </div>
+  <button class="search-btn" onclick="openDocsSearch()" aria-label="Search docs" data-i18n-aria="header.search"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span data-i18n="header.search">Search</span></button>
 </header>
 <script>function toggleTheme(){var h=document.documentElement,n=h.getAttribute('data-theme')==='light'?'dark':'light';h.setAttribute('data-theme',n);localStorage.setItem('theme',n);document.querySelectorAll('.logo-img').forEach(function(i){i.src=n==='light'?'assets/OBSILO_LOGOFULL_v2.png':'assets/OBSILO_LOGOFULL_SW_v2.png'})}(function(){var t=document.documentElement.getAttribute('data-theme');if(t==='light'){document.querySelectorAll('.logo-img').forEach(function(i){i.src='assets/OBSILO_LOGOFULL_v2.png'})}})()</script>
 
 <div class="docs-layout">
   <aside class="docs-sidebar">
     <div class="sidebar-section">
-      <div class="sidebar-section-title">Get Started</div>
-      <nav class="sidebar-nav"><a href="getting-started.html">Getting Started</a></nav>
+      <div class="sidebar-section-title" data-i18n="sidebar.getStarted">Get Started</div>
+      <nav class="sidebar-nav"><a href="getting-started.html" data-i18n="sidebar.gettingStarted">Getting Started</a></nav>
     </div>
     <div class="sidebar-section">
-      <div class="sidebar-section-title">Using Obsilo</div>
+      <div class="sidebar-section-title" data-i18n="sidebar.usingObsilo">Using Obsilo</div>
       <nav class="sidebar-nav">
-        <a href="chat-interface.html">Chat Interface</a>
-        <a href="memory.html" class="active">Memory &amp; Chat History</a>
-        <a href="modes.html">Modes</a>
-        <a href="permissions.html">Permissions &amp; Safety</a>
+        <a href="chat-interface.html" data-i18n="sidebar.chatInterface">Chat Interface</a>
+        <a href="memory.html" class="active" data-i18n="sidebar.memoryHistory">Memory &amp; Chat History</a>
+        <a href="modes.html" data-i18n="sidebar.modes">Modes</a>
+        <a href="permissions.html" data-i18n="sidebar.permissionsSafety">Permissions &amp; Safety</a>
       </nav>
     </div>
     <div class="sidebar-section">
-      <div class="sidebar-section-title">Context &amp; Knowledge</div>
+      <div class="sidebar-section-title" data-i18n="sidebar.contextKnowledge">Context &amp; Knowledge</div>
       <nav class="sidebar-nav">
-        <a href="rules-skills-workflows.html">Rules, Skills &amp; Workflows</a>
-        <a href="semantic-search.html">Semantic Search</a>
+        <a href="rules-skills-workflows.html" data-i18n="sidebar.rulesSkillsWorkflows">Rules, Skills &amp; Workflows</a>
+        <a href="semantic-search.html" data-i18n="sidebar.semanticSearch">Semantic Search</a>
       </nav>
     </div>
     <div class="sidebar-section">
-      <div class="sidebar-section-title">Reference</div>
+      <div class="sidebar-section-title" data-i18n="sidebar.reference">Reference</div>
       <nav class="sidebar-nav">
-        <a href="tools.html">Tools Reference</a>
-        <a href="providers.html">Providers &amp; Models</a>
-        <a href="mcp-servers.html">MCP Servers</a>
-        <a href="checkpoints.html">Checkpoints</a>
-        <a href="settings-reference.html">Settings Reference</a>
+        <a href="tools.html" data-i18n="sidebar.toolsRef">Tools Reference</a>
+        <a href="providers.html" data-i18n="sidebar.providersModels">Providers &amp; Models</a>
+        <a href="mcp-servers.html" data-i18n="sidebar.mcpServers">MCP Servers</a>
+        <a href="checkpoints.html" data-i18n="sidebar.checkpoints">Checkpoints</a>
+        <a href="settings-reference.html" data-i18n="sidebar.settingsRef">Settings Reference</a>
       </nav>
     </div>
   </aside>
@@ -66,46 +73,46 @@
   <main class="docs-main">
     <article class="docs-content">
       <div class="breadcrumb">
-        <a href="index.html">Docs</a> <span class="breadcrumb-sep">&rsaquo;</span>
+        <a href="index.html" data-i18n="breadcrumb.docs">Docs</a> <span class="breadcrumb-sep">&rsaquo;</span>
         Using Obsilo <span class="breadcrumb-sep">&rsaquo;</span>
-        Memory &amp; Chat History
+        <span data-i18n="breadcrumb.memoryHistory">Memory &amp; Chat History</span>
       </div>
 
-      <h1>Memory &amp; Chat History</h1>
-      <p>Obsilo remembers your conversations and learns your preferences over time. Chat history stores every conversation for browsing and restore. The memory system automatically extracts knowledge from your conversations and personalizes the agent across sessions.</p>
+      <h1 data-i18n="pages.memory.title">Memory &amp; Chat History</h1>
+      <p data-i18n="pages.memory.subtitle">Obsilo remembers your conversations and learns your preferences over time. Chat history stores every conversation for browsing and restore. The memory system automatically extracts knowledge from your conversations and personalizes the agent across sessions.</p>
 
-      <div class="callout callout-tip">
+      <div class="callout callout-tip" data-i18n-html="pages.memory.privacyCallout">
         <strong>Privacy first</strong>
         All memory data is stored locally in your plugin directory. Memory extraction uses a dedicated model you choose (ideally a small, cheap model like Haiku). No data leaves your machine except for the LLM API calls you configure.
       </div>
 
-      <h2 id="chat-history">Chat History</h2>
-      <p>Chat history is enabled by default. Every conversation is saved automatically as a JSON file inside the plugin directory (<code>.obsidian/plugins/obsidian-agent/history/</code>).</p>
+      <h2 id="chat-history" data-i18n="pages.memory.chatHistory">Chat History</h2>
+      <p data-i18n-html="pages.memory.chatHistory.text">Chat history is enabled by default. Every conversation is saved automatically as a JSON file inside the plugin directory (<code>.obsidian/plugins/obsidian-agent/history/</code>).</p>
 
-      <h3 id="history-panel">History Panel</h3>
-      <p>Click the <strong>history icon</strong> in the sidebar header (left of the New Chat button) to open the history panel. It slides in from the left and shows your conversations grouped by date:</p>
-      <ul>
+      <h3 id="history-panel" data-i18n="pages.memory.historyPanel">History Panel</h3>
+      <p data-i18n-html="pages.memory.historyPanel.text">Click the <strong>history icon</strong> in the sidebar header (left of the New Chat button) to open the history panel. It slides in from the left and shows your conversations grouped by date:</p>
+      <ul data-i18n-html="pages.memory.historyPanel.list">
         <li><strong>Today</strong> / <strong>Yesterday</strong> / <strong>This Week</strong> / <strong>Older</strong></li>
         <li>Each entry shows the conversation title, date, and message count</li>
         <li>Use the text filter at the top to search through titles</li>
         <li>Hover over an entry to reveal the delete button</li>
       </ul>
 
-      <h3 id="restore">Restoring a Conversation</h3>
-      <p>Click any conversation in the history panel to restore it. The full message history is loaded back into the sidebar — including assistant messages, tool calls, and the internal conversation state. You can continue the conversation exactly where you left off.</p>
+      <h3 id="restore" data-i18n="pages.memory.restore">Restoring a Conversation</h3>
+      <p data-i18n="pages.memory.restore.text">Click any conversation in the history panel to restore it. The full message history is loaded back into the sidebar — including assistant messages, tool calls, and the internal conversation state. You can continue the conversation exactly where you left off.</p>
 
-      <h3 id="auto-title">Auto-Titling</h3>
-      <p>After the first assistant response, Obsilo generates a short title (3-8 words) for the conversation using the active model. This title appears in the history panel and helps you find conversations later.</p>
+      <h3 id="auto-title" data-i18n="pages.memory.autoTitle">Auto-Titling</h3>
+      <p data-i18n="pages.memory.autoTitle.text">After the first assistant response, Obsilo generates a short title (3-8 words) for the conversation using the active model. This title appears in the history panel and helps you find conversations later.</p>
 
-      <h2 id="memory-system">Memory System</h2>
-      <p>The memory system has two layers:</p>
-      <ul>
+      <h2 id="memory-system" data-i18n="pages.memory.memorySystem">Memory System</h2>
+      <p data-i18n="pages.memory.memorySystem.text">The memory system has two layers:</p>
+      <ul data-i18n-html="pages.memory.memorySystem.list">
         <li><strong>Session memory</strong> — a summary of each conversation, stored as a Markdown file</li>
         <li><strong>Long-term memory</strong> — your profile, active projects, and behavioral patterns, distilled from session summaries</li>
       </ul>
 
-      <h3 id="how-it-works">How It Works</h3>
-      <ol>
+      <h3 id="how-it-works" data-i18n="pages.memory.howItWorks">How It Works</h3>
+      <ol data-i18n-html="pages.memory.howItWorks.list">
         <li><strong>You have a conversation</strong> with the agent as usual</li>
         <li><strong>When the conversation ends</strong> (new chat or close), if it had enough messages (configurable, default: 6), a background extraction job is queued</li>
         <li><strong>The extraction model</strong> (a separate, cheap model you configure) processes the queue:
@@ -117,14 +124,14 @@
         <li><strong>Next time you start a conversation</strong>, the agent has your profile, projects, and patterns in its system prompt — plus relevant session summaries retrieved via semantic search</li>
       </ol>
 
-      <div class="callout callout-note">
+      <div class="callout callout-note" data-i18n-html="pages.memory.howItWorks.callout">
         <strong>Zero impact on chat speed</strong>
         Memory extraction runs entirely in the background after the conversation ends. It never blocks or slows down your active conversation. If Obsidian closes before extraction finishes, the queue is processed on next startup.
       </div>
 
-      <h3 id="memory-files">Memory Files</h3>
-      <p>Memory is stored as editable Markdown files in <code>.obsidian/plugins/obsidian-agent/memory/</code>:</p>
-      <table>
+      <h3 id="memory-files" data-i18n="pages.memory.memoryFiles">Memory Files</h3>
+      <p data-i18n-html="pages.memory.memoryFiles.text">Memory is stored as editable Markdown files in <code>.obsidian/plugins/obsidian-agent/memory/</code>:</p>
+      <table data-i18n-html="pages.memory.memoryFiles.table">
         <thead><tr><th>File</th><th>Contains</th><th>Loaded into context</th></tr></thead>
         <tbody>
           <tr><td><code>user-profile.md</code></td><td>Your name, language, communication style, agent preferences</td><td>Always (system prompt)</td></tr>
@@ -134,18 +141,18 @@
           <tr><td><code>sessions/*.md</code></td><td>Per-conversation summaries with YAML frontmatter</td><td>On demand (semantic search)</td></tr>
         </tbody>
       </table>
-      <p>You can edit these files directly — they are plain Markdown. Changes take effect on the next conversation.</p>
+      <p data-i18n="pages.memory.memoryFiles.text2">You can edit these files directly — they are plain Markdown. Changes take effect on the next conversation.</p>
 
-      <h3 id="session-context">Session Context Retrieval</h3>
-      <p>When you start a new conversation, Obsilo uses your first message to semantically search past session summaries. The top 3 most relevant summaries are injected into the system prompt as context. This means the agent can reference previous conversations when relevant — without you having to remind it.</p>
+      <h3 id="session-context" data-i18n="pages.memory.sessionContext">Session Context Retrieval</h3>
+      <p data-i18n="pages.memory.sessionContext.text">When you start a new conversation, Obsilo uses your first message to semantically search past session summaries. The top 3 most relevant summaries are injected into the system prompt as context. This means the agent can reference previous conversations when relevant — without you having to remind it.</p>
 
-      <h2 id="onboarding">Onboarding</h2>
-      <p>The first time you use Obsilo (when no user profile exists), the agent starts an onboarding conversation. It naturally asks about your name, language preference, vault usage, and communication style. The answers are extracted into your user profile after the conversation ends.</p>
-      <p>You can re-run onboarding at any time from Settings → Memory → Re-run Onboarding.</p>
+      <h2 id="onboarding" data-i18n="pages.memory.onboarding">Onboarding</h2>
+      <p data-i18n="pages.memory.onboarding.text1">The first time you use Obsilo (when no user profile exists), the agent starts an onboarding conversation. It naturally asks about your name, language preference, vault usage, and communication style. The answers are extracted into your user profile after the conversation ends.</p>
+      <p data-i18n="pages.memory.onboarding.text2">You can re-run onboarding at any time from Settings → Memory → Re-run Onboarding.</p>
 
-      <h2 id="settings">Settings</h2>
-      <p>All memory settings are under Settings → Agent Behaviour → <strong>Memory</strong>:</p>
-      <table>
+      <h2 id="settings" data-i18n="pages.memory.settings">Settings</h2>
+      <p data-i18n-html="pages.memory.settings.text">All memory settings are under Settings → Agent Behaviour → <strong>Memory</strong>:</p>
+      <table data-i18n-html="pages.memory.settings.table">
         <thead><tr><th>Setting</th><th>Default</th><th>Description</th></tr></thead>
         <tbody>
           <tr><td>Enable memory</td><td>On</td><td>Master toggle for the memory system</td></tr>
@@ -158,19 +165,19 @@
         </tbody>
       </table>
 
-      <div class="callout callout-tip">
+      <div class="callout callout-tip" data-i18n-html="pages.memory.settings.callout">
         <strong>Tip</strong>
         You must select a memory model before extraction works. If no model is selected, conversations are saved to history but no memory extraction runs.
       </div>
 
       <div class="page-nav">
         <a href="chat-interface.html" class="page-nav-item">
-          <span class="page-nav-label">Previous</span>
-          <span class="page-nav-title">&larr; Chat Interface</span>
+          <span class="page-nav-label" data-i18n="nav.previous">Previous</span>
+          <span class="page-nav-title">&larr; <span data-i18n="sidebar.chatInterface">Chat Interface</span></span>
         </a>
         <a href="modes.html" class="page-nav-item next">
-          <span class="page-nav-label">Next</span>
-          <span class="page-nav-title">Modes &rarr;</span>
+          <span class="page-nav-label" data-i18n="nav.next">Next</span>
+          <span class="page-nav-title"><span data-i18n="sidebar.modes">Modes</span> &rarr;</span>
         </a>
       </div>
     </article>
@@ -178,9 +185,10 @@
 </div>
 
 <footer class="footer">
-  <p class="footer-credits">Obsilo Agent <script>document.write(new Date().getFullYear())</script> &middot; <a href="https://github.com/pssah4/obsilo-public/blob/main/LICENSE">Apache 2.0</a> &middot; <a href="https://github.com/pssah4/obsilo-public/blob/main/NOTICE.md">Notice</a> &middot; <a href="imprint.html">Imprint</a></p>
-  <p class="footer-disclaimer">Provided as-is, without any warranty or liability.</p>
+  <p class="footer-credits">Obsilo Agent <script>document.write(new Date().getFullYear())</script> &middot; <a href="https://github.com/pssah4/obsilo-public/blob/main/LICENSE" data-i18n="footer.license">Apache 2.0</a> &middot; <a href="https://github.com/pssah4/obsilo-public/blob/main/NOTICE.md" data-i18n="footer.notice">Notice</a> &middot; <a href="imprint.html" data-i18n="footer.imprint">Imprint</a></p>
+  <p class="footer-disclaimer" data-i18n="footer.disclaimer">Provided as-is, without any warranty or liability.</p>
 </footer>
+<script src="assets/i18n.js"></script>
 <script src="assets/search.js" defer></script>
 </body>
 </html>

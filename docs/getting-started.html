@@ -6,7 +6,7 @@
   <title>Getting Started — Obsilo Agent Docs</title>
   <link rel="icon" type="image/png" href="assets/OBSILO_ICON50x50_lila.png">
   <link rel="stylesheet" href="assets/style.css">
-  <script>(function(){var t=localStorage.getItem('theme')||'dark';document.documentElement.setAttribute('data-theme',t)})()</script>
+  <script>(function(){var t=localStorage.getItem('theme')||'dark';document.documentElement.setAttribute('data-theme',t)})();(function(){var l=localStorage.getItem('lang');if(l)document.documentElement.setAttribute('lang',l)})()</script>
 </head>
 <body>
 
@@ -15,52 +15,59 @@
     <img src="assets/OBSILO_LOGOFULL_SW_v2.png" alt="Obsilo" class="logo-img">
   </a>
   <nav class="header-links">
-    <a href="getting-started.html">Docs</a>
-    <a href="about.html">About</a>
-    <a href="https://github.com/pssah4/obsilo-public" class="github-btn"><svg aria-hidden="true" height="16" viewBox="0 0 16 16" width="16" class="github-icon"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg> GitHub</a>
+    <a href="getting-started.html" data-i18n="header.docs">Docs</a>
+    <a href="about.html" data-i18n="header.about">About</a>
+    <a href="https://github.com/pssah4/obsilo-public" class="github-btn"><svg aria-hidden="true" height="16" viewBox="0 0 16 16" width="16" class="github-icon"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg> <span data-i18n="header.github">GitHub</span></a>
     <a href="https://buymeacoffee.com/sebastianhanke" target="_blank" rel="noopener noreferrer"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" class="bmc-header-btn"></a>
   </nav>
   <div class="spacer"></div>
-  <button class="theme-toggle" aria-label="Toggle theme" onclick="toggleTheme()">
+  <button class="theme-toggle" aria-label="Toggle theme" data-i18n-aria="header.toggleTheme" onclick="toggleTheme()">
     <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
     <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
   </button>
-  <button class="search-btn" onclick="openDocsSearch()" aria-label="Search docs"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Search</button>
+  <div class="lang-switcher">
+    <button class="lang-toggle" onclick="toggleLangDropdown(event)" aria-label="Switch language" data-i18n-aria="header.switchLang">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+      <span class="lang-toggle-label">EN</span>
+    </button>
+    <div class="lang-dropdown"></div>
+  </div>
+  <button class="search-btn" onclick="openDocsSearch()" aria-label="Search docs" data-i18n-aria="header.search"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span data-i18n="header.search">Search</span></button>
 </header>
 <script>function toggleTheme(){var h=document.documentElement,n=h.getAttribute('data-theme')==='light'?'dark':'light';h.setAttribute('data-theme',n);localStorage.setItem('theme',n);document.querySelectorAll('.logo-img').forEach(function(i){i.src=n==='light'?'assets/OBSILO_LOGOFULL_v2.png':'assets/OBSILO_LOGOFULL_SW_v2.png'})}(function(){var t=document.documentElement.getAttribute('data-theme');if(t==='light'){document.querySelectorAll('.logo-img').forEach(function(i){i.src='assets/OBSILO_LOGOFULL_v2.png'})}})()</script>
 
 <div class="docs-layout">
   <aside class="docs-sidebar">
     <div class="sidebar-section">
-      <div class="sidebar-section-title">Get Started</div>
+      <div class="sidebar-section-title" data-i18n="sidebar.getStarted">Get Started</div>
       <nav class="sidebar-nav">
-        <a href="getting-started.html" class="active">Getting Started</a>
+        <a href="getting-started.html" class="active" data-i18n="sidebar.gettingStarted">Getting Started</a>
       </nav>
     </div>
     <div class="sidebar-section">
-      <div class="sidebar-section-title">Using Obsilo</div>
+      <div class="sidebar-section-title" data-i18n="sidebar.usingObsilo">Using Obsilo</div>
       <nav class="sidebar-nav">
-        <a href="chat-interface.html">Chat Interface</a>
-        <a href="memory.html">Memory &amp; Chat History</a>
-        <a href="modes.html">Modes</a>
-        <a href="permissions.html">Permissions &amp; Safety</a>
+        <a href="chat-interface.html" data-i18n="sidebar.chatInterface">Chat Interface</a>
+        <a href="memory.html" data-i18n="sidebar.memoryHistory">Memory &amp; Chat History</a>
+        <a href="modes.html" data-i18n="sidebar.modes">Modes</a>
+        <a href="permissions.html" data-i18n="sidebar.permissionsSafety">Permissions &amp; Safety</a>
       </nav>
     </div>
     <div class="sidebar-section">
-      <div class="sidebar-section-title">Context &amp; Knowledge</div>
+      <div class="sidebar-section-title" data-i18n="sidebar.contextKnowledge">Context &amp; Knowledge</div>
       <nav class="sidebar-nav">
-        <a href="rules-skills-workflows.html">Rules, Skills &amp; Workflows</a>
-        <a href="semantic-search.html">Semantic Search</a>
+        <a href="rules-skills-workflows.html" data-i18n="sidebar.rulesSkillsWorkflows">Rules, Skills &amp; Workflows</a>
+        <a href="semantic-search.html" data-i18n="sidebar.semanticSearch">Semantic Search</a>
       </nav>
     </div>
     <div class="sidebar-section">
-      <div class="sidebar-section-title">Reference</div>
+      <div class="sidebar-section-title" data-i18n="sidebar.reference">Reference</div>
       <nav class="sidebar-nav">
-        <a href="tools.html">Tools Reference</a>
-        <a href="providers.html">Providers &amp; Models</a>
-        <a href="mcp-servers.html">MCP Servers</a>
-        <a href="checkpoints.html">Checkpoints</a>
-        <a href="settings-reference.html">Settings Reference</a>
+        <a href="tools.html" data-i18n="sidebar.toolsRef">Tools Reference</a>
+        <a href="providers.html" data-i18n="sidebar.providersModels">Providers &amp; Models</a>
+        <a href="mcp-servers.html" data-i18n="sidebar.mcpServers">MCP Servers</a>
+        <a href="checkpoints.html" data-i18n="sidebar.checkpoints">Checkpoints</a>
+        <a href="settings-reference.html" data-i18n="sidebar.settingsRef">Settings Reference</a>
       </nav>
     </div>
   </aside>
@@ -68,22 +75,22 @@
   <main class="docs-main">
     <article class="docs-content">
       <div class="breadcrumb">
-        <a href="index.html">Docs</a>
+        <a href="index.html" data-i18n="breadcrumb.docs">Docs</a>
         <span class="breadcrumb-sep">›</span>
-        Getting Started
+        <span data-i18n="pages.gettingStarted.title">Getting Started</span>
       </div>
 
-      <h1>Getting Started</h1>
-      <p>Obsilo is in early beta and open for testing. It has not been published as Community Plugin yet, hence you'll need to use one of the two other options described below. 
+      <h1 data-i18n="pages.gettingStarted.title">Getting Started</h1>
+      <p data-i18n="pages.gettingStarted.subtitle" data-i18n-html>Obsilo is in early beta and open for testing. It has not been published as Community Plugin yet, hence you'll need to use one of the two other options described below.
       <br/> Install Obsilo Agent, connect your first AI model, and run your first task in under 5 minutes.</p>
 
-      <div class="callout callout-tip">
+      <div class="callout callout-tip" data-i18n-html="pages.gettingStarted.intro.callout">
         <strong>What you'll be able to do</strong>
         Ask questions about your vault, create and edit notes with AI assistance, research topics on the web and save the results, organize notes in bulk — all from a sidebar inside Obsidian, with a diff preview and approval step before anything changes.
       </div>
 
-      <h2 id="requirements">Requirements</h2>
-      <table>
+      <h2 id="requirements" data-i18n="pages.gettingStarted.requirements">Requirements</h2>
+      <table data-i18n-html="pages.gettingStarted.requirements.table">
         <tbody>
           <tr><td><strong>Obsidian</strong></td><td>Version 1.4.0 or later</td></tr>
           <tr><td><strong>Platform</strong></td><td>Desktop only (macOS, Windows, Linux). Not available on mobile.</td></tr>
@@ -92,48 +99,48 @@
         </tbody>
       </table>
 
-      <h2 id="installation">Installation</h2>
+      <h2 id="installation" data-i18n="pages.gettingStarted.installation">Installation</h2>
 
-      <h3 id="brat">Install via BRAT (Recommended)</h3>
-      <p><a href="https://github.com/TfTHacker/obsidian42-brat" target="_blank" rel="noopener noreferrer">BRAT</a> (Beta Reviewers Auto-update Tool) lets you install Obsilo Agent directly from GitHub without building from source, and keeps it up to date automatically.</p>
+      <h3 id="brat" data-i18n="pages.gettingStarted.brat">Install via BRAT (Recommended)</h3>
+      <p data-i18n-html="pages.gettingStarted.brat.text"><a href="https://github.com/TfTHacker/obsidian42-brat" target="_blank" rel="noopener noreferrer">BRAT</a> (Beta Reviewers Auto-update Tool) lets you install Obsilo Agent directly from GitHub without building from source, and keeps it up to date automatically.</p>
       <ol class="steps">
-        <li>
+        <li data-i18n-html="pages.gettingStarted.brat.step1">
           <strong>Install BRAT</strong>
           <p>In Obsidian: Settings → Community Plugins → Browse → search for "BRAT" → Install and Enable.</p>
         </li>
-        <li>
+        <li data-i18n-html="pages.gettingStarted.brat.step2">
           <strong>Add Obsilo Agent</strong>
           <p>Open BRAT settings → <strong>Add Beta Plugin</strong> → paste:</p>
           <pre><code>https://github.com/pssah4/obsilo-public</code></pre>
           <p>Click <strong>Add Plugin</strong>. BRAT downloads and installs the latest release.</p>
         </li>
-        <li>
+        <li data-i18n-html="pages.gettingStarted.brat.step3">
           <strong>Enable the plugin</strong>
           <p>Go to Settings → Community Plugins → scroll to "Obsilo Agent" → toggle on.</p>
         </li>
       </ol>
 
-      <h3 id="manual">Manual Installation (from source)</h3>
+      <h3 id="manual" data-i18n="pages.gettingStarted.manual">Manual Installation (from source)</h3>
       <ol class="steps">
-        <li>
+        <li data-i18n-html="pages.gettingStarted.manual.step1">
           <strong>Clone the repository</strong>
           <pre><code>git clone https://github.com/pssah4/obsilo-public.git
 cd obsidian-agent</code></pre>
         </li>
-        <li>
+        <li data-i18n-html="pages.gettingStarted.manual.step2">
           <strong>Install dependencies and build</strong>
           <pre><code>npm install
 npm run build</code></pre>
           This produces <code>main.js</code> in the project root.
         </li>
-        <li>
+        <li data-i18n-html="pages.gettingStarted.manual.step3">
           <strong>Copy to your vault</strong>
           <p>Create the plugin directory and copy the three required files:</p>
           <pre><code>mkdir -p "/path/to/your-vault/.obsidian/plugins/obsidian-agent"
 cp main.js styles.css manifest.json \
    "/path/to/your-vault/.obsidian/plugins/obsidian-agent/"</code></pre>
         </li>
-        <li>
+        <li data-i18n-html="pages.gettingStarted.manual.step4">
           <strong>Enable in Obsidian</strong>
           <p>Open Obsidian → Settings → Community Plugins → scroll to "Obsilo Agent" → toggle it on.</p>
           <div class="callout callout-note">
@@ -143,17 +150,17 @@ cp main.js styles.css manifest.json \
         </li>
       </ol>
 
-      <div class="callout callout-note">
+      <div class="callout callout-note" data-i18n-html="pages.gettingStarted.installation.callout">
         <strong>Development mode</strong>
         Run <code>npm run dev</code> to watch for changes and hot-deploy on every save. Set the target vault path in <code>esbuild.config.mjs</code> (<code>VAULT_PLUGIN_DIR</code>) to auto-deploy on each build.
       </div>
 
-      <h2 id="first-setup">First Setup</h2>
+      <h2 id="first-setup" data-i18n="pages.gettingStarted.firstSetup">First Setup</h2>
 
-      <h3 id="add-model">1. Add an AI Model</h3>
-      <p>Open Obsidian Settings → Obsilo Agent → <strong>Providers → Models</strong>.</p>
-      <p>You'll see pre-configured built-in models. Click <strong>Edit</strong> on any model to add your API key and enable it:</p>
-      <table>
+      <h3 id="add-model" data-i18n="pages.gettingStarted.addModel">1. Add an AI Model</h3>
+      <p data-i18n-html="pages.gettingStarted.addModel.text1">Open Obsidian Settings → Obsilo Agent → <strong>Providers → Models</strong>.</p>
+      <p data-i18n-html="pages.gettingStarted.addModel.text2">You'll see pre-configured built-in models. Click <strong>Edit</strong> on any model to add your API key and enable it:</p>
+      <table data-i18n-html="pages.gettingStarted.addModel.table">
         <thead><tr><th>Provider</th><th>Where to get key</th><th>Recommended model</th></tr></thead>
         <tbody>
           <tr><td>Anthropic</td><td><a href="https://console.anthropic.com">console.anthropic.com</a></td><td>Claude Sonnet 4.5</td></tr>
@@ -162,61 +169,61 @@ cp main.js styles.css manifest.json \
           <tr><td>Ollama</td><td>Run locally: <code>ollama serve</code></td><td>llama3.2 or qwen2.5:7b</td></tr>
         </tbody>
       </table>
-      <p>After entering the key, click <strong>Test Connection</strong> to verify it works. Then enable the model to make it available in the chat.</p>
+      <p data-i18n-html="pages.gettingStarted.addModel.text3">After entering the key, click <strong>Test Connection</strong> to verify it works. Then enable the model to make it available in the chat.</p>
 
-      <h3 id="open-sidebar">2. Open the Sidebar</h3>
-      <p>Click the Obsilo Agent icon in the Obsidian ribbon (left or right edge of the window). If you don't see it, use the Command Palette (<kbd>Ctrl/Cmd+P</kbd>) and search for "Open Agent Sidebar".</p>
-      <p>The sidebar defaults to the right panel. You can move it to the left in Settings → Interface → Sidebar Position.</p>
+      <h3 id="open-sidebar" data-i18n="pages.gettingStarted.openSidebar">2. Open the Sidebar</h3>
+      <p data-i18n-html="pages.gettingStarted.openSidebar.text1">Click the Obsilo Agent icon in the Obsidian ribbon (left or right edge of the window). If you don't see it, use the Command Palette (<kbd>Ctrl/Cmd+P</kbd>) and search for "Open Agent Sidebar".</p>
+      <p data-i18n-html="pages.gettingStarted.openSidebar.text2">The sidebar defaults to the right panel. You can move it to the left in Settings → Interface → Sidebar Position.</p>
 
-      <h3 id="first-task">3. Your First Task</h3>
-      <p>The sidebar opens in <strong>Ask mode</strong> by default — a read-only assistant that answers questions about your vault without touching any files. Try:</p>
-      <ul>
+      <h3 id="first-task" data-i18n="pages.gettingStarted.firstTask">3. Your First Task</h3>
+      <p data-i18n-html="pages.gettingStarted.firstTask.text1">The sidebar opens in <strong>Ask mode</strong> by default — a read-only assistant that answers questions about your vault without touching any files. Try:</p>
+      <ul data-i18n-html="pages.gettingStarted.firstTask.list1">
         <li><em>"What are my most recently modified notes?"</em></li>
         <li><em>"Find all notes tagged with #project"</em></li>
         <li><em>"What do I know about [any topic in your vault]?"</em></li>
       </ul>
-      <p>Switch to <strong>Agent mode</strong> using the mode selector in the chat header when you want to create, edit, or reorganize. The agent will show you a diff and ask for your approval before changing any file. Try:</p>
-      <ul>
+      <p data-i18n-html="pages.gettingStarted.firstTask.text2">Switch to <strong>Agent mode</strong> using the mode selector in the chat header when you want to create, edit, or reorganize. The agent will show you a diff and ask for your approval before changing any file. Try:</p>
+      <ul data-i18n-html="pages.gettingStarted.firstTask.list2">
         <li><em>"Create a weekly review template with sections for goals, accomplishments, and next steps"</em></li>
         <li><em>"Add a 'status' frontmatter field to all notes in my Projects folder"</em></li>
         <li><em>"Research [topic] on the web and save a summary note to my Research folder"</em></li>
       </ul>
 
-      <h2 id="semantic-search-setup">4. Set Up Semantic Search (Optional but Recommended)</h2>
-      <p>Semantic search lets the agent find notes by meaning rather than just keywords. It runs entirely locally — no cloud service needed.</p>
+      <h2 id="semantic-search-setup" data-i18n="pages.gettingStarted.semanticSearchSetup">4. Set Up Semantic Search (Optional but Recommended)</h2>
+      <p data-i18n="pages.gettingStarted.semanticSearchSetup.text1">Semantic search lets the agent find notes by meaning rather than just keywords. It runs entirely locally — no cloud service needed.</p>
       <ol class="steps">
-        <li>Go to Settings → Obsilo Agent → <strong>Semantic Index</strong></li>
-        <li>Toggle "Enable Semantic Index" on</li>
-        <li>Choose an embedding model. The default <code>Xenova/all-MiniLM-L6-v2</code> runs locally and requires no API key</li>
-        <li>Click <strong>Build Index</strong> and wait for indexing to complete (the first build may take a few minutes)</li>
+        <li data-i18n-html="pages.gettingStarted.semanticSearchSetup.step1">Go to Settings → Obsilo Agent → <strong>Semantic Index</strong></li>
+        <li data-i18n-html="pages.gettingStarted.semanticSearchSetup.step2">Toggle "Enable Semantic Index" on</li>
+        <li data-i18n-html="pages.gettingStarted.semanticSearchSetup.step3">Choose an embedding model. The default <code>Xenova/all-MiniLM-L6-v2</code> runs locally and requires no API key</li>
+        <li data-i18n-html="pages.gettingStarted.semanticSearchSetup.step4">Click <strong>Build Index</strong> and wait for indexing to complete (the first build may take a few minutes)</li>
       </ol>
-      <p>Once built, the <code>semantic_search</code> tool is available to the agent in all modes.</p>
+      <p data-i18n-html="pages.gettingStarted.semanticSearchSetup.text2">Once built, the <code>semantic_search</code> tool is available to the agent in all modes.</p>
 
-      <h2 id="next-steps">Next Steps</h2>
+      <h2 id="next-steps" data-i18n="pages.gettingStarted.nextSteps">Next Steps</h2>
       <div class="docs-grid" style="margin-top: 1rem;">
         <a href="chat-interface.html" class="docs-card">
-          <div class="docs-card-title">Chat Interface</div>
-          <div class="docs-card-desc">Learn about the sidebar UI, attachments, autocomplete, and activity log.</div>
+          <div class="docs-card-title" data-i18n="pages.gettingStarted.nextSteps.chatInterfaceTitle">Chat Interface</div>
+          <div class="docs-card-desc" data-i18n="pages.gettingStarted.nextSteps.chatInterfaceDesc">Learn about the sidebar UI, attachments, autocomplete, and activity log.</div>
         </a>
         <a href="modes.html" class="docs-card">
-          <div class="docs-card-title">Modes</div>
-          <div class="docs-card-desc">Understand built-in modes and create your own custom agent personas.</div>
+          <div class="docs-card-title" data-i18n="pages.gettingStarted.nextSteps.modesTitle">Modes</div>
+          <div class="docs-card-desc" data-i18n="pages.gettingStarted.nextSteps.modesDesc">Understand built-in modes and create your own custom agent personas.</div>
         </a>
         <a href="rules-skills-workflows.html" class="docs-card">
-          <div class="docs-card-title">Rules, Skills &amp; Workflows</div>
-          <div class="docs-card-desc">Customize how the agent behaves with permanent instructions and templates.</div>
+          <div class="docs-card-title" data-i18n="pages.gettingStarted.nextSteps.rulesSkillsWorkflowsTitle">Rules, Skills &amp; Workflows</div>
+          <div class="docs-card-desc" data-i18n="pages.gettingStarted.nextSteps.rulesSkillsWorkflowsDesc">Customize how the agent behaves with permanent instructions and templates.</div>
         </a>
         <a href="permissions.html" class="docs-card">
-          <div class="docs-card-title">Permissions</div>
-          <div class="docs-card-desc">Configure which operations need your approval and which are auto-approved.</div>
+          <div class="docs-card-title" data-i18n="pages.gettingStarted.nextSteps.permissionsTitle">Permissions</div>
+          <div class="docs-card-desc" data-i18n="pages.gettingStarted.nextSteps.permissionsDesc">Configure which operations need your approval and which are auto-approved.</div>
         </a>
       </div>
 
       <div class="page-nav">
         <span></span>
         <a href="chat-interface.html" class="page-nav-item next">
-          <span class="page-nav-label">Next</span>
-          <span class="page-nav-title">Chat Interface &rarr;</span>
+          <span class="page-nav-label" data-i18n="nav.next">Next</span>
+          <span class="page-nav-title"><span data-i18n="sidebar.chatInterface">Chat Interface</span> &rarr;</span>
         </a>
       </div>
     </article>
@@ -224,9 +231,10 @@ cp main.js styles.css manifest.json \
 </div>
 
 <footer class="footer">
-  <p class="footer-credits">Obsilo Agent <script>document.write(new Date().getFullYear())</script> &middot; <a href="https://github.com/pssah4/obsilo-public/blob/main/LICENSE">Apache 2.0</a> &middot; <a href="https://github.com/pssah4/obsilo-public/blob/main/NOTICE.md">Notice</a> &middot; <a href="imprint.html">Imprint</a></p>
-  <p class="footer-disclaimer">Provided as-is, without any warranty or liability.</p>
+  <p class="footer-credits">Obsilo Agent <script>document.write(new Date().getFullYear())</script> &middot; <a href="https://github.com/pssah4/obsilo-public/blob/main/LICENSE" data-i18n="footer.license">Apache 2.0</a> &middot; <a href="https://github.com/pssah4/obsilo-public/blob/main/NOTICE.md" data-i18n="footer.notice">Notice</a> &middot; <a href="imprint.html" data-i18n="footer.imprint">Imprint</a></p>
+  <p class="footer-disclaimer" data-i18n="footer.disclaimer">Provided as-is, without any warranty or liability.</p>
 </footer>
+<script src="assets/i18n.js"></script>
 <script src="assets/search.js" defer></script>
 </body>
 </html>

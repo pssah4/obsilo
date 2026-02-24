@@ -6,7 +6,7 @@
   <title>Chat Interface — Obsilo Agent Docs</title>
   <link rel="icon" type="image/png" href="assets/OBSILO_LOGOFULL_SW_v2.png">
   <link rel="stylesheet" href="assets/style.css">
-  <script>(function(){var t=localStorage.getItem('theme')||'dark';document.documentElement.setAttribute('data-theme',t)})()</script>
+  <script>(function(){var t=localStorage.getItem('theme')||'dark';document.documentElement.setAttribute('data-theme',t)})();(function(){var l=localStorage.getItem('lang');if(l)document.documentElement.setAttribute('lang',l)})()</script>
 </head>
 <body>
 
@@ -15,50 +15,57 @@
     <img src="assets/OBSILO_LOGOFULL_SW_v2.png" alt="Obsilo" class="logo-img">
   </a>
   <nav class="header-links">
-    <a href="getting-started.html">Docs</a>
-    <a href="about.html">About</a>
-    <a href="https://github.com/pssah4/obsilo-public" class="github-btn"><svg aria-hidden="true" height="16" viewBox="0 0 16 16" width="16" class="github-icon"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg> GitHub</a>
+    <a href="getting-started.html" data-i18n="header.docs">Docs</a>
+    <a href="about.html" data-i18n="header.about">About</a>
+    <a href="https://github.com/pssah4/obsilo-public" class="github-btn"><svg aria-hidden="true" height="16" viewBox="0 0 16 16" width="16" class="github-icon"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg> <span data-i18n="header.github">GitHub</span></a>
     <a href="https://buymeacoffee.com/sebastianhanke" target="_blank" rel="noopener noreferrer"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" class="bmc-header-btn"></a>
   </nav>
   <div class="spacer"></div>
-  <button class="theme-toggle" aria-label="Toggle theme" onclick="toggleTheme()">
+  <button class="theme-toggle" aria-label="Toggle theme" data-i18n-aria="header.toggleTheme" onclick="toggleTheme()">
     <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
     <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
   </button>
-  <button class="search-btn" onclick="openDocsSearch()" aria-label="Search docs"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Search</button>
+  <div class="lang-switcher">
+    <button class="lang-toggle" onclick="toggleLangDropdown(event)" aria-label="Switch language" data-i18n-aria="header.switchLang">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+      <span class="lang-toggle-label">EN</span>
+    </button>
+    <div class="lang-dropdown"></div>
+  </div>
+  <button class="search-btn" onclick="openDocsSearch()" aria-label="Search docs" data-i18n-aria="header.search"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span data-i18n="header.search">Search</span></button>
 </header>
 <script>function toggleTheme(){var h=document.documentElement,n=h.getAttribute('data-theme')==='light'?'dark':'light';h.setAttribute('data-theme',n);localStorage.setItem('theme',n);document.querySelectorAll('.logo-img').forEach(function(i){i.src=n==='light'?'assets/OBSILO_LOGOFULL_v2.png':'assets/OBSILO_LOGOFULL_SW_v2.png'})}(function(){var t=document.documentElement.getAttribute('data-theme');if(t==='light'){document.querySelectorAll('.logo-img').forEach(function(i){i.src='assets/OBSILO_LOGOFULL_v2.png'})}})()</script>
 
 <div class="docs-layout">
   <aside class="docs-sidebar">
     <div class="sidebar-section">
-      <div class="sidebar-section-title">Get Started</div>
-      <nav class="sidebar-nav"><a href="getting-started.html">Getting Started</a></nav>
+      <div class="sidebar-section-title" data-i18n="sidebar.getStarted">Get Started</div>
+      <nav class="sidebar-nav"><a href="getting-started.html" data-i18n="sidebar.gettingStarted">Getting Started</a></nav>
     </div>
     <div class="sidebar-section">
-      <div class="sidebar-section-title">Using Obsilo</div>
+      <div class="sidebar-section-title" data-i18n="sidebar.usingObsilo">Using Obsilo</div>
       <nav class="sidebar-nav">
-        <a href="chat-interface.html" class="active">Chat Interface</a>
-        <a href="memory.html">Memory &amp; Chat History</a>
-        <a href="modes.html">Modes</a>
-        <a href="permissions.html">Permissions &amp; Safety</a>
+        <a href="chat-interface.html" class="active" data-i18n="sidebar.chatInterface">Chat Interface</a>
+        <a href="memory.html" data-i18n="sidebar.memoryHistory">Memory &amp; Chat History</a>
+        <a href="modes.html" data-i18n="sidebar.modes">Modes</a>
+        <a href="permissions.html" data-i18n="sidebar.permissionsSafety">Permissions &amp; Safety</a>
       </nav>
     </div>
     <div class="sidebar-section">
-      <div class="sidebar-section-title">Context &amp; Knowledge</div>
+      <div class="sidebar-section-title" data-i18n="sidebar.contextKnowledge">Context &amp; Knowledge</div>
       <nav class="sidebar-nav">
-        <a href="rules-skills-workflows.html">Rules, Skills &amp; Workflows</a>
-        <a href="semantic-search.html">Semantic Search</a>
+        <a href="rules-skills-workflows.html" data-i18n="sidebar.rulesSkillsWorkflows">Rules, Skills &amp; Workflows</a>
+        <a href="semantic-search.html" data-i18n="sidebar.semanticSearch">Semantic Search</a>
       </nav>
     </div>
     <div class="sidebar-section">
-      <div class="sidebar-section-title">Reference</div>
+      <div class="sidebar-section-title" data-i18n="sidebar.reference">Reference</div>
       <nav class="sidebar-nav">
-        <a href="tools.html">Tools Reference</a>
-        <a href="providers.html">Providers &amp; Models</a>
-        <a href="mcp-servers.html">MCP Servers</a>
-        <a href="checkpoints.html">Checkpoints</a>
-        <a href="settings-reference.html">Settings Reference</a>
+        <a href="tools.html" data-i18n="sidebar.toolsRef">Tools Reference</a>
+        <a href="providers.html" data-i18n="sidebar.providersModels">Providers &amp; Models</a>
+        <a href="mcp-servers.html" data-i18n="sidebar.mcpServers">MCP Servers</a>
+        <a href="checkpoints.html" data-i18n="sidebar.checkpoints">Checkpoints</a>
+        <a href="settings-reference.html" data-i18n="sidebar.settingsRef">Settings Reference</a>
       </nav>
     </div>
   </aside>
@@ -66,67 +73,67 @@
   <main class="docs-main">
     <article class="docs-content">
       <div class="breadcrumb">
-        <a href="index.html">Docs</a> <span class="breadcrumb-sep">›</span>
+        <a href="index.html" data-i18n="breadcrumb.docs">Docs</a> <span class="breadcrumb-sep">›</span>
         Using Obsilo <span class="breadcrumb-sep">›</span>
-        Chat Interface
+        <span data-i18n="breadcrumb.chatInterface">Chat Interface</span>
       </div>
 
-      <h1>Chat Interface</h1>
-      <p>Everything you do in Obsilo starts in the sidebar. Here's how to get the most out of it — from sending your first message to attaching files, using autocomplete, and reading the activity log.</p>
+      <h1 data-i18n="pages.chatInterface.title">Chat Interface</h1>
+      <p data-i18n="pages.chatInterface.subtitle">Everything you do in Obsilo starts in the sidebar. Here's how to get the most out of it — from sending your first message to attaching files, using autocomplete, and reading the activity log.</p>
 
-      <h2 id="overview">Overview</h2>
-      <p>The sidebar has three main zones:</p>
-      <ul>
+      <h2 id="overview" data-i18n="pages.chatInterface.overview">Overview</h2>
+      <p data-i18n="pages.chatInterface.overview.text">The sidebar has three main zones:</p>
+      <ul data-i18n-html="pages.chatInterface.overview.list">
         <li><strong>Header</strong> — mode selector, model selector, new chat button</li>
         <li><strong>Messages area</strong> — conversation history with real-time streaming</li>
         <li><strong>Input area</strong> — text input with toolbar (attachments, tools, send)</li>
       </ul>
 
-      <h2 id="sending-messages">Sending Messages</h2>
-      <p>Type your message in the input area at the bottom of the sidebar.</p>
-      <ul>
+      <h2 id="sending-messages" data-i18n="pages.chatInterface.sendingMessages">Sending Messages</h2>
+      <p data-i18n="pages.chatInterface.sendingMessages.text1">Type your message in the input area at the bottom of the sidebar.</p>
+      <ul data-i18n-html="pages.chatInterface.sendingMessages.list">
         <li><strong>Enter</strong> — send the message (default)</li>
         <li><strong>Shift+Enter</strong> — insert a newline</li>
         <li><strong>Ctrl/Cmd+Enter</strong> — alternative send key (configurable in Settings → Interface)</li>
       </ul>
-      <p>You can change the send key behavior in Settings → Interface → "Press Enter to send".</p>
+      <p data-i18n="pages.chatInterface.sendingMessages.text2">You can change the send key behavior in Settings → Interface → "Press Enter to send".</p>
 
-      <h2 id="context-injection">Context Injection</h2>
+      <h2 id="context-injection" data-i18n="pages.chatInterface.contextInjection">Context Injection</h2>
 
-      <h3 id="active-file">Active File Context</h3>
-      <p>Enable "Auto-add active file context" in Settings → Interface to automatically include the note you're currently viewing in every message. A badge in the input area shows the filename. This lets you ask questions like <em>"Summarize this note"</em> or <em>"Find related notes"</em> without having to attach the file manually.</p>
+      <h3 id="active-file" data-i18n="pages.chatInterface.activeFile">Active File Context</h3>
+      <p data-i18n-html="pages.chatInterface.activeFile.text">Enable "Auto-add active file context" in Settings → Interface to automatically include the note you're currently viewing in every message. A badge in the input area shows the filename. This lets you ask questions like <em>"Summarize this note"</em> or <em>"Find related notes"</em> without having to attach the file manually.</p>
 
-      <h3 id="file-attachments">Attaching Files</h3>
-      <p>Type <code>@</code> in the input to open the Vault File Picker — a live-search list of all your vault files. Select one (or several) to include their content as context. Attached files appear as chips in the input area and can be removed individually. This is useful when you want the agent to reference a specific note without switching to it.</p>
+      <h3 id="file-attachments" data-i18n="pages.chatInterface.fileAttachments">Attaching Files</h3>
+      <p data-i18n-html="pages.chatInterface.fileAttachments.text">Type <code>@</code> in the input to open the Vault File Picker — a live-search list of all your vault files. Select one (or several) to include their content as context. Attached files appear as chips in the input area and can be removed individually. This is useful when you want the agent to reference a specific note without switching to it.</p>
 
-      <h3 id="autocomplete">Autocomplete</h3>
-      <p>Two shortcut triggers are available in the input:</p>
-      <ul>
+      <h3 id="autocomplete" data-i18n="pages.chatInterface.autocomplete">Autocomplete</h3>
+      <p data-i18n="pages.chatInterface.autocomplete.text">Two shortcut triggers are available in the input:</p>
+      <ul data-i18n-html="pages.chatInterface.autocomplete.list">
         <li><strong><code>/</code></strong> — opens a list of your workflows and custom prompts. Select one to expand it as a message template. For example, type <code>/daily-review</code> to run your review workflow.</li>
         <li><strong><code>@</code></strong> — opens the vault file picker to attach notes as context.</li>
       </ul>
 
-      <h2 id="activity-block">Activity Block</h2>
-      <p>When the agent is working, an expandable <strong>activity block</strong> appears below the spinner. It shows every tool call in real time — the tool name, its inputs, and the result (success or error). You can expand it at any time while the agent is still running.</p>
-      <p>Each tool call shows:</p>
-      <ul>
+      <h2 id="activity-block" data-i18n="pages.chatInterface.activityBlock">Activity Block</h2>
+      <p data-i18n-html="pages.chatInterface.activityBlock.text1">When the agent is working, an expandable <strong>activity block</strong> appears below the spinner. It shows every tool call in real time — the tool name, its inputs, and the result (success or error). You can expand it at any time while the agent is still running.</p>
+      <p data-i18n="pages.chatInterface.activityBlock.text2">Each tool call shows:</p>
+      <ul data-i18n-html="pages.chatInterface.activityBlock.list">
         <li><strong>Tool name</strong> in a monospace badge</li>
         <li><strong>Key parameters</strong> (e.g., the file path for read_file)</li>
         <li><strong>Diff badge</strong> for write operations: <code>+N / -N</code> lines changed</li>
         <li><strong>Result</strong> shown on expansion</li>
       </ul>
 
-      <h2 id="todo-list">Task Checklist</h2>
-      <p>When the agent calls <code>update_todo_list</code> to plan a complex task, a checklist card appears in the conversation. It updates live as the agent completes steps:</p>
-      <ul>
+      <h2 id="todo-list" data-i18n="pages.chatInterface.todoList">Task Checklist</h2>
+      <p data-i18n-html="pages.chatInterface.todoList.text">When the agent calls <code>update_todo_list</code> to plan a complex task, a checklist card appears in the conversation. It updates live as the agent completes steps:</p>
+      <ul data-i18n-html="pages.chatInterface.todoList.list">
         <li><code>[ ]</code> — pending</li>
         <li><code>[~]</code> — in progress (highlighted)</li>
         <li><code>[x]</code> — complete</li>
       </ul>
 
-      <h2 id="approval-flow">Approval Flow</h2>
-      <p>When the agent wants to create, edit, or delete a file, an <strong>approval card</strong> appears:</p>
-      <ul>
+      <h2 id="approval-flow" data-i18n="pages.chatInterface.approvalFlow">Approval Flow</h2>
+      <p data-i18n-html="pages.chatInterface.approvalFlow.text">When the agent wants to create, edit, or delete a file, an <strong>approval card</strong> appears:</p>
+      <ul data-i18n-html="pages.chatInterface.approvalFlow.list">
         <li><strong>Tool name and file path</strong> — what will change</li>
         <li><strong>Diff preview</strong> — added (green) and removed (red) lines for edits</li>
         <li><strong>Approve</strong> — execute the operation and continue</li>
@@ -134,39 +141,39 @@
         <li><strong>Auto-approve</strong> — approve this operation type for the rest of the session</li>
       </ul>
 
-      <div class="callout callout-tip">
+      <div class="callout callout-tip" data-i18n-html="pages.chatInterface.approvalFlow.callout">
         <strong>Tip</strong>
         Configure permanent auto-approval in Settings → Permissions to skip the approval card for operations you always trust (e.g., read operations are auto-approved by default).
       </div>
 
-      <h2 id="token-usage">Token Usage</h2>
-      <p>After each response, a token badge shows the cumulative input and output tokens used in the conversation. This helps you track costs and understand when context condensing might be useful.</p>
+      <h2 id="token-usage" data-i18n="pages.chatInterface.tokenUsage">Token Usage</h2>
+      <p data-i18n="pages.chatInterface.tokenUsage.text">After each response, a token badge shows the cumulative input and output tokens used in the conversation. This helps you track costs and understand when context condensing might be useful.</p>
 
-      <h2 id="model-mode-switcher">Mode and Model Selector</h2>
-      <p>The chat header has two selectors:</p>
-      <ul>
+      <h2 id="model-mode-switcher" data-i18n="pages.chatInterface.modelModeSwitcher">Mode and Model Selector</h2>
+      <p data-i18n="pages.chatInterface.modelModeSwitcher.text1">The chat header has two selectors:</p>
+      <ul data-i18n-html="pages.chatInterface.modelModeSwitcher.list">
         <li><strong>Mode selector</strong> (left) — switch between Ask, Agent, and custom modes. The switch takes effect for the next message.</li>
         <li><strong>Model selector</strong> (right) — switch the AI model. Shows all enabled models.</li>
       </ul>
-      <p>The agent can also switch modes mid-conversation with the <code>switch_mode</code> tool if the task calls for it (requires approval).</p>
+      <p data-i18n-html="pages.chatInterface.modelModeSwitcher.text2">The agent can also switch modes mid-conversation with the <code>switch_mode</code> tool if the task calls for it (requires approval).</p>
 
-      <h2 id="chat-controls">Chat Controls</h2>
-      <ul>
+      <h2 id="chat-controls" data-i18n="pages.chatInterface.chatControls">Chat Controls</h2>
+      <ul data-i18n-html="pages.chatInterface.chatControls.list">
         <li><strong>New Chat</strong> (header button) — clears the conversation and starts fresh</li>
         <li><strong>Stop</strong> (appears while agent is running) — aborts the current request</li>
         <li><strong>Regenerate</strong> — re-sends the last user message, discarding the previous response</li>
         <li><strong>Save Chat</strong> — saves the current conversation to a JSON file in your vault (if chat history folder is configured)</li>
       </ul>
 
-      <h2 id="chat-history">Chat History</h2>
-      <p>Chat history is enabled by default. Every conversation is automatically saved and can be restored from the history panel. Click the history icon in the sidebar header to browse past conversations grouped by date.</p>
-      <p>For full details on chat history, memory, and personalization, see <a href="memory.html">Memory &amp; Chat History</a>.</p>
+      <h2 id="chat-history" data-i18n="pages.chatInterface.chatHistory">Chat History</h2>
+      <p data-i18n="pages.chatInterface.chatHistory.text1">Chat history is enabled by default. Every conversation is automatically saved and can be restored from the history panel. Click the history icon in the sidebar header to browse past conversations grouped by date.</p>
+      <p data-i18n-html="pages.chatInterface.chatHistory.text2">For full details on chat history, memory, and personalization, see <a href="memory.html">Memory &amp; Chat History</a>.</p>
 
-      <h2 id="tool-picker">Tool Picker (Session Overrides)</h2>
-      <p>Click the wrench icon in the input toolbar to open the Tool Picker popover. This lets you temporarily override which tools, skills, or workflows are active for the current session — without changing your permanent settings.</p>
+      <h2 id="tool-picker" data-i18n="pages.chatInterface.toolPicker">Tool Picker (Session Overrides)</h2>
+      <p data-i18n="pages.chatInterface.toolPicker.text">Click the wrench icon in the input toolbar to open the Tool Picker popover. This lets you temporarily override which tools, skills, or workflows are active for the current session — without changing your permanent settings.</p>
 
-      <h2 id="keyboard">Keyboard Shortcuts</h2>
-      <table>
+      <h2 id="keyboard" data-i18n="pages.chatInterface.keyboard">Keyboard Shortcuts</h2>
+      <table data-i18n-html="pages.chatInterface.keyboard.table">
         <thead><tr><th>Shortcut</th><th>Action</th></tr></thead>
         <tbody>
           <tr><td><kbd>Enter</kbd></td><td>Send message (default)</td></tr>
@@ -180,12 +187,12 @@
 
       <div class="page-nav">
         <a href="getting-started.html" class="page-nav-item">
-          <span class="page-nav-label">Previous</span>
-          <span class="page-nav-title">← Getting Started</span>
+          <span class="page-nav-label" data-i18n="nav.previous">Previous</span>
+          <span class="page-nav-title">← <span data-i18n="sidebar.gettingStarted">Getting Started</span></span>
         </a>
         <a href="memory.html" class="page-nav-item next">
-          <span class="page-nav-label">Next</span>
-          <span class="page-nav-title">Memory &amp; Chat History →</span>
+          <span class="page-nav-label" data-i18n="nav.next">Next</span>
+          <span class="page-nav-title"><span data-i18n="sidebar.memoryHistory">Memory &amp; Chat History</span> →</span>
         </a>
       </div>
     </article>
@@ -193,9 +200,10 @@
 </div>
 
 <footer class="footer">
-  <p class="footer-credits">Obsilo Agent <script>document.write(new Date().getFullYear())</script> &middot; <a href="https://github.com/pssah4/obsilo-public/blob/main/LICENSE">Apache 2.0</a> &middot; <a href="https://github.com/pssah4/obsilo-public/blob/main/NOTICE.md">Notice</a> &middot; <a href="imprint.html">Imprint</a></p>
-  <p class="footer-disclaimer">Provided as-is, without any warranty or liability.</p>
+  <p class="footer-credits">Obsilo Agent <script>document.write(new Date().getFullYear())</script> &middot; <a href="https://github.com/pssah4/obsilo-public/blob/main/LICENSE" data-i18n="footer.license">Apache 2.0</a> &middot; <a href="https://github.com/pssah4/obsilo-public/blob/main/NOTICE.md" data-i18n="footer.notice">Notice</a> &middot; <a href="imprint.html" data-i18n="footer.imprint">Imprint</a></p>
+  <p class="footer-disclaimer" data-i18n="footer.disclaimer">Provided as-is, without any warranty or liability.</p>
 </footer>
+<script src="assets/i18n.js"></script>
 <script src="assets/search.js" defer></script>
 </body>
 </html>

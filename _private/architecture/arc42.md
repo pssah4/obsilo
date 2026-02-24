@@ -1,8 +1,8 @@
 # arc42 — Obsidian Agent Architecture
 
-**Version:** 2.0 (post-implementation)
-**Stand:** 2026-02-20
-**Status:** Aktuell — alle Features implementiert
+**Version:** 3.0 (pre-release)
+**Stand:** 2026-02-24
+**Status:** Aktuell — alle Features implementiert, Dokumentation vollstaendig
 
 ---
 
@@ -92,7 +92,15 @@ Obsidian Agent ist ein Obsidian-Plugin, das einen vollständigen KI-Agenten dire
 
 5. **Local-Only Semantic Index** — vectra (Pure-TypeScript HNSW) + Xenova Transformers (ONNX). Keine Cloud-Abhängigkeit. Index liegt im Obsidian-Sync-Ordner.
 
-6. **Sliding Window Repetition Detection** — Erkennt Tool-Loops (gleiche Tool+Input-Kombination ≥ 3× in letzten 10 Calls) und bricht den Loop ab.
+6. **Sliding Window Repetition Detection** — Erkennt Tool-Loops (gleiche Tool+Input-Kombination >= 3x in letzten 10 Calls) und bricht den Loop ab.
+
+7. **Multi-Provider API (Adapter Pattern)** — Einheitliches `ApiHandler`-Interface fuer Anthropic (nativ) und alle OpenAI-kompatiblen Provider (OpenAI, Ollama, LM Studio, OpenRouter, Azure, Custom). Internes Message-Format ist Anthropic-nativ. [ADR-011](ADR-011-multi-provider-api.md)
+
+8. **3-Tier Memory Architecture** — Chat History (kurzfristig) -> Session Summaries (mittelfristig, LLM-extrahiert) -> Long-Term Memory (langfristig, Fakten-Promotion). Asynchrone Verarbeitung via persistenter ExtractionQueue. [ADR-013](ADR-013-memory-architecture.md)
+
+9. **VaultDNA Plugin Discovery** — Automatischer Runtime-Scan aller installierten Plugins. Generiert Skill-Files mit Commands und API-Methoden. Agent kann Plugins aktivieren und deren APIs nutzen. [ADR-014](ADR-014-vault-dna-plugin-discovery.md)
+
+10. **Hybrid Search (Semantic + BM25 + RRF)** — Kombiniert Vektor-Aehnlichkeit mit TF-IDF/BM25-Keyword-Scoring (inkl. Stemming). Ergebnis-Fusion via Reciprocal Rank Fusion (k=60). Graph Augmentation via 1-Hop-Wikilinks. [ADR-015](ADR-015-hybrid-search-rrf.md)
 
 ---
 
@@ -159,22 +167,27 @@ AgentTask.run()
   └── Context Condensing (wenn threshold erreicht)
 ```
 
-### 5.3 Ebene 2: Tool Registry
+### 5.3 Ebene 2: Tool Registry (34 Tools)
 
 ```
 ToolRegistry
-  ├── read group:    read_file, list_files, search_files
-  ├── vault group:   get_vault_stats, get_frontmatter, update_frontmatter,
-  │                  search_by_tag, get_linked_notes, open_note,
-  │                  get_daily_note, semantic_search, query_base
-  ├── edit group:    write_file, edit_file, append_to_file, create_folder,
-  │                  delete_file, move_file, generate_canvas,
-  │                  create_base, update_base
-  ├── web group:     web_fetch, web_search
-  ├── agent group:   ask_followup_question, attempt_completion,
-  │                  switch_mode, update_todo_list, new_task
-  └── mcp group:     use_mcp_tool
+  ├── read group:     read_file, list_files, search_files
+  ├── vault group:    get_vault_stats, get_frontmatter, update_frontmatter,
+  │                   search_by_tag, get_linked_notes, open_note,
+  │                   get_daily_note, semantic_search, query_base
+  ├── edit group:     write_file, edit_file, append_to_file, create_folder,
+  │                   delete_file, move_file, generate_canvas,
+  │                   create_base, update_base
+  ├── web group:      web_fetch, web_search
+  ├── agent group:    ask_followup_question, attempt_completion,
+  │                   switch_mode, update_todo_list, new_task
+  ├── skill group:    execute_command, enable_plugin, resolve_capability_gap
+  ├── plugin-api:     call_plugin_api, execute_recipe
+  ├── settings:       update_settings, configure_model
+  └── mcp group:      use_mcp_tool
 ```
+
+Tool-Beschreibungen kommen aus `toolMetadata.ts` (Single Source of Truth fuer Prompt und UI). Feature-Spec: `FEATURE-tool-metadata-registry.md`. ADR: [ADR-008](ADR-008-modular-prompt-sections.md).
 
 ### 5.4 Ebene 2: Semantic Search Pipeline
 
@@ -190,6 +203,53 @@ SemanticSearchTool.execute()
   ├── Graph Augmentation (1-hop wikilinks)
   └── Excerpt truncation (500 chars)
 ```
+
+### 5.5 Ebene 2: Memory Architecture (3-Tier)
+
+```
+Tier 1: Chat History (ConversationStore)
+  └── Volle Konversationen als JSON im Plugin-Verzeichnis
+      Kurzfristig, pro Session
+
+Tier 2: Session Summaries (SessionExtractor)
+  └── LLM-generierte Zusammenfassung nach Gespraechsende
+      Mittelfristig, eine pro Konversation
+      Semantisch durchsuchbar (MemoryRetriever)
+
+Tier 3: Long-Term Memory (LongTermExtractor)
+  └── Fakten aus Sessions in persistente Dateien promoviert
+      user-profile.md, projects.md, patterns.md, soul.md
+      Langfristig, kumulativ
+
+Asynchrone Verarbeitung:
+  ExtractionQueue (persistent FIFO, ueberlebt Neustarts)
+    ├── SessionExtractor -> LLM call -> sessions/{id}.md
+    └── LongTermExtractor -> LLM call -> update memory files
+```
+
+ADR: [ADR-013](ADR-013-memory-architecture.md). Feature-Spec: `FEATURE-memory-personalization.md`.
+
+### 5.6 Ebene 2: VaultDNA / Plugin Skills
+
+```
+VaultDNAScanner (onLayoutReady + 5s Polling)
+  │
+  ├── Core Plugins (Obsidian Built-ins)
+  │     └── Commands sofort verfuegbar
+  │
+  └── Community Plugins
+        ├── API Reflection → Method Discovery
+        ├── Command Discovery → Command IDs
+        └── Skill-File Generation → .obsidian-agent/plugin-skills/{id}.skill.md
+
+Agent-Nutzung:
+  ├── execute_command(command_id)
+  ├── enable_plugin(plugin_id, enable)
+  ├── resolve_capability_gap(capability, context)
+  └── call_plugin_api(plugin_id, method, args)
+```
+
+ADR: [ADR-014](ADR-014-vault-dna-plugin-discovery.md). Feature-Spec: `FEATURE-local-skills.md`.
 
 ---
 
@@ -245,6 +305,61 @@ Pipeline.checkApproval(toolCall)
   │           └── User: "Deny" → return error result
   └── Tool-Result enthält Fehlermeldung bei Ablehnung
 ```
+
+### 6.4 Memory Extraction Flow
+
+```
+Conversation End (>= extractionThreshold messages)
+  │
+  ├── Build minimal transcript (~8000 chars)
+  ├── Enqueue PendingExtraction { type: 'session' }
+  │
+  └── ExtractionQueue (background, one-at-a-time)
+        ├── SessionExtractor
+        │     ├── LLM call (memoryModelKey)
+        │     ├── Output: sessions/{id}.md (YAML frontmatter + summary)
+        │     └── if autoUpdateLongTerm → enqueue { type: 'long-term' }
+        │
+        └── LongTermExtractor
+              ├── LLM call (merges facts into existing files)
+              └── Updates: user-profile.md, projects.md, patterns.md
+```
+
+### 6.5 Context Condensing Flow
+
+```
+AgentTask Iteration N (nach Tool-Result)
+  │
+  ├── estimateTokenCount(history) > contextWindow * condensingThreshold?
+  │     └── Nein → weiter mit naechster Iteration
+  │
+  └── Ja → maybeCondenseContext()
+        ├── Behalte: erste User-Nachricht (Original-Aufgabe)
+        ├── Behalte: letzte 4 Nachrichten (aktueller Kontext)
+        ├── Komprimiere: mittlerer Teil via LLM-Call
+        └── Ersetze History: [erste, Zusammenfassung, letzte 4]
+```
+
+ADR: [ADR-012](ADR-012-context-condensing.md).
+
+### 6.6 Semantic Search Pipeline
+
+```
+semantic_search(query, top_k, folder?, tags?, since?)
+  │
+  ├── [optional] HyDE: LLM generiert hypothetisches Dokument
+  │
+  ├── Parallel:
+  │     ├── Semantic: Vectra HNSW (top_k * 3 Ergebnisse)
+  │     └── Keyword: BM25/TF-IDF mit Stemming (alle Vault-Dateien)
+  │
+  ├── RRF Fusion (k=60): score(doc) = SUM(1/(60+rank_i))
+  ├── Metadata Filter (folder, tags, since)
+  ├── Graph Augmentation (1-hop Wikilinks, max 5)
+  └── Excerpt Truncation (500 chars)
+```
+
+ADR: [ADR-015](ADR-015-hybrid-search-rrf.md).
 
 ---
 
@@ -393,6 +508,36 @@ Alle Tools erben von `BaseTool` und nutzen:
 
 Write-Tools (`write_file`, `edit_file`) emittieren `<diff_stats added="N" removed="N"/>` im Tool-Result. Die UI parst diesen Tag und rendert das Badge.
 
+### 8.9 Multi-Agent Orchestration
+
+Der Agent kann via `new_task` Tool Sub-Agenten (Child Tasks) spawnen:
+
+- **Depth Guard**: `maxSubtaskDepth` begrenzt die Verschachtelungstiefe (Default: 2)
+- **Isolation**: Kind-Task hat eigene History, eigenen ToolRepetitionDetector
+- **Shared**: Kind erbt den Approval-Callback des Parents (damit Write-Ops nicht auto-rejected werden)
+- **Modes**: Kind kann nur in `agent` oder `ask` Mode laufen
+- **Patterns**: Prompt Chaining, Orchestrator-Worker, Evaluator-Optimizer, Routing
+
+### 8.10 Plugin Skills & VaultDNA
+
+VaultDNA ermoeglicht dem Agent die Nutzung aller installierten Obsidian-Plugins:
+
+- **Discovery**: Runtime-Scan via Obsidian API (Core + Community Plugins)
+- **Skill-Files**: Automatisch generierte Beschreibungen in `.obsidian-agent/plugin-skills/`
+- **Commands**: Agent kann Obsidian-Befehle via `execute_command` ausfuehren
+- **Plugin API**: Agent kann Plugin-Methoden via `call_plugin_api` aufrufen (Allowlist-geschuetzt)
+- **Recipes**: Vordefinierte Workflows (z.B. Pandoc-Export) via `execute_recipe`
+- **Continuous Sync**: 5s-Polling erkennt Plugin-Aenderungen
+
+### 8.11 Onboarding
+
+`OnboardingService` erkennt den ersten Kontakt (kein Memory vorhanden) und fuehrt den Nutzer durch einen 5-Schritt-Dialog:
+1. Backup-Import
+2. Profil (Name, Sprache, Tonfall)
+3. Modell (API-Key oder Gemini Free Tier)
+4. Permissions (Preset: Permissive / Balanced / Restrictive)
+5. Abschluss
+
 ---
 
 ## 9. Architekturentscheidungen
@@ -409,6 +554,13 @@ Siehe einzelne ADRs in `_private/architecture/`:
 | [ADR-006](ADR-006-sliding-window-repetition.md) | Sliding Window für Tool-Repetition-Erkennung |
 | [ADR-007](ADR-007-event-separation.md) | Event Separation — Completion-Signale getrennt von Text-Output |
 | [ADR-008](ADR-008-modular-prompt-sections.md) | Modulare Prompt-Sections & zentrale Tool-Metadata-Registry |
+| [ADR-009](ADR-009-local-skills.md) | Lokale Plugin-Skills (VaultDNA PAS-1) |
+| [ADR-010](ADR-010-permissions-audit.md) | Permissions Audit & Governance-Analyse |
+| [ADR-011](ADR-011-multi-provider-api.md) | Multi-Provider API Architecture (Adapter Pattern) |
+| [ADR-012](ADR-012-context-condensing.md) | Context Condensing (Keep-First-Last + LLM-Summarize) |
+| [ADR-013](ADR-013-memory-architecture.md) | 3-Tier Memory Architecture |
+| [ADR-014](ADR-014-vault-dna-plugin-discovery.md) | VaultDNA — Automatische Plugin-Erkennung als Skills |
+| [ADR-015](ADR-015-hybrid-search-rrf.md) | Hybrid Search mit Semantic + BM25 + RRF Fusion |
 
 ---
 
@@ -434,8 +586,11 @@ Siehe einzelne ADRs in `_private/architecture/`:
 | `search_files` nutzt Node.js `fs` direkt | Nicht kompatibel mit Obsidian Mobile | Obsidian-API-Fallback (future) |
 | `query_base` nutzt Regex-YAML-Parser | Komplexe Filterausdrücke können falsch geparst werden | Echter YAML-Parser (future) |
 | `update_base` erkennt View-Blöcke via Regex | Fragil bei unerwarteter YAML-Formatierung | Vollständiger YAML-Parser (future) |
-| Keyword-Suche in SemanticSearch ist ein Live-Scan | Langsam bei großen Vaults | BM25-Index aufbauen (future) |
+| Keyword-Suche (BM25) ist ein Live-Scan | Linear mit Vault-Groesse | Vorkompilierter BM25-Index (future) |
 | HyDE verursacht extra LLM-Call | +2-5s Latenz pro Suche | Default: disabled, opt-in |
+| Memory-Extraktion basiert auf LLM-Qualitaet | Ungenaue Fakten bei schwachen Modellen | Separate memoryModelKey-Einstellung |
+| VaultDNA Reflection kann bei Plugins fehlschlagen | Unvollstaendige Skill-Files | Nutzer kann Skill-Files manuell anpassen |
+| MCP stdio spawnt Subprozesse | Sicherheitsrisiko bei boeswilligen Configs | Shell-Metacharacter-Validation |
 
 ---
 
@@ -463,4 +618,13 @@ Siehe einzelne ADRs in `_private/architecture/`:
 | **MemoryRetriever** | Semantische Suche über Session-Summaries für Cross-Session-Kontext |
 | **Event Separation** | Architekturmuster: Completion-Signale (attempt_completion) getrennt von Text-Output. hasStreamedText-Flag steuert Fallback-Rendering (ADR-007) |
 | **ToolPickerPopover** | UI-Element für session-lokale Overrides von Tools, Skills und Workflows |
-| **Session-Override** | RAM-only Überschreibung von Mode-Einstellungen für die aktuelle Chat-Session |
+| **Session-Override** | RAM-only Ueberschreibung von Mode-Einstellungen fuer die aktuelle Chat-Session |
+| **VaultDNA** | Automatischer Runtime-Scan aller installierten Plugins. Generiert Skill-Files mit Commands und API-Methoden |
+| **BM25** | Best Matching 25 — probabilistisches Keyword-Ranking-Verfahren basierend auf TF-IDF |
+| **TF-IDF** | Term Frequency - Inverse Document Frequency — Gewichtung der Relevanz eines Terms in einem Dokument relativ zum Gesamtkorpus |
+| **Stemming** | Reduktion von Woertern auf ihren Wortstamm (z.B. "analysiert" -> "analys") fuer besseren Recall |
+| **Multi-Agent** | Delegation von Teilaufgaben an Kind-Tasks via `new_task`. Eigene History, forwarded Approval |
+| **Plugin Skills** | Automatisch aus installierten Plugins generierte Skill-Beschreibungen in `.obsidian-agent/plugin-skills/` |
+| **Soul** | Persistente Agent-Persoenlichkeit (Name, Sprache, Werte, Anti-Patterns) in `memory/soul.md` |
+| **OnboardingService** | Erkennt ersten Kontakt und fuehrt den Nutzer durch einen 5-Schritt-Setup-Dialog |
+| **ExplicitInstructions** | Best-Practice-Anweisungen im System Prompt (z.B. "Vault is sacred", parallele Reads) |
