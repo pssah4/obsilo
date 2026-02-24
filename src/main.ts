@@ -646,6 +646,8 @@ export default class ObsidianAgentPlugin extends Plugin {
      * Used by Settings buttons (Start/Restart setup).
      */
     async startOnboarding(): Promise<void> {
+        // Close the settings modal so the user sees the chat
+        (this.app as any).setting?.close();
         await this.activateView();
         setTimeout(() => {
             const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_AGENT_SIDEBAR);

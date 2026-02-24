@@ -953,8 +953,12 @@ export class AgentSidebarView extends ItemView {
                     if (!hasTools) {
                         hasTools = true;
                         if (name !== 'attempt_completion') {
-                            accumulatedText = '';
+                            // Clear the streaming UI — text will be re-rendered as
+                            // Markdown in onComplete. Keep accumulatedText so any
+                            // text the LLM wrote BEFORE the first tool call (e.g.
+                            // onboarding greeting) is preserved and rendered later.
                             contentEl.empty();
+                            streamingPara = null;
                         }
                     }
 
