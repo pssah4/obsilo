@@ -3,32 +3,15 @@
   'use strict';
 
   var LANGS = {
-    ar: '\u0627\u0644\u0639\u0631\u0628\u064A\u0629',
-    ca: 'Catal\u00E0',
-    cs: '\u010Ce\u0161tina',
     de: 'Deutsch',
     en: 'English',
     es: 'Espa\u00F1ol',
-    fr: 'Fran\u00E7ais',
     hi: '\u0939\u093F\u0928\u094D\u0926\u0940',
-    id: 'Bahasa Indonesia',
-    it: 'Italiano',
     ja: '\u65E5\u672C\u8A9E',
-    ko: '\uD55C\uAD6D\uC5B4',
-    nl: 'Nederlands',
-    pl: 'Polski',
-    'pt-BR': 'Portugu\u00EAs',
-    ru: '\u0420\u0443\u0441\u0441\u043A\u0438\u0439',
-    sk: 'Sloven\u010Dina',
-    th: '\u0E44\u0E17\u0E22',
-    tr: 'T\u00FCrk\u00E7e',
-    uk: '\u0423\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u0430',
-    vi: 'Ti\u1EBFng Vi\u1EC7t',
-    'zh-CN': '\u7B80\u4F53\u4E2D\u6587',
-    'zh-TW': '\u7E41\u9AD4\u4E2D\u6587'
+    'zh-CN': '\u7B80\u4F53\u4E2D\u6587'
   };
 
-  var RTL_LANGS = ['ar'];
+  var RTL_LANGS = [];
   var DEFAULT_LANG = 'en';
   var STORAGE_KEY = 'lang';
   var translations = {};

@@ -1376,9 +1376,8 @@ export class AgentSidebarView extends ItemView {
                         if (accumulatedText) {
                             this.uiMessages.push({ role: 'assistant', text: accumulatedText, ts: new Date().toISOString() });
                         }
-                        // Render user answer as a chat bubble
-                        const userMsg = this.chatContainer!.createDiv('message user-message');
-                        userMsg.createDiv('message-bubble').setText(answer);
+                        // Render user answer as a regular chat message
+                        this.addUserMessage(answer);
                         this.uiMessages.push({ role: 'user', text: answer, ts: new Date().toISOString() });
                         // Create fresh assistant message element for the next response
                         ({ messageEl, thinkingEl, toolsEl, contentEl, footerEl } = this.createStreamingMessageEl());
