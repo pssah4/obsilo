@@ -64,7 +64,8 @@ export class SemanticSearchTool extends BaseTool<'semantic_search'> {
             : undefined;
         const hasFilter = !!(folderFilter || tagsFilter || sinceFilter);
         // Request more candidates when filters are active so we still return topK after filtering
-        const searchK = hasFilter ? Math.min(topK * 4, 80) : topK;
+        // Request more candidates so per-file dedup still yields topK unique files
+        const searchK = hasFilter ? Math.min(topK * 4, 80) : Math.min(topK * 3, 40);
 
         if (!query.trim()) {
             callbacks.pushToolResult(this.formatError(new Error('query parameter is required')));
@@ -124,7 +125,10 @@ export class SemanticSearchTool extends BaseTool<'semantic_search'> {
             const fused = new Map<string, HybridEntry>();
 
             semanticResults.forEach((r: any, i: number) => {
-                fused.set(r.path, { path: r.path, excerpt: r.excerpt, score: 1 / (RRF_K + i + 1), method: 'semantic' });
+                // Keep first (best-ranked) occurrence per file — don't overwrite with worse rank
+                if (!fused.has(r.path)) {
+                    fused.set(r.path, { path: r.path, excerpt: r.excerpt, score: 1 / (RRF_K + i + 1), method: 'semantic' });
+                }
             });
             keywordResults.forEach((r: any, i: number) => {
                 const rrf = 1 / (RRF_K + i + 1);

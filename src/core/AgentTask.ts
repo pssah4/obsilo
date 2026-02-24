@@ -261,6 +261,12 @@ export class AgentTask {
 
         try {
             for (let iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
+                // Early exit if task was cancelled between iterations
+                if (abortSignal?.aborted) {
+                    console.log('[AgentTask] Abort signal detected at iteration start');
+                    break;
+                }
+
                 // Apply any pending mode switch at the start of each iteration
                 if (pendingModeSwitch !== null) {
                     const newMode = this.resolveMode(pendingModeSwitch);
@@ -509,8 +515,12 @@ export class AgentTask {
             }
             this.taskCallbacks.onComplete();
         } catch (error) {
-            // AbortError is expected when user cancels — not a real error
-            if (error instanceof Error && error.name === 'AbortError') {
+            // AbortError is expected when user cancels — not a real error.
+            // Also: when the abort signal is already triggered, ANY error
+            // (including TypeError: Failed to fetch) is a cancellation side-effect.
+            const isAbort = error instanceof Error && error.name === 'AbortError';
+            const isAbortedSignal = abortSignal?.aborted === true;
+            if (isAbort || isAbortedSignal) {
                 console.log('[AgentTask] Task cancelled by user');
                 this.taskCallbacks.onComplete();
                 return;
@@ -534,8 +544,18 @@ export class AgentTask {
             }
 
             const err = error instanceof Error ? error : new Error(String(error));
-            console.error('[AgentTask] Task failed:', err);
-            this.taskCallbacks.onError(err);
+            // Network errors (e.g. "Failed to fetch") get a friendlier message
+            const isNetworkError = err instanceof TypeError
+                && /failed to fetch|network|econnrefused/i.test(err.message);
+            if (isNetworkError) {
+                console.warn('[AgentTask] Network error:', err.message);
+                this.taskCallbacks.onError(new Error(
+                    'Connection to the API failed. Check your network and API key, then try again.',
+                ));
+            } else {
+                console.error('[AgentTask] Task failed:', err);
+                this.taskCallbacks.onError(err);
+            }
         }
     }
 

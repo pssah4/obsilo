@@ -1,7 +1,7 @@
 # Obsidian Agent — Backlog
 
 > Status: `[x]` fertig · `[~]` in Arbeit · `[ ]` offen · `[-]` zurückgestellt
-> Letzte Aktualisierung: 2026-02-23 (Onboarding & Settings-Skill)
+> Letzte Aktualisierung: 2026-02-24 (Keyword Search Upgrade — Stemming + TF-IDF)
 
 ---
 
@@ -68,7 +68,7 @@
 | Status | Feature | Datei |
 |--------|---------|-------|
 | `[x]` | SemanticIndexService (vectra HNSW, Xenova embeddings, heading-aware chunking) | `src/core/semantic/SemanticIndexService.ts` |
-| `[x]` | Hybrid search (semantic + BM25 keyword + RRF fusion) | `src/core/semantic/SemanticIndexService.ts` |
+| `[x]` | Hybrid search (semantic + TF-IDF keyword with stemming + RRF fusion) | `src/core/semantic/SemanticIndexService.ts` |
 | `[x]` | HyDE support (hypothetical document expansion) | `src/core/semantic/SemanticIndexService.ts` |
 | `[x]` | Graph augmentation (1-hop wikilink expansion) | `src/core/semantic/SemanticIndexService.ts` |
 | `[x]` | Incremental builds (mtime checkpoint, resumable) | `src/core/semantic/SemanticIndexService.ts` |

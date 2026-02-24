@@ -40,7 +40,22 @@ export function getToolDecisionGuidelinesSection(): string {
 3. NO REDUNDANT READS. Only call read_file for files whose content is NOT already in the conversation.
 4. BATCH INDEPENDENT CALLS. Call multiple independent tools in one step (parallel execution).
 5. INTENTIONAL TOOL USE. Only call a tool when you genuinely need its result.
-6. RAG PATTERN — For vault content questions: call semantic_search ALONE first. Answer directly from returned excerpts. Only use search_files as fallback. Only call read_file when modifying a file or one is explicitly requested.
+6. SEARCH STRATEGY — Pick ONE tool, deliver an answer. Do NOT combine multiple search tools for the same question.
+   ROUTING: Choose the right tool based on what the user is asking:
+   (a) External / current information ("search the internet", "latest news about X", "current changes in Y", "what's new in Z"):
+       → web_search. The user is asking for information OUTSIDE the vault. NEVER substitute with vault search.
+         If web_search is not available in your tools or returns an error, tell the user to enable Web Search in Settings → Providers → Web Search. Do NOT silently fall back to vault tools.
+   (b) Topical / conceptual questions about vault content ("What do I know about X?", "notes related to Y"):
+       → semantic_search. Answer directly from excerpts. Done.
+   (c) Tag/category filtering ("all notes tagged X", "my meeting notes"):
+       → search_by_tag. Done.
+   (d) Exact text or regex ("find the note mentioning 'ABC-123'"):
+       → search_files. Done.
+   (e) Structured data from a .base file ("list from my Meetings base"):
+       → query_base. Done.
+   KEY DISTINCTION: "search the internet/web for X" → web_search. "search my notes/vault for X" → vault tools. When the user explicitly says "internet", "web", "online", "aktuell", "neueste", "latest" — that means web_search, not vault.
+   TOOL BUDGET: Maximum 1-2 search calls, then deliver your answer. If the results are incomplete, present what you found — the user will guide refinement. NEVER chain semantic_search + search_files + get_vault_stats + list_files + query_base for the same question. A good answer now beats a perfect answer after 20 tool calls.
+   FALLBACK: Only call read_file when modifying a file or when the user explicitly requests to see full content.
 7. CITE WITH WIKILINKS. When referencing notes, use [[Note Name]] format.
 8. DO NOT DELEGATE SIMPLE TASKS. NEVER use new_task for tasks you can accomplish directly with your own tools. new_task is ONLY for tasks that: (a) require 5+ steps across different specialties (research + write + organize), (b) would genuinely benefit from context isolation (e.g., deep research into many files where intermediate results would bloat your context), or (c) need parallel processing of truly independent subtasks. For plugin operations: ALWAYS use execute_command, execute_recipe, or call_plugin_api directly. For single-file reads/writes: ALWAYS do it yourself. Rule of thumb: if you can do it in 1-4 tool calls, do it yourself — never spawn a sub-agent.`;
 }

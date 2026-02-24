@@ -447,39 +447,120 @@ export class SemanticIndexService {
         }
     }
 
+    // -----------------------------------------------------------------------
+    // Keyword search helpers: stemming + tokenization
+    // -----------------------------------------------------------------------
+
     /**
-     * Keyword search over indexed chunks (in-memory, no file I/O).
-     * Scores each chunk by term frequency, returns best chunk per file.
-     * Used by hybrid search to catch exact names/tags the embedding model misses.
+     * Lightweight suffix stemmer for search term normalization.
+     * Handles common English and German inflectional suffixes.
+     * No external dependencies — intentionally simple to avoid over-stemming.
+     */
+    private static stemWord(word: string): string {
+        if (word.length < 3) return word;
+        let w = word;
+        // English suffixes (longest first to avoid partial matches)
+        if (w.endsWith('ings') && w.length > 6) w = w.slice(0, -4);
+        else if (w.endsWith('tion') && w.length > 6) w = w.slice(0, -4) + 't';
+        else if (w.endsWith('ness') && w.length > 6) w = w.slice(0, -4);
+        else if (w.endsWith('ment') && w.length > 6) w = w.slice(0, -4);
+        else if (w.endsWith('able') && w.length > 6) w = w.slice(0, -4);
+        else if (w.endsWith('keit') && w.length > 6) w = w.slice(0, -4);
+        else if (w.endsWith('heit') && w.length > 6) w = w.slice(0, -4);
+        else if (w.endsWith('lich') && w.length > 6) w = w.slice(0, -4);
+        else if (w.endsWith('isch') && w.length > 6) w = w.slice(0, -4);
+        else if (w.endsWith('ies') && w.length > 4) w = w.slice(0, -3) + 'y';
+        else if (w.endsWith('ful') && w.length > 5) w = w.slice(0, -3);
+        else if (w.endsWith('ung') && w.length > 5) w = w.slice(0, -3);
+        else if (w.endsWith('ing') && w.length > 5) w = w.slice(0, -3);
+        else if (w.endsWith('ed') && w.length > 4) w = w.slice(0, -2);
+        else if (w.endsWith('es') && w.length > 4) w = w.slice(0, -2);
+        else if (w.endsWith('er') && w.length > 4) w = w.slice(0, -2);
+        else if (w.endsWith('en') && w.length > 4) w = w.slice(0, -2);
+        else if (w.endsWith('s') && !w.endsWith('ss') && w.length > 3) w = w.slice(0, -1);
+        return w;
+    }
+
+    /**
+     * Tokenize text into stemmed words.
+     * Splits on word boundaries (whitespace, hyphens, underscores, punctuation)
+     * to handle compound words like "Meeting-Notiz" → ["meeting", "notiz"].
+     * Filters tokens shorter than 3 characters.
+     */
+    private static tokenize(text: string): string[] {
+        return text
+            .toLowerCase()
+            .split(/[\s\-_/,.;:!?()\[\]{}"'`|@#=+*<>~^]+/)
+            .filter((t) => t.length >= 3)
+            .map(SemanticIndexService.stemWord);
+    }
+
+    /**
+     * Keyword search over indexed chunks using TF-IDF scoring with stemming.
+     *
+     * Improvements over the previous substring-counting approach:
+     * - Stemming: "meetings" matches "Meeting-Notiz" (both stem to "meeting")
+     * - Word boundaries: "cat" does NOT match "category" (tokenized separately)
+     * - IDF weighting: rare terms score higher than common words (language-agnostic,
+     *   no hardcoded stop-word list needed)
+     * - Compound-word splitting: "Meeting-Notiz" → ["meeting", "notiz"]
+     *
+     * Used by hybrid search (RRF fusion) to catch exact names/tags the embedding misses.
      */
     async keywordSearch(query: string, topK = 8): Promise<SemanticResult[]> {
         if (!await this.index.isIndexCreated().catch(() => false)) return [];
         try {
-            const terms = query.toLowerCase().split(/\s+/).filter((t) => t.length >= 3);
-            if (terms.length === 0) return [];
+            // 1. Tokenize + stem query terms, deduplicate
+            const queryTerms = [...new Set(SemanticIndexService.tokenize(query))];
+            if (queryTerms.length === 0) return [];
 
             const allItems: any[] = await this.index.listItemsByMetadata({});
+            const N = allItems.length;
+            if (N === 0) return [];
 
-            // Score each chunk by total term occurrence count, keep best chunk per file
+            // 2. Pre-compute IDF: log((N+1) / (df+1)) per query term
+            //    IDF naturally downweights frequent words regardless of language.
+            const docFreq = new Map<string, number>();
+            const chunkTokensCache: Map<any, Set<string>> = new Map();
+            for (const item of allItems) {
+                const chunk: string = (item.metadata?.chunk as string) ?? '';
+                if (!chunk) continue;
+                const tokenSet = new Set(SemanticIndexService.tokenize(chunk));
+                chunkTokensCache.set(item, tokenSet);
+                for (const qt of queryTerms) {
+                    if (tokenSet.has(qt)) docFreq.set(qt, (docFreq.get(qt) ?? 0) + 1);
+                }
+            }
+
+            // 3. Score each chunk: sum(TF * IDF) per matching term, keep best chunk per file
             const byPath = new Map<string, { excerpt: string; score: number }>();
             for (const item of allItems) {
                 const chunk: string = (item.metadata?.chunk as string) ?? '';
                 const filePath: string = (item.metadata?.path as string) ?? '';
                 if (!chunk || !filePath) continue;
-                const lower = chunk.toLowerCase();
-                const termCount = terms.reduce((acc, term) => {
-                    let n = 0, pos = 0;
-                    while ((pos = lower.indexOf(term, pos)) !== -1) { n++; pos += term.length; }
-                    return acc + n;
-                }, 0);
-                if (termCount === 0) continue;
+
+                const tokenSet = chunkTokensCache.get(item);
+                if (!tokenSet) continue;
+
+                let score = 0;
+                for (const qt of queryTerms) {
+                    if (!tokenSet.has(qt)) continue;
+                    // Count occurrences of this stemmed term in the full token list
+                    const tokens = SemanticIndexService.tokenize(chunk);
+                    const tf = tokens.filter((t) => t === qt).length;
+                    const df = docFreq.get(qt) ?? 1;
+                    const idf = Math.log((N + 1) / (df + 1));
+                    score += tf * idf;
+                }
+                if (score === 0) continue;
+
                 const existing = byPath.get(filePath);
-                if (!existing || termCount > existing.score) {
-                    byPath.set(filePath, { excerpt: chunk, score: termCount });
+                if (!existing || score > existing.score) {
+                    byPath.set(filePath, { excerpt: chunk, score });
                 }
             }
 
-            // Normalize scores 0-1, sort by score, return topK
+            // 4. Normalize scores 0-1, sort, return top-K
             const entries = Array.from(byPath.entries());
             const maxScore = entries.reduce((m, [, v]) => Math.max(m, v.score), 1);
             return entries
@@ -520,12 +601,22 @@ export class SemanticIndexService {
             const embedText = textForEmbedding ?? query;
             const [vector] = await this.embedBatch([embedText]);
             // vectra signature: queryItems(vector, textQuery, topK)
-            const results = await this.index.queryItems(vector, query, topK);
-            return results.map((r: any) => ({
-                path: r.item.metadata?.path as string ?? '',
-                excerpt: r.item.metadata?.chunk as string ?? '',
-                score: r.score,
-            }));
+            // Request extra chunks so we still have topK unique files after per-file dedup
+            const rawK = Math.min(topK * 3, 60);
+            const results = await this.index.queryItems(vector, query, rawK);
+            // Best chunk per file (results are sorted by score desc, so first-seen = best)
+            const byPath = new Map<string, SemanticResult>();
+            for (const r of results) {
+                const filePath = (r.item.metadata?.path as string) ?? '';
+                if (!filePath || byPath.has(filePath)) continue;
+                byPath.set(filePath, {
+                    path: filePath,
+                    excerpt: (r.item.metadata?.chunk as string) ?? '',
+                    score: r.score,
+                });
+                if (byPath.size >= topK) break;
+            }
+            return Array.from(byPath.values());
         } catch (e) {
             console.error('[SemanticIndex] Search failed:', e);
             return [];

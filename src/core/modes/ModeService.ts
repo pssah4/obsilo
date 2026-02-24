@@ -115,6 +115,13 @@ export class ModeService {
     /** Get ToolDefinitions filtered to the effective tool set for a mode */
     getToolDefinitions(mode: ModeConfig, sessionOverride?: string[]): ToolDefinition[] {
         const allowed = new Set(this.getEffectiveToolNames(mode, sessionOverride));
+        // Remove web tools from the definition set when web tools are disabled.
+        // This prevents the LLM from calling them and hitting error loops.
+        const webDisabled = !this.plugin.settings.webTools?.enabled;
+        if (webDisabled) {
+            allowed.delete('web_search');
+            allowed.delete('web_fetch');
+        }
         return this.toolRegistry
             .getAllTools()
             .filter((t) => allowed.has(t.name))

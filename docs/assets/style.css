@@ -469,13 +469,24 @@ a.hero-badge:hover { background: var(--bg-4); border-color: var(--accent-light);
   -webkit-text-fill-color: transparent;
   background-clip: text;
   line-height: 1.15;
+  text-wrap: balance;
 }
 .hero-sub {
   font-size: clamp(1.15rem, 2.5vw, 1.35rem);
+  color: var(--text);
+  max-width: 720px;
+  margin-bottom: 0.4rem;
+  line-height: 1.7;
+  text-wrap: pretty;
+  font-weight: 600;
+}
+.hero-sub-detail {
+  font-size: clamp(0.95rem, 2vw, 1.1rem);
   color: var(--text-muted);
   max-width: 720px;
   margin-bottom: 0.4rem;
   line-height: 1.7;
+  text-wrap: pretty;
 }
 
 /* ── Landing page: feature section ── */
@@ -674,6 +685,7 @@ a.hero-badge:hover { background: var(--bg-4); border-color: var(--accent-light);
 }
 .footer-sep { color: var(--text-dim); }
 .footer-credits { margin: 0; color: var(--text-dim); }
+.footer-disclaimer { margin: 0.15rem 0 0; font-size: 0.75rem; }
 
 /* ── Imprint page ── */
 .imprint-layout {
@@ -819,7 +831,7 @@ a.hero-badge:hover { background: var(--bg-4); border-color: var(--accent-light);
 .chat-mockup {
   max-width: 560px;
   width: 100%;
-  margin: 0.75rem auto 1.5rem;
+  margin: 1.25rem auto 1.75rem;
   border: 1px solid var(--border);
   border-radius: 10px;
   overflow: hidden;
@@ -987,16 +999,6 @@ a.hero-badge:hover { background: var(--bg-4); border-color: var(--accent-light);
 }
 .search-btn:hover { background: var(--bg-4); color: var(--text-muted); border-color: var(--accent); }
 .search-btn svg { width: 14px; height: 14px; flex-shrink: 0; }
-.search-btn kbd {
-  font-family: var(--font);
-  font-size: 0.65rem;
-  background: var(--bg-4);
-  border: 1px solid var(--border);
-  border-radius: 3px;
-  padding: 0.1rem 0.3rem;
-  color: var(--text-dim);
-  margin-left: 0.25rem;
-}
 
 /* ── Search modal ── */
 .search-modal {

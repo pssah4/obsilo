@@ -73,10 +73,13 @@ Files are split into chunks before embedding:
    - Embed the query (or HyDE document)
    - `vectra.queryItems(queryVector, top_k * 3)` — over-fetch for post-filtering
 
-3. **Keyword search (hybrid):**
-   - BM25-inspired keyword match across all vault notes (not indexed, live scan)
-   - Score: term frequency × (1 / (1 + |doc|))
-   - Returns top_k * 2 candidates
+3. **Keyword search (hybrid) — TF-IDF with stemming:**
+   - Tokenization with word boundaries (splits hyphens, underscores, punctuation)
+   - Lightweight suffix stemmer (English + German morphology)
+   - TF-IDF scoring: `sum(TF * IDF)` per stemmed query term
+   - IDF provides language-agnostic stop-word handling (no hardcoded list)
+   - Compound-word splitting: "Meeting-Notiz" → ["meeting", "notiz"]
+   - Returns top_k candidates, best chunk per file
 
 4. **Reciprocal Rank Fusion (RRF):**
    - Merge semantic + keyword rankings: `score += 1 / (k + rank)` where `k=60`
