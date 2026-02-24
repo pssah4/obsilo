@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tool Execution Pipeline — Obsilo Developer Docs</title>
+  <title>Tool Execution Pipeline — Obsilo Architecture</title>
   <link rel="icon" type="image/png" href="../assets/OBSILO_ICON50x50_lila.png">
   <link rel="stylesheet" href="../assets/style.css">
   <script>(function(){var t=localStorage.getItem('theme')||'dark';document.documentElement.setAttribute('data-theme',t)})();(function(){var l=localStorage.getItem('lang');if(l)document.documentElement.setAttribute('lang',l)})()</script>
@@ -11,23 +11,35 @@
 <body>
 
 <header class="site-header">
-  <a href="../index.html" class="logo"><img src="../assets/OBSILO_LOGOFULL_SW_v2.png" alt="Obsilo" class="logo-img"></a>
+  <a href="../index.html" class="logo">
+    <img src="../assets/OBSILO_LOGOFULL_SW_v2.png" alt="Obsilo" class="logo-img">
+  </a>
   <nav class="header-links">
     <a href="../getting-started.html" data-i18n="header.docs">Guide</a>
     <a href="index.html" data-i18n="header.devDocs">Architecture</a>
     <a href="../about.html" data-i18n="header.about">About</a>
     <a href="https://github.com/pssah4/obsilo-public" class="github-btn"><svg aria-hidden="true" height="16" viewBox="0 0 16 16" width="16" class="github-icon"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg> <span data-i18n="header.github">GitHub</span></a>
+    <a href="https://buymeacoffee.com/sebastianhanke" target="_blank" rel="noopener noreferrer"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" class="bmc-header-btn"></a>
   </nav>
   <div class="spacer"></div>
-  <button class="theme-toggle" aria-label="Toggle theme" onclick="toggleTheme()"><svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg><svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></button>
-  <div class="lang-switcher"><button class="lang-toggle" onclick="toggleLangDropdown(event)" aria-label="Switch language"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg><span class="lang-toggle-label">EN</span></button><div class="lang-dropdown"></div></div>
-  <button class="search-btn" onclick="openDocsSearch()" aria-label="Search docs"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span data-i18n="header.search">Search</span></button>
+  <button class="theme-toggle" aria-label="Toggle theme" data-i18n-aria="header.toggleTheme" onclick="toggleTheme()">
+    <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+  </button>
+  <div class="lang-switcher">
+    <button class="lang-toggle" onclick="toggleLangDropdown(event)" aria-label="Switch language" data-i18n-aria="header.switchLang">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+      <span class="lang-toggle-label">EN</span>
+    </button>
+    <div class="lang-dropdown"></div>
+  </div>
+  <button class="search-btn" onclick="openDocsSearch()" aria-label="Search docs" data-i18n-aria="header.search"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span data-i18n="header.search">Search</span></button>
 </header>
 <script>function toggleTheme(){var h=document.documentElement,n=h.getAttribute('data-theme')==='light'?'dark':'light';h.setAttribute('data-theme',n);localStorage.setItem('theme',n);document.querySelectorAll('.logo-img').forEach(function(i){i.src=n==='light'?'../assets/OBSILO_LOGOFULL_v2.png':'../assets/OBSILO_LOGOFULL_SW_v2.png'})}(function(){var t=document.documentElement.getAttribute('data-theme');if(t==='light'){document.querySelectorAll('.logo-img').forEach(function(i){i.src='../assets/OBSILO_LOGOFULL_v2.png'})}})()</script>
 
 <div class="docs-layout">
   <aside class="docs-sidebar">
-    <div class="sidebar-section"><div class="sidebar-section-title">Developer Docs</div><nav class="sidebar-nav"><a href="index.html">Overview</a></nav></div>
+    <div class="sidebar-section"><div class="sidebar-section-title">Architecture</div><nav class="sidebar-nav"><a href="index.html">Overview</a></nav></div>
     <div class="sidebar-section"><div class="sidebar-section-title">Core Architecture</div><nav class="sidebar-nav"><a href="architecture-overview.html">Architecture Overview</a><a href="agent-loop.html">Agent Loop</a><a href="system-prompt.html">System Prompt</a></nav></div>
     <div class="sidebar-section"><div class="sidebar-section-title">Tool System</div><nav class="sidebar-nav"><a href="tool-system.html" class="active">Tool Execution Pipeline</a><a href="governance.html">Governance &amp; Safety</a></nav></div>
     <div class="sidebar-section"><div class="sidebar-section-title">Knowledge &amp; Memory</div><nav class="sidebar-nav"><a href="semantic-search.html">Semantic Search Pipeline</a><a href="memory-system.html">Memory Architecture</a></nav></div>
@@ -39,7 +51,7 @@
     <article class="docs-content">
       <div class="breadcrumb">
         <a href="../index.html">Home</a><span class="breadcrumb-sep">&rsaquo;</span>
-        <a href="index.html">Dev Docs</a><span class="breadcrumb-sep">&rsaquo;</span>
+        <a href="index.html">Architecture</a><span class="breadcrumb-sep">&rsaquo;</span>
         <span>Tool Execution Pipeline</span>
       </div>
 
@@ -133,7 +145,76 @@
       </table>
 
       <h2 id="repetition">Tool Repetition Detection</h2>
-      <p>A sliding window of the last 5 tool calls tracks tool name + arguments combinations. If the same combination appears 3 times, the loop is terminated to prevent infinite repetition.</p>
+      <p>The pipeline maintains a <strong>10-call sliding window</strong> that tracks each tool invocation as a composite key of <code>toolName + JSON.stringify(input)</code>. After every tool execution, the window is checked for repeated patterns.</p>
+
+      <p>When the same composite key appears <strong>3 or more times</strong> within the sliding window, the loop detection triggers:</p>
+      <ol>
+        <li>An error message is injected into the tool result: <code>&lt;error&gt;Tool repetition loop detected. Aborting.&lt;/error&gt;</code></li>
+        <li><code>signalCompletion('aborted: tool repetition loop')</code> is called, which terminates the current agent loop iteration.</li>
+        <li>The user sees a notification that the task was aborted due to repetitive tool calls.</li>
+      </ol>
+
+      <p>The sliding window is <strong>reset on mode switch</strong> -- when the agent switches from one mode to another (e.g., Ask to Agent), the repetition history is cleared. This prevents false positives when a new mode legitimately needs to call the same tools. The window is also reset at the start of each new conversation turn.</p>
+
+      <p>This mechanism prevents runaway loops where the LLM repeatedly calls the same tool with identical arguments (e.g., reading the same file in a loop, or retrying a failed search with the same query). It acts as a safety net complementing the <code>consecutiveMistakeLimit</code> on the AgentTask level.</p>
+
+      <h2 id="execution-context">ToolExecutionContext</h2>
+      <p>Every tool's <code>execute()</code> method receives a <code>ToolExecutionContext</code> object as its second argument. This context provides the tool with access to agent-level capabilities without requiring direct coupling to the AgentTask or UI layer.</p>
+
+      <pre><code><span class="code-keyword">interface</span> <span class="code-type">ToolExecutionContext</span> {
+  <span class="code-function">spawnSubtask</span>: (description: <span class="code-type">string</span>, mode: <span class="code-type">string</span>) =&gt; <span class="code-type">Promise</span>&lt;<span class="code-type">string</span>&gt;;
+  <span class="code-function">switchMode</span>: (slug: <span class="code-type">string</span>) =&gt; <span class="code-type">void</span>;
+  <span class="code-function">signalCompletion</span>: (result: <span class="code-type">string</span>) =&gt; <span class="code-type">void</span>;
+  <span class="code-function">askQuestion</span>: (question: <span class="code-type">string</span>, options?: <span class="code-type">string</span>[]) =&gt; <span class="code-type">Promise</span>&lt;<span class="code-type">string</span>&gt;;
+  <span class="code-function">updateTodos</span>: (todos: <span class="code-type">TodoItem</span>[]) =&gt; <span class="code-type">void</span>;
+  <span class="code-function">onApprovalRequired</span>: (tool: <span class="code-type">string</span>, input: <span class="code-type">Record</span>&lt;<span class="code-type">string</span>, <span class="code-type">any</span>&gt;) =&gt; <span class="code-type">Promise</span>&lt;<span class="code-type">boolean</span>&gt;;
+  <span class="code-function">onCheckpoint</span>: (info: <span class="code-type">CheckpointInfo</span>) =&gt; <span class="code-type">void</span>;
+  <span class="code-function">invalidateToolCache</span>: () =&gt; <span class="code-type">void</span>;
+}</code></pre>
+
+      <table>
+        <thead><tr><th>Method</th><th>Used By</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td><code>spawnSubtask</code></td><td><code>new_task</code></td><td>Creates a child AgentTask with its own conversation and leaner system prompt</td></tr>
+          <tr><td><code>switchMode</code></td><td><code>switch_mode</code></td><td>Changes the active mode, triggering a system prompt rebuild on next iteration</td></tr>
+          <tr><td><code>signalCompletion</code></td><td><code>attempt_completion</code></td><td>Signals the agent loop to stop iterating and present the result to the user</td></tr>
+          <tr><td><code>askQuestion</code></td><td><code>ask_followup_question</code></td><td>Pauses the agent loop and waits for user input before continuing</td></tr>
+          <tr><td><code>updateTodos</code></td><td><code>update_todo_list</code></td><td>Updates the todo list in the sidebar UI</td></tr>
+          <tr><td><code>onApprovalRequired</code></td><td>Pipeline step [3]</td><td>Shows the approval dialog for write operations and returns the user's decision</td></tr>
+          <tr><td><code>onCheckpoint</code></td><td>Pipeline step [4]</td><td>Notifies the UI that a git checkpoint was created</td></tr>
+          <tr><td><code>invalidateToolCache</code></td><td>Settings tools</td><td>Clears cached tool definitions when configuration changes (e.g., web tools toggled)</td></tr>
+        </tbody>
+      </table>
+      <p>The context is constructed by the AgentTask and passed through the ToolExecutionPipeline. The same context object is shared across all tool calls within a single agent loop iteration, ensuring consistent state. The <code>ContextExtensions</code> pipeline mirrors all context fields so that tool wrappers and middleware can intercept calls.</p>
+
+      <h2 id="parallel-execution">Parallel Execution</h2>
+      <p>When the LLM returns multiple <code>tool_use</code> blocks in a single response, the pipeline evaluates whether they can be executed in parallel or must run sequentially.</p>
+
+      <p>A tool is eligible for parallel execution only if it is in the <strong>PARALLEL_SAFE</strong> set -- a hardcoded allowlist of 13 read-only, side-effect-free tools:</p>
+      <pre><code><span class="code-keyword">const</span> PARALLEL_SAFE = <span class="code-keyword">new</span> <span class="code-type">Set</span>([
+  <span class="code-string">'read_file'</span>,
+  <span class="code-string">'list_files'</span>,
+  <span class="code-string">'search_files'</span>,
+  <span class="code-string">'get_frontmatter'</span>,
+  <span class="code-string">'get_linked_notes'</span>,
+  <span class="code-string">'search_by_tag'</span>,
+  <span class="code-string">'get_vault_stats'</span>,
+  <span class="code-string">'get_daily_note'</span>,
+  <span class="code-string">'web_fetch'</span>,
+  <span class="code-string">'web_search'</span>,
+  <span class="code-string">'semantic_search'</span>,
+  <span class="code-string">'query_base'</span>,
+  <span class="code-string">'open_note'</span>,
+]);</code></pre>
+
+      <p>The decision logic is straightforward:</p>
+      <ol>
+        <li>If the LLM returns only 1 tool call, it runs immediately (no parallelism needed).</li>
+        <li>If the LLM returns 2+ tool calls and <strong>all</strong> of them are in the PARALLEL_SAFE set, they execute via <code>Promise.all()</code>.</li>
+        <li>If <strong>any</strong> tool in the batch is not in the PARALLEL_SAFE set, the entire batch runs <strong>sequentially</strong> in the order returned by the LLM.</li>
+      </ol>
+
+      <p>Sequential fallback is deliberate: write operations may depend on each other's results (e.g., create a file then write to it), and the approval flow for write tools requires serial user interaction. Mixing parallel reads with serial writes in a single batch would create race conditions with the approval dialog.</p>
 
       <div class="callout callout-crosslink">
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14L21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>

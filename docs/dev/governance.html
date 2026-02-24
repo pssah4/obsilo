@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Governance &amp; Safety — Obsilo Developer Docs</title>
+  <title>Governance &amp; Safety — Obsilo Architecture</title>
   <link rel="icon" type="image/png" href="../assets/OBSILO_ICON50x50_lila.png">
   <link rel="stylesheet" href="../assets/style.css">
   <script>(function(){var t=localStorage.getItem('theme')||'dark';document.documentElement.setAttribute('data-theme',t)})();(function(){var l=localStorage.getItem('lang');if(l)document.documentElement.setAttribute('lang',l)})()</script>
@@ -19,27 +19,28 @@
     <a href="index.html" data-i18n="header.devDocs">Architecture</a>
     <a href="../about.html" data-i18n="header.about">About</a>
     <a href="https://github.com/pssah4/obsilo-public" class="github-btn"><svg aria-hidden="true" height="16" viewBox="0 0 16 16" width="16" class="github-icon"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg> <span data-i18n="header.github">GitHub</span></a>
+    <a href="https://buymeacoffee.com/sebastianhanke" target="_blank" rel="noopener noreferrer"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" class="bmc-header-btn"></a>
   </nav>
   <div class="spacer"></div>
-  <button class="theme-toggle" aria-label="Toggle theme" onclick="toggleTheme()">
+  <button class="theme-toggle" aria-label="Toggle theme" data-i18n-aria="header.toggleTheme" onclick="toggleTheme()">
     <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
     <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
   </button>
   <div class="lang-switcher">
-    <button class="lang-toggle" onclick="toggleLangDropdown(event)" aria-label="Switch language">
+    <button class="lang-toggle" onclick="toggleLangDropdown(event)" aria-label="Switch language" data-i18n-aria="header.switchLang">
       <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
       <span class="lang-toggle-label">EN</span>
     </button>
     <div class="lang-dropdown"></div>
   </div>
-  <button class="search-btn" onclick="openDocsSearch()" aria-label="Search docs"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span data-i18n="header.search">Search</span></button>
+  <button class="search-btn" onclick="openDocsSearch()" aria-label="Search docs" data-i18n-aria="header.search"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span data-i18n="header.search">Search</span></button>
 </header>
 <script>function toggleTheme(){var h=document.documentElement,n=h.getAttribute('data-theme')==='light'?'dark':'light';h.setAttribute('data-theme',n);localStorage.setItem('theme',n);document.querySelectorAll('.logo-img').forEach(function(i){i.src=n==='light'?'../assets/OBSILO_LOGOFULL_v2.png':'../assets/OBSILO_LOGOFULL_SW_v2.png'})}(function(){var t=document.documentElement.getAttribute('data-theme');if(t==='light'){document.querySelectorAll('.logo-img').forEach(function(i){i.src='../assets/OBSILO_LOGOFULL_v2.png'})}})()</script>
 
 <div class="docs-layout">
   <aside class="docs-sidebar">
     <div class="sidebar-section">
-      <div class="sidebar-section-title">Developer Docs</div>
+      <div class="sidebar-section-title">Architecture</div>
       <nav class="sidebar-nav">
         <a href="index.html">Overview</a>
       </nav>
@@ -88,7 +89,7 @@
       <div class="breadcrumb">
         <a href="../index.html">Home</a>
         <span class="breadcrumb-sep">&rsaquo;</span>
-        <a href="index.html">Dev Docs</a>
+        <a href="index.html">Architecture</a>
         <span class="breadcrumb-sep">&rsaquo;</span>
         <span>Governance &amp; Safety</span>
       </div>
@@ -115,9 +116,38 @@
       <p><strong>ReDoS protection:</strong> reject patterns &gt; 200 chars or with 3+ consecutive <code>**</code>.</p>
       <p><strong>Fail-closed:</strong> all paths inaccessible until governance rules load.</p>
 
+      <h3>Example Configuration</h3>
+      <pre><code># .obsidian-agentignore
+# Ignore private journal
+journal/private/
+*.secret.md
+
+# .obsidian-agentprotected (read-only access)
+templates/**</code></pre>
+      <p>Files matching <code>.obsidian-agentignore</code> patterns are completely invisible to the agent &mdash; no read, no write, no listing. Files matching <code>.obsidian-agentprotected</code> patterns can be read but not modified or deleted. Both files are placed at the vault root and follow the same glob syntax.</p>
+
       <h2 id="auto-approval">Auto-Approval System</h2>
       <p>Per-group approval toggles. Default: master toggle disabled.</p>
       <p>Agent tools always auto-approved: <code>ask_followup_question</code>, <code>attempt_completion</code>, <code>update_todo_list</code>, <code>open_note</code>, <code>update_settings</code>, <code>configure_model</code>.</p>
+
+      <h3>AutoApprovalConfig Interface</h3>
+      <pre><code>interface AutoApprovalConfig {
+  enabled: boolean;        // Master toggle
+  read: boolean;           // Read operations
+  noteEdits: boolean;      // apply_diff, insert_content
+  vaultChanges: boolean;   // write_to_file, move_file, delete_file, create_directory
+  web: boolean;            // web_search, web_fetch
+  mcp: boolean;            // use_mcp_tool
+  mode: boolean;           // switch_mode
+  subtasks: boolean;       // new_task
+  question: boolean;       // ask_followup_question
+  todo: boolean;           // update_todo_list
+  skills: boolean;         // execute_command, enable_plugin
+  pluginApiRead: boolean;  // call_plugin_api (read)
+  pluginApiWrite: boolean; // call_plugin_api (write)
+  recipes: boolean;        // execute_recipe
+}</code></pre>
+      <p><strong>Defaults:</strong> <code>enabled=false</code>, <code>read=true</code>, all write groups <code>=false</code>. The system is <strong>fail-closed</strong>: if no approval callback is registered on the execution context, write operations are denied outright rather than silently executed.</p>
 
       <h3>Approval Groups</h3>
       <table>
@@ -136,6 +166,23 @@
         </tbody>
       </table>
 
+      <h2 id="approval-decision-flow">Approval Decision Flow</h2>
+      <p>The following decision tree shows how the pipeline resolves whether a tool call requires user approval or can execute automatically.</p>
+      <div class="arch-diagram">Tool call arrives
+  |
+  Is tool in the always-auto-approved set? (agent group)
+  |                          |
+  YES --> Execute            NO
+                             |
+                   Is auto-approval master toggle enabled?
+                   |                          |
+                   NO --> Show approval UI     YES
+                                              |
+                                    Is group toggle enabled for this tool?
+                                    |                          |
+                                    NO --> Show approval UI     YES --> Execute</div>
+      <p>When the approval UI is shown, the user can approve or deny the operation. Denied operations return a rejection message to the agent, allowing it to adjust its approach. Approved operations continue to the next pipeline stage (checkpoint creation, then execution).</p>
+
       <h2 id="git-checkpoints">Git Checkpoints</h2>
       <p><code>GitCheckpointService</code> uses <code>isomorphic-git</code> to maintain a shadow git repository. Before every write operation, a snapshot is created. Users can restore to any checkpoint from the UI.</p>
       <ul>
@@ -144,9 +191,68 @@
         <li><strong>Auto-snapshot</strong> &mdash; before every write operation</li>
       </ul>
 
+      <h3>CheckpointInfo Interface</h3>
+      <pre><code>interface CheckpointInfo {
+  taskId: string;
+  commitOid: string;
+  timestamp: number;
+  filesChanged: string[];
+  toolName: string;
+  newFiles: string[];
+}</code></pre>
+
+      <h3>Storage &amp; Restore</h3>
+      <p>Checkpoints are held in an in-memory <code>Map&lt;taskId, CheckpointInfo[]&gt;</code> for fast lookup during an active session. Each task maintains its own ordered list of checkpoints.</p>
+      <p><strong>Restore process:</strong> For existing files, <code>git.readBlob()</code> reads the file content from the checkpoint commit. For files that were created after the checkpoint (tracked in <code>newFiles</code>), <code>vault.delete()</code> removes them from the vault entirely.</p>
+      <p><strong>Post-restart recovery:</strong> Since the in-memory map is lost on plugin reload, the service falls back to a <code>git.log()</code> scan of the shadow repo to reconstruct checkpoint history from commit metadata.</p>
+
+      <h3>Configuration</h3>
+      <table>
+        <thead><tr><th>Setting</th><th>Default</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>enableCheckpoints</code></td><td><code>true</code></td><td>Master toggle for the checkpoint system</td></tr>
+          <tr><td><code>checkpointTimeoutSeconds</code></td><td><code>30</code></td><td>Maximum time allowed for a single checkpoint commit before timeout</td></tr>
+        </tbody>
+      </table>
+
       <h2 id="operation-logger">Operation Logger</h2>
-      <p>Every tool execution is logged to a JSONL file. Fields: timestamp, tool name, input parameters, result status, duration, mode, conversation ID.</p>
-      <p>Log file: <code>.obsidian/plugins/obsidian-agent/operations.jsonl</code></p>
+      <p>Every tool execution is logged to a JSONL file for full audit traceability.</p>
+
+      <h3>LogEntry Structure</h3>
+      <pre><code>{
+  timestamp: string;    // ISO 8601
+  taskId: string;
+  mode: string;
+  tool: string;
+  params: object;       // Sanitized input parameters
+  result: string;       // Sanitized output summary
+  success: boolean;
+  durationMs: number;
+  error?: string;       // Present only on failure
+}</code></pre>
+
+      <h3>Sanitization Rules</h3>
+      <p>Before writing to disk, all log entries are sanitized to prevent accidental secret exposure:</p>
+      <ul>
+        <li>Fields named <code>password</code>, <code>token</code>, <code>api_key</code>, <code>secret</code>, <code>key</code>, or <code>auth</code> are replaced with <code>[REDACTED]</code>.</li>
+        <li>Content fields (note bodies, file contents) are summarized as <code>"[N chars]"</code> to reduce log volume.</li>
+        <li>URLs are stripped of query parameters to avoid leaking tokens embedded in URLs.</li>
+        <li>Any string value exceeding 500 characters is truncated with an ellipsis.</li>
+      </ul>
+
+      <h3>File Rotation</h3>
+      <p>Logs are stored as daily files at <code>.obsidian/plugins/obsidian-agent/logs/YYYY-MM-DD.jsonl</code>. Files older than 30 days are automatically deleted on plugin startup. Each line in the JSONL file is a self-contained JSON object, making the logs easy to parse and filter with standard tooling.</p>
+
+      <h2 id="consecutive-mistake-limit">Consecutive Mistake Limit</h2>
+      <p>A safety valve that halts runaway agent loops. An internal counter tracks consecutive tool errors (any tool execution that returns <code>success: false</code>). The counter resets to zero on every successful tool call.</p>
+      <p>When the counter reaches the configured limit, the agent task is stopped immediately and the user is notified. This prevents scenarios where the agent repeatedly attempts a failing operation, burning tokens and potentially causing unintended side effects.</p>
+      <table>
+        <thead><tr><th>Setting</th><th>Default</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>advancedApi.consecutiveMistakeLimit</code></td><td><code>3</code></td><td>Number of consecutive tool errors before the task is halted</td></tr>
+        </tbody>
+      </table>
+      <p>The limit is configurable per-session. Setting it to <code>0</code> disables the safety valve entirely (not recommended). The counter is scoped to the current task and is not shared across subtasks.</p>
 
       <h2 id="defense-in-depth">Defense in Depth</h2>
       <div class="arch-diagram">Layer 1: IgnoreService     -- Path-based blocks (hard + configurable)

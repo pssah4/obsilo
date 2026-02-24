@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Semantic Search Pipeline — Obsilo Developer Docs</title>
+  <title>Semantic Search Pipeline — Obsilo Architecture</title>
   <link rel="icon" type="image/png" href="../assets/OBSILO_ICON50x50_lila.png">
   <link rel="stylesheet" href="../assets/style.css">
   <script>(function(){var t=localStorage.getItem('theme')||'dark';document.documentElement.setAttribute('data-theme',t)})();(function(){var l=localStorage.getItem('lang');if(l)document.documentElement.setAttribute('lang',l)})()</script>
@@ -19,27 +19,28 @@
     <a href="index.html" data-i18n="header.devDocs">Architecture</a>
     <a href="../about.html" data-i18n="header.about">About</a>
     <a href="https://github.com/pssah4/obsilo-public" class="github-btn"><svg aria-hidden="true" height="16" viewBox="0 0 16 16" width="16" class="github-icon"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg> <span data-i18n="header.github">GitHub</span></a>
+    <a href="https://buymeacoffee.com/sebastianhanke" target="_blank" rel="noopener noreferrer"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" class="bmc-header-btn"></a>
   </nav>
   <div class="spacer"></div>
-  <button class="theme-toggle" aria-label="Toggle theme" onclick="toggleTheme()">
+  <button class="theme-toggle" aria-label="Toggle theme" data-i18n-aria="header.toggleTheme" onclick="toggleTheme()">
     <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
     <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
   </button>
   <div class="lang-switcher">
-    <button class="lang-toggle" onclick="toggleLangDropdown(event)" aria-label="Switch language">
+    <button class="lang-toggle" onclick="toggleLangDropdown(event)" aria-label="Switch language" data-i18n-aria="header.switchLang">
       <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
       <span class="lang-toggle-label">EN</span>
     </button>
     <div class="lang-dropdown"></div>
   </div>
-  <button class="search-btn" onclick="openDocsSearch()" aria-label="Search docs"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span data-i18n="header.search">Search</span></button>
+  <button class="search-btn" onclick="openDocsSearch()" aria-label="Search docs" data-i18n-aria="header.search"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span data-i18n="header.search">Search</span></button>
 </header>
 <script>function toggleTheme(){var h=document.documentElement,n=h.getAttribute('data-theme')==='light'?'dark':'light';h.setAttribute('data-theme',n);localStorage.setItem('theme',n);document.querySelectorAll('.logo-img').forEach(function(i){i.src=n==='light'?'../assets/OBSILO_LOGOFULL_v2.png':'../assets/OBSILO_LOGOFULL_SW_v2.png'})}(function(){var t=document.documentElement.getAttribute('data-theme');if(t==='light'){document.querySelectorAll('.logo-img').forEach(function(i){i.src='../assets/OBSILO_LOGOFULL_v2.png'})}})()</script>
 
 <div class="docs-layout">
   <aside class="docs-sidebar">
     <div class="sidebar-section">
-      <div class="sidebar-section-title">Developer Docs</div>
+      <div class="sidebar-section-title">Architecture</div>
       <nav class="sidebar-nav">
         <a href="index.html">Overview</a>
       </nav>
@@ -88,7 +89,7 @@
       <div class="breadcrumb">
         <a href="../index.html">Home</a>
         <span class="breadcrumb-sep">&rsaquo;</span>
-        <a href="index.html">Dev Docs</a>
+        <a href="index.html">Architecture</a>
         <span class="breadcrumb-sep">&rsaquo;</span>
         <span>Semantic Search Pipeline</span>
       </div>
@@ -98,7 +99,14 @@
 
       <h2 id="vectra-localindex">Vectra LocalIndex</h2>
       <p>Pure-TypeScript HNSW vector index. Storage: <code>.obsidian/plugins/obsidian-agent/semantic-index/</code>. Default model: <code>Xenova/all-MiniLM-L6-v2</code> (384 dimensions, runs locally via ONNX).</p>
-      <p>Two embedding paths: Xenova local (default, zero config) and API-based (OpenAI-compatible endpoint).</p>
+      <p>Two embedding paths are supported:</p>
+
+      <h3>Local Embeddings (Default)</h3>
+      <p>Model: <code>Xenova/all-MiniLM-L6-v2</code>, 384 dimensions, mean pooling, L2-normalized output. Zero configuration required &mdash; the ONNX runtime loads the model on first use and caches it locally. All computation stays on-device with no network calls.</p>
+
+      <h3>API-Based Embeddings</h3>
+      <p>Any OpenAI-compatible embedding endpoint. Requests are batched with a batch size of 16 embeddings per API call. Failures are handled with exponential backoff: 1s, 2s, 4s, 8s delays with a maximum of 4 retries. Each request has a 30-second timeout.</p>
+      <p>Model key format: <code>{provider}:{modelName}</code> (e.g. <code>openai:text-embedding-3-small</code>). Changing the model key triggers a full index rebuild since embedding dimensions and vector spaces differ between models.</p>
 
       <h2 id="heading-aware-chunking">Heading-Aware Chunking</h2>
       <p>5-stage chunking pipeline:</p>
@@ -110,14 +118,19 @@
         <li><strong>Ellipsis prefix</strong> &mdash; for continued chunks.</li>
       </ol>
 
+      <h3>YAML Frontmatter Handling</h3>
+      <p>YAML frontmatter delimiters (<code>---</code>) are stripped, but the frontmatter content itself is preserved and prepended to the document body before chunking. This ensures metadata like tags, aliases, and descriptions contribute to the semantic representation of the note.</p>
+      <p><strong>Single-chunk optimization:</strong> If the entire file content (after frontmatter processing) fits within the configured chunk size, the chunking pipeline is bypassed and the full text is used as a single chunk. This avoids unnecessary overlap and ellipsis artifacts on small files.</p>
+
       <h2 id="bm25-tfidf">BM25/TF-IDF with Stemming</h2>
-      <p><strong>Tokenization:</strong> lowercase + split on non-alphanumeric.</p>
+      <p><strong>Tokenization:</strong> Text is lowercased and split on the regex pattern <code>[\s\-_/,.;:!?()\[\]{}"'\`|@#=+*&lt;&gt;~^]+</code>. Tokens shorter than 3 characters are filtered out to remove noise from short fragments and common articles.</p>
       <p><strong>Suffix stemmer</strong> with rules for:</p>
       <ul>
         <li><strong>English:</strong> -ing, -tion, -ness, -ment, -able, -ful, -less, -ous, -ive, -ly, -ed, -er, -est, -es, -s</li>
         <li><strong>German:</strong> -ung, -heit, -keit, -isch, -lich, -bar, -sam, -en, -er, -es, -te, -ten</li>
       </ul>
-      <p><strong>Scoring:</strong> TF = matches/total tokens, IDF = log(N/df), Score = SUM(TF * IDF).</p>
+      <p><strong>Scoring:</strong> TF = matches/total tokens, IDF = <code>log((N+1)/(df+1))</code> where N is total document count and df is documents containing the term. The +1 smoothing prevents division by zero and dampens extreme weights for rare terms. Final score: <code>SUM(TF * IDF)</code> across all query terms.</p>
+      <p><strong>Per-file deduplication:</strong> When multiple chunks from the same file appear in results, only the highest-scoring chunk per file is retained. This prevents a single long document from dominating the result set.</p>
 
       <h2 id="hybrid-search-rrf">Hybrid Search &amp; RRF Fusion</h2>
       <div class="arch-diagram">User Query
@@ -142,11 +155,58 @@
               v
           Final results (top_k)</div>
 
+      <h3>searchK Inflation</h3>
+      <p>To ensure enough candidates survive deduplication and filtering, the internal search retrieves more results than the requested <code>topK</code>:</p>
+      <ul>
+        <li><strong>With metadata filters:</strong> <code>min(topK * 4, 80)</code> &mdash; extra inflation compensates for post-filter attrition.</li>
+        <li><strong>Without filters:</strong> <code>min(topK * 3, 40)</code> &mdash; less inflation needed when no candidates are dropped.</li>
+      </ul>
+
+      <h3>Post-Search Metadata Filters</h3>
+      <p>After RRF fusion, results can be further narrowed by metadata filters provided by the caller:</p>
+      <table>
+        <thead><tr><th>Filter</th><th>Match Logic</th></tr></thead>
+        <tbody>
+          <tr><td><code>folder</code></td><td>Prefix match on file path (e.g. <code>projects/</code> matches all files under that folder)</td></tr>
+          <tr><td><code>tags</code></td><td>Any-match &mdash; result is included if it contains at least one of the specified tags</td></tr>
+          <tr><td><code>since</code></td><td>File modification time must be after the given timestamp</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Source Labeling</h3>
+      <p>Each result in the final set is labeled with its origin for transparency: <code>'semantic'</code> if found only by vector search, <code>'keyword'</code> if found only by BM25, or <code>'hybrid'</code> if both retrieval paths returned the same document. This labeling helps consumers understand why a result was returned and diagnose search quality.</p>
+
       <h2 id="hyde">HyDE (Hypothetical Document Expansion)</h2>
-      <p>When enabled, the LLM generates a hypothetical answer to the query, which is then embedded alongside the original query to improve recall for abstract questions.</p>
+      <p>When enabled, the LLM generates a hypothetical note excerpt &mdash; a 2-3 sentence passage that would plausibly answer the query if it existed in the vault. This synthetic text is then embedded alongside the original query vector. Both embeddings are used for the semantic search pass, effectively doubling the chance of matching relevant documents that use different vocabulary than the query.</p>
+      <p>HyDE is particularly effective for abstract or conceptual queries (e.g. "how do I organize my project notes?") where the user's phrasing may not overlap with the actual note content. For exact keyword lookups, the BM25 branch already covers the match.</p>
+      <p><strong>Silent fallback:</strong> If the LLM call fails (timeout, rate limit, API error), HyDE is silently skipped and the search proceeds with only the original query embedding. No error is surfaced to the user.</p>
 
       <h2 id="incremental-build">Incremental Build</h2>
-      <p>Index built incrementally: only new/modified files re-indexed. File modification tracked via metadata. Auto-update queue processes changes in background.</p>
+      <p>Index built incrementally: only new/modified files re-indexed. File modification tracked via a checkpoint file at <code>{indexDir}/index-meta.json</code> which records the last-indexed mtime for every file.</p>
+
+      <h3>Rebuild Phases</h3>
+      <ol class="steps">
+        <li><strong>Phase A &mdash; Cleanup:</strong> For each modified or deleted file, delete all existing chunks belonging to that file from the Vectra index.</li>
+        <li><strong>Phase B &mdash; Index:</strong> Read the file, run the heading-aware chunker, batch-embed the chunks (up to <code>embeddingBatchSize</code> per API call), insert into the index, and commit progress every 20 files.</li>
+      </ol>
+      <p><strong>Cancellation:</strong> The build can be cancelled at any time (e.g. plugin unload or user action). Partial progress is saved &mdash; files that were already committed remain indexed. The next build resumes from where it left off.</p>
+
+      <h3>Auto-Update Queue</h3>
+      <p>File modifications detected by Obsidian's vault events are pushed into an auto-update queue backed by a <code>Set&lt;string&gt;</code> for path deduplication. The queue processes files one at a time (concurrency of 1) with a 2-second pause between files to avoid starving the main thread. Rapid successive edits to the same file are naturally deduplicated by the Set.</p>
+
+      <h2 id="configuration">Configuration</h2>
+      <p>The following parameters control index behavior. All are set in the plugin settings under the Semantic Search section.</p>
+      <table>
+        <thead><tr><th>Parameter</th><th>Default</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>batchSize</code></td><td><code>20</code></td><td>Number of files processed per index commit. Higher values reduce commit overhead but increase memory usage.</td></tr>
+          <tr><td><code>embeddingBatchSize</code></td><td><code>16</code></td><td>Number of embeddings per API call (API mode only). Balances throughput against rate limits.</td></tr>
+          <tr><td><code>chunkSize</code></td><td><code>2000</code></td><td>Maximum characters per chunk. Changing this value triggers a full index rebuild since chunk boundaries shift.</td></tr>
+          <tr><td><code>storageLocation</code></td><td><code>'obsidian-sync'</code></td><td>Index storage path strategy. <code>'obsidian-sync'</code> stores inside the plugin data folder (syncs with Obsidian Sync).</td></tr>
+          <tr><td><code>indexPdfs</code></td><td><code>false</code></td><td>When enabled, PDF files in the vault are extracted and indexed alongside Markdown notes.</td></tr>
+          <tr><td><code>hydeEnabled</code></td><td><code>false</code></td><td>Enable Hypothetical Document Expansion. Requires an active LLM API connection for the generation step.</td></tr>
+        </tbody>
+      </table>
 
       <div class="callout callout-crosslink">
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14L21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>

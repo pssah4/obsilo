@@ -150,6 +150,8 @@
   "pages.gettingStarted.semanticSearchSetup.step4": "<strong>インデックスをビルド</strong>をクリックし、インデックスの完了を待ちます（初回ビルドには数分かかる場合があります）",
   "pages.gettingStarted.semanticSearchSetup.text1": "セマンティック検索により、エージェントはキーワードだけでなく意味でノートを見つけられます。完全にローカルで動作し、クラウドサービスは不要です。",
   "pages.gettingStarted.semanticSearchSetup.text2": "ビルド後、<code>semantic_search</code>ツールはすべてのモードでエージェントが利用可能になります。",
+  "pages.gettingStarted.apiKeyWarning": "<strong>API キーの保存</strong> API キーは Obsidian に暗号化されずに保存されます。クラウドサービスで Obsidian を同期している場合、API キーも暗号化されずに同期されます。",
+  "pages.gettingStarted.backupWarning": "<strong>まずバックアップを!</strong> Obsilo での作業を始める前に、Vault のバックアップを作成してください。",
   "pages.gettingStarted.subtitle": "Obsilo は現在アーリーベータ版であり、テスト利用が可能です。まだコミュニティプラグインとして公開されていないため、以下に説明する2つの方法のいずれかを使用する必要があります。<br/>Obsilo Agent をインストールし、最初のAIモデルを接続して、5分以内に最初のタスクを実行しましょう。",
   "pages.gettingStarted.title": "はじめに",
   "pages.imprint.contact": "連絡先",

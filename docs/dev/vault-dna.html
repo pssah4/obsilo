@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>VaultDNA — Obsilo Developer Docs</title>
+  <title>VaultDNA — Obsilo Architecture</title>
   <link rel="icon" type="image/png" href="../assets/OBSILO_ICON50x50_lila.png">
   <link rel="stylesheet" href="../assets/style.css">
   <script>(function(){var t=localStorage.getItem('theme')||'dark';document.documentElement.setAttribute('data-theme',t)})();(function(){var l=localStorage.getItem('lang');if(l)document.documentElement.setAttribute('lang',l)})()</script>
@@ -11,23 +11,35 @@
 <body>
 
 <header class="site-header">
-  <a href="../index.html" class="logo"><img src="../assets/OBSILO_LOGOFULL_SW_v2.png" alt="Obsilo" class="logo-img"></a>
+  <a href="../index.html" class="logo">
+    <img src="../assets/OBSILO_LOGOFULL_SW_v2.png" alt="Obsilo" class="logo-img">
+  </a>
   <nav class="header-links">
     <a href="../getting-started.html" data-i18n="header.docs">Guide</a>
     <a href="index.html" data-i18n="header.devDocs">Architecture</a>
     <a href="../about.html" data-i18n="header.about">About</a>
     <a href="https://github.com/pssah4/obsilo-public" class="github-btn"><svg aria-hidden="true" height="16" viewBox="0 0 16 16" width="16" class="github-icon"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg> <span data-i18n="header.github">GitHub</span></a>
+    <a href="https://buymeacoffee.com/sebastianhanke" target="_blank" rel="noopener noreferrer"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" class="bmc-header-btn"></a>
   </nav>
   <div class="spacer"></div>
-  <button class="theme-toggle" aria-label="Toggle theme" onclick="toggleTheme()"><svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg><svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></button>
-  <div class="lang-switcher"><button class="lang-toggle" onclick="toggleLangDropdown(event)" aria-label="Switch language"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg><span class="lang-toggle-label">EN</span></button><div class="lang-dropdown"></div></div>
-  <button class="search-btn" onclick="openDocsSearch()" aria-label="Search docs"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span data-i18n="header.search">Search</span></button>
+  <button class="theme-toggle" aria-label="Toggle theme" data-i18n-aria="header.toggleTheme" onclick="toggleTheme()">
+    <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+  </button>
+  <div class="lang-switcher">
+    <button class="lang-toggle" onclick="toggleLangDropdown(event)" aria-label="Switch language" data-i18n-aria="header.switchLang">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+      <span class="lang-toggle-label">EN</span>
+    </button>
+    <div class="lang-dropdown"></div>
+  </div>
+  <button class="search-btn" onclick="openDocsSearch()" aria-label="Search docs" data-i18n-aria="header.search"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span data-i18n="header.search">Search</span></button>
 </header>
 <script>function toggleTheme(){var h=document.documentElement,n=h.getAttribute('data-theme')==='light'?'dark':'light';h.setAttribute('data-theme',n);localStorage.setItem('theme',n);document.querySelectorAll('.logo-img').forEach(function(i){i.src=n==='light'?'../assets/OBSILO_LOGOFULL_v2.png':'../assets/OBSILO_LOGOFULL_SW_v2.png'})}(function(){var t=document.documentElement.getAttribute('data-theme');if(t==='light'){document.querySelectorAll('.logo-img').forEach(function(i){i.src='../assets/OBSILO_LOGOFULL_v2.png'})}})()</script>
 
 <div class="docs-layout">
   <aside class="docs-sidebar">
-    <div class="sidebar-section"><div class="sidebar-section-title">Developer Docs</div><nav class="sidebar-nav"><a href="index.html">Overview</a></nav></div>
+    <div class="sidebar-section"><div class="sidebar-section-title">Architecture</div><nav class="sidebar-nav"><a href="index.html">Overview</a></nav></div>
     <div class="sidebar-section"><div class="sidebar-section-title">Core Architecture</div><nav class="sidebar-nav"><a href="architecture-overview.html">Architecture Overview</a><a href="agent-loop.html">Agent Loop</a><a href="system-prompt.html">System Prompt</a></nav></div>
     <div class="sidebar-section"><div class="sidebar-section-title">Tool System</div><nav class="sidebar-nav"><a href="tool-system.html">Tool Execution Pipeline</a><a href="governance.html">Governance &amp; Safety</a></nav></div>
     <div class="sidebar-section"><div class="sidebar-section-title">Knowledge &amp; Memory</div><nav class="sidebar-nav"><a href="semantic-search.html">Semantic Search Pipeline</a><a href="memory-system.html">Memory Architecture</a></nav></div>
@@ -39,7 +51,7 @@
     <article class="docs-content">
       <div class="breadcrumb">
         <a href="../index.html">Home</a><span class="breadcrumb-sep">&rsaquo;</span>
-        <a href="index.html">Dev Docs</a><span class="breadcrumb-sep">&rsaquo;</span>
+        <a href="index.html">Architecture</a><span class="breadcrumb-sep">&rsaquo;</span>
         <span>VaultDNA</span>
       </div>
 
@@ -131,6 +143,33 @@ VaultDNA Scanner
           <tr><td><code>resolve_capability_gap</code></td><td>Find plugins for a needed capability (active skills, then disabled plugins)</td></tr>
           <tr><td><code>call_plugin_api</code></td><td>Call a method on a plugin's public API</td></tr>
           <tr><td><code>execute_recipe</code></td><td>Run a multi-step recipe (plugin + vault operations)</td></tr>
+        </tbody>
+      </table>
+
+      <h3 id="tool-execute-command">execute_command</h3>
+      <p>Validates the given <code>command_id</code> against <code>app.commands.commands</code> before execution. If the command is not found, the tool suggests similar command IDs to help the agent self-correct. Execution is dispatched via <code>executeCommandById()</code>. On startup, the tool waits 500ms for new plugin command registrations before considering the command registry complete.</p>
+
+      <h3 id="tool-call-plugin-api">call_plugin_api</h3>
+      <p>Uses a two-tier allowlist system to control which plugin methods the agent can invoke. <strong>Tier 1</strong> is a built-in curated list of safe methods for well-known plugins (dataview.query, omnisearch.search, metaedit methods, etc.). <strong>Tier 2</strong> uses dynamic discovery via runtime reflection on the plugin's API object, filtering out dangerous methods. Methods that are always blocked: <code>execute</code>, <code>executeJs</code>, <code>render</code>, and <code>eval</code>. All calls enforce a 10-second timeout and truncate the response to <code>maxReturnSize</code>.</p>
+
+      <h3 id="tool-execute-recipe">execute_recipe</h3>
+      <p>Runs multi-step recipes with 7 security layers: master toggle (global on/off), per-recipe toggle, parameter validation against declared schemas, no shell expansion via <code>spawn()</code> (not <code>exec()</code>), pipeline approval for write operations, process confinement, and audit trail logging. Built-in recipes include <code>pandoc-pdf</code>, <code>pandoc-docx</code>, and <code>check-dependency</code>. Binary paths are resolved at runtime using <code>which</code>/<code>where</code> to avoid hardcoded paths.</p>
+
+      <h3 id="tool-resolve-capability-gap">resolve_capability_gap</h3>
+      <p>Performs a 3-stage search to find plugins matching a described capability. Stage 1: keyword-match against active skills. Stage 2: search disabled plugins. Stage 3: search archived/community plugins. Keyword extraction uses words of 3 or more characters, case-insensitive matching, with no stemming applied.</p>
+
+      <h2 id="api-allowlist">Built-in API Allowlist</h2>
+      <p>The Tier 1 allowlist defines curated, pre-approved methods for well-known plugins. Each entry specifies the access level (read or write) and the maximum return size.</p>
+      <table>
+        <thead><tr><th>Plugin</th><th>Method</th><th>Access</th><th>Max Return</th></tr></thead>
+        <tbody>
+          <tr><td><code>dataview</code></td><td><code>query</code></td><td>read</td><td>50 KB</td></tr>
+          <tr><td><code>dataview</code></td><td><code>tryQueryMarkdown</code></td><td>read</td><td>50 KB</td></tr>
+          <tr><td><code>dataview</code></td><td><code>pages</code></td><td>read</td><td>50 KB</td></tr>
+          <tr><td><code>dataview</code></td><td><code>page</code></td><td>read</td><td>10 KB</td></tr>
+          <tr><td><code>omnisearch</code></td><td><code>search</code></td><td>read</td><td>50 KB</td></tr>
+          <tr><td><code>metaedit</code></td><td><code>getPropertyValue</code></td><td>read</td><td>10 KB</td></tr>
+          <tr><td><code>metaedit</code></td><td><code>update</code></td><td>write</td><td>10 KB</td></tr>
         </tbody>
       </table>
 

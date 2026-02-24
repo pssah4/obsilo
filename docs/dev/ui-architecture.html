@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>UI Architecture — Obsilo Developer Docs</title>
+  <title>UI Architecture — Obsilo Architecture</title>
   <link rel="icon" type="image/png" href="../assets/OBSILO_ICON50x50_lila.png">
   <link rel="stylesheet" href="../assets/style.css">
   <script>(function(){var t=localStorage.getItem('theme')||'dark';document.documentElement.setAttribute('data-theme',t)})();(function(){var l=localStorage.getItem('lang');if(l)document.documentElement.setAttribute('lang',l)})()</script>
@@ -11,23 +11,35 @@
 <body>
 
 <header class="site-header">
-  <a href="../index.html" class="logo"><img src="../assets/OBSILO_LOGOFULL_SW_v2.png" alt="Obsilo" class="logo-img"></a>
+  <a href="../index.html" class="logo">
+    <img src="../assets/OBSILO_LOGOFULL_SW_v2.png" alt="Obsilo" class="logo-img">
+  </a>
   <nav class="header-links">
     <a href="../getting-started.html" data-i18n="header.docs">Guide</a>
     <a href="index.html" data-i18n="header.devDocs">Architecture</a>
     <a href="../about.html" data-i18n="header.about">About</a>
     <a href="https://github.com/pssah4/obsilo-public" class="github-btn"><svg aria-hidden="true" height="16" viewBox="0 0 16 16" width="16" class="github-icon"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg> <span data-i18n="header.github">GitHub</span></a>
+    <a href="https://buymeacoffee.com/sebastianhanke" target="_blank" rel="noopener noreferrer"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" class="bmc-header-btn"></a>
   </nav>
   <div class="spacer"></div>
-  <button class="theme-toggle" aria-label="Toggle theme" onclick="toggleTheme()"><svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg><svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></button>
-  <div class="lang-switcher"><button class="lang-toggle" onclick="toggleLangDropdown(event)" aria-label="Switch language"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg><span class="lang-toggle-label">EN</span></button><div class="lang-dropdown"></div></div>
-  <button class="search-btn" onclick="openDocsSearch()" aria-label="Search docs"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span data-i18n="header.search">Search</span></button>
+  <button class="theme-toggle" aria-label="Toggle theme" data-i18n-aria="header.toggleTheme" onclick="toggleTheme()">
+    <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+  </button>
+  <div class="lang-switcher">
+    <button class="lang-toggle" onclick="toggleLangDropdown(event)" aria-label="Switch language" data-i18n-aria="header.switchLang">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+      <span class="lang-toggle-label">EN</span>
+    </button>
+    <div class="lang-dropdown"></div>
+  </div>
+  <button class="search-btn" onclick="openDocsSearch()" aria-label="Search docs" data-i18n-aria="header.search"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span data-i18n="header.search">Search</span></button>
 </header>
 <script>function toggleTheme(){var h=document.documentElement,n=h.getAttribute('data-theme')==='light'?'dark':'light';h.setAttribute('data-theme',n);localStorage.setItem('theme',n);document.querySelectorAll('.logo-img').forEach(function(i){i.src=n==='light'?'../assets/OBSILO_LOGOFULL_v2.png':'../assets/OBSILO_LOGOFULL_SW_v2.png'})}(function(){var t=document.documentElement.getAttribute('data-theme');if(t==='light'){document.querySelectorAll('.logo-img').forEach(function(i){i.src='../assets/OBSILO_LOGOFULL_v2.png'})}})()</script>
 
 <div class="docs-layout">
   <aside class="docs-sidebar">
-    <div class="sidebar-section"><div class="sidebar-section-title">Developer Docs</div><nav class="sidebar-nav"><a href="index.html">Overview</a></nav></div>
+    <div class="sidebar-section"><div class="sidebar-section-title">Architecture</div><nav class="sidebar-nav"><a href="index.html">Overview</a></nav></div>
     <div class="sidebar-section"><div class="sidebar-section-title">Core Architecture</div><nav class="sidebar-nav"><a href="architecture-overview.html">Architecture Overview</a><a href="agent-loop.html">Agent Loop</a><a href="system-prompt.html">System Prompt</a></nav></div>
     <div class="sidebar-section"><div class="sidebar-section-title">Tool System</div><nav class="sidebar-nav"><a href="tool-system.html">Tool Execution Pipeline</a><a href="governance.html">Governance &amp; Safety</a></nav></div>
     <div class="sidebar-section"><div class="sidebar-section-title">Knowledge &amp; Memory</div><nav class="sidebar-nav"><a href="semantic-search.html">Semantic Search Pipeline</a><a href="memory-system.html">Memory Architecture</a></nav></div>
@@ -39,7 +51,7 @@
     <article class="docs-content">
       <div class="breadcrumb">
         <a href="../index.html">Home</a><span class="breadcrumb-sep">&rsaquo;</span>
-        <a href="index.html">Dev Docs</a><span class="breadcrumb-sep">&rsaquo;</span>
+        <a href="index.html">Architecture</a><span class="breadcrumb-sep">&rsaquo;</span>
         <span>UI Architecture</span>
       </div>
 
@@ -125,7 +137,20 @@ Conversation persisted to ConversationStore</div>
       <p>Session-level tool configuration. Groups: Built-In (with group checkboxes), MCP Servers (toggle), Skills (async-loaded), Workflows (radio-style). Changes persist for the session only.</p>
 
       <h2 id="history">HistoryPanel</h2>
-      <p>Overlay panel showing past conversations. Features: search by title/content, restore previous conversation, delete individual entries. Powered by <code>ConversationStore</code>.</p>
+      <p>Overlay panel showing past conversations. Rendered as a sliding overlay with a CSS transition (200 ms) from the left edge of the sidebar.</p>
+
+      <h3>Date Grouping</h3>
+      <p>Conversations are organized into four groups: <strong>Today</strong>, <strong>Yesterday</strong>, <strong>This Week</strong>, and <strong>Older</strong>. Within each group, entries are sorted in reverse-chronological order (newest first).</p>
+
+      <h3>Interaction</h3>
+      <ul>
+        <li><strong>Search filter</strong> &mdash; Substring match across conversation titles and content. Results update as the user types.</li>
+        <li><strong>Restore &amp; continue</strong> &mdash; Clicking an entry calls <code>loadConversation()</code>, which restores the full conversation history and resumes the session.</li>
+        <li><strong>Delete</strong> &mdash; Individual entries can be removed from the store.</li>
+      </ul>
+
+      <h3>Persistence</h3>
+      <p>All conversations are persisted by <code>ConversationStore</code> as JSON files on disk, one file per conversation.</p>
 
       <h2 id="approval">Approval Flow</h2>
       <p>Two modal types for write operation approval:</p>
@@ -135,8 +160,77 @@ Conversation persisted to ConversationStore</div>
       </ul>
       <p>Both return a Promise&lt;boolean&gt; that the pipeline awaits.</p>
 
+      <h3>DiffReviewModal Detail</h3>
+      <p>The <code>DiffReviewModal</code> operates in two distinct modes:</p>
+      <table>
+        <thead><tr><th>Mode</th><th>Context</th><th>Actions</th></tr></thead>
+        <tbody>
+          <tr><td><code>review</code></td><td>Post-task review of changes</td><td>Per-section: Keep / Undo / Edit. Global: Apply Selected, Keep All, Undo All</td></tr>
+          <tr><td><code>checkpoint</code></td><td>Read-only inspection of a past checkpoint</td><td>Restore button (reverts vault to that snapshot)</td></tr>
+        </tbody>
+      </table>
+
+      <h4>Semantic Section Grouping</h4>
+      <p>Diffs are not shown as raw line-level patches. Instead, the modal groups changes into semantic sections based on Markdown structure: frontmatter, headings, code blocks, lists, callouts, tables, and paragraphs. Each section is independently reviewable.</p>
+
+      <h4>Side-by-Side Diff with Context Collapse</h4>
+      <p>Changes are rendered in a two-column layout (before / after). When more than 7 consecutive unchanged lines appear between changed regions, they are collapsed into a clickable expander to keep the diff focused on actual modifications.</p>
+
+      <h4>Inline Edit Capability</h4>
+      <p>In <code>review</code> mode, clicking the Edit action on a section opens an inline textarea pre-filled with the proposed content. The user can modify the text freely. Edited content is tracked separately and spliced into the correct position when the user applies the final selection.</p>
+
       <h2 id="settings">Settings UI</h2>
-      <p>16-tab settings interface built with Obsidian's <code>PluginSettingTab</code>. Each tab corresponds to a feature area (General, Providers, Modes, Rules, Skills, Semantic Index, Memory, MCP, Approval, Ignore, etc.).</p>
+      <p>The settings interface is built with Obsidian's <code>PluginSettingTab</code> and organized as 4 top-level tabs, each with its own sub-tabs:</p>
+      <table>
+        <thead><tr><th>Top-Level Tab</th><th>Sub-Tabs</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Providers</strong></td><td>Models, Embeddings, Web Search, MCP</td></tr>
+          <tr><td><strong>Agent Behaviour</strong></td><td>Modes, Auto-Approve, Loop, Memory, Rules, Workflows, Skills, Prompts</td></tr>
+          <tr><td><strong>Vault</strong></td><td>Semantic Index, Ignored Paths</td></tr>
+          <tr><td><strong>Advanced</strong></td><td>Interface, Shell, Log, Debug, Backup</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Router State</h3>
+      <p>Navigation state is managed by three properties: <code>activeTab</code>, <code>activeProvidersSubTab</code>, <code>activeAgentSubTab</code>, and <code>activeAdvancedSubTab</code>. The method <code>openAt(tab, subTab)</code> supports deep-linking &mdash; other components can programmatically jump to a specific settings pane (for example, a "Configure provider" link in an error message opens the Providers &rarr; Models sub-tab directly).</p>
+
+      <h2 id="toolbar">Toolbar Elements</h2>
+      <p>The chat toolbar sits between the message area and the input field. It contains 9 interactive elements:</p>
+      <ol>
+        <li><strong>Mode button</strong> &mdash; Dropdown showing all available modes. Click to switch the active mode for the current conversation.</li>
+        <li><strong>Model button</strong> &mdash; Override the model on a per-conversation basis, independent of the global default.</li>
+        <li><strong>Tool picker</strong> (pocket-knife icon) &mdash; Opens the <code>ToolPickerPopover</code> to toggle individual tools, skills, workflows, and MCP servers.</li>
+        <li><strong>Web toggle</strong> (globe icon) &mdash; Enable or disable web tools (<code>web_fetch</code>, <code>web_search</code>) for the current session.</li>
+        <li><strong>Attach</strong> (paperclip icon) &mdash; Opens a native file picker. Selected files are processed through <code>AttachmentHandler</code>.</li>
+        <li><strong>@ trigger</strong> &mdash; Typing <code>@</code> in the input opens the <code>VaultFilePicker</code> for vault file references.</li>
+        <li><strong>More options</strong> (ellipsis icon) &mdash; Context menu with additional actions (export, clear, settings shortcuts).</li>
+        <li><strong>Stop button</strong> &mdash; Visible only during task execution. Fires the <code>AbortController</code> signal to cancel the running agent loop.</li>
+        <li><strong>Send button</strong> &mdash; Triggers <code>handleSendMessage()</code>, which packages attachments, conversation history, and user text into the agent task.</li>
+      </ol>
+
+      <h2 id="attachments">AttachmentHandler</h2>
+      <p>The <code>AttachmentHandler</code> manages file attachments in the chat input area.</p>
+
+      <h3>Entry Points</h3>
+      <table>
+        <thead><tr><th>Method</th><th>Source</th><th>Behaviour</th></tr></thead>
+        <tbody>
+          <tr><td><code>processFile(File)</code></td><td>Toolbar paperclip, drag-and-drop, clipboard paste</td><td>Images: base64-encoded. Text files: content wrapped as text blocks.</td></tr>
+          <tr><td><code>addVaultFile(TFile)</code></td><td>@ mention picker</td><td>Reads file content via <code>vault.read()</code> and attaches it as a vault reference.</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Input Methods</h3>
+      <ul>
+        <li><strong>Clipboard paste</strong> &mdash; Images pasted from clipboard are intercepted and processed automatically.</li>
+        <li><strong>Drag-and-drop</strong> &mdash; Files dragged into the input area trigger a visual drop-zone indicator before processing.</li>
+      </ul>
+
+      <h3>Constraints and Rendering</h3>
+      <p>Maximum file size is 10 MB. Attached files render as chips below the input field: images show a thumbnail preview, text files display a file-text icon with the filename.</p>
+
+      <h3>Send Behaviour</h3>
+      <p>When the user sends a message, the handler snapshots all pending attachments, clears the attachment area, and builds a <code>ContentBlock[]</code> array. Ordering: image blocks first, then text content blocks, then vault file blocks. This array is merged into the user message before being passed to the agent task.</p>
 
       <div class="callout callout-crosslink">
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14L21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>

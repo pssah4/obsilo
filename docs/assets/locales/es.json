@@ -150,6 +150,8 @@
   "pages.gettingStarted.semanticSearchSetup.step4": "Haga clic en <strong>Construir índice</strong> y espere a que se complete la indexación (la primera construcción puede tardar unos minutos)",
   "pages.gettingStarted.semanticSearchSetup.text1": "La búsqueda semántica permite al agente encontrar notas por significado en lugar de solo por palabras clave. Se ejecuta completamente en local — no se necesita ningún servicio en la nube.",
   "pages.gettingStarted.semanticSearchSetup.text2": "Una vez construido, la herramienta <code>semantic_search</code> está disponible para el agente en todos los modos.",
+  "pages.gettingStarted.apiKeyWarning": "<strong>Almacenamiento de API Keys</strong> Las API Keys se almacenan sin cifrar en Obsidian. Si utilizas servicios en la nube para sincronizar Obsidian, tus API Keys también se sincronizarán sin cifrar.",
+  "pages.gettingStarted.backupWarning": "<strong>Primero haz una copia de seguridad!</strong> Crea una copia de seguridad de tu vault antes de empezar a trabajar con Obsilo.",
   "pages.gettingStarted.subtitle": "Obsilo está en fase beta temprana y abierto para pruebas. Aún no se ha publicado como Plugin de la comunidad, por lo que deberá utilizar una de las dos opciones descritas a continuación. Instale Obsilo Agent, conecte su primer modelo de IA y ejecute su primera tarea en menos de 5 minutos.",
   "pages.gettingStarted.title": "Primeros pasos",
   "pages.imprint.contact": "Contacto",
