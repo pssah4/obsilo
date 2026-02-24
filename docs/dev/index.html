@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Developer Documentation — Obsilo Agent</title>
+  <link rel="icon" type="image/png" href="../assets/OBSILO_ICON50x50_lila.png">
+  <link rel="stylesheet" href="../assets/style.css">
+  <script>(function(){var t=localStorage.getItem('theme')||'dark';document.documentElement.setAttribute('data-theme',t)})();(function(){var l=localStorage.getItem('lang');if(l)document.documentElement.setAttribute('lang',l)})()</script>
+</head>
+<body>
+
+<header class="site-header">
+  <a href="../index.html" class="logo">
+    <img src="../assets/OBSILO_LOGOFULL_SW_v2.png" alt="Obsilo" class="logo-img">
+  </a>
+  <nav class="header-links">
+    <a href="../getting-started.html" data-i18n="header.docs">Guide</a>
+    <a href="index.html" class="active" data-i18n="header.devDocs">Architecture</a>
+    <a href="../about.html" data-i18n="header.about">About</a>
+    <a href="https://github.com/pssah4/obsilo-public" class="github-btn"><svg aria-hidden="true" height="16" viewBox="0 0 16 16" width="16" class="github-icon"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg> <span data-i18n="header.github">GitHub</span></a>
+  </nav>
+  <div class="spacer"></div>
+  <button class="theme-toggle" aria-label="Toggle theme" data-i18n-aria="header.toggleTheme" onclick="toggleTheme()">
+    <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+  </button>
+  <div class="lang-switcher">
+    <button class="lang-toggle" onclick="toggleLangDropdown(event)" aria-label="Switch language" data-i18n-aria="header.switchLang">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+      <span class="lang-toggle-label">EN</span>
+    </button>
+    <div class="lang-dropdown"></div>
+  </div>
+  <button class="search-btn" onclick="openDocsSearch()" aria-label="Search docs" data-i18n-aria="header.search"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span data-i18n="header.search">Search</span></button>
+</header>
+<script>function toggleTheme(){var h=document.documentElement,n=h.getAttribute('data-theme')==='light'?'dark':'light';h.setAttribute('data-theme',n);localStorage.setItem('theme',n);document.querySelectorAll('.logo-img').forEach(function(i){i.src=n==='light'?'../assets/OBSILO_LOGOFULL_v2.png':'../assets/OBSILO_LOGOFULL_SW_v2.png'})}(function(){var t=document.documentElement.getAttribute('data-theme');if(t==='light'){document.querySelectorAll('.logo-img').forEach(function(i){i.src='../assets/OBSILO_LOGOFULL_v2.png'})}})()</script>
+
+<div class="docs-layout">
+  <aside class="docs-sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-section-title" data-i18n="dev_sidebar.title">Developer Docs</div>
+      <nav class="sidebar-nav">
+        <a href="index.html" class="active" data-i18n="dev_sidebar.hub">Overview</a>
+      </nav>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-title" data-i18n="dev_sidebar.coreArch">Core Architecture</div>
+      <nav class="sidebar-nav">
+        <a href="architecture-overview.html" data-i18n="dev_sidebar.archOverview">Architecture Overview</a>
+        <a href="agent-loop.html" data-i18n="dev_sidebar.agentLoop">Agent Loop</a>
+        <a href="system-prompt.html" data-i18n="dev_sidebar.systemPrompt">System Prompt</a>
+      </nav>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-title" data-i18n="dev_sidebar.toolSystem">Tool System</div>
+      <nav class="sidebar-nav">
+        <a href="tool-system.html" data-i18n="dev_sidebar.toolPipeline">Tool Execution Pipeline</a>
+        <a href="governance.html" data-i18n="dev_sidebar.governance">Governance &amp; Safety</a>
+      </nav>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-title" data-i18n="dev_sidebar.knowledgeMemory">Knowledge &amp; Memory</div>
+      <nav class="sidebar-nav">
+        <a href="semantic-search.html" data-i18n="dev_sidebar.semanticSearch">Semantic Search Pipeline</a>
+        <a href="memory-system.html" data-i18n="dev_sidebar.memorySystem">Memory Architecture</a>
+      </nav>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-title" data-i18n="dev_sidebar.extensions">Extensions</div>
+      <nav class="sidebar-nav">
+        <a href="mode-system.html" data-i18n="dev_sidebar.modeSystem">Mode System</a>
+        <a href="mcp-client.html" data-i18n="dev_sidebar.mcpClient">MCP Client</a>
+        <a href="api-providers.html" data-i18n="dev_sidebar.apiProviders">API Providers</a>
+        <a href="vault-dna.html" data-i18n="dev_sidebar.vaultDna">VaultDNA</a>
+      </nav>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-title" data-i18n="dev_sidebar.ui">UI</div>
+      <nav class="sidebar-nav">
+        <a href="ui-architecture.html" data-i18n="dev_sidebar.uiArch">UI Architecture</a>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="docs-main">
+    <article class="docs-content">
+      <div class="breadcrumb">
+        <a href="../index.html" data-i18n="breadcrumb.home">Home</a>
+        <span class="breadcrumb-sep">&rsaquo;</span>
+        <span data-i18n="dev_hub.breadcrumb">Developer Docs</span>
+      </div>
+
+      <h1 data-i18n="dev_hub.title">Developer Documentation</h1>
+      <p data-i18n="dev_hub.subtitle">Understand how Obsilo works under the hood. Explore the architecture, agent loop, tool execution pipeline, and more.</p>
+
+      <div class="callout callout-crosslink">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14L21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
+        <span data-i18n="dev_hub.userDocsLink">Looking for the user guide? See the <a href="../getting-started.html">User Documentation</a>.</span>
+      </div>
+
+      <div class="dev-stats">
+        <div class="dev-stat-item">
+          <span class="dev-stat-value">36</span>
+          <span class="dev-stat-label" data-i18n="dev_hub.stats.tools">Tools</span>
+        </div>
+        <div class="dev-stat-item">
+          <span class="dev-stat-value">16</span>
+          <span class="dev-stat-label" data-i18n="dev_hub.stats.promptSections">Prompt Sections</span>
+        </div>
+        <div class="dev-stat-item">
+          <span class="dev-stat-value">3</span>
+          <span class="dev-stat-label" data-i18n="dev_hub.stats.memoryTiers">Memory Tiers</span>
+        </div>
+        <div class="dev-stat-item">
+          <span class="dev-stat-value">7</span>
+          <span class="dev-stat-label" data-i18n="dev_hub.stats.providers">Provider Types</span>
+        </div>
+        <div class="dev-stat-item">
+          <span class="dev-stat-value">6</span>
+          <span class="dev-stat-label" data-i18n="dev_hub.stats.pipelineSteps">Pipeline Steps</span>
+        </div>
+      </div>
+
+      <h2 id="core-architecture" data-i18n="dev_hub.section.coreArch">Core Architecture</h2>
+      <div class="dev-hub-grid">
+        <a href="architecture-overview.html" class="dev-hub-card">
+          <span class="dev-hub-card-title" data-i18n="dev_hub.cards.archOverview.title">Architecture Overview</span>
+          <span class="dev-hub-card-desc" data-i18n="dev_hub.cards.archOverview.desc">High-level system decomposition, building blocks, and key architectural decisions behind Obsilo.</span>
+        </a>
+        <a href="agent-loop.html" class="dev-hub-card">
+          <span class="dev-hub-card-title" data-i18n="dev_hub.cards.agentLoop.title">Agent Loop</span>
+          <span class="dev-hub-card-desc" data-i18n="dev_hub.cards.agentLoop.desc">The AgentTask lifecycle: iteration flow, abort conditions, context condensing, and parallel tool execution.</span>
+        </a>
+        <a href="system-prompt.html" class="dev-hub-card">
+          <span class="dev-hub-card-title" data-i18n="dev_hub.cards.systemPrompt.title">System Prompt Architecture</span>
+          <span class="dev-hub-card-desc" data-i18n="dev_hub.cards.systemPrompt.desc">How the 16-section modular prompt is assembled from mode definitions, rules, skills, and memory.</span>
+        </a>
+      </div>
+
+      <h2 id="tool-system" data-i18n="dev_hub.section.toolSystem">Tool System</h2>
+      <div class="dev-hub-grid">
+        <a href="tool-system.html" class="dev-hub-card">
+          <span class="dev-hub-card-title" data-i18n="dev_hub.cards.toolPipeline.title">Tool Execution Pipeline</span>
+          <span class="dev-hub-card-desc" data-i18n="dev_hub.cards.toolPipeline.desc">The 6-step governance pipeline: validation, ignore check, approval, checkpoint, execution, and logging.</span>
+        </a>
+        <a href="governance.html" class="dev-hub-card">
+          <span class="dev-hub-card-title" data-i18n="dev_hub.cards.governance.title">Governance &amp; Safety</span>
+          <span class="dev-hub-card-desc" data-i18n="dev_hub.cards.governance.desc">IgnoreService, fail-closed approval, git checkpoints, operation logging, and defense in depth.</span>
+        </a>
+      </div>
+
+      <h2 id="knowledge-memory" data-i18n="dev_hub.section.knowledgeMemory">Knowledge &amp; Memory</h2>
+      <div class="dev-hub-grid">
+        <a href="semantic-search.html" class="dev-hub-card">
+          <span class="dev-hub-card-title" data-i18n="dev_hub.cards.semanticSearch.title">Semantic Search Pipeline</span>
+          <span class="dev-hub-card-desc" data-i18n="dev_hub.cards.semanticSearch.desc">Vectra HNSW, BM25/TF-IDF with stemming, RRF fusion, HyDE expansion, and graph augmentation.</span>
+        </a>
+        <a href="memory-system.html" class="dev-hub-card">
+          <span class="dev-hub-card-title" data-i18n="dev_hub.cards.memorySystem.title">Memory Architecture</span>
+          <span class="dev-hub-card-desc" data-i18n="dev_hub.cards.memorySystem.desc">3-tier memory: chat history, session extraction, and long-term memory promotion via LLM pipeline.</span>
+        </a>
+      </div>
+
+      <h2 id="extensions" data-i18n="dev_hub.section.extensions">Extensions</h2>
+      <div class="dev-hub-grid">
+        <a href="mode-system.html" class="dev-hub-card">
+          <span class="dev-hub-card-title" data-i18n="dev_hub.cards.modeSystem.title">Mode System</span>
+          <span class="dev-hub-card-desc" data-i18n="dev_hub.cards.modeSystem.desc">Built-in and custom modes, tool group filtering, role definitions, and the mode switching mechanism.</span>
+        </a>
+        <a href="mcp-client.html" class="dev-hub-card">
+          <span class="dev-hub-card-title" data-i18n="dev_hub.cards.mcpClient.title">MCP Client</span>
+          <span class="dev-hub-card-desc" data-i18n="dev_hub.cards.mcpClient.desc">Model Context Protocol integration with stdio, SSE, and streamable-http transports.</span>
+        </a>
+        <a href="api-providers.html" class="dev-hub-card">
+          <span class="dev-hub-card-title" data-i18n="dev_hub.cards.apiProviders.title">API Providers</span>
+          <span class="dev-hub-card-desc" data-i18n="dev_hub.cards.apiProviders.desc">Multi-provider adapter pattern supporting Anthropic, OpenAI, Ollama, Azure, and custom endpoints.</span>
+        </a>
+        <a href="vault-dna.html" class="dev-hub-card">
+          <span class="dev-hub-card-title" data-i18n="dev_hub.cards.vaultDna.title">VaultDNA</span>
+          <span class="dev-hub-card-desc" data-i18n="dev_hub.cards.vaultDna.desc">Runtime plugin discovery via API reflection, automatic skill-file generation, and the plugin API bridge.</span>
+        </a>
+      </div>
+
+      <h2 id="ui" data-i18n="dev_hub.section.ui">UI</h2>
+      <div class="dev-hub-grid">
+        <a href="ui-architecture.html" class="dev-hub-card">
+          <span class="dev-hub-card-title" data-i18n="dev_hub.cards.uiArch.title">UI Architecture</span>
+          <span class="dev-hub-card-desc" data-i18n="dev_hub.cards.uiArch.desc">AgentSidebarView, message rendering, autocomplete, history panel, diff review, and settings UI.</span>
+        </a>
+      </div>
+
+    </article>
+  </main>
+</div>
+
+<footer class="footer">
+  <p class="footer-credits">Obsilo Agent <script>document.write(new Date().getFullYear())</script> &middot; <a href="https://github.com/pssah4/obsilo-public/blob/main/LICENSE" data-i18n="footer.license">Apache 2.0</a> &middot; <a href="https://github.com/pssah4/obsilo-public/blob/main/NOTICE.md" data-i18n="footer.notice">Notice</a> &middot; <a href="../imprint.html" data-i18n="footer.imprint">Imprint</a></p>
+  <p class="footer-disclaimer" data-i18n="footer.disclaimer">Provided as-is, without any warranty or liability.</p>
+</footer>
+<script src="../assets/i18n.js"></script>
+<script src="../assets/search.js" defer></script>
+</body>
+</html>

@@ -583,6 +583,24 @@ a.hero-badge:hover { background: var(--bg-4); border-color: var(--accent-light);
 }
 .btn-secondary:hover { background: var(--bg-4); color: var(--text); text-decoration: none; }
 
+.dev-cta {
+  text-align: center;
+  padding: 3rem 1.5rem 4rem;
+  border-top: 1px solid var(--border);
+  max-width: 600px;
+  margin: 0 auto;
+}
+.dev-cta h2 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+.dev-cta p {
+  color: var(--text-muted);
+  margin-bottom: 1.25rem;
+  line-height: 1.6;
+}
+
 .section { padding: 4rem 1.5rem; }
 .section-inner { max-width: 1100px; margin: 0 auto; }
 .section-title {
@@ -1164,6 +1182,117 @@ a.hero-badge:hover { background: var(--bg-4); border-color: var(--accent-light);
   color: var(--accent);
 }
 [data-theme="light"] .search-backdrop { background: rgba(0, 0, 0, 0.3); }
+
+/* ── Cross-link callout (user ↔ dev docs) ── */
+.callout-crosslink {
+  background: var(--accent-glow);
+  border-color: var(--accent);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.callout-crosslink svg {
+  flex-shrink: 0;
+  color: var(--accent-light);
+  width: 20px;
+  height: 20px;
+}
+.callout-crosslink a {
+  font-weight: 600;
+  color: var(--accent-light);
+}
+
+/* ── Dev docs card grid (hub page) ── */
+.dev-hub-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+.dev-hub-card {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem 1.5rem;
+  text-decoration: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  transition: border-color 0.15s, transform 0.15s;
+}
+.dev-hub-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+  text-decoration: none;
+}
+.dev-hub-card-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--accent-light);
+}
+.dev-hub-card-desc {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+/* ── Dev docs: stats bar ── */
+.dev-stats {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 2rem;
+  padding: 1rem 1.25rem;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.dev-stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+.dev-stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--accent-light);
+  font-family: var(--font-mono);
+}
+.dev-stat-label {
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ── Code syntax highlighting (basic) ── */
+.code-keyword { color: #c792ea; }
+.code-string { color: #c3e88d; }
+.code-comment { color: #546e7a; font-style: italic; }
+.code-type { color: #ffcb6b; }
+.code-function { color: #82aaff; }
+.code-number { color: #f78c6c; }
+[data-theme="light"] .code-keyword { color: #7c3aed; }
+[data-theme="light"] .code-string { color: #059669; }
+[data-theme="light"] .code-comment { color: #94a3b8; }
+[data-theme="light"] .code-type { color: #d97706; }
+[data-theme="light"] .code-function { color: #2563eb; }
+[data-theme="light"] .code-number { color: #dc2626; }
+
+/* ── Architecture diagram box ── */
+.arch-diagram {
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  line-height: 1.6;
+  overflow-x: auto;
+  white-space: pre;
+  color: var(--text-muted);
+}
 
 /* ── Responsive ── */
 @media (max-width: 768px) {

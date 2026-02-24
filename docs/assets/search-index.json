@@ -259,5 +259,162 @@
       "Parameters: use_mcp_tool"
     ],
     "content": "Docs \u203a Reference \u203a Tools Reference Tools Reference Complete reference for all 30+ tools available to Obsilo Agent. Tools are grouped by category, which maps to the tool group permission system. Read Tools These tools are read-only and are in the read tool group. Auto-approved by default. read read_file Read the complete content of a file. Always call this before editing an existing file. read list_files List files and folders in a directory. Use \"/\" for the vault root. Optional recursive parameter. read search_files Full-text and regex search across files. Returns matching lines with file path and line number. Supports file_pattern glob filter. Parameters: read_file Parameter Type Required Description path string yes Vault-relative path to the file (e.g., \"Projects/plan.md\") Parameters: list_files Parameter Type Required Description path string yes Directory path. Use \"/\" for vault root recursive boolean no Include subdirectory contents (default: false) Parameters: search_files Parameter Type Required Description path string yes Directory to search in pattern string yes Text or regex pattern to search for file_pattern string no Glob pattern to filter files (e.g., \"*.md\") Vault Intelligence Tools These tools are read-only metadata and search operations. In the vault tool group. Auto-approved by default. vault get_vault_stats Returns a vault overview: total notes, folder tree, top tags, recently modified files. No parameters needed. vault get_frontmatter Read all YAML frontmatter fields of a note (tags, aliases, dates, custom properties). vault search_by_tag Find all notes with given tags. Supports AND or OR matching. Tags with or without # both work. vault get_linked_notes Get forward links and backlinks for a note. Direction: \"both\" (default), \"forward\", or \"backlinks\". vault get_daily_note Read a daily note. offset=0 (today), -1 (yesterday), 1 (tomorrow). create=true creates it if missing. vault open_note Open a note in the Obsidian editor view. Use after creating or editing a note to bring it into focus. vault semantic_search Hybrid semantic + keyword search. Finds notes by meaning. Requires Semantic Index to be built. Supports folder, tag, and date filters. vault query_base Query an Obsidian Bases (.base) file. Returns the notes matching the view's filter conditions. Parameters: semantic_search Parameter Type Required Description query string yes Natural language search query top_k number no Max results to return (default: 8, max: 20) folder string no Restrict results to notes in this folder (prefix match) tags string[] no Only return notes that have ANY of these tags since string no Only return notes modified on or after this date (ISO format: \"2025-01-01\") Writing &amp; Editing Tools These tools modify vault files and require approval (or auto-approval). In the edit tool group. edit write_file Create a new file or completely replace an existing file's content. Preferred for new notes or full rewrites. edit edit_file Replace a specific string"
+  },
+  {
+    "url": "dev/architecture-overview.html",
+    "title": "[Dev] Architecture Overview",
+    "sections": [
+      "Architecture Overview",
+      "Quality Goals",
+      "Key Architectural Decisions",
+      "Building Blocks",
+      "External Dependencies"
+    ],
+    "content": "Architecture >Core Architecture > Architecture Overview Architecture Overview Obsilo is an AI agent built as an Obsidian plugin. It runs entirely in the Electron renderer process, with no backend server, combining an agentic loop with a governed tool execution pipeline and a modular prompt system. System Context Obsilo connects three external boundaries: the Obsidian Vault (local filesystem), LLM API providers (Anthropic, OpenAI, Ollama, etc.), and optionally MCP servers for extended tool access. Quality Goals Priority 1: Data Security - Fail-closed approval, git checkpoints, .obsidian-agentignore. Priority 2: Extensibility - Custom modes, rules, skills, workflows, MCP servers, plugin skills. Priority 3: Privacy - Local-first: embeddings, index, memory all on disk. No telemetry. Priority 4: Transparency - Diff preview, operation log (JSONL), tool cards in UI. Priority 5: Performance - Streaming responses, parallel tool execution, incremental index builds. Key Architectural Decisions 1. Central tool execution pipeline - Every tool call passes through a 6-step governance flow: validate, ignore check, approval, checkpoint, execute, log. 2. Fail-closed approval - If no approval callback is registered, write operations are denied by default. 3. Shadow git repository - isomorphic-git maintains a hidden repo for checkpoint/restore without requiring system git. 4. Mode-based tool filtering - Each mode defines which tool groups are accessible. 5. Local-only semantic index - Vectra HNSW with Xenova embeddings runs entirely on-device. 6. Sliding-window repetition detection - Prevents infinite tool loops by tracking recent calls in a 5-call window. 7. Multi-provider API adapter - Unified ApiHandler interface normalizes Anthropic, OpenAI, Ollama, Azure, and custom providers. 8. 3-tier memory architecture - Chat history, session extraction, long-term memory promotion via LLM pipeline. 9. VaultDNA plugin discovery - Runtime reflection scans installed plugins, generates skill files automatically. 10. Hybrid search with RRF - Semantic + BM25/TF-IDF combined via Reciprocal Rank Fusion (k=60). Building Blocks Core Engine: AgentTask (main agent loop), ToolExecutionPipeline (6-step governance), SystemPrompt (16 modular sections), ToolRegistry (36 tools), ModeService (mode resolution). Knowledge & Memory: SemanticIndexService (Vectra, BM25, RRF, HyDE), MemoryService (6 memory files), ExtractionQueue (background extraction). Governance: IgnoreService (path-based access control), GitCheckpointService (shadow git), OperationLogger (JSONL audit). External Dependencies: @anthropic-ai/sdk, openai, @modelcontextprotocol/sdk, vectra, @xenova/transformers, isomorphic-git."
+  },
+  {
+    "url": "dev/agent-loop.html",
+    "title": "[Dev] Agent Loop",
+    "sections": [
+      "AgentTask Lifecycle",
+      "Constructor Parameters",
+      "Iteration Flow",
+      "Termination Conditions",
+      "Parallel Tool Execution",
+      "ContextExtensions",
+      "AgentTaskCallbacks"
+    ],
+    "content": "Architecture >Core Architecture > Agent Loop Agent Loop The AgentTask class is the central conversation loop. It manages the iterative cycle of sending messages to the LLM, processing tool calls, and accumulating conversation history until a termination condition is reached. AgentTask Lifecycle Constructor receives: api (ApiHandler), toolRegistry, taskCallbacks (14 methods), modeService, consecutiveMistakeLimit, rateLimitMs, condensingEnabled, condensingThreshold, powerSteeringFrequency, maxIterations (default 25), depth, maxSubtaskDepth (default 2). Iteration Flow Each iteration follows 13 sequential steps: 1. Abort check - If abortSignal is set, exit immediately. 2. Mode switch - Apply any pending mode switch. 3. Rate limiting - Delay by rateLimitMs if configured. 4. Power steering - Every N iterations, inject a system reminder. 5. Rebuild prompt cache - Regenerate system prompt with updated context. 6. Stream LLM response - Send conversation history to the API. 7. Accumulate tool calls - Collect tool_use blocks from the stream. 8. Execute tools - Process through ToolExecutionPipeline. PARALLEL_SAFE tools run concurrently. 9. Append results - Add tool results to conversation history. 10. Context condensing - If token estimate exceeds threshold, summarize older messages. 11. Completion check - If attempt_completion was called or no tools invoked, end loop. 12. Repetition detection - Check 5-call sliding window for repeated patterns. 13. Iteration counter - Increment and check against maxIterations. Termination Conditions: Natural end (text only, no tools), Completion signal (attempt_completion), Abort signal, Max iterations (25), Consecutive errors, Repetition loop (3 times in 5-call window). Parallel Tool Execution: Tools in PARALLEL_SAFE set run concurrently via Promise.all(). Includes read_file, list_files, search_files, search_by_tag, get_vault_stats, get_linked_notes, get_daily_note, semantic_search, web_search, web_fetch. ContextExtensions: askQuestion, signalCompletion, onApprovalRequired, updateTodos, switchMode, spawnSubtask, onCheckpoint, invalidateToolCache. AgentTaskCallbacks interface defines 14 callbacks: onIterationStart, onThinking, onText, onToolStart, onToolResult, onUsage, onTodoUpdate, onContextCondensed, onModeSwitch, onCheckpoint, onQuestion, onApprovalRequired, onAttemptCompletion, onComplete, onError."
+  },
+  {
+    "url": "dev/system-prompt.html",
+    "title": "[Dev] System Prompt",
+    "sections": [
+      "Prompt Assembly",
+      "The 16 Sections",
+      "Subtask Mode"
+    ],
+    "content": "Architecture >Core Architecture > System Prompt System Prompt Architecture The system prompt is assembled dynamically from 16 modular sections, each managed by a dedicated builder function in src/core/prompts/sections/. The orchestrator buildSystemPromptForMode() concatenates them in a fixed order. Prompt Assembly On every iteration, the system prompt is rebuilt with current context (time, active file, memory, tool definitions). This ensures the LLM always has up-to-date information. The 16 Sections: 1. dateTime - Current date, time, and timezone for time-aware decisions. 2. vaultContext - Vault name, active file path, settings summary, workspace context. 3. capabilities - High-level overview of what the agent can do. 4. memory - Up to 4000 characters from 5 memory files (800 chars each max): soul.md, user-profile.md, projects.md, patterns.md, learnings.md. Each wrapped in XML tags. 5. tools - Complete JSON schema definitions for all tools accessible in the current mode. Largest section. 6. pluginSkills - VaultDNA-discovered plugin skills. One line per plugin. 7. toolRules - Specific usage rules for tools. 8. toolDecisionGuidelines - Decision tree for choosing between similar tools. 9. objective - 11-point task decomposition framework. 10. responseFormat - Response structuring guidelines. 11. explicitInstructions - Best practices and anti-patterns. 12. securityBoundary - The vault is sacred guardrails. 13. modeDefinition - Role definition for the currently active mode. 14. customInstructions - Global + mode-specific user-defined instructions. 15. skills - Content from keyword-matched skill files. 16. rules - Active rules from .obsidian-agent/rules/ wrapped in rule tags. Subtask Mode When a child task is spawned via new_task, it receives a leaner prompt: sections 1-5, 7, 12, and the parent's task description. Skills, rules, and custom instructions are not inherited to keep the subtask focused."
+  },
+  {
+    "url": "dev/tool-system.html",
+    "title": "[Dev] Tool Execution Pipeline",
+    "sections": [
+      "6-Step Pipeline",
+      "ToolRegistry",
+      "BaseTool Interface",
+      "ToolMeta",
+      "Tool Group Filtering",
+      "Repetition Detection"
+    ],
+    "content": "Architecture >Tool System > Tool Execution Pipeline Tool Execution Pipeline Every tool call from the LLM passes through a 6-step governance pipeline before reaching the actual tool implementation. This ensures safety, auditability, and user control. The 6-Step Pipeline: 1. VALIDATE - Tool exists? Input valid? Mode allows it? 2. IGNORE CHECK - IgnoreService: path blocked? 3. APPROVAL - Write operation? Auto-approve config? Show diff, wait for user. 4. CHECKPOINT - GitCheckpointService: snapshot before write. 5. EXECUTE - BaseTool.execute(input, context). 6. LOG - OperationLogger: append to JSONL. ToolRegistry Central Map<string, BaseTool> created once during plugin startup. Categories: Vault Read (3): read_file, list_files, search_files. Vault Write (6): write_to_file, apply_diff, insert_content, move_file, create_directory, delete_file. Vault Intelligence (7): search_by_tag, get_vault_stats, get_linked_notes, get_daily_note, open_note, search_and_replace, batch_rename. Semantic (1): semantic_search. Canvas (1): generate_canvas. Bases (3): query_base, create_base, update_base. Web (2): web_search, web_fetch. Agent Control (5): ask_followup_question, attempt_completion, update_todo_list, switch_mode, new_task. Plugin Skills (3): execute_command, enable_plugin, resolve_capability_gap. Plugin API (2): call_plugin_api, execute_recipe. Settings (2): update_settings, configure_model. MCP (1): use_mcp_tool. BaseTool Interface: abstract class with name, isWriteOperation, execute(input, context), formatSuccess, formatError, formatContent. ToolMeta: group (read|vault|edit|web|agent|mcp|skill), label, description, icon, signature. Tool Group Filtering: expandToolGroups() resolves group names to individual tool names. Groups are hierarchical: read subset of vault subset of edit. Repetition Detection: Sliding window of last 5 tool calls tracks tool name + arguments. Same combination 3 times terminates the loop."
+  },
+  {
+    "url": "dev/governance.html",
+    "title": "[Dev] Governance & Safety",
+    "sections": [
+      "IgnoreService",
+      "Auto-Approval System",
+      "Git Checkpoints",
+      "Operation Logger",
+      "Defense in Depth"
+    ],
+    "content": "Architecture >Tool System > Governance & Safety Governance & Safety Obsilo implements defense in depth with four security layers: path-based access control, user approval, git checkpoints, and audit logging. IgnoreService Path-based access control using .obsidian-agentignore and .obsidian-agentprotected files. Hard-Coded Blocks: .git/ (Git internals), .obsidian/workspace (Obsidian workspace state), .obsidian/workspace.json, .obsidian/cache. Pattern Syntax: Gitignore-style. * matches non-/, ** matches anything, trailing / = directory. ReDoS protection: reject patterns > 200 chars or with 3+ consecutive **. Fail-closed: all paths inaccessible until governance rules load. Auto-Approval System Per-group approval toggles. Default: master toggle disabled. Agent tools always auto-approved: ask_followup_question, attempt_completion, update_todo_list, open_note, update_settings, configure_model. Approval Groups: read (Read operations), noteEdits (apply_diff, insert_content), vaultChanges (write_to_file, move_file, delete_file, create_directory), web (web_search, web_fetch), mcp (use_mcp_tool), mode (switch_mode), subtasks (new_task), skills (execute_command, enable_plugin), pluginApiRead/Write (call_plugin_api), recipes (execute_recipe). Git Checkpoints GitCheckpointService uses isomorphic-git to maintain a shadow git repository. Before every write operation, a snapshot is created. Users can restore to any checkpoint from the UI. Pure-JS, no system git required. Shadow repo at .obsidian/plugins/obsidian-agent/checkpoints/. Auto-snapshot before every write operation. Operation Logger Every tool execution is logged to a JSONL file. Fields: timestamp, tool name, input parameters, result status, duration, mode, conversation ID. Log file: .obsidian/plugins/obsidian-agent/operations.jsonl. Defense in Depth Layer 1: IgnoreService (path-based blocks). Layer 2: Approval System (user consent). Layer 3: Git Checkpoints (undo capability). Layer 4: Operation Logger (full audit trail)."
+  },
+  {
+    "url": "dev/semantic-search.html",
+    "title": "[Dev] Semantic Search Pipeline",
+    "sections": [
+      "Vectra LocalIndex",
+      "Heading-Aware Chunking",
+      "BM25 Keyword Search",
+      "Hybrid Search & RRF Fusion",
+      "HyDE",
+      "Incremental Build"
+    ],
+    "content": "Architecture >Knowledge & Memory > Semantic Search Pipeline Semantic Search Pipeline Obsilo implements hybrid search combining vector similarity (Vectra HNSW) with keyword matching (BM25/TF-IDF) via Reciprocal Rank Fusion, enhanced by HyDE expansion and wikilink graph augmentation. Vectra LocalIndex Pure-TypeScript HNSW vector index. Storage: .obsidian/plugins/obsidian-agent/semantic-index/. Default model: Xenova/all-MiniLM-L6-v2 (384 dimensions, runs locally via ONNX). Two embedding paths: Xenova local (default, zero config) and API-based (OpenAI-compatible endpoint). Heading-Aware Chunking 5-stage chunking pipeline: 1. Split by headings - break document at Markdown heading boundaries. 2. Respect chunk size - default 2000 characters per chunk. 3. 10% overlap - between consecutive chunks for context continuity. 4. Hard split at 70% - to avoid mid-word breaks. 5. Ellipsis prefix - for continued chunks. BM25/TF-IDF with Stemming Tokenization: lowercase + split on non-alphanumeric. Suffix stemmer with rules for English (-ing, -tion, -ness, -ment, -able, -ful, -less, -ous, -ive, -ly, -ed, -er, -est, -es, -s) and German (-ung, -heit, -keit, -isch, -lich, -bar, -sam, -en, -er, -es, -te, -ten). Scoring: TF = matches/total tokens, IDF = log(N/df), Score = SUM(TF * IDF). Hybrid Search & RRF Fusion User query runs two searches in parallel: Semantic Search (Vectra HNSW, top_k * 3) producing Rank List A (by cosine similarity), and BM25 Keyword Search (TF-IDF, stemming) producing Rank List B. RRF Fusion: score(doc) = SUM(1 / (k + rank_i)), k=60. Then Graph Augmentation: 1-hop wikilink expansion (max 5 per hit). HyDE (Hypothetical Document Expansion) When enabled, the LLM generates a hypothetical answer to the query, which is then embedded alongside the original query to improve recall for abstract questions. Incremental Build Index built incrementally: only new/modified files re-indexed. File modification tracked via metadata. Auto-update queue processes changes in background."
+  },
+  {
+    "url": "dev/memory-system.html",
+    "title": "[Dev] Memory Architecture",
+    "sections": [
+      "3-Tier Architecture",
+      "Memory Files",
+      "ExtractionQueue",
+      "Memory Context Injection",
+      "OnboardingService"
+    ],
+    "content": "Architecture >Knowledge & Memory > Memory Architecture Memory Architecture Obsilo implements a 3-tier memory system that enables the agent to learn from conversations: chat history for short-term, session summaries for medium-term, and promoted facts for long-term persistence. 3-Tier Architecture Tier 1: Chat History (ConversationStore) - Full conversations as JSON, per session. Tier 2: Session Summaries (SessionExtractor) - LLM-generated summary, one per conversation. Semantically searchable via MemoryRetriever. Tier 3: Long-Term Memory (LongTermExtractor) - Facts promoted into persistent Markdown files: user-profile.md, projects.md, patterns.md, soul.md, learnings.md. Memory Files Storage: .obsidian/plugins/obsidian-agent/memory/. soul.md (<agent_identity>) - Agent personality, language, values, anti-patterns. user-profile.md (<user_profile>) - User preferences, communication style. projects.md (<active_projects>) - Current projects and contexts. patterns.md (<behavioral_patterns>) - Learned interaction patterns. learnings.md (<task_learnings>) - Task execution insights. knowledge.md - On-demand via semantic search only. Limits: 800 characters per file, 4000 total in system prompt. ExtractionQueue Persistent FIFO queue surviving Obsidian restarts. Queue file: .obsidian/plugins/obsidian-agent/pending-extractions.json. Queue items: conversationId, transcript, title, queuedAt, type ('session' | 'long-term'). Two async LLM calls per conversation: session extraction + long-term promotion. Memory Context Injection Each memory file is injected into the system prompt wrapped in its XML tag. The buildMemoryContext() method reads all files, truncates to limits, and concatenates. OnboardingService 5-step setup flow for new users. Creates default soul.md with name Obsilo, language Deutsch, and anti-patterns."
+  },
+  {
+    "url": "dev/mode-system.html",
+    "title": "[Dev] Mode System",
+    "sections": [
+      "Mode Resolution",
+      "Built-in Modes",
+      "Custom Modes",
+      "Tool Group Mapping",
+      "Mode Switching",
+      "Rules System",
+      "Workflows",
+      "Skills"
+    ],
+    "content": "Architecture >Extensions > Mode System Mode System Modes define the agent's role, accessible tools, and behavioral constraints. The ModeService resolves modes from a three-tier hierarchy and filters the tool registry accordingly. Mode Resolution Three-tier priority: built-in modes, global modes (~/.obsidian-agent/modes.json), vault modes (per-vault settings). Vault modes override built-in modes with the same slug. Built-in Modes Ask (slug: ask) - Tool Groups: read, vault, agent. Role: Read-only Q&A assistant. Agent (slug: agent) - Tool Groups: read, vault, edit, web, agent, mcp, skill. Role: Full-access agent with write capabilities. Custom Modes ModeConfig interface: slug, name, roleDefinition, toolGroups, customInstructions, modelOverride, mcpWhitelist. Users can create custom modes with specific tool access, custom role definitions, and per-mode model overrides. Tool Group Mapping expandToolGroups() resolves group names to individual tool names. Groups are hierarchical: read is a subset of vault, which is a subset of edit. Mode Switching The switch_mode tool allows the LLM to change modes during a conversation. The switch takes effect at the start of the next iteration. Rules System Rules stored at .obsidian-agent/rules/. Each .md file is a rule with on/off toggle. Max file size: 50,000 chars. Active rules injected into system prompt section 16 wrapped in <rule> tags. Workflows Stored at .obsidian-agent/workflows/. Slug derived from filename. Activated via /slug slash commands. Workflow content wrapped in <explicit_instructions> tags. Skills Keyword-matched content injected into system prompt section 15. Skills auto-activate when user message contains matching keywords."
+  },
+  {
+    "url": "dev/mcp-client.html",
+    "title": "[Dev] MCP Client",
+    "sections": [
+      "McpClient Architecture",
+      "Transport Types",
+      "Command Validation",
+      "Connection Flow",
+      "UseMcpToolTool",
+      "Error Handling"
+    ],
+    "content": "Architecture >Extensions > MCP Client MCP Client The McpClient manages connections to external MCP (Model Context Protocol) servers, providing the agent with access to tools beyond the built-in set. It supports three transport mechanisms and includes security validation for command execution. McpClient Architecture McpClient maintains a Map<serverId, McpConnection> with status (connected, connecting, disconnected, error), client (MCP SDK Client), and tools (McpToolInfo[]). Methods: connect(serverConfig), connectAll(configs[]), callTool(server, tool, args), disconnect(serverId). Transport Types stdio - Stdin/stdout of a child process for local CLI tools. sse - HTTP Server-Sent Events for remote servers with streaming. streamable-http - HTTP with streaming support for modern HTTP servers. Command Validation For stdio transport, the command string is validated against shell metacharacters to prevent injection. Blocked characters: ; & | ` $ ( ) { } [ ] < > \\. This prevents commands like npx some-tool; rm -rf / from executing. Connection Flow 1. Validate config - Check transport type, validate command (stdio) or URL (sse/http). 2. Create transport - Instantiate the appropriate MCP SDK transport. 3. Connect with timeout - Race connection against configurable timeout (default: 60 seconds). 4. Discover tools - Call listTools() on the connected server. 5. Store connection - Save with status, client, and discovered tools. UseMcpToolTool (LLM Bridge) The use_mcp_tool tool bridges LLM tool calls to MCP server invocations. Parameters: server_name, tool_name, arguments. Write operation classification: if tool name contains write, create, delete, update, edit, modify, remove, insert, or set, it requires approval. Per-Mode Server Whitelist Each mode can define which MCP servers are accessible. Empty array means all servers accessible. Error Handling: Connection timeout sets status to error. Server disconnect triggers auto-reconnect on next call. Empty response returns (no output). Non-text response returns (non-text response)."
+  },
+  {
+    "url": "dev/api-providers.html",
+    "title": "[Dev] API Providers",
+    "sections": [
+      "ApiHandler Interface",
+      "Stream Chunks",
+      "AnthropicProvider",
+      "OpenAiProvider",
+      "Provider Types",
+      "Internal Message Format"
+    ],
+    "content": "Architecture >Extensions > API Providers API Providers Obsilo uses an adapter pattern to support multiple LLM providers through a unified ApiHandler interface. Two concrete implementations handle all 7 provider types: AnthropicProvider for the Anthropic API, and OpenAiProvider for all OpenAI-compatible APIs. ApiHandler Interface createMessage(systemPrompt, messages, tools) returns AsyncGenerator<StreamChunk>. getModel() returns the model identifier string. Stream Chunk Types Both providers normalize their streams into 4 chunk types: text (incremental text tokens), thinking (extended thinking content, Anthropic models), tool_use (complete tool call object after full JSON accumulated), usage (token counts at end of response). AnthropicProvider Uses the official @anthropic-ai/sdk with dangerouslyAllowBrowser: true (required for Electron renderer). Native SDK streaming with content block events. Tool accumulation via Map<number, { id, name, inputJson }> keyed by content block index. Thinking blocks mapped to separate accumulator. Temperature default 0.2, clamped to max 1.0. OpenAiProvider Covers 6 OpenAI-compatible provider types: OpenAI (api.openai.com/v1, Bearer token), Ollama (localhost:11434/v1, no auth), LM Studio (localhost:1234/v1, no auth), OpenRouter (openrouter.ai/api/v1, Bearer + HTTP-Referer + X-Title), Azure (custom deployment URL, api-key header + api-version query), Custom (user-configured URL, Bearer token). SSE stream parsing: Manual parsing of data: lines. Temperature omitted for O-series models. Azure uses max_completion_tokens instead of max_tokens. Internal Message Format All providers normalize to Anthropic's content block format: MessageParam with role (user|assistant) and content (string or ContentBlock[]). ContentBlock types: text, image, tool_use, tool_result. Provider Factory buildApiHandlerForModel() reads model configuration and instantiates the appropriate handler."
+  },
+  {
+    "url": "dev/vault-dna.html",
+    "title": "[Dev] VaultDNA",
+    "sections": [
+      "Plugin Discovery",
+      "Classification",
+      "API Discovery",
+      "Skill File Generation",
+      "Settings Sanitization",
+      "Plugin Tools",
+      "Continuous Sync"
+    ],
+    "content": "Architecture >Extensions > VaultDNA VaultDNA VaultDNA is the plugin discovery system that automatically scans all installed Obsidian plugins, classifies their capabilities, and generates skill files that enable the agent to use any plugin's commands and APIs. Plugin Discovery On plugin start, VaultDNA Scanner enumerates all installed plugins (core + community). For each plugin: read manifest (name, description, version), discover commands (app.commands), classify as FULL / PARTIAL / NONE, API reflection (Tier 2, if available), generate skill file. Continuous sync with 5s polling detects enable/disable/install/remove. Classification System FULL (3+ meaningful commands) - Plugin fully usable by the agent. PARTIAL (1-2 meaningful commands) - Limited functionality available. NONE (0 meaningful commands) - Plugin not directly usable. UI-only commands excluded: toggle, show-, focus, settings, -panel, -sidebar, -pane. API Discovery (Reflection) For plugins with public API via plugin.api, VaultDNA performs runtime reflection: enumerate all methods, filter blocked methods (constructor, execute, executeJs, render, register, unregister, onload, onunload, destroy, eval), filter private methods (starting with _), record method names and parameter signatures. Skill File Generation Each plugin gets a Markdown skill file at .obsidian-agent/plugin-skills/{plugin-id}.skill.md with frontmatter (name, id, version, classification, commands, apiMethods) and sections for Commands and API Methods. Settings Sanitization When reading plugin settings, sensitive fields are automatically redacted. Sensitive patterns: api-key, secret, password, token, credential, oauth. Internal state excluded: lastSync, cache, version. Size limits: strings truncated at 500 chars, arrays show 3-item preview, max depth 3. Total output cap: 8,000 characters. Plugin Tools execute_command (run any Obsidian command by ID), enable_plugin (enable a disabled plugin), resolve_capability_gap (find plugins for a needed capability), call_plugin_api (call a method on a plugin's public API), execute_recipe (run a multi-step recipe). Continuous Sync Polling every 5 seconds detects plugin enable/disable changes. On change, affected skill files are regenerated with a 3-second reclassification delay."
+  },
+  {
+    "url": "dev/ui-architecture.html",
+    "title": "[Dev] UI Architecture",
+    "sections": [
+      "AgentSidebarView",
+      "Message Flow",
+      "Rendering Components",
+      "Autocomplete Handler",
+      "VaultFilePicker",
+      "ToolPickerPopover",
+      "HistoryPanel",
+      "Approval Flow",
+      "Settings UI"
+    ],
+    "content": "Architecture >UI > UI Architecture UI Architecture Obsilo's UI is built as an Obsidian ItemView registered in the right sidebar. The AgentSidebarView orchestrates message rendering, user input, autocomplete, and all interactive elements. AgentSidebarView Extends Obsidian's ItemView (view type: obsidian-agent-sidebar, display name: Obsilo Agent). State Management: conversationHistory (MessageParam[]), uiMessages (UIMessage[]), activeConversationId, currentAbortController, lastUserMessage (for retry), nextMessageHidden. Message Flow User types message, AutocompleteHandler checks for triggers (/, @), message submitted. Create AbortController, render user bubble, instantiate AgentTask, run task. Callbacks: onText (append to assistant bubble), onThinking (render thinking block), onToolStart/onToolResult (render/update tool card), onApprovalRequired (show diff modal), onQuestion (show question dialog), onTodoUpdate (update todo box), onCheckpoint (show undo bar), onUsage (update token display), onComplete (finalize, save to store). Rendering Components Message Bubbles rendered as markdown via Obsidian MarkdownRenderer.render(). Tool Cards: collapsible cards with tool name, badge (group color), input parameters, result. Read-only tools with same group merged. Thinking Blocks: distinct collapsible with muted styling. Diff-Stats Badge: lines added/removed after write operations. Token Usage: HH:MM, input/output counts. Autocomplete Handler Two triggers: / (workflows + custom prompts), @ (vault files via VaultFilePicker). VaultFilePicker Live search across all vault markdown files. Max 10 results. Active note pinned at top. Keyboard navigation and multi-select. ToolPickerPopover Session-level tool configuration with groups for Built-In, MCP Servers, Skills, Workflows. HistoryPanel Overlay showing past conversations with search, restore, and delete. Approval Flow DiffReviewModal (full diff with syntax highlighting) and ApproveEditModal (simplified approve/reject). Both return Promise<boolean>. Settings UI 16-tab settings interface built with Obsidian PluginSettingTab."
   }
 ]
