@@ -276,6 +276,11 @@ export class UpdateSettingsTool extends BaseTool<'update_settings'> {
 
         // Apply preset values to autoApproval
         Object.assign(this.plugin.settings.autoApproval, preset);
+        // Auto-complete onboarding when a preset is applied during setup
+        if (!this.plugin.settings.onboarding.completed) {
+            this.plugin.settings.onboarding.completed = true;
+            this.plugin.settings.onboarding.currentStep = 'done';
+        }
         await this.plugin.saveSettings();
 
         const summary = presetName === 'permissive'

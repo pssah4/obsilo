@@ -33,6 +33,16 @@ export interface SemanticResult {
     score: number;
 }
 
+export interface BuildResult {
+    indexed: number;
+    total: number;
+    errors: number;
+    cancelled: boolean;
+    /** Sample of skipped file paths (max 10) for diagnostics */
+    skippedFiles: string[];
+    durationMs: number;
+}
+
 export interface SemanticIndexOptions {
     /** How many files to process before committing to disk. Default: 20 */
     batchSize?: number;
@@ -64,6 +74,7 @@ const CHECKPOINT_VERSION = 1;
 const DEFAULT_CHUNK_SIZE = 2000;   // chars — larger chunks → fewer API calls
 const DEFAULT_COMMIT_EVERY = 20;   // files between disk commits
 const DEFAULT_EMBED_BATCH = 16;    // texts per API request
+const LOCAL_MODEL_MAX_CHUNK = 800; // ~200 tokens — safe for MiniLM-L6-v2 (256 token limit)
 
 // ---------------------------------------------------------------------------
 // SemanticIndexService
@@ -74,7 +85,9 @@ export class SemanticIndexService {
     private pluginDir: string;
     private indexDir: string;          // absolute FS path for vectra
     private index: LocalIndex<Record<string, string | number | boolean>>;
-    private pipeline: any = null;
+    /** Local Xenova tokenizer + model (lazy-loaded). */
+    private xenovaTokenizer: any = null;
+    private xenovaModel: any = null;
 
     private isBuilding = false;
     private cancelled = false;
@@ -101,6 +114,8 @@ export class SemanticIndexService {
     /** Live progress for external polling (e.g. Settings UI). */
     progressIndexed = 0;
     progressTotal = 0;
+    /** Last build diagnostics — available after buildIndex() completes. */
+    lastBuildResult: BuildResult | null = null;
 
     constructor(vault: Vault, pluginDir: string, options: SemanticIndexOptions = {}) {
         this.vault = vault;
@@ -134,6 +149,14 @@ export class SemanticIndexService {
     get isIndexed(): boolean { return this.builtAt !== null; }
     get building(): boolean { return this.isBuilding; }
     get lastBuiltAt(): Date | null { return this.builtAt; }
+
+    /** Effective chunk size — auto-capped for local model to prevent silent token truncation. */
+    private effectiveChunkSize(): number {
+        if (!this.embeddingModel && this.chunkSize > LOCAL_MODEL_MAX_CHUNK) {
+            return LOCAL_MODEL_MAX_CHUNK;
+        }
+        return this.chunkSize;
+    }
 
     setEmbeddingModel(model: CustomModel | null): void {
         this.embeddingModel = model;
@@ -174,10 +197,12 @@ export class SemanticIndexService {
     async buildIndex(
         onProgress?: (indexed: number, total: number) => void,
         force = false,
-    ): Promise<void> {
-        if (this.isBuilding) return;
+    ): Promise<BuildResult> {
+        if (this.isBuilding) return { indexed: 0, total: 0, errors: 0, cancelled: false, skippedFiles: [], durationMs: 0 };
         this.isBuilding = true;
         this.cancelled = false;
+        const startTime = Date.now();
+        const skippedFiles: string[] = [];
 
         try {
             // ----------------------------------------------------------------
@@ -198,6 +223,20 @@ export class SemanticIndexService {
             const total = files.length;
 
             const modelKey = this.modelKey();
+
+            // ----------------------------------------------------------------
+            // 1b. Pre-validate local pipeline before committing to a build
+            // ----------------------------------------------------------------
+            if (!this.embeddingModel) {
+                try {
+                    await this.loadPipeline();
+                } catch (e) {
+                    throw new Error(
+                        `Local embedding model failed to load: ${(e as Error).message ?? e}. ` +
+                        `Consider using an API embedding model for reliable indexing.`
+                    );
+                }
+            }
 
             // ----------------------------------------------------------------
             // 2. Load checkpoint — detect model/chunkSize change
@@ -235,8 +274,9 @@ export class SemanticIndexService {
                 return !stored || stored.mtime < (f.stat?.mtime ?? 0);
             });
 
-            // Files already indexed (skipped this run)
-            let indexed = isFullRebuild ? 0 : Object.keys(this.checkpoint.files).length;
+            // Files already indexed (skipped this run) — use actual vault count minus pending,
+            // not checkpoint keys (which may contain entries for deleted files).
+            let indexed = isFullRebuild ? 0 : (files.length - toIndex.length);
             let errors = 0;
 
             this.progressIndexed = indexed;
@@ -246,7 +286,9 @@ export class SemanticIndexService {
             if (toIndex.length === 0) {
                 console.log('[SemanticIndex] Index up to date — nothing to index.');
                 this.builtAt = new Date();
-                return;
+                const result: BuildResult = { indexed: total, total, errors: 0, cancelled: false, skippedFiles: [], durationMs: Date.now() - startTime };
+                this.lastBuildResult = result;
+                return result;
             }
 
             // ----------------------------------------------------------------
@@ -283,7 +325,7 @@ export class SemanticIndexService {
 
                 try {
                     const content = await this.readFileContent(file);
-                    const chunks = this.splitIntoChunks(content, this.chunkSize);
+                    const chunks = this.splitIntoChunks(content, this.effectiveChunkSize());
 
                     if (chunks.length > 0) {
                         // --- KEY IMPROVEMENT: batch all chunks of this file ---
@@ -321,12 +363,22 @@ export class SemanticIndexService {
                     }
                 } catch (e) {
                     errors++;
+                    if (skippedFiles.length < 10) skippedFiles.push(file.path);
                     console.warn(`[SemanticIndex] Skipping "${file.path}":`, e);
                 }
             }
 
             // Final commit
             await this.index.endUpdate();
+
+            // Prune stale checkpoint entries for files no longer in the vault
+            if (!isFullRebuild && !this.cancelled) {
+                const vaultPaths = new Set(files.map((f) => f.path));
+                for (const cp of Object.keys(this.checkpoint.files)) {
+                    if (!vaultPaths.has(cp)) delete this.checkpoint.files[cp];
+                }
+            }
+
             this.checkpoint.docCount = indexed;
             this.checkpoint.builtAt = new Date().toISOString();
             await this.saveCheckpoint(this.checkpoint);
@@ -337,6 +389,10 @@ export class SemanticIndexService {
             if (!this.cancelled) {
                 console.log(`[SemanticIndex] Build complete: ${indexed}/${total} files, ${errors} skipped.`);
             }
+
+            const result: BuildResult = { indexed, total, errors, cancelled: this.cancelled, skippedFiles, durationMs: Date.now() - startTime };
+            this.lastBuildResult = result;
+            return result;
         } catch (e) {
             console.error('[SemanticIndex] Build failed:', e);
             // Best-effort: close any open vectra transaction so the index isn't
@@ -367,7 +423,7 @@ export class SemanticIndexService {
 
             // Embed + insert new chunks
             const content = await this.readFileContent(file);
-            const chunks = this.splitIntoChunks(content, this.chunkSize);
+            const chunks = this.splitIntoChunks(content, this.effectiveChunkSize());
             if (chunks.length > 0) {
                 const vectors = await this.embedBatch(chunks);
                 for (let ci = 0; ci < chunks.length; ci++) {
@@ -631,7 +687,7 @@ export class SemanticIndexService {
     async indexSessionSummary(sessionId: string, content: string): Promise<void> {
         if (!await this.index.isIndexCreated().catch(() => false)) return;
         try {
-            const chunks = this.splitIntoChunks(content, this.chunkSize);
+            const chunks = this.splitIntoChunks(content, this.effectiveChunkSize());
             if (chunks.length === 0) return;
 
             const vectors = await this.embedBatch(chunks);
@@ -720,11 +776,18 @@ export class SemanticIndexService {
             return results;
         }
 
-        // Local Xenova — sequential to avoid OOM on long notes with many chunks
+        // Local Xenova — sequential to avoid OOM on long notes with many chunks.
+        // Single retry per text for transient WASM/memory errors.
         await this.loadPipeline();
         const out: number[][] = [];
         for (const t of texts) {
-            out.push(await this.embedXenova(t));
+            try {
+                out.push(await this.embedXenova(t));
+            } catch (e) {
+                console.warn('[SemanticIndex] Local embed failed, retrying:', (e as Error).message ?? e);
+                await this.sleep(500);
+                out.push(await this.embedXenova(t));
+            }
         }
         return out;
     }
@@ -816,14 +879,52 @@ export class SemanticIndexService {
         // Yield to the event loop before WASM inference so Obsidian can process
         // pending UI events (paint, keyboard, etc.) before the CPU-heavy part.
         await this.sleep(50);
-        const output = await this.pipeline(text, { pooling: 'mean', normalize: true });
-        return Array.from(output.data as Float32Array);
+
+        const inputs = await this.xenovaTokenizer(text, { padding: true, truncation: true });
+        const output = await this.xenovaModel(inputs);
+
+        // Mean pooling over token embeddings, then L2 normalize
+        const embeddings = output.last_hidden_state;
+        const [, seqLen, hiddenSize] = embeddings.dims;
+        const data = embeddings.data as Float32Array;
+        const attentionMask = inputs.attention_mask.data as BigInt64Array;
+
+        // Compute mean over non-padding tokens
+        const result = new Float32Array(hiddenSize);
+        let count = 0;
+        for (let t = 0; t < seqLen; t++) {
+            if (Number(attentionMask[t]) === 0) continue;
+            count++;
+            for (let h = 0; h < hiddenSize; h++) {
+                result[h] += data[t * hiddenSize + h];
+            }
+        }
+        if (count > 0) {
+            for (let h = 0; h < hiddenSize; h++) result[h] /= count;
+        }
+
+        // L2 normalize
+        let norm = 0;
+        for (let h = 0; h < hiddenSize; h++) norm += result[h] * result[h];
+        norm = Math.sqrt(norm);
+        if (norm > 0) {
+            for (let h = 0; h < hiddenSize; h++) result[h] /= norm;
+        }
+
+        return Array.from(result);
     }
 
+    /**
+     * Load the local Xenova tokenizer + model.
+     * Bypasses the `pipeline()` convenience function which has circular init
+     * issues when bundled by esbuild (TASK_ALIASES stays undefined).
+     */
     private async loadPipeline(): Promise<void> {
-        if (this.pipeline) return;
-        const { pipeline } = await import('@xenova/transformers');
-        this.pipeline = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
+        if (this.xenovaTokenizer && this.xenovaModel) return;
+        const { AutoTokenizer, AutoModel } = await import('@xenova/transformers');
+        const modelId = 'Xenova/all-MiniLM-L6-v2';
+        this.xenovaTokenizer = await AutoTokenizer.from_pretrained(modelId);
+        this.xenovaModel = await AutoModel.from_pretrained(modelId);
     }
 
     private sleep(ms: number): Promise<void> {

@@ -60,6 +60,9 @@ export class AgentSidebarView extends ItemView {
     private lastMarkdownView: MarkdownView | null = null;
     // Hidden message flag — when true, skip user bubble rendering but still send to LLM
     private nextMessageHidden = false;
+    // Onboarding key-setup state machine (chat-based flow, no LLM needed)
+    private onboardingKeyState: 'awaiting_choice' | 'awaiting_key_free' | 'awaiting_provider' | 'awaiting_key_own' | 'testing' | null = null;
+    private onboardingSelectedProvider: { label: string; provider: ProviderType; model: string } | null = null;
 
     // Tool picker (pocket-knife button)
     private toolPickerButton: HTMLElement | null = null;
@@ -615,9 +618,9 @@ export class AgentSidebarView extends ItemView {
     }
 
     /**
-     * Show the onboarding welcome card (first activation only).
-     * Phase 1: Client-side API key setup (no LLM needed).
-     * Phase 2: LLM-driven conversation (after key is configured).
+     * Show the onboarding welcome message (first activation only).
+     * Chat-based flow: scripted assistant bubbles + buttons, no LLM needed.
+     * User pastes API key in the normal chat textarea.
      */
     private showWelcomeMessage(): void {
         if (!this.chatContainer) return;
@@ -625,131 +628,175 @@ export class AgentSidebarView extends ItemView {
         const ob = this.plugin.settings.onboarding;
         if (ob.completed || ob.startedAt || !this.plugin.memoryService) return;
 
-        const onboarding = new OnboardingService(this.plugin.memoryService, this.plugin);
+        const welcomeText = [
+            '## Willkommen bei Obsilo',
+            '',
+            'Bevor wir loslegen, brauche ich Zugang zu einem KI-Modell.',
+            'Das geht schnell -- und kostenlos.',
+        ].join('\n');
 
         const wrapper = this.chatContainer.createDiv('message assistant-message');
         const bubble = wrapper.createDiv('message-bubble');
+        MarkdownRenderer.render(this.app, welcomeText, bubble, '', this);
 
-        MarkdownRenderer.render(this.app,
-            `## Willkommen bei Obsilo\n\nBevor wir loslegen, brauche ich Zugang zu einem KI-Modell. Das geht schnell — und kostenlos.`,
-            bubble, '', this,
-        );
+        const btnRow = bubble.createDiv('setup-welcome-buttons');
 
-        // --- Tab switcher: Free key vs. Own key ---
-        const tabBar = bubble.createDiv('setup-tab-bar');
-        const tabFree = tabBar.createEl('button', { cls: 'setup-tab setup-tab-active', text: 'Kostenloser Key (Google)' });
-        const tabOwn = tabBar.createEl('button', { cls: 'setup-tab', text: 'Eigenen Key verwenden' });
-
-        const panelFree = bubble.createDiv('setup-panel setup-panel-active');
-        const panelOwn = bubble.createDiv('setup-panel');
-
-        tabFree.addEventListener('click', () => {
-            tabFree.addClass('setup-tab-active'); tabOwn.removeClass('setup-tab-active');
-            panelFree.addClass('setup-panel-active'); panelOwn.removeClass('setup-panel-active');
+        const freeBtn = btnRow.createEl('button', {
+            cls: 'setup-welcome-btn setup-welcome-btn-primary',
+            text: 'Kostenlos testen (Google)',
         });
-        tabOwn.addEventListener('click', () => {
-            tabOwn.addClass('setup-tab-active'); tabFree.removeClass('setup-tab-active');
-            panelOwn.addClass('setup-panel-active'); panelFree.removeClass('setup-panel-active');
+        freeBtn.addEventListener('click', () => {
+            this.disableOnboardingButtons(btnRow);
+            this.showFreeKeyInstructions();
         });
 
-        // --- Free key panel (Google Gemini) ---
-        MarkdownRenderer.render(this.app, [
-            'Google bietet mit **Gemini 2.5 Flash** ein sehr gutes KI-Modell — komplett kostenlos, ohne Kreditkarte.',
+        const ownBtn = btnRow.createEl('button', {
+            cls: 'setup-welcome-btn setup-welcome-btn-secondary',
+            text: 'Ich habe einen API-Key',
+        });
+        ownBtn.addEventListener('click', () => {
+            this.disableOnboardingButtons(btnRow);
+            this.showProviderSelection();
+        });
+
+        this.onboardingKeyState = 'awaiting_choice';
+        this.chatContainer.scrollTop = this.chatContainer.scrollHeight;
+    }
+
+    /** Show Google free key instructions as a chat bubble. */
+    private showFreeKeyInstructions(): void {
+        this.onboardingKeyState = 'awaiting_key_free';
+        this.onboardingSelectedProvider = {
+            label: 'Google (Gemini)',
+            provider: 'custom' as ProviderType,
+            model: 'gemini-2.5-flash',
+        };
+
+        const markdown = [
+            'Google bietet mit **Gemini 2.5 Flash** ein sehr gutes KI-Modell -- komplett kostenlos.',
+            '',
+            '**So bekommst du deinen API-Key:**',
             '',
             '1. Oeffne die [Google AI Studio API-Key Seite](https://aistudio.google.com/app/apikey)',
-            '2. Melde dich mit deinem Google-Konto an',
+            '2. Melde dich mit deinem Google-Konto an und akzeptiere die Nutzungsbedingungen',
             '3. Klicke auf **Create API Key**',
-            '4. Kopiere den Key und fuege ihn unten ein',
+            '4. Waehle ein bestehendes Projekt oder erstelle ein neues',
+            '5. Kopiere den Key',
             '',
             '> Keine Kreditkarte noetig. [Pricing](https://ai.google.dev/gemini-api/docs/pricing) | [Rate Limits](https://ai.google.dev/gemini-api/docs/rate-limits)',
-        ].join('\n'), panelFree, '', this);
+            '',
+            'Fuege deinen Key einfach hier im Chat ein.',
+        ].join('\n');
 
-        const freeInput = panelFree.createEl('input', {
-            cls: 'setup-key-input',
-            attr: { type: 'text', placeholder: 'API-Key hier einfuegen...' },
-        }) as HTMLInputElement;
+        this.addAssistantMessage(markdown);
+    }
 
-        const freeStatus = panelFree.createDiv('setup-key-status');
+    /** Show provider selection buttons as a chat bubble. */
+    private showProviderSelection(): void {
+        if (!this.chatContainer) return;
+        this.onboardingKeyState = 'awaiting_provider';
 
-        const freeBtnRow = panelFree.createDiv('setup-welcome-buttons');
-        const freeTestBtn = freeBtnRow.createEl('button', {
-            cls: 'setup-welcome-btn setup-welcome-btn-primary',
-            text: 'Key testen',
-        });
-        freeTestBtn.addEventListener('click', () => {
-            this.testAndSaveKey('gemini-2.5-flash', 'custom', freeInput.value.trim(), freeStatus, bubble);
-        });
-
-        // --- Own key panel ---
-        const providerRow = panelOwn.createDiv('setup-provider-row');
-        providerRow.createEl('label', { text: 'Provider:' });
-        const providerSelect = providerRow.createEl('select', { cls: 'setup-provider-select' }) as HTMLSelectElement;
         const providers: { label: string; provider: ProviderType; model: string }[] = [
             { label: 'Anthropic (Claude)', provider: 'anthropic', model: 'claude-sonnet-4-5-20250929' },
             { label: 'OpenAI (GPT)', provider: 'openai', model: 'gpt-4o' },
             { label: 'Google (Gemini)', provider: 'custom', model: 'gemini-2.5-flash' },
             { label: 'OpenRouter', provider: 'openrouter', model: 'anthropic/claude-3.5-sonnet' },
         ];
+
+        const wrapper = this.chatContainer.createDiv('message assistant-message');
+        const bubble = wrapper.createDiv('message-bubble');
+        MarkdownRenderer.render(this.app, 'Welchen **Provider** moechtest du verwenden?', bubble, '', this);
+
+        const btnRow = bubble.createDiv('setup-welcome-buttons setup-provider-buttons');
         for (const p of providers) {
-            providerSelect.createEl('option', { text: p.label, value: String(providers.indexOf(p)) });
+            const btn = btnRow.createEl('button', {
+                cls: 'setup-welcome-btn setup-welcome-btn-secondary',
+                text: p.label,
+            });
+            btn.addEventListener('click', () => {
+                this.disableOnboardingButtons(btnRow);
+                this.onboardingSelectedProvider = p;
+                this.onboardingKeyState = 'awaiting_key_own';
+                this.addAssistantMessage(`**${p.label}** -- Fuege deinen API-Key hier im Chat ein.`);
+            });
         }
 
-        const ownInput = panelOwn.createEl('input', {
-            cls: 'setup-key-input',
-            attr: { type: 'text', placeholder: 'API-Key hier einfuegen...' },
-        }) as HTMLInputElement;
-
-        const ownStatus = panelOwn.createDiv('setup-key-status');
-
-        const ownBtnRow = panelOwn.createDiv('setup-welcome-buttons');
-        const ownTestBtn = ownBtnRow.createEl('button', {
-            cls: 'setup-welcome-btn setup-welcome-btn-primary',
-            text: 'Key testen',
-        });
-        ownTestBtn.addEventListener('click', () => {
-            const selected = providers[Number(providerSelect.value)];
-            this.testAndSaveKey(selected.model, selected.provider, ownInput.value.trim(), ownStatus, bubble);
-        });
-
-        // --- Skip button ---
-        const skipRow = bubble.createDiv('setup-welcome-buttons');
-        const skipBtn = skipRow.createEl('button', {
-            cls: 'setup-welcome-btn setup-welcome-btn-secondary',
-            text: 'Setup ueberspringen',
-        });
-        skipBtn.addEventListener('click', async () => {
-            await onboarding.markCompleted();
-            new Notice('Setup uebersprungen. Du kannst es jederzeit in den Einstellungen neu starten.');
-            if (this.chatContainer) this.chatContainer.empty();
-        });
+        this.chatContainer.scrollTop = this.chatContainer.scrollHeight;
     }
 
     /**
-     * Test an API key, save the model if successful, and show a "Start" button.
+     * Show a helpful setup message when no model is configured.
+     * Offers a free Google key path and a link to model settings.
+     * Works regardless of onboarding state.
      */
-    private async testAndSaveKey(
+    private showNoModelSetupMessage(): void {
+        if (!this.chatContainer) return;
+
+        const wrapper = this.chatContainer.createDiv('message assistant-message');
+        const bubble = wrapper.createDiv('message-bubble');
+
+        const markdown = [
+            'Kein Modell konfiguriert. Um loszulegen, brauchst du einen API-Key.',
+            '',
+            'Google bietet **Gemini 2.5 Flash** kostenlos an -- ohne Kreditkarte:',
+            '',
+            '1. Oeffne die [Google AI Studio API-Key Seite](https://aistudio.google.com/app/apikey)',
+            '2. Melde dich an und klicke **Create API Key**',
+            '3. Fuege den Key hier im Chat ein',
+            '',
+            'Oder konfiguriere ein Modell in den **Settings**.',
+        ].join('\n');
+
+        MarkdownRenderer.render(this.app, markdown, bubble, '', this);
+
+        const btnRow = bubble.createDiv('setup-welcome-buttons');
+
+        const freeBtn = btnRow.createEl('button', {
+            cls: 'setup-welcome-btn setup-welcome-btn-primary',
+            text: 'Google Key eingeben',
+        });
+        freeBtn.addEventListener('click', () => {
+            this.disableOnboardingButtons(btnRow);
+            this.onboardingSelectedProvider = {
+                label: 'Google (Gemini)',
+                provider: 'custom' as ProviderType,
+                model: 'gemini-2.5-flash',
+            };
+            this.onboardingKeyState = 'awaiting_key_free';
+            this.addAssistantMessage('Fuege deinen Google API-Key hier im Chat ein.');
+        });
+
+        const settingsBtn = btnRow.createEl('button', {
+            cls: 'setup-welcome-btn setup-welcome-btn-secondary',
+            text: 'Settings oeffnen',
+        });
+        settingsBtn.addEventListener('click', () => {
+            this.disableOnboardingButtons(btnRow);
+            (this.app as any).setting?.open?.();
+            (this.app as any).setting?.openTabById?.('obsidian-agent');
+        });
+
+        this.chatContainer.scrollTop = this.chatContainer.scrollHeight;
+    }
+
+    /**
+     * Test an API key via chat flow. Returns true on success.
+     * Extracted from testAndSaveKey() for the chat-based onboarding.
+     */
+    private async testAndSaveKeyChat(
         modelName: string,
         provider: ProviderType,
         apiKey: string,
-        statusEl: HTMLElement,
-        bubble: HTMLElement,
-    ): Promise<void> {
-        if (!apiKey) {
-            statusEl.setText('Bitte einen API-Key eingeben.');
-            statusEl.className = 'setup-key-status setup-key-error';
-            return;
-        }
-
-        statusEl.setText('Teste Verbindung...');
-        statusEl.className = 'setup-key-status setup-key-testing';
-
+    ): Promise<boolean> {
         const builtIn = BUILT_IN_MODELS.find((m) => m.name === modelName);
         const model: CustomModel = {
             name: modelName,
             provider,
             displayName: builtIn?.displayName ?? modelName,
             apiKey,
-            baseUrl: builtIn?.baseUrl ?? (provider === 'custom' ? 'https://generativelanguage.googleapis.com/v1beta/' : undefined),
+            baseUrl: builtIn?.baseUrl ?? (provider === 'custom'
+                ? 'https://generativelanguage.googleapis.com/v1beta/openai'
+                : undefined),
             enabled: true,
             isBuiltIn: builtIn?.isBuiltIn ?? false,
         };
@@ -765,10 +812,8 @@ export class AgentSidebarView extends ItemView {
             for await (const chunk of stream) {
                 if (chunk.type === 'text') text += chunk.text;
             }
-
             if (!text.trim()) throw new Error('Empty response');
 
-            // Save model
             const key = getModelKey(model);
             const existingIdx = this.plugin.settings.activeModels.findIndex(
                 (m) => getModelKey(m) === key,
@@ -781,26 +826,19 @@ export class AgentSidebarView extends ItemView {
             }
             this.plugin.settings.activeModelKey = key;
             await this.plugin.saveSettings();
-            // Rebuild the API handler so the LLM conversation works immediately
             this.plugin.initApiHandler();
-
-            statusEl.setText('Verbindung erfolgreich!');
-            statusEl.className = 'setup-key-status setup-key-success';
-
-            // Remove existing start buttons, show the "Los geht's" button
-            bubble.querySelectorAll('.setup-start-row').forEach((el) => el.remove());
-            const startRow = bubble.createDiv('setup-welcome-buttons setup-start-row');
-            const startBtn = startRow.createEl('button', {
-                cls: 'setup-welcome-btn setup-welcome-btn-primary',
-                text: 'Los geht\'s — Obsilo kennenlernen',
-            });
-            startBtn.addEventListener('click', () => this.startOnboardingChat());
-            startBtn.focus();
-        } catch (e: any) {
-            const msg = e?.message ?? String(e);
-            statusEl.setText(`Fehler: ${msg.slice(0, 120)}`);
-            statusEl.className = 'setup-key-status setup-key-error';
+            return true;
+        } catch {
+            return false;
         }
+    }
+
+    /** Disable all buttons in a row (gray out after choice). */
+    private disableOnboardingButtons(row: HTMLElement): void {
+        row.querySelectorAll('button').forEach((btn) => {
+            (btn as HTMLButtonElement).disabled = true;
+            btn.addClass('setup-btn-disabled');
+        });
     }
 
     /**
@@ -809,6 +847,8 @@ export class AgentSidebarView extends ItemView {
      * Called from the welcome card, settings buttons, or programmatically.
      */
     startOnboardingChat(): void {
+        this.onboardingKeyState = null;
+        this.onboardingSelectedProvider = null;
         // Mark as started (prevents re-trigger on reload)
         this.plugin.settings.onboarding.startedAt = new Date().toISOString();
         this.plugin.saveSettings();
@@ -841,6 +881,46 @@ export class AgentSidebarView extends ItemView {
 
         const isHidden = this.nextMessageHidden;
         this.nextMessageHidden = false;
+
+        // Onboarding key interception: treat input as API key when waiting
+        if (this.onboardingKeyState === 'awaiting_key_free' || this.onboardingKeyState === 'awaiting_key_own') {
+            const apiKey = text.trim();
+            this.textarea.value = '';
+            this.autoResizeTextarea();
+            if (!apiKey) return;
+
+            // Show masked key as user bubble (don't expose full key in chat)
+            const masked = apiKey.length > 8
+                ? apiKey.slice(0, 4) + '...' + apiKey.slice(-4)
+                : '****';
+            this.addUserMessage(masked);
+            this.addAssistantMessage('Teste Verbindung...');
+            this.onboardingKeyState = 'testing';
+
+            const provider = this.onboardingSelectedProvider!;
+            const success = await this.testAndSaveKeyChat(provider.model, provider.provider, apiKey);
+
+            if (success) {
+                this.addAssistantMessage(
+                    `Verbindung erfolgreich! **${provider.label}** ist konfiguriert.`,
+                );
+                this.onboardingKeyState = null;
+                this.onboardingSelectedProvider = null;
+                this.updateModelButton();
+                // Start LLM onboarding if not yet completed, otherwise just let user chat
+                if (!this.plugin.settings.onboarding.completed) {
+                    setTimeout(() => this.startOnboardingChat(), 800);
+                }
+            } else {
+                this.addAssistantMessage(
+                    'Der Key konnte nicht verifiziert werden. Bitte pruefe den Key und versuche es nochmal.',
+                );
+                this.onboardingKeyState = provider.model === 'gemini-2.5-flash' && provider.provider === 'custom'
+                    ? 'awaiting_key_free'
+                    : 'awaiting_key_own';
+            }
+            return;
+        }
 
         this.lastUserMessage = text;
 
@@ -938,18 +1018,14 @@ export class AgentSidebarView extends ItemView {
         if (!resolvedApiHandler) {
             const activeKey = this.plugin.settings.activeModelKey;
             const activeModel = this.plugin.settings.activeModels.find((m) => getModelKey(m) === activeKey);
-            if (!activeKey || !activeModel) {
+
+            if (activeModel?.provider === 'ollama') {
                 this.addAssistantMessage(
-                    'No model selected. Click the **model button** in the toolbar below, or go to **Settings → Obsilo Agent** to enable a model.',
-                );
-            } else if (activeModel.provider === 'ollama') {
-                this.addAssistantMessage(
-                    `**${activeModel.displayName ?? activeModel.name}** could not start. Make sure Ollama is running (\`ollama serve\`) and the model name is correct. Open **Settings → Obsilo Agent → Configure** to verify.`,
+                    `**${activeModel.displayName ?? activeModel.name}** could not start. Make sure Ollama is running (\`ollama serve\`) and the model name is correct. Open **Settings -> Obsilo Agent -> Configure** to verify.`,
                 );
             } else {
-                this.addAssistantMessage(
-                    `**${activeModel.displayName ?? activeModel.name}** has no API key. Add one in **Settings → Obsilo Agent → Configure**.`,
-                );
+                // No model or no API key — show setup guidance
+                this.showNoModelSetupMessage();
             }
             return;
         }
@@ -1134,10 +1210,10 @@ export class AgentSidebarView extends ItemView {
                     if (!hasTools) {
                         hasTools = true;
                         if (name !== 'attempt_completion') {
-                            // Clear the streaming UI — text will be re-rendered as
-                            // Markdown in onComplete. Keep accumulatedText so any
-                            // text the LLM wrote BEFORE the first tool call (e.g.
-                            // onboarding greeting) is preserved and rendered later.
+                            // Hide + clear the streaming UI — text will be re-rendered as
+                            // Markdown in onQuestion/onComplete. Hide first to avoid the
+                            // flash of raw streaming text disappearing.
+                            contentEl.style.visibility = 'hidden';
                             contentEl.empty();
                             streamingPara = null;
                         }
@@ -1350,8 +1426,11 @@ export class AgentSidebarView extends ItemView {
                     // onComplete only fires at the very end — the greeting text
                     // would otherwise stay invisible until the entire task finishes.
                     if (accumulatedText.trim()) {
+                        // Hide during re-render to avoid flash of raw → markdown transition
+                        contentEl.style.visibility = 'hidden';
                         contentEl.empty();
                         MarkdownRenderer.render(this.app, accumulatedText, contentEl, '', this);
+                        requestAnimationFrame(() => { contentEl.style.visibility = ''; });
                     }
                     // Wrap resolve: after the user answers, show their answer as a
                     // chat bubble and create a fresh message element for the next
@@ -1449,6 +1528,7 @@ export class AgentSidebarView extends ItemView {
                     if (renderText) {
                         contentEl.empty();
                         MarkdownRenderer.render(this.app, renderText, contentEl, '', this);
+                        contentEl.style.visibility = '';
                     } else if (hasTools) {
                         // Tools ran but the model returned no text — show a neutral placeholder
                         // so the user doesn't stare at an empty message bubble.
@@ -1691,6 +1771,8 @@ export class AgentSidebarView extends ItemView {
         this.uiMessages = [];
         this.conversationHistory = [];
         this.userDismissedContext = false;
+        this.onboardingKeyState = null;
+        this.onboardingSelectedProvider = null;
         this.attachments.clear();
         if (this.chatContainer) {
             this.chatContainer.empty();

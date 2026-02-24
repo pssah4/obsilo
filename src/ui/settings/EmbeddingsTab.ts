@@ -127,7 +127,13 @@ export class EmbeddingsTab {
                 return;
             }
             if (idx.isIndexed) {
-                statusEl.setText(`Ready: ${idx.docCount} notes · Built: ${(idx.lastBuiltAt as Date).toLocaleString()}`);
+                const br = idx.lastBuildResult;
+                const base = `Ready: ${idx.docCount} notes · Built: ${(idx.lastBuiltAt as Date).toLocaleString()}`;
+                if (br && br.errors > 0) {
+                    statusEl.setText(`${base} · ${br.errors} file${br.errors > 1 ? 's' : ''} skipped`);
+                } else {
+                    statusEl.setText(base);
+                }
             } else {
                 statusEl.setText('Not built yet. Click "Build Index" to start.');
             }
@@ -158,9 +164,12 @@ export class EmbeddingsTab {
                     cancelBtn.setDisabled(false);
                     statusEl.setText('Building index…');
                     try {
-                        await idx.buildIndex((indexed: number, total: number) => {
+                        const result = await idx.buildIndex((indexed: number, total: number) => {
                             statusEl.setText(`Building… (${indexed}/${total})`);
                         });
+                        if (result.errors > 0) {
+                            new Notice(`Index built: ${result.indexed}/${result.total} files, ${result.errors} skipped.`);
+                        }
                         refreshStatus();
                     } catch (e) {
                         statusEl.setText(`Build failed: ${(e as Error).message}`);
@@ -180,9 +189,12 @@ export class EmbeddingsTab {
                     cancelBtn.setDisabled(false);
                     statusEl.setText('Force rebuild…');
                     try {
-                        await idx.buildIndex((indexed: number, total: number) => {
+                        const result = await idx.buildIndex((indexed: number, total: number) => {
                             statusEl.setText(`Rebuilding… (${indexed}/${total})`);
                         }, true);
+                        if (result.errors > 0) {
+                            new Notice(`Rebuild: ${result.indexed}/${result.total} files, ${result.errors} skipped.`);
+                        }
                         refreshStatus();
                     } catch (e) {
                         statusEl.setText(`Rebuild failed: ${(e as Error).message}`);
@@ -406,6 +418,18 @@ export class EmbeddingsTab {
 
         // Actions — empty for built-in
         row.createDiv('mc-actions');
+
+        // Hint: local model is a fallback, recommend API model
+        if (isActive) {
+            const hint = table.createDiv({ cls: 'setting-item-description' });
+            hint.style.marginTop = '4px';
+            hint.style.marginBottom = '8px';
+            hint.style.padding = '0 8px';
+            hint.setText(
+                'For best results, use an API embedding model (e.g. text-embedding-3-small). ' +
+                'The local model has limited quality and slower indexing — suitable as offline fallback only.'
+            );
+        }
     }
 
     renderEmbeddingRow(table: HTMLElement, model: CustomModel): void {
