@@ -5,14 +5,14 @@
 | Repo | Sichtbarkeit | Zweck |
 |------|-------------|-------|
 | `github.com/pssah4/obsilo` | Privat | Entwicklung — alle Branches |
-| `github.com/pssah4/obsilo-public` | Öffentlich | Releases — nur `main` |
+| `github.com/pssah4/obsilo` | Öffentlich | Releases — nur `main` |
 
 ---
 
 ## Branch-Struktur (obsilo, privat)
 
 ```
-dev     →  test     →  main     →  obsilo-public/main
+dev     →  test     →  main     →  obsilo/main
 (Entwicklung)  (Staging)  (Release)   (öffentlich, ohne CLAUDE.md)
 ```
 
@@ -33,7 +33,7 @@ dev     →  test     →  main     →  obsilo-public/main
 - Merge: `test → main` (manuell via PR in obsilo)
 - **Trigger:** Push auf `main` startet automatisch den GitHub Actions Workflow
 
-### `main` (obsilo-public, öffentlich)
+### `main` (obsilo, öffentlich)
 - Gespiegelt von `obsilo/main`, gefiltert:
   - `CLAUDE.md` wird entfernt
 - Wird **automatisch** via GitHub Actions aktualisiert (kein manueller Schritt)
@@ -62,14 +62,14 @@ dev     →  test     →  main     →  obsilo-public/main
          ├── Checkout obsilo/main
          ├── CLAUDE.md entfernen
          ├── Commit (gefiltert)
-         └── Force-Push → obsilo-public/main
+         └── Force-Push → obsilo/main
 ```
 
 ---
 
 ## Was ist wo vorhanden
 
-| Datei / Ordner | dev | test | main (obsilo) | main (obsilo-public) |
+| Datei / Ordner | dev | test | main (obsilo) | main (obsilo) |
 |----------------|-----|------|---------------|----------------------|
 | `src/` | ✓ | ✓ | ✓ | ✓ |
 | `docs/` | ✓ | ✓ | ✓ | ✓ |
@@ -99,8 +99,8 @@ Details: `_private/docs/TWO-REMOTE-SETUP.md`
 ```bash
 git remote -v
 # origin         https://github.com/pssah4/obsilo.git (fetch/push)
-# obsilo-public  https://github.com/pssah4/obsilo-public.git (fetch/push)
+# obsilo  https://github.com/pssah4/obsilo.git (fetch/push)
 ```
 
-Das `obsilo-public` Remote wird lokal nur noch als Fallback für den manuellen
+Das `obsilo` Remote wird lokal nur noch als Fallback für den manuellen
 Publish-Script benötigt. Der reguläre Sync läuft über GitHub Actions.

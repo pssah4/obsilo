@@ -1,10 +1,10 @@
 #!/bin/bash
-# publish.sh — Build and push clean public release to obsilo-public
+# publish.sh — Build and push clean public release to obsilo
 # Usage: bash _private/scripts/publish.sh [--dry-run]
 #
 # What this does:
 #   1. Runs npm build
-#   2. Pushes current branch to obsilo-public/main
+#   2. Pushes current branch to obsilo/main
 #
 # Private files (_private/, .claude/, .kilocode/, forked-kilocode/)
 # are gitignored and will NOT appear in the public repo.
@@ -36,16 +36,16 @@ echo "Build complete."
 
 # Show what will be published
 echo ""
-echo "Files that will be in obsilo-public/main:"
+echo "Files that will be in obsilo/main:"
 git ls-files | head -60
 echo ""
 
 # Push
 if [[ "$DRY_RUN" == "false" ]]; then
-  echo "Pushing to obsilo-public/main..."
-  git push --force obsilo-public "${CURRENT_BRANCH}:main"
+  echo "Pushing to obsilo/main..."
+  git push --force obsilo "${CURRENT_BRANCH}:main"
   echo ""
-  echo "Done. obsilo-public/main updated from branch: $CURRENT_BRANCH"
+  echo "Done. obsilo/main updated from branch: $CURRENT_BRANCH"
 else
-  echo "[dry-run] Would run: git push --force obsilo-public ${CURRENT_BRANCH}:main"
+  echo "[dry-run] Would run: git push --force obsilo ${CURRENT_BRANCH}:main"
 fi

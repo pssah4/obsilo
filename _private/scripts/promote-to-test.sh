@@ -3,13 +3,13 @@
 #
 # Merges dev into test and removes internal-only files/dirs that
 # must not appear in the public open-source release.
-# Pushes to both origin (private backup) and obsilo-public (public release).
+# Pushes to both origin (private backup) and obsilo (public release).
 #
 # Usage:  bash scripts/promote-to-test.sh
 #
 # Prerequisites:
 #   - Clean working tree (no uncommitted changes)
-#   - Remotes named "origin" and "obsilo-public"
+#   - Remotes named "origin" and "obsilo"
 
 set -euo pipefail
 
@@ -76,11 +76,11 @@ fi
 echo "Pushing test to origin (private backup)..."
 git push origin test
 
-echo "Pushing test to obsilo-public (public release)..."
-git push obsilo-public test
+echo "Pushing test to obsilo (public release)..."
+git push obsilo test
 
 echo ""
 echo "Done. test is now up to date and clean."
 echo "  origin/test        → private backup"
-echo "  obsilo-public/test → public release (https://github.com/pssah4/obsilo-public)"
+echo "  obsilo/test → public release (https://github.com/pssah4/obsilo)"
 echo "To return to your previous branch:  git checkout $CURRENT_BRANCH"

@@ -179,6 +179,7 @@
 
 | Priorität | Feature | Spec | Notiz |
 |-----------|---------|------|-------|
+| **Hoch** | **Localization (i18n)** | `FEATURE-localization.md` | 6 Sprachen (en/de/es/ja/zh-CN/hi), Language-Tab, t()-Funktion |
 | Mittel | Mode Export/Import (JSON) | — | Fehlte in Settings-Tab |
 | Niedrig | Settings Reset (Factory Reset) | — | BackupTab hat Export/Import, nur Reset fehlt |
 | Niedrig | Custom Tools (`.ts` Dateien laden) | — | Experimental |

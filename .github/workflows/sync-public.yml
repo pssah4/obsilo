@@ -1,4 +1,4 @@
-name: Sync to obsilo-public
+name: Sync to obsilo
 
 on:
   push:
@@ -29,9 +29,9 @@ jobs:
             git commit -m "chore: remove internal-only files for public release [skip ci]"
           fi
 
-      - name: Push to obsilo-public
+      - name: Push to obsilo
         env:
           TOKEN: ${{ secrets.OBSILO_PUBLIC_TOKEN }}
         run: |
-          git remote add obsilo-public "https://x-access-token:${TOKEN}@github.com/pssah4/obsilo-public.git"
-          git push obsilo-public HEAD:main --force
+          git remote add obsilo "https://x-access-token:${TOKEN}@github.com/pssah4/obsilo.git"
+          git push obsilo HEAD:main --force

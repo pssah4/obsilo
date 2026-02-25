@@ -1,13 +1,13 @@
-# Two-Remote Setup: obsilo + obsilo-public
+# Two-Remote Setup: obsilo + obsilo
 
 ## Konzept
 
 | Remote | Repo | Sichtbarkeit | Inhalt |
 |--------|------|-------------|--------|
 | `origin` | `github.com/pssah4/obsilo` | Privat | Alle Branches, inkl. `dev` mit CLAUDE.md |
-| `obsilo-public` | `github.com/pssah4/obsilo-public` | Öffentlich | Nur `main` — gespiegelt von `origin/main` ohne CLAUDE.md |
+| `obsilo` | `github.com/pssah4/obsilo` | Öffentlich | Nur `main` — gespiegelt von `origin/main` ohne CLAUDE.md |
 
-**Was NIE in obsilo-public landet:**
+**Was NIE in obsilo landet:**
 - `CLAUDE.md` (intern, wird im GitHub Actions Workflow entfernt)
 - `_private/` (gitignored — existiert in keinem Remote)
 - `.claude/`, `.kilocode/`, `forked-kilocode/` (gitignored)
@@ -25,7 +25,7 @@ Was der Workflow macht:
 1. Checkout `origin/main`
 2. `git rm --cached CLAUDE.md` (staged deletion)
 3. Commit (nur wenn CLAUDE.md vorhanden)
-4. Force-push zu `obsilo-public/main`
+4. Force-push zu `obsilo/main`
 
 ---
 
@@ -37,7 +37,7 @@ Was der Workflow macht:
 2. Links: **Developer settings** → **Personal access tokens** → **Tokens (classic)**
 3. **Generate new token (classic)**
 4. Token-Einstellungen:
-   - **Note:** `obsilo-public sync`
+   - **Note:** `obsilo sync`
    - **Expiration:** 1 year (oder "No expiration")
    - **Scopes:** `repo` (alles unter repo ankreuzen)
 5. **Generate token** → Token kopieren (nur einmal sichtbar!)
@@ -58,8 +58,8 @@ Der Workflow in `.github/workflows/sync-public.yml` ist bereits im Repo. Er wird
 **Prüfen ob alles funktioniert:**
 1. Merge irgendetwas auf `origin/main` (oder push direkt)
 2. Gehe zu `github.com/pssah4/obsilo` → **Actions** Tab
-3. Der Workflow "Sync to obsilo-public" sollte grün sein
-4. Prüfe `github.com/pssah4/obsilo-public` → kein `CLAUDE.md` vorhanden
+3. Der Workflow "Sync to obsilo" sollte grün sein
+4. Prüfe `github.com/pssah4/obsilo` → kein `CLAUDE.md` vorhanden
 
 ---
 
@@ -78,7 +78,7 @@ Feature entwickeln (dev branch)
     Merge PR                      → GitHub Actions startet automatisch
          │
          ▼
-  obsilo/main aktuell             → obsilo-public/main aktuell (ohne CLAUDE.md)
+  obsilo/main aktuell             → obsilo/main aktuell (ohne CLAUDE.md)
 ```
 
 ### Lokale Remote-Konfiguration
@@ -86,10 +86,10 @@ Feature entwickeln (dev branch)
 ```bash
 git remote -v
 # origin       https://github.com/pssah4/obsilo.git (fetch/push)
-# obsilo-public https://github.com/pssah4/obsilo-public.git (fetch/push)
+# obsilo https://github.com/pssah4/obsilo.git (fetch/push)
 ```
 
-Das `obsilo-public` Remote wird nur noch für den manuellen Fallback benötigt (Publish-Script). Der automatische Sync läuft über GitHub Actions.
+Das `obsilo` Remote wird nur noch für den manuellen Fallback benötigt (Publish-Script). Der automatische Sync läuft über GitHub Actions.
 
 ---
 
@@ -101,16 +101,16 @@ Falls GitHub Actions nicht verfügbar oder ein Hotfix nötig ist:
 bash _private/scripts/publish.sh
 ```
 
-Der Publish-Script pusht den aktuellen Branch direkt zu `obsilo-public/main` (force push). Private Dateien sind gitignored und erscheinen nicht. **CLAUDE.md** wird jedoch mitgepusht — daher ist der Actions-Workflow der bevorzugte Weg.
+Der Publish-Script pusht den aktuellen Branch direkt zu `obsilo/main` (force push). Private Dateien sind gitignored und erscheinen nicht. **CLAUDE.md** wird jedoch mitgepusht — daher ist der Actions-Workflow der bevorzugte Weg.
 
 ---
 
 ## GitHub Pages
 
-GitHub Pages ist auf `obsilo-public` aktiviert:
+GitHub Pages ist auf `obsilo` aktiviert:
 - **Branch:** `main`
 - **Folder:** `/docs`
-- **URL:** `https://pssah4.github.io/obsilo-public`
+- **URL:** `https://pssah4.github.io/obsilo`
 
 ---
 
@@ -120,10 +120,10 @@ GitHub Pages ist auf `obsilo-public` aktiviert:
 - PAT ist abgelaufen → neuen PAT erstellen, Secret aktualisieren
 - PAT hat nicht `repo` Scope → neuen PAT mit korrekten Scopes erstellen
 
-**CLAUDE.md erscheint doch in obsilo-public:**
+**CLAUDE.md erscheint doch in obsilo:**
 - Prüfen ob Workflow läuft (Actions Tab)
 - Sicherstellen dass CLAUDE.md in `origin/main` getrackt ist (`git ls-files CLAUDE.md`)
 
-**obsilo-public hat anderen Inhalt als obsilo/main:**
-- Normal: obsilo-public hat einen extra Commit "remove internal-only files"
+**obsilo hat anderen Inhalt als obsilo/main:**
+- Normal: obsilo hat einen extra Commit "remove internal-only files"
 - Commit-History unterscheidet sich leicht (akzeptabel)

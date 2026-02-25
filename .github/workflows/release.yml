@@ -45,7 +45,7 @@ jobs:
 
             Install via [BRAT](https://github.com/TfTHacker/obsidian42-brat):
             1. Install BRAT from Community Plugins
-            2. BRAT → Add Beta Plugin → `https://github.com/pssah4/obsilo-public`
+            2. BRAT → Add Beta Plugin → `https://github.com/pssah4/obsilo`
 
             Or install manually: download `main.js`, `manifest.json`, `styles.css` and place them in `.obsidian/plugins/obsidian-agent/`.
           files: |

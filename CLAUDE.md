@@ -46,7 +46,7 @@ All documentation belongs in one of the paths above.
 
 4. **Analysis or ideation from session** → Save in `_private/analysis/`.
 
-5. **Before publishing** → Merge `dev → test → main` via PR. GitHub Actions syncs `main` to `obsilo-public` automatically (without CLAUDE.md).
+5. **Before publishing** → Merge `dev → test → main` via PR. GitHub Actions syncs `main` to `obsilo` automatically (without CLAUDE.md).
 
 ---
 
