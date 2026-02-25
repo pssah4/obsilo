@@ -53,7 +53,7 @@
     "openai": "^4.0.0",
     "p-wait-for": "^5.0.0",
     "pdf-parse": "^1.1.1",
-    "pdfjs-dist": "^4.4.168",
+    "pdfjs-dist": "^5.4.624",
     "serialize-error": "^11.0.0",
     "uuid": "^9.0.1",
     "vectra": "^0.12.3"
