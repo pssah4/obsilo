@@ -9,7 +9,7 @@
 
 **Was NIE in obsilo landet:**
 - `CLAUDE.md` (intern, wird im GitHub Actions Workflow entfernt)
-- `_private/` (gitignored — existiert in keinem Remote)
+- `devprocess/` (gitignored — existiert in keinem Remote)
 - `.claude/`, `.kilocode/`, `forked-kilocode/` (gitignored)
 - `.env` (gitignored)
 
@@ -98,7 +98,7 @@ Das `obsilo` Remote wird nur noch für den manuellen Fallback benötigt (Publish
 Falls GitHub Actions nicht verfügbar oder ein Hotfix nötig ist:
 
 ```bash
-bash _private/scripts/publish.sh
+bash devprocess/scripts/publish.sh
 ```
 
 Der Publish-Script pusht den aktuellen Branch direkt zu `obsilo/main` (force push). Private Dateien sind gitignored und erscheinen nicht. **CLAUDE.md** wird jedoch mitgepusht — daher ist der Actions-Workflow der bevorzugte Weg.

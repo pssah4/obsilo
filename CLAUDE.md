@@ -1,7 +1,7 @@
 # Obsidian Agent — Project Manifest
 
 ## What this project is
-Kilo Code clone reimplemented as an Obsidian plugin. See `_private/architecture/arc42.md` for the full architecture.
+Kilo Code clone reimplemented as an Obsidian plugin. See `devprocess/architecture/arc42.md` for the full architecture.
 
 ---
 
@@ -10,7 +10,7 @@ Kilo Code clone reimplemented as an Obsidian plugin. See `_private/architecture/
 ### Workflow: BA → RE → Architecture → Implementation
 
 ```
-_private/
+devprocess/
 ├── analysis/          ← BA: Analysen, Ideations, historische Docs, Kontext-Research
 │   └── context/       ← BA Research & Produktkontext
 ├── requirements/      ← RE: Feature-Specs und Epics
@@ -38,13 +38,13 @@ All documentation belongs in one of the paths above.
 
 ## Documentation Maintenance Rules (mandatory for Claude)
 
-1. **New feature implemented** → Create or update `_private/requirements/features/FEATURE-{name}.md` AND update `_private/implementation/BACKLOG.md` AND update the relevant page in `docs/` if it is user-facing.
+1. **New feature implemented** → Create or update `devprocess/requirements/features/FEATURE-{name}.md` AND update `devprocess/implementation/BACKLOG.md` AND update the relevant page in `docs/` if it is user-facing.
 
 2. **Feature changed or extended** → Update the feature file, BACKLOG.md status, and docs page.
 
-3. **Architecture decision made** → Create a new `_private/architecture/ADR-{NNN}-{slug}.md` and update `_private/architecture/arc42.md` to reflect the current state.
+3. **Architecture decision made** → Create a new `devprocess/architecture/ADR-{NNN}-{slug}.md` and update `devprocess/architecture/arc42.md` to reflect the current state.
 
-4. **Analysis or ideation from session** → Save in `_private/analysis/`.
+4. **Analysis or ideation from session** → Save in `devprocess/analysis/`.
 
 5. **Before publishing** → Merge `dev → test → main` via PR. GitHub Actions syncs `main` to `obsilo` automatically (without CLAUDE.md).
 
@@ -57,7 +57,7 @@ npm run build          # TypeScript check + esbuild production build
                        # Auto-deploys to Obsidian vault via vault-deploy
 ```
 
-Build after every implementation step. Deploy script: `_private/scripts/publish.sh`.
+Build after every implementation step. Deploy script: `devprocess/scripts/publish.sh`.
 
 ---
 

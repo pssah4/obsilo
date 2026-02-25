@@ -1,4 +1,4 @@
-name: Sync dev to test (strip _private/)
+name: Sync dev to test (strip devprocess/)
 
 on:
   push:
@@ -15,16 +15,16 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: Strip _private/ and restore gitignore entry
+      - name: Strip devprocess/ and restore gitignore entry
         run: |
-          # Remove _private/ from working tree and index
-          git rm -r --cached _private/ 2>/dev/null || true
-          rm -rf _private/
+          # Remove devprocess/ from working tree and index
+          git rm -r --cached devprocess/ 2>/dev/null || true
+          rm -rf devprocess/
 
-          # Add _private/ back to .gitignore for test/main branches
+          # Add devprocess/ back to .gitignore for test/main branches
           echo "" >> .gitignore
-          echo "# Private / internal files — stripped by CI for test/main" >> .gitignore
-          echo "_private/" >> .gitignore
+          echo "# Dev process files — stripped by CI for test/main" >> .gitignore
+          echo "devprocess/" >> .gitignore
 
           git add .gitignore
 
@@ -33,7 +33,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git config user.name "github-actions[bot]"
           if ! git diff --cached --quiet; then
-            git commit -m "chore: strip _private/ for test branch"
+            git commit -m "chore: strip devprocess/ for test branch"
           fi
 
       - name: Push to test branch

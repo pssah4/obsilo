@@ -216,7 +216,7 @@
 
 ## Dokumentation
 
-### Feature-Specs (43 Dateien in `_private/requirements/features/`)
+### Feature-Specs (43 Dateien in `devprocess/requirements/features/`)
 
 Alle implementierten Features haben eine `FEATURE-*.md` Spec.
 
@@ -240,7 +240,7 @@ Alle implementierten Features haben eine `FEATURE-*.md` Spec.
 | ADR-014 | VaultDNA Plugin Discovery |
 | ADR-015 | Hybrid Search (Semantic + BM25 + RRF) |
 
-### Technische Dokumentation (10 Dateien in `_private/implementation/`)
+### Technische Dokumentation (10 Dateien in `devprocess/implementation/`)
 
 | Datei | Inhalt |
 |-------|--------|

@@ -1,12 +1,12 @@
 #!/bin/bash
 # publish.sh — Build and push clean public release to obsilo
-# Usage: bash _private/scripts/publish.sh [--dry-run]
+# Usage: bash devprocess/scripts/publish.sh [--dry-run]
 #
 # What this does:
 #   1. Runs npm build
 #   2. Pushes current branch to obsilo/main
 #
-# Private files (_private/, .claude/, .kilocode/, forked-kilocode/)
+# Private files (devprocess/, .claude/, .kilocode/, forked-kilocode/)
 # are gitignored and will NOT appear in the public repo.
 
 set -e
@@ -21,7 +21,7 @@ CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
 echo "Current branch: $CURRENT_BRANCH"
 
 # Verify no private files are staged
-PRIVATE_STAGED=$(git diff --cached --name-only | grep -E '^_private/' || true)
+PRIVATE_STAGED=$(git diff --cached --name-only | grep -E '^devprocess/' || true)
 if [[ -n "$PRIVATE_STAGED" ]]; then
   echo "ERROR: Private files are staged for commit:"
   echo "$PRIVATE_STAGED"

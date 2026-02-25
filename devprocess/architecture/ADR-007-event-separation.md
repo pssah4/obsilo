@@ -55,4 +55,4 @@ Always discard the attempt_completion result text. Simple but loses the fallback
 
 - Kilo Code: `src/core/assistant-message/presentAssistantMessage.ts` — tool-owned completion UI
 - OpenClaw: Event-driven architecture with `message_*` / `tool_execution_*` / `agent_end` events
-- Feature Spec: `_private/requirements/features/FEATURE-memory-personalization.md`
+- Feature Spec: `devprocess/requirements/features/FEATURE-memory-personalization.md`

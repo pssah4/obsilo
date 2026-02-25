@@ -19,7 +19,7 @@ dev     →  test     →  main     →  obsilo/main
 ### `dev`
 - Aktiver Entwicklungs-Branch
 - Enthält `CLAUDE.md` (Projekt-Manifest für Claude Code)
-- `_private/` ist gitignored — interne Docs existieren nur lokal
+- `devprocess/` ist gitignored — interne Docs existieren nur lokal
 - Wird **nicht** automatisch syncronisiert
 
 ### `test`
@@ -74,7 +74,7 @@ dev     →  test     →  main     →  obsilo/main
 | `src/` | ✓ | ✓ | ✓ | ✓ |
 | `docs/` | ✓ | ✓ | ✓ | ✓ |
 | `CLAUDE.md` | ✓ | ✓ | ✓ | ✗ (entfernt) |
-| `_private/` | gitignored | gitignored | gitignored | gitignored |
+| `devprocess/` | gitignored | gitignored | gitignored | gitignored |
 | `.claude/` | gitignored | gitignored | gitignored | gitignored |
 | `forked-kilocode/` | gitignored | gitignored | gitignored | gitignored |
 | `.env` | gitignored | gitignored | gitignored | gitignored |
@@ -90,7 +90,7 @@ Einmaliges Setup:
 1. PAT erstellen (github.com → Settings → Developer settings → Tokens (classic), Scope: `repo`)
 2. Secret `OBSILO_PUBLIC_TOKEN` in obsilo Repo Settings → Secrets and variables → Actions hinterlegen
 
-Details: `_private/docs/TWO-REMOTE-SETUP.md`
+Details: `devprocess/docs/TWO-REMOTE-SETUP.md`
 
 ---
 

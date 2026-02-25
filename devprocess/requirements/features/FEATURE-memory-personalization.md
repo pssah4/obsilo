@@ -3,7 +3,7 @@
 **Status:** Complete (All Phases)
 **Epic:** Cross-Session Awareness
 **Sources:** CrewAI Memory, OpenClaw Memory, Claude Code Session Memory, ChatGPT Memory, Mem0
-**ADR:** [ADR-007 — Event Separation](../../_private/architecture/ADR-007-event-separation.md)
+**ADR:** [ADR-007 — Event Separation](../../devprocess/architecture/ADR-007-event-separation.md)
 
 ## Summary
 

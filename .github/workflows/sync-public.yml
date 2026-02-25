@@ -18,8 +18,8 @@ jobs:
       - name: Remove internal-only files
         run: |
           # Remove files that must not appear in the public repo
-          git rm -rf --cached CLAUDE.md _private/ 2>/dev/null || true
-          rm -rf CLAUDE.md _private/
+          git rm -rf --cached CLAUDE.md devprocess/ 2>/dev/null || true
+          rm -rf CLAUDE.md devprocess/
 
       - name: Commit filtered state
         run: |
