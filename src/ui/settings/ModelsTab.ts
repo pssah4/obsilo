@@ -5,6 +5,7 @@ import { CodeImportModal } from './CodeImportModal';
 import type { CustomModel } from '../../types/settings';
 import { getModelKey, getFirstEnabledModelKey } from '../../types/settings';
 import { PROVIDER_LABELS, PROVIDER_COLORS } from './constants';
+import { t } from '../../i18n';
 
 export class ModelsTab {
     constructor(private plugin: ObsidianAgentPlugin, private app: App, private rerender: () => void) {}
@@ -13,29 +14,29 @@ export class ModelsTab {
         // Table header
         const table = containerEl.createDiv('model-table');
         const header = table.createDiv('model-row model-row-header');
-        header.createDiv({ cls: 'mc-name', text: 'Model' });
-        header.createDiv({ cls: 'mc-provider', text: 'Provider' });
-        header.createDiv({ cls: 'mc-key', text: 'Key' });
-        header.createDiv({ cls: 'mc-enable', text: 'Enable' });
-        header.createDiv({ cls: 'mc-default', text: 'Default' });
+        header.createDiv({ cls: 'mc-name', text: t('settings.models.headerModel') });
+        header.createDiv({ cls: 'mc-provider', text: t('settings.models.headerProvider') });
+        header.createDiv({ cls: 'mc-key', text: t('settings.models.headerKey') });
+        header.createDiv({ cls: 'mc-enable', text: t('settings.models.headerEnable') });
+        header.createDiv({ cls: 'mc-default', text: t('settings.models.headerDefault') });
         header.createDiv({ cls: 'mc-actions' });
 
         // Rows
         const models = this.plugin.settings.activeModels;
         if (models.length === 0) {
-            table.createDiv({ cls: 'model-table-empty', text: 'No models added yet. Click "+ Add Model" to get started.' });
+            table.createDiv({ cls: 'model-table-empty', text: t('settings.models.empty') });
         } else {
             models.forEach((model) => this.renderModelRow(table, model));
         }
 
         // Add model button
         const footer = containerEl.createDiv('model-table-footer');
-        const addBtn = footer.createEl('button', { cls: 'mod-cta model-add-btn', text: '+ Add Model' });
+        const addBtn = footer.createEl('button', { cls: 'mod-cta model-add-btn', text: t('settings.models.addModel') });
         addBtn.addEventListener('click', () => {
             new ModelConfigModal(this.app, null, async (newModel) => {
                 const key = getModelKey(newModel);
                 if (this.plugin.settings.activeModels.some((m) => getModelKey(m) === key)) {
-                    new Notice(`"${newModel.name}" already exists`);
+                    new Notice(t('settings.models.alreadyExists', { name: newModel.name }));
                     return;
                 }
                 this.plugin.settings.activeModels.push(newModel);
@@ -45,7 +46,7 @@ export class ModelsTab {
         });
 
         // Import from Code button
-        const importBtn = footer.createEl('button', { cls: 'model-import-btn', text: 'Import from Code' });
+        const importBtn = footer.createEl('button', { cls: 'model-import-btn', text: t('settings.models.importFromCode') });
         importBtn.addEventListener('click', () => {
             const existingKeys = new Set(
                 this.plugin.settings.activeModels.map((m) => getModelKey(m)),
@@ -67,8 +68,8 @@ export class ModelsTab {
                     this.rerender();
                 }
                 const parts: string[] = [];
-                if (imported > 0) parts.push(`Imported ${imported} model${imported > 1 ? 's' : ''}`);
-                if (skipped > 0) parts.push(`${skipped} skipped (duplicate)`);
+                if (imported > 0) parts.push(t('settings.models.imported', { count: imported }));
+                if (skipped > 0) parts.push(t('settings.models.skipped', { count: skipped }));
                 if (parts.length > 0) new Notice(parts.join('. ') + '.');
             }).open();
         });
@@ -140,7 +141,7 @@ export class ModelsTab {
         // Actions
         const actionsEl = row.createDiv('mc-actions');
 
-        const configBtn = actionsEl.createEl('button', { cls: 'mc-action-btn', attr: { title: 'Configure' } });
+        const configBtn = actionsEl.createEl('button', { cls: 'mc-action-btn', attr: { title: t('settings.models.configure') } });
         setIcon(configBtn, 'settings');
         configBtn.addEventListener('click', () => {
             new ModelConfigModal(this.app, { ...model }, async (updated) => {
@@ -155,7 +156,7 @@ export class ModelsTab {
             }).open();
         });
 
-        const delBtn = actionsEl.createEl('button', { cls: 'mc-action-btn mc-action-del', attr: { title: 'Remove model' } });
+        const delBtn = actionsEl.createEl('button', { cls: 'mc-action-btn mc-action-del', attr: { title: t('settings.models.remove') } });
         setIcon(delBtn, 'trash');
         delBtn.addEventListener('click', async () => {
             this.plugin.settings.activeModels = this.plugin.settings.activeModels.filter(

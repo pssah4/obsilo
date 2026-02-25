@@ -1,5 +1,6 @@
 import { App, Notice, Setting, setIcon } from 'obsidian';
 import type ObsidianAgentPlugin from '../../main';
+import { t } from '../../i18n';
 
 
 export class PermissionsTab {
@@ -8,14 +9,14 @@ export class PermissionsTab {
     build(containerEl: HTMLElement): void {
         containerEl.createEl('p', {
             cls: 'agent-settings-desc',
-            text: 'Modes define which tools the agent can use. Auto-approve controls whether the agent can run those tools immediately or must ask for your confirmation first. When a category is off, the agent pauses and shows an approval dialog before each action in that category.',
+            text: t('settings.permissions.desc'),
         });
 
-        containerEl.createEl('h3', { cls: 'agent-settings-section', text: 'General' });
+        containerEl.createEl('h3', { cls: 'agent-settings-section', text: t('settings.permissions.headingGeneral') });
 
         new Setting(containerEl)
-            .setName('Enable auto-approve')
-            .setDesc('Master switch. When off, every tool call requires manual approval regardless of the category settings below.')
+            .setName(t('settings.permissions.enableAutoApprove'))
+            .setDesc(t('settings.permissions.enableAutoApproveDesc'))
             .addToggle((t) =>
                 t.setValue(this.plugin.settings.autoApproval.enabled).onChange(async (v) => {
                     this.plugin.settings.autoApproval.enabled = v;
@@ -24,8 +25,8 @@ export class PermissionsTab {
             );
 
         new Setting(containerEl)
-            .setName('Show approval bar in chat')
-            .setDesc('Show a row of quick-toggle buttons above the chat input for easy access.')
+            .setName(t('settings.permissions.showApprovalBar'))
+            .setDesc(t('settings.permissions.showApprovalBarDesc'))
             .addToggle((t) =>
                 t.setValue(this.plugin.settings.autoApproval.showMenuInChat).onChange(async (v) => {
                     this.plugin.settings.autoApproval.showMenuInChat = v;
@@ -33,11 +34,11 @@ export class PermissionsTab {
                 }),
             );
 
-        containerEl.createEl('h3', { cls: 'agent-settings-section', text: 'Per category' });
+        containerEl.createEl('h3', { cls: 'agent-settings-section', text: t('settings.permissions.headingPerCategory') });
 
         new Setting(containerEl)
-            .setName('Read operations')
-            .setDesc('Reading and searching notes. These operations never change your vault.')
+            .setName(t('settings.permissions.readOps'))
+            .setDesc(t('settings.permissions.readOpsDesc'))
             .addToggle((t) =>
                 t.setValue(this.plugin.settings.autoApproval.read).onChange(async (v) => {
                     this.plugin.settings.autoApproval.read = v;
@@ -46,8 +47,8 @@ export class PermissionsTab {
             );
 
         new Setting(containerEl)
-            .setName('Note edits')
-            .setDesc('Writing or modifying note content (write_file, edit_file, append_to_file). When off, you approve each change before it is saved.')
+            .setName(t('settings.permissions.noteEdits'))
+            .setDesc(t('settings.permissions.noteEditsDesc'))
             .addToggle((t) =>
                 t.setValue(this.plugin.settings.autoApproval.noteEdits).onChange(async (v) => {
                     this.plugin.settings.autoApproval.noteEdits = v;
@@ -56,8 +57,8 @@ export class PermissionsTab {
             );
 
         new Setting(containerEl)
-            .setName('Vault structure changes')
-            .setDesc('Creating folders, moving files, deleting notes, generating canvases, or creating bases. Harder to undo.')
+            .setName(t('settings.permissions.vaultChanges'))
+            .setDesc(t('settings.permissions.vaultChangesDesc'))
             .addToggle((t) =>
                 t.setValue(this.plugin.settings.autoApproval.vaultChanges).onChange(async (v) => {
                     this.plugin.settings.autoApproval.vaultChanges = v;
@@ -66,8 +67,8 @@ export class PermissionsTab {
             );
 
         new Setting(containerEl)
-            .setName('MCP tool calls')
-            .setDesc('Calls to external tools connected via Model Context Protocol servers.')
+            .setName(t('settings.permissions.mcpCalls'))
+            .setDesc(t('settings.permissions.mcpCallsDesc'))
             .addToggle((t) =>
                 t.setValue(this.plugin.settings.autoApproval.mcp).onChange(async (v) => {
                     this.plugin.settings.autoApproval.mcp = v;
@@ -76,8 +77,8 @@ export class PermissionsTab {
             );
 
         new Setting(containerEl)
-            .setName('Mode switching')
-            .setDesc('Let the agent switch between modes (e.g. from Agent to a custom Researcher mode) without asking.')
+            .setName(t('settings.permissions.modeSwitching'))
+            .setDesc(t('settings.permissions.modeSwitchingDesc'))
             .addToggle((t) =>
                 t.setValue(this.plugin.settings.autoApproval.mode).onChange(async (v) => {
                     this.plugin.settings.autoApproval.mode = v;
@@ -86,8 +87,8 @@ export class PermissionsTab {
             );
 
         new Setting(containerEl)
-            .setName('Subtasks')
-            .setDesc('Allow the agent to spawn sub-agents (new_task) to handle parts of a larger task independently.')
+            .setName(t('settings.permissions.subtasks'))
+            .setDesc(t('settings.permissions.subtasksDesc'))
             .addToggle((t) =>
                 t.setValue(this.plugin.settings.autoApproval.subtasks).onChange(async (v) => {
                     this.plugin.settings.autoApproval.subtasks = v;
@@ -96,8 +97,8 @@ export class PermissionsTab {
             );
 
         new Setting(containerEl)
-            .setName('Follow-up questions')
-            .setDesc('Let the agent ask you clarifying questions during a task without needing separate approval.')
+            .setName(t('settings.permissions.followUp'))
+            .setDesc(t('settings.permissions.followUpDesc'))
             .addToggle((t) =>
                 t.setValue(this.plugin.settings.autoApproval.question).onChange(async (v) => {
                     this.plugin.settings.autoApproval.question = v;
@@ -106,8 +107,8 @@ export class PermissionsTab {
             );
 
         new Setting(containerEl)
-            .setName('Todo list updates')
-            .setDesc('Allow the agent to update its task checklist while working.')
+            .setName(t('settings.permissions.todoUpdates'))
+            .setDesc(t('settings.permissions.todoUpdatesDesc'))
             .addToggle((t) =>
                 t.setValue(this.plugin.settings.autoApproval.todo).onChange(async (v) => {
                     this.plugin.settings.autoApproval.todo = v;
@@ -116,8 +117,8 @@ export class PermissionsTab {
             );
 
         new Setting(containerEl)
-            .setName('Plugin skills')
-            .setDesc('Execute Obsidian commands via execute_command, enable/disable plugins, and resolve capability gaps. Includes native commands like PDF export.')
+            .setName(t('settings.permissions.pluginSkills'))
+            .setDesc(t('settings.permissions.pluginSkillsDesc'))
             .addToggle((t) =>
                 t.setValue(this.plugin.settings.autoApproval.skills).onChange(async (v) => {
                     this.plugin.settings.autoApproval.skills = v;
@@ -125,11 +126,11 @@ export class PermissionsTab {
                 }),
             );
 
-        containerEl.createEl('h3', { cls: 'agent-settings-section', text: 'Plugin API & Recipes' });
+        containerEl.createEl('h3', { cls: 'agent-settings-section', text: t('settings.permissions.headingPluginApi') });
 
         new Setting(containerEl)
-            .setName('Plugin API reads')
-            .setDesc('Auto-approve read-only plugin API calls (e.g., Dataview queries, Omnisearch). These never modify your vault.')
+            .setName(t('settings.permissions.pluginApiReads'))
+            .setDesc(t('settings.permissions.pluginApiReadsDesc'))
             .addToggle((t) =>
                 t.setValue(this.plugin.settings.autoApproval.pluginApiRead ?? true).onChange(async (v) => {
                     this.plugin.settings.autoApproval.pluginApiRead = v;
@@ -138,8 +139,8 @@ export class PermissionsTab {
             );
 
         new Setting(containerEl)
-            .setName('Plugin API writes')
-            .setDesc('Auto-approve plugin API calls that modify data (e.g., MetaEdit update). Off by default for safety.')
+            .setName(t('settings.permissions.pluginApiWrites'))
+            .setDesc(t('settings.permissions.pluginApiWritesDesc'))
             .addToggle((t) =>
                 t.setValue(this.plugin.settings.autoApproval.pluginApiWrite ?? false).onChange(async (v) => {
                     this.plugin.settings.autoApproval.pluginApiWrite = v;
@@ -148,8 +149,8 @@ export class PermissionsTab {
             );
 
         new Setting(containerEl)
-            .setName('Recipe execution')
-            .setDesc('Auto-approve recipe execution (Pandoc exports, etc.). Off by default. Each recipe runs via spawn without shell expansion.')
+            .setName(t('settings.permissions.recipes'))
+            .setDesc(t('settings.permissions.recipesDesc'))
             .addToggle((t) =>
                 t.setValue(this.plugin.settings.autoApproval.recipes ?? false).onChange(async (v) => {
                     this.plugin.settings.autoApproval.recipes = v;

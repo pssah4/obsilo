@@ -1,5 +1,6 @@
 import { App, PluginSettingTab, setIcon } from 'obsidian';
 import type ObsidianAgentPlugin from '../main';
+import { t } from '../i18n';
 
 // ─── Extracted modules ────────────────────────────────────────────────────────
 import { ModelsTab }      from './settings/ModelsTab';
@@ -20,6 +21,7 @@ import { DebugTab }       from './settings/DebugTab';
 import { BackupTab }      from './settings/BackupTab';
 import { MemoryTab }      from './settings/MemoryTab';
 import { ShellTab }       from './settings/ShellTab';
+import { LanguageTab }    from './settings/LanguageTab';
 
 // Re-export for backward compatibility (used in main.ts and other places)
 export { ModelConfigModal } from './settings/ModelConfigModal';
@@ -71,10 +73,10 @@ export class AgentSettingsTab extends PluginSettingTab {
     private buildTabNav(container: HTMLElement): void {
         const nav = container.createDiv('agent-settings-nav');
         const tabs: { id: TabId; label: string; icon: string }[] = [
-            { id: 'providers',       label: 'Providers',       icon: 'plug'         },
-            { id: 'agent-behaviour', label: 'Agent Behaviour', icon: 'users-round'  },
-            { id: 'vault',           label: 'Vault',           icon: 'server'       },
-            { id: 'advanced',        label: 'Advanced',        icon: 'settings-2'   },
+            { id: 'providers',       label: t('settings.group.providers'),       icon: 'plug'         },
+            { id: 'agent-behaviour', label: t('settings.group.agentBehaviour'), icon: 'users-round'  },
+            { id: 'vault',           label: t('settings.group.vault'),           icon: 'server'       },
+            { id: 'advanced',        label: t('settings.group.advanced'),        icon: 'settings-2'   },
         ];
         tabs.forEach(({ id, label, icon }) => {
             const btn = nav.createEl('button', {
@@ -147,10 +149,10 @@ export class AgentSettingsTab extends PluginSettingTab {
         this.buildSubTabNav(
             container,
             [
-                { id: 'models',      label: 'Models'     },
-                { id: 'embeddings',  label: 'Embeddings' },
-                { id: 'web-search',  label: 'Web Search' },
-                { id: 'mcp-servers', label: 'MCP'        },
+                { id: 'models',      label: t('settings.tab.models')     },
+                { id: 'embeddings',  label: t('settings.tab.embeddings') },
+                { id: 'web-search',  label: t('settings.tab.webSearch') },
+                { id: 'mcp-servers', label: t('settings.tab.mcp')        },
             ],
             this.activeProvidersSubTab,
             (id) => { this.activeProvidersSubTab = id; this.display(); },
@@ -169,14 +171,14 @@ export class AgentSettingsTab extends PluginSettingTab {
 
     private buildAgentBehaviourTab(container: HTMLElement): void {
         const subTabs = [
-            { id: 'modes',       label: 'Modes'       },
-            { id: 'permissions', label: 'Auto-Approve' },
-            { id: 'loop',        label: 'Loop'        },
-            { id: 'memory',      label: 'Memory'      },
-            { id: 'rules',       label: 'Rules'       },
-            { id: 'workflows',   label: 'Workflows'   },
-            { id: 'skills',      label: 'Skills'      },
-            { id: 'prompts',     label: 'Prompts'     },
+            { id: 'modes',       label: t('settings.tab.modes')       },
+            { id: 'permissions', label: t('settings.tab.autoApprove') },
+            { id: 'loop',        label: t('settings.tab.loop')        },
+            { id: 'memory',      label: t('settings.tab.memory')      },
+            { id: 'rules',       label: t('settings.tab.rules')       },
+            { id: 'workflows',   label: t('settings.tab.workflows')   },
+            { id: 'skills',      label: t('settings.tab.skills')      },
+            { id: 'prompts',     label: t('settings.tab.prompts')     },
         ];
         this.buildSubTabNav(container, subTabs, this.activeAgentSubTab,
             (id) => { this.activeAgentSubTab = id; this.display(); });
@@ -201,11 +203,12 @@ export class AgentSettingsTab extends PluginSettingTab {
         this.buildSubTabNav(
             container,
             [
-                { id: 'interface', label: 'Interface' },
-                { id: 'shell',     label: 'Shell'     },
-                { id: 'log',       label: 'Log'       },
-                { id: 'debug',     label: 'Debug'     },
-                { id: 'backup',    label: 'Backup'    },
+                { id: 'interface', label: t('settings.tab.interface') },
+                { id: 'shell',     label: t('settings.tab.shell')     },
+                { id: 'log',       label: t('settings.tab.log')       },
+                { id: 'debug',     label: t('settings.tab.debug')     },
+                { id: 'backup',    label: t('settings.tab.backup')    },
+                { id: 'language',  label: t('settings.tab.language')  },
             ],
             this.activeAdvancedSubTab,
             (id) => { this.activeAdvancedSubTab = id; this.display(); },
@@ -217,5 +220,6 @@ export class AgentSettingsTab extends PluginSettingTab {
         if (this.activeAdvancedSubTab === 'log')       new LogTab(this.plugin, this.app, rerender).build(content);
         if (this.activeAdvancedSubTab === 'debug')     new DebugTab(this.plugin, this.app, rerender).build(content);
         if (this.activeAdvancedSubTab === 'backup')    new BackupTab(this.plugin, this.app, rerender).build(content);
+        if (this.activeAdvancedSubTab === 'language')  new LanguageTab(this.plugin, this.app, rerender).build(content);
     }
 }

@@ -1,5 +1,6 @@
 import { App, Notice, Setting, setIcon } from 'obsidian';
 import type ObsidianAgentPlugin from '../../main';
+import { t } from '../../i18n';
 import { addInfoButton } from './utils';
 
 export class LoopTab {
@@ -8,14 +9,14 @@ export class LoopTab {
     build(containerEl: HTMLElement): void {
         containerEl.createEl('p', {
             cls: 'agent-settings-desc',
-            text: 'Control how the agent loop runs, how long context is kept, and how reliably the agent stays on task.',
+            text: t('settings.loop.desc'),
         });
 
-        containerEl.createEl('h3', { cls: 'agent-settings-section', text: 'Agent Loop' });
+        containerEl.createEl('h3', { cls: 'agent-settings-section', text: t('settings.loop.headingLoop') });
 
         new Setting(containerEl)
-            .setName('Consecutive error limit')
-            .setDesc('Stop the task after this many tool errors in a row. Prevents the agent from getting stuck in a loop. Set to 0 to never stop automatically.')
+            .setName(t('settings.loop.errorLimit'))
+            .setDesc(t('settings.loop.errorLimitDesc'))
             .addText((t) =>
                 t
                     .setValue(String(this.plugin.settings.advancedApi.consecutiveMistakeLimit))
@@ -29,8 +30,8 @@ export class LoopTab {
             );
 
         new Setting(containerEl)
-            .setName('Pause between requests (ms)')
-            .setDesc('Wait this many milliseconds between API calls. Useful if you hit rate limits on your API plan. Set to 0 for no delay.')
+            .setName(t('settings.loop.rateLimit'))
+            .setDesc(t('settings.loop.rateLimitDesc'))
             .addText((t) =>
                 t
                     .setValue(String(this.plugin.settings.advancedApi.rateLimitMs))
@@ -43,12 +44,12 @@ export class LoopTab {
                     }),
             );
 
-        containerEl.createEl('h3', { cls: 'agent-settings-section', text: 'Context Condensing' });
+        containerEl.createEl('h3', { cls: 'agent-settings-section', text: t('settings.loop.headingCondensing') });
 
         const condensingSetting = new Setting(containerEl)
-            .setName('Enable context condensing')
-            .setDesc('When a conversation gets very long, automatically summarize older messages to stay within the model\'s memory limit. The summary replaces older messages but keeps key facts intact.');
-        addInfoButton(condensingSetting, this.app, 'Context Condensing', 'AI models can only hold a limited amount of text in memory at once. When your conversation approaches that limit, Context Condensing automatically creates a summary of what was discussed so far, then continues the conversation with that summary instead of all the original messages. This lets you work on very large tasks without hitting context limits.');
+            .setName(t('settings.loop.enableCondensing'))
+            .setDesc(t('settings.loop.enableCondensingDesc'));
+        addInfoButton(condensingSetting, this.app, t('settings.loop.infoCondensingTitle'), t('settings.loop.infoCondensingBody'));
         condensingSetting.addToggle((t) =>
             t.setValue(this.plugin.settings.advancedApi.condensingEnabled ?? false).onChange(async (v) => {
                 this.plugin.settings.advancedApi.condensingEnabled = v;
@@ -58,8 +59,8 @@ export class LoopTab {
         );
 
         const thresholdSetting = new Setting(containerEl)
-            .setName('Condensing threshold')
-            .setDesc('Start condensing when the conversation reaches this percentage of the model\'s memory limit. Lower = condenses more often; higher = waits longer before condensing.')
+            .setName(t('settings.loop.condensingThreshold'))
+            .setDesc(t('settings.loop.condensingThresholdDesc'))
             .addSlider((s) =>
                 s
                     .setLimits(50, 95, 5)
@@ -73,12 +74,12 @@ export class LoopTab {
         thresholdSetting.settingEl.style.display =
             (this.plugin.settings.advancedApi.condensingEnabled ?? false) ? '' : 'none';
 
-        containerEl.createEl('h3', { cls: 'agent-settings-section', text: 'Power Steering' });
+        containerEl.createEl('h3', { cls: 'agent-settings-section', text: t('settings.loop.headingPowerSteering') });
 
         const powerSteeringSetting = new Setting(containerEl)
-            .setName('Power Steering frequency')
-            .setDesc('Every N steps, remind the agent of its current mode instructions. Helps keep long tasks on track. Set to 0 to disable. Recommended: 4.');
-        addInfoButton(powerSteeringSetting, this.app, 'Power Steering', 'During long tasks, the agent can gradually lose track of its role and instructions. Power Steering periodically re-injects the current mode\'s system prompt into the conversation, keeping the agent focused on its intended purpose. A frequency of 4 means the reminder is sent every 4 conversation turns.');
+            .setName(t('settings.loop.powerSteeringFreq'))
+            .setDesc(t('settings.loop.powerSteeringFreqDesc'));
+        addInfoButton(powerSteeringSetting, this.app, t('settings.loop.infoPowerSteeringTitle'), t('settings.loop.infoPowerSteeringBody'));
         powerSteeringSetting.addText((t) =>
             t
                 .setValue(String(this.plugin.settings.advancedApi.powerSteeringFrequency ?? 0))
@@ -92,8 +93,8 @@ export class LoopTab {
             );
 
         new Setting(containerEl)
-            .setName('Max iterations per message')
-            .setDesc('Maximum number of tool-call rounds the agent can take for a single message. Higher values allow more complex tasks. Default: 25.')
+            .setName(t('settings.loop.maxIterations'))
+            .setDesc(t('settings.loop.maxIterationsDesc'))
             .addSlider((s) =>
                 s
                     .setLimits(5, 50, 5)
@@ -106,8 +107,8 @@ export class LoopTab {
             );
 
         new Setting(containerEl)
-            .setName('Max sub-agent depth')
-            .setDesc('Maximum nesting depth for sub-agents. 1 = children cannot spawn grandchildren. 2 = one level of grandchildren allowed. Default: 2.')
+            .setName(t('settings.loop.maxSubtaskDepth'))
+            .setDesc(t('settings.loop.maxSubtaskDepthDesc'))
             .addSlider((s) =>
                 s
                     .setLimits(1, 3, 1)

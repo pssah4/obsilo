@@ -2,16 +2,16 @@ import { App, Notice, Setting, setIcon } from 'obsidian';
 import type ObsidianAgentPlugin from '../../main';
 import { ContentEditorModal } from './ContentEditorModal';
 import { RulesLoader } from '../../core/context/RulesLoader';
+import { t } from '../../i18n';
 
 export class RulesTab {
     constructor(private plugin: ObsidianAgentPlugin, private app: App, private rerender: () => void) {}
 
     build(containerEl: HTMLElement): void {
-        containerEl.createEl('h3', { text: 'Rules' });
+        containerEl.createEl('h3', { text: t('settings.rules.heading') });
         containerEl.createEl('p', {
             cls: 'agent-settings-desc',
-            text: 'Rules are injected into the system prompt of every agent session. ' +
-                  'Store rule files as .md or .txt in your vault at .obsidian-agent/rules/.',
+            text: t('settings.rules.desc'),
         });
 
         const rulesLoader = (this.plugin as any).rulesLoader;
@@ -19,13 +19,13 @@ export class RulesTab {
         // ── Create row ───────────────────────────────────────────────────
         const createRow = containerEl.createDiv({ cls: 'agent-rules-create-row' });
         const nameInput = createRow.createEl('input', {
-            type: 'text', placeholder: 'Rule name (e.g. "always-use-iso-dates")',
+            type: 'text', placeholder: t('settings.rules.placeholder'),
             cls: 'agent-rules-name-input',
         });
-        const createBtn = createRow.createEl('button', { text: 'Create rule', cls: 'mod-cta' });
+        const createBtn = createRow.createEl('button', { text: t('settings.rules.create'), cls: 'mod-cta' });
 
         // Import button
-        const importBtn = createRow.createEl('button', { text: 'Import', cls: 'agent-rules-import-btn' });
+        const importBtn = createRow.createEl('button', { text: t('settings.rules.import'), cls: 'agent-rules-import-btn' });
         importBtn.addEventListener('click', () => {
             const fileInput = document.createElement('input');
             fileInput.type = 'file';
@@ -39,7 +39,7 @@ export class RulesTab {
                     await rulesLoader.createRule(nameWithoutExt, content);
                     await refreshList();
                 } catch {
-                    new Notice('Could not import rule');
+                    new Notice(t('settings.rules.importFailed'));
                 }
             });
             fileInput.click();
@@ -51,12 +51,12 @@ export class RulesTab {
         const refreshList = async () => {
             listEl.empty();
             if (!rulesLoader) {
-                listEl.createEl('p', { cls: 'agent-empty-state', text: 'Rules loader not available.' });
+                listEl.createEl('p', { cls: 'agent-empty-state', text: t('settings.rules.loaderNotAvailable') });
                 return;
             }
             const paths: string[] = await rulesLoader.discoverRules();
             if (paths.length === 0) {
-                listEl.createEl('p', { cls: 'agent-empty-state', text: 'No rules yet. Create one above.' });
+                listEl.createEl('p', { cls: 'agent-empty-state', text: t('settings.rules.empty') });
                 return;
             }
             for (const rPath of paths) {
@@ -68,17 +68,17 @@ export class RulesTab {
 
                 const editBtn = actions.createEl('button', { cls: 'agent-rules-edit-btn' });
                 setIcon(editBtn, 'pencil');
-                editBtn.setAttribute('aria-label', 'Edit');
+                editBtn.setAttribute('aria-label', t('settings.rules.edit'));
                 editBtn.addEventListener('click', async () => {
                     const content = await this.app.vault.adapter.read(rPath);
-                    new ContentEditorModal(this.app, `Edit rule: ${RulesLoader.displayName(rPath)}`, content, async (newContent) => {
+                    new ContentEditorModal(this.app, t('settings.rules.editRule', { name: RulesLoader.displayName(rPath) }), content, async (newContent) => {
                         await this.app.vault.adapter.write(rPath, newContent);
                     }).open();
                 });
 
                 const exportBtn = actions.createEl('button', { cls: 'agent-rules-export-btn' });
                 setIcon(exportBtn, 'download');
-                exportBtn.setAttribute('aria-label', 'Export');
+                exportBtn.setAttribute('aria-label', t('settings.rules.export'));
                 exportBtn.addEventListener('click', async () => {
                     const content = await this.app.vault.adapter.read(rPath);
                     const blob = new Blob([content], { type: 'text/markdown' });
@@ -92,7 +92,7 @@ export class RulesTab {
 
                 const delBtn = actions.createEl('button', { cls: 'agent-rules-delete-btn' });
                 setIcon(delBtn, 'trash-2');
-                delBtn.setAttribute('aria-label', 'Delete');
+                delBtn.setAttribute('aria-label', t('settings.rules.delete'));
                 delBtn.addEventListener('click', async () => {
                     await rulesLoader.deleteRule(rPath);
                     this.plugin.settings.rulesToggles ??= {};
@@ -124,7 +124,7 @@ export class RulesTab {
             const rPath = await rulesLoader.createRule(name, template);
             nameInput.value = '';
             await refreshList();
-            new ContentEditorModal(this.app, `Edit rule: ${name}`, template, async (content) => {
+            new ContentEditorModal(this.app, t('settings.rules.editRule', { name }), template, async (content) => {
                 await this.app.vault.adapter.write(rPath, content);
             }).open();
         });

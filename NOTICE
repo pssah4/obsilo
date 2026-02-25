@@ -1,10 +1,11 @@
 Obsilo Agent
 Copyright 2025 Sebastian Hanke
 
-Licensed under the Apache License, Version 2.0.
-A copy of the license is included in this repository as LICENSE.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-=========================================================================
+    http://www.apache.org/licenses/LICENSE-2.0
 
 This product includes software adapted from Kilo Code
 (https://github.com/Kilo-Org/kilocode).
@@ -16,22 +17,15 @@ Original work: Copyright 2025 Cline Bot Inc.
 Modified work (Roo Code): Copyright 2025 Roo Veterinary Inc.
 Modified work (Kilo Code): Copyright 2025- Kilo Code LLC.
 
-This product also includes software developed by Continue Dev, Inc.
+This product includes software developed by Continue Dev, Inc.
 Copyright 2023 Continue Dev, Inc.
 Licensed under the Apache License, Version 2.0.
 
-The following components are derived from or inspired by Kilo Code:
-
-- src/api/ -- API handler interfaces, streaming providers, factory patterns
-- src/core/AgentTask.ts -- Conversation loop (adapted from Task.ts)
-- src/core/systemPrompt.ts -- System prompt architecture (adapted from system.ts)
-- src/core/tools/ -- Tool execution pipeline and BaseTool pattern
-- src/core/context/ -- Context loader architecture
-- src/core/modes/ -- Mode system and definitions
-- src/core/skills/ -- Skills and workflow system
-- src/ui/ -- Sidebar UI patterns
-
-=========================================================================
+Derived components include:
+  src/api/          API handler interfaces, streaming providers, factory patterns
+  src/core/         Agent loop, system prompt, tool pipeline, context loaders,
+                    mode system, skills and workflow system
+  src/ui/           Sidebar UI patterns
 
 Portions of the agent identity system are inspired by OpenClaw
 (https://github.com/openclaw/openclaw).

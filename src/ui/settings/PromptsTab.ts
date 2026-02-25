@@ -2,17 +2,16 @@ import { App, Notice, Setting, setIcon } from 'obsidian';
 import type ObsidianAgentPlugin from '../../main';
 import type { CustomPrompt } from '../../types/settings';
 import { BUILT_IN_MODES } from '../../core/modes/builtinModes';
+import { t } from '../../i18n';
 
 export class PromptsTab {
     constructor(private plugin: ObsidianAgentPlugin, private app: App, private rerender: () => void) {}
 
     build(containerEl: HTMLElement): void {
-        containerEl.createEl('h3', { text: 'Prompts' });
+        containerEl.createEl('h3', { text: t('settings.prompts.heading') });
         containerEl.createEl('p', {
             cls: 'agent-settings-desc',
-            text: 'Create your own prompt templates. Type / in the chat to trigger them. ' +
-                  'Use {{userInput}} to insert your current message text, ' +
-                  'and {{activeFile}} to insert the name of the active note.',
+            text: t('settings.prompts.desc'),
         });
 
         let editingId: string | null = null;
@@ -30,13 +29,13 @@ export class PromptsTab {
         // ── Create row (same pattern as Skills/Rules/Workflows) ─────────
         const createRow = containerEl.createDiv({ cls: 'agent-rules-create-row' });
         const nameInput = createRow.createEl('input', {
-            type: 'text', placeholder: 'Prompt name (e.g. "daily-report")',
+            type: 'text', placeholder: t('settings.prompts.namePlaceholder'),
             cls: 'agent-rules-name-input',
         }) as HTMLInputElement;
-        const createBtn = createRow.createEl('button', { text: 'Create prompt', cls: 'mod-cta' });
+        const createBtn = createRow.createEl('button', { text: t('settings.prompts.create'), cls: 'mod-cta' });
 
         // Import button
-        const importBtn = createRow.createEl('button', { text: 'Import', cls: 'agent-rules-import-btn' });
+        const importBtn = createRow.createEl('button', { text: t('settings.prompts.import'), cls: 'agent-rules-import-btn' });
         importBtn.addEventListener('click', () => {
             const fileInput = document.createElement('input');
             fileInput.type = 'file';
@@ -48,7 +47,7 @@ export class PromptsTab {
                     const text = await file.text();
                     const data = JSON.parse(text);
                     if (!data.name || !data.slug || !data.content) {
-                        new Notice('Invalid prompt file: missing name, slug, or content');
+                        new Notice(t('settings.prompts.invalidFile'));
                         return;
                     }
                     const prompts = [...(this.plugin.settings.customPrompts ?? [])];
@@ -63,7 +62,7 @@ export class PromptsTab {
                     await savePrompts(prompts);
                     renderList();
                 } catch {
-                    new Notice('Could not import prompt');
+                    new Notice(t('settings.prompts.importFailed'));
                 }
             });
             fileInput.click();
@@ -73,13 +72,13 @@ export class PromptsTab {
         const formEl = containerEl.createDiv({ cls: 'agent-prompt-form' });
         formEl.style.display = 'none';
 
-        const formTitle = formEl.createEl('p', { cls: 'agent-prompt-form-title', text: 'New Prompt' });
+        const formTitle = formEl.createEl('p', { cls: 'agent-prompt-form-title', text: t('settings.prompts.newPrompt') });
         const formNameInput = formEl.createEl('input', {
-            type: 'text', placeholder: 'Name (e.g. "Daily report")',
+            type: 'text', placeholder: t('settings.prompts.formName'),
             cls: 'agent-prompt-input',
         }) as HTMLInputElement;
         const slugInput = formEl.createEl('input', {
-            type: 'text', placeholder: 'Slug (e.g. "daily-report")',
+            type: 'text', placeholder: t('settings.prompts.formSlug'),
             cls: 'agent-prompt-input',
         }) as HTMLInputElement;
 
@@ -93,36 +92,36 @@ export class PromptsTab {
         });
 
         const contentInput = formEl.createEl('textarea', {
-            placeholder: 'Prompt template — use {{userInput}} and {{activeFile}}',
+            placeholder: t('settings.prompts.formTemplate'),
             cls: 'agent-prompt-textarea',
         }) as HTMLTextAreaElement;
         contentInput.rows = 5;
 
         formEl.createEl('p', {
             cls: 'agent-empty-state',
-            text: 'Variables: {{userInput}} = current chat message  |  {{activeFile}} = active note name',
+            text: t('settings.prompts.variables'),
         });
 
         // Optional mode selector
         const modeRow = formEl.createDiv({ cls: 'agent-prompt-mode-row' });
-        modeRow.createEl('label', { text: 'Mode (optional):', cls: 'agent-prompt-mode-label' });
+        modeRow.createEl('label', { text: t('settings.prompts.modeLabel'), cls: 'agent-prompt-mode-label' });
         const modeSelect = modeRow.createEl('select', { cls: 'agent-prompt-input agent-prompt-mode-select' }) as HTMLSelectElement;
-        modeSelect.createEl('option', { value: '', text: 'All modes' });
+        modeSelect.createEl('option', { value: '', text: t('settings.prompts.modeAll') });
         for (const mode of allModes) {
             modeSelect.createEl('option', { value: mode.slug, text: mode.name });
         }
         modeRow.createEl('span', {
             cls: 'agent-empty-state',
-            text: 'Restrict this prompt to a specific mode. Leave blank to show in all modes.',
+            text: t('settings.prompts.modeHint'),
         });
 
         const formBtns = formEl.createDiv({ cls: 'agent-prompt-form-btns' });
-        const saveBtn = formBtns.createEl('button', { text: 'Save', cls: 'mod-cta' });
-        const cancelBtn = formBtns.createEl('button', { text: 'Cancel' });
+        const saveBtn = formBtns.createEl('button', { text: t('settings.prompts.save'), cls: 'mod-cta' });
+        const cancelBtn = formBtns.createEl('button', { text: t('settings.prompts.cancel') });
 
         const openForm = (prompt?: CustomPrompt) => {
             editingId = prompt?.id ?? null;
-            formTitle.setText(prompt ? 'Edit Prompt' : 'New Prompt');
+            formTitle.setText(prompt ? t('settings.prompts.editPrompt') : t('settings.prompts.newPrompt'));
             formNameInput.value = prompt?.name ?? '';
             slugInput.value = prompt?.slug ?? '';
             contentInput.value = prompt?.content ?? '';
@@ -174,7 +173,7 @@ export class PromptsTab {
             if (prompts.length === 0) {
                 listEl.createEl('p', {
                     cls: 'agent-empty-state',
-                    text: 'No custom prompts yet. Create one above.',
+                    text: t('settings.prompts.empty'),
                 });
                 return;
             }
@@ -192,12 +191,12 @@ export class PromptsTab {
 
                 const editBtn = actions.createEl('button', { cls: 'agent-rules-edit-btn' });
                 setIcon(editBtn, 'pencil');
-                editBtn.setAttribute('aria-label', 'Edit');
+                editBtn.setAttribute('aria-label', t('settings.prompts.edit'));
                 editBtn.addEventListener('click', () => openForm(p));
 
                 const exportBtn = actions.createEl('button', { cls: 'agent-rules-export-btn' });
                 setIcon(exportBtn, 'download');
-                exportBtn.setAttribute('aria-label', 'Export');
+                exportBtn.setAttribute('aria-label', t('settings.prompts.export'));
                 exportBtn.addEventListener('click', () => {
                     const data = { name: p.name, slug: p.slug, content: p.content, mode: p.mode };
                     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -211,7 +210,7 @@ export class PromptsTab {
 
                 const delBtn = actions.createEl('button', { cls: 'agent-rules-delete-btn' });
                 setIcon(delBtn, 'trash-2');
-                delBtn.setAttribute('aria-label', 'Delete');
+                delBtn.setAttribute('aria-label', t('settings.prompts.delete'));
                 delBtn.addEventListener('click', async () => {
                     const updated = (this.plugin.settings.customPrompts ?? []).filter((cp) => cp.id !== p.id);
                     await savePrompts(updated);

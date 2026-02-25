@@ -1,5 +1,6 @@
 import { App, Notice, Setting, setIcon } from 'obsidian';
 import type ObsidianAgentPlugin from '../../main';
+import { t } from '../../i18n';
 
 
 export class DebugTab {
@@ -7,8 +8,8 @@ export class DebugTab {
 
     build(containerEl: HTMLElement): void {
         new Setting(containerEl)
-            .setName('Debug mode')
-            .setDesc('Write detailed logs to the browser developer console. Only useful for troubleshooting. Open the console with Cmd+Option+I (Mac) or Ctrl+Shift+I (Windows).')
+            .setName(t('settings.debug.debugMode'))
+            .setDesc(t('settings.debug.debugModeDesc'))
             .addToggle((t) =>
                 t.setValue(this.plugin.settings.debugMode).onChange(async (v) => {
                     this.plugin.settings.debugMode = v;

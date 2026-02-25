@@ -13,6 +13,7 @@ import { App, Notice, Setting } from 'obsidian';
 import type ObsidianAgentPlugin from '../../main';
 import { getModelKey } from '../../types/settings';
 import { OnboardingService } from '../../core/memory/OnboardingService';
+import { t } from '../../i18n';
 
 export class MemoryTab {
     constructor(private plugin: ObsidianAgentPlugin, private app: App, private rerender: () => void) {}
@@ -20,15 +21,15 @@ export class MemoryTab {
     build(containerEl: HTMLElement): void {
         containerEl.createEl('p', {
             cls: 'agent-settings-desc',
-            text: 'Configure how the agent remembers conversations and learns from past interactions. Memory is extracted in the background using a dedicated model.',
+            text: t('settings.memory.desc'),
         });
 
         // ─── Chat History ─────────────────────────────────────────────
-        containerEl.createEl('h3', { cls: 'agent-settings-section', text: 'Chat History' });
+        containerEl.createEl('h3', { cls: 'agent-settings-section', text: t('settings.memory.headingHistory') });
 
         new Setting(containerEl)
-            .setName('Enable chat history')
-            .setDesc('Save conversations to the plugin directory for later browsing and restoration.')
+            .setName(t('settings.memory.enableHistory'))
+            .setDesc(t('settings.memory.enableHistoryDesc'))
             .addToggle((t) =>
                 t.setValue(this.plugin.settings.enableChatHistory).onChange(async (v) => {
                     this.plugin.settings.enableChatHistory = v;
@@ -40,25 +41,25 @@ export class MemoryTab {
         if (store) {
             const count = store.count();
             new Setting(containerEl)
-                .setName('Stored conversations')
-                .setDesc(`${count} conversation${count !== 1 ? 's' : ''} saved`)
+                .setName(t('settings.memory.storedConversations'))
+                .setDesc(t('settings.memory.storedConversationsDesc', { count }))
                 .addButton((b) =>
-                    b.setButtonText('Clear all').setWarning().onClick(async () => {
+                    b.setButtonText(t('settings.memory.clearAll')).setWarning().onClick(async () => {
                         await store.deleteAll();
-                        new Notice('All conversations deleted');
+                        new Notice(t('settings.memory.allConversationsDeleted'));
                         this.rerender();
                     }),
                 );
         }
 
         // ─── Memory ───────────────────────────────────────────────────
-        containerEl.createEl('h3', { cls: 'agent-settings-section', text: 'Memory' });
+        containerEl.createEl('h3', { cls: 'agent-settings-section', text: t('settings.memory.headingMemory') });
 
         const mem = this.plugin.settings.memory;
 
         new Setting(containerEl)
-            .setName('Enable memory')
-            .setDesc('Allow the agent to build long-term memory from conversations. Disable to stop all extraction.')
+            .setName(t('settings.memory.enableMemory'))
+            .setDesc(t('settings.memory.enableMemoryDesc'))
             .addToggle((t) =>
                 t.setValue(mem.enabled).onChange(async (v) => {
                     this.plugin.settings.memory.enabled = v;
@@ -69,8 +70,8 @@ export class MemoryTab {
 
         if (mem.enabled) {
             new Setting(containerEl)
-                .setName('Auto-extract session summaries')
-                .setDesc('Automatically create a summary when a conversation ends.')
+                .setName(t('settings.memory.autoExtract'))
+                .setDesc(t('settings.memory.autoExtractDesc'))
                 .addToggle((t) =>
                     t.setValue(mem.autoExtractSessions).onChange(async (v) => {
                         this.plugin.settings.memory.autoExtractSessions = v;
@@ -79,8 +80,8 @@ export class MemoryTab {
                 );
 
             new Setting(containerEl)
-                .setName('Auto-update long-term memory')
-                .setDesc('Promote durable facts from session summaries to long-term memory files.')
+                .setName(t('settings.memory.autoLongTerm'))
+                .setDesc(t('settings.memory.autoLongTermDesc'))
                 .addToggle((t) =>
                     t.setValue(mem.autoUpdateLongTerm).onChange(async (v) => {
                         this.plugin.settings.memory.autoUpdateLongTerm = v;
@@ -89,19 +90,19 @@ export class MemoryTab {
                 );
 
             // ─── Memory Model ─────────────────────────────────────────
-            containerEl.createEl('h3', { cls: 'agent-settings-section', text: 'Memory Model' });
+            containerEl.createEl('h3', { cls: 'agent-settings-section', text: t('settings.memory.headingModel') });
 
             const models = this.plugin.settings.activeModels.filter((m) => m.enabled);
             const modelSetting = new Setting(containerEl)
-                .setName('Model for memory extraction')
-                .setDesc('Select a small, fast model (e.g., Haiku) for cost-efficient background extraction.');
+                .setName(t('settings.memory.modelSelect'))
+                .setDesc(t('settings.memory.modelSelectDesc'));
 
             if (models.length === 0) {
-                modelSetting.setDesc('No models configured. Add and enable a model in Providers first.');
+                modelSetting.setDesc(t('settings.memory.noModels'));
             }
 
             modelSetting.addDropdown((d) => {
-                d.addOption('', '-- Select model --');
+                d.addOption('', t('settings.memory.selectModel'));
                 for (const m of models) {
                     d.addOption(getModelKey(m), m.displayName ?? m.name);
                 }
@@ -113,11 +114,11 @@ export class MemoryTab {
             });
 
             // ─── Extraction Threshold ─────────────────────────────────
-            containerEl.createEl('h3', { cls: 'agent-settings-section', text: 'Extraction Threshold' });
+            containerEl.createEl('h3', { cls: 'agent-settings-section', text: t('settings.memory.headingThreshold') });
 
             new Setting(containerEl)
-                .setName('Minimum messages before extraction')
-                .setDesc('Conversations shorter than this are not saved to memory.')
+                .setName(t('settings.memory.minMessages'))
+                .setDesc(t('settings.memory.minMessagesDesc'))
                 .addSlider((s) =>
                     s
                         .setLimits(2, 20, 1)
@@ -130,71 +131,71 @@ export class MemoryTab {
                 );
 
             // ─── Memory Files ─────────────────────────────────────────
-            containerEl.createEl('h3', { cls: 'agent-settings-section', text: 'Memory Files' });
+            containerEl.createEl('h3', { cls: 'agent-settings-section', text: t('settings.memory.headingFiles') });
 
             const memService = this.plugin.memoryService;
             if (memService) {
                 memService.getStats().then((stats) => {
                     const desc = [
-                        `${stats.fileCount} memory file${stats.fileCount !== 1 ? 's' : ''}`,
-                        `${stats.sessionCount} session summar${stats.sessionCount !== 1 ? 'ies' : 'y'}`,
+                        t('settings.memory.statsFiles', { count: stats.fileCount }),
+                        t('settings.memory.statsSessions', { count: stats.sessionCount }),
                     ];
                     if (stats.lastUpdated) {
-                        desc.push(`last updated ${new Date(stats.lastUpdated).toLocaleDateString()}`);
+                        desc.push(t('settings.memory.statsLastUpdated', { date: new Date(stats.lastUpdated).toLocaleDateString() }));
                     }
                     statsSetting.setDesc(desc.join(' | '));
                 });
             }
 
             const statsSetting = new Setting(containerEl)
-                .setName('Memory storage')
-                .setDesc('Loading...')
+                .setName(t('settings.memory.memoryStorage'))
+                .setDesc(t('settings.memory.memoryStorageLoading'))
                 .addButton((b) =>
-                    b.setButtonText('View files').onClick(() => {
+                    b.setButtonText(t('settings.memory.viewFiles')).onClick(() => {
                         if (memService) {
                             // Open the memory directory in Obsidian's file explorer
                             const dir = memService.getMemoryDir();
-                            new Notice(`Memory files: ${dir}`);
+                            new Notice(t('settings.memory.memoryFilesLocation', { dir }));
                         }
                     }),
                 )
                 .addButton((b) =>
-                    b.setButtonText('Reset all').setWarning().onClick(async () => {
+                    b.setButtonText(t('settings.memory.resetAll')).setWarning().onClick(async () => {
                         if (memService) {
                             await memService.resetAll();
-                            new Notice('All memory files reset');
+                            new Notice(t('settings.memory.allMemoryReset'));
                             this.rerender();
                         }
                     }),
                 );
 
             // ─── Onboarding ──────────────────────────────────────────
-            containerEl.createEl('h3', { cls: 'agent-settings-section', text: 'Onboarding' });
+            containerEl.createEl('h3', { cls: 'agent-settings-section', text: t('settings.memory.headingOnboarding') });
 
             if (memService) {
                 const onboarding = new OnboardingService(memService, this.plugin);
                 const isComplete = !onboarding.needsOnboarding();
 
                 const profileSetting = new Setting(containerEl)
-                    .setName('User profile');
+                    .setName(t('settings.memory.userProfile'));
 
                 if (!isComplete) {
-                    profileSetting.setDesc('No profile yet. Start a conversation and the agent will guide you through setup.');
+                    profileSetting.setDesc(t('settings.memory.noProfile'));
                 } else {
-                    profileSetting.setDesc('Profile active. The agent uses your preferences to personalize responses.');
+                    profileSetting.setDesc(t('settings.memory.profileActive'));
                 }
 
                 // Setup dialog controls
                 const setupSetting = new Setting(containerEl)
-                    .setName('Setup dialog')
+                    .setName(t('settings.memory.setupDialog'))
                     .setDesc(
                         isComplete
-                            ? 'Setup completed. Restart to re-configure model, permissions, and profile.'
-                            : 'Setup not started yet. Open the chat to begin.',
+                            ? t('settings.memory.setupCompleted')
+                            : t('settings.memory.setupNotStarted'),
                     );
 
                 setupSetting.addButton((b) =>
-                    b.setButtonText(isComplete ? 'Restart setup' : 'Start setup').setCta().onClick(async () => {
+                    b.setButtonText(isComplete ? t('settings.memory.restartSetup') : t('settings.memory.startSetup')).setCta().onClick(async () => {
                         await onboarding.reset();
                         await this.plugin.startOnboarding();
                     }),
@@ -202,9 +203,9 @@ export class MemoryTab {
 
                 if (!isComplete) {
                     setupSetting.addButton((b) =>
-                        b.setButtonText('Skip setup').onClick(async () => {
+                        b.setButtonText(t('settings.memory.skipSetup')).onClick(async () => {
                             await onboarding.markCompleted();
-                            new Notice('Setup skipped. You can restart it anytime from settings.');
+                            new Notice(t('settings.memory.setupSkipped'));
                             this.rerender();
                         }),
                     );

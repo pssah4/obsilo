@@ -1,6 +1,7 @@
 import { App, Notice } from 'obsidian';
 import type ObsidianAgentPlugin from '../../main';
 import { DEFAULT_SETTINGS } from '../../types/settings';
+import { t } from '../../i18n';
 
 // ── Backup category definitions ──────────────────────────────────────────────
 
@@ -15,88 +16,97 @@ interface BackupCategory {
     description: string;
 }
 
-const CATEGORIES: BackupCategory[] = [
-    {
-        id: 'settings',
-        label: 'Plugin Settings',
-        root: 'plugin',
-        dir: null,
-        recursive: false,
-        description: 'API keys, modes, permissions, all configuration',
-    },
-    {
-        id: 'memory',
-        label: 'Agent Memory',
-        root: 'plugin',
-        dir: 'memory',
-        recursive: true,
-        description: 'Long-term memory and session summaries',
-    },
-    {
-        id: 'history',
-        label: 'Chat History',
-        root: 'plugin',
-        dir: 'history',
-        recursive: false,
-        description: 'Full conversation transcripts',
-    },
-    {
-        id: 'workflows',
-        label: 'Workflows',
-        root: 'vault',
-        dir: '.obsidian-agent/workflows',
-        recursive: false,
-        description: 'Custom workflow definitions',
-    },
-    {
-        id: 'rules',
-        label: 'Custom Rules',
-        root: 'vault',
-        dir: '.obsidian-agent/rules',
-        recursive: false,
-        description: 'Custom agent rules',
-    },
-    {
-        id: 'skills',
-        label: 'Custom Skills',
-        root: 'vault',
-        dir: '.obsidian-agent/skills',
-        recursive: true,
-        description: 'Custom skill definitions',
-    },
-    {
-        id: 'plugin-skills',
-        label: 'Plugin Skill Files',
-        root: 'vault',
-        dir: '.obsidian-agent/plugin-skills',
-        recursive: false,
-        description: 'Auto-generated skill and README files from VaultDNA scanner',
-    },
-    {
-        id: 'vault-dna',
-        label: 'VaultDNA Scan Cache',
-        root: 'vault',
-        dir: null,
-        recursive: false,
-        description: 'Plugin scan results (vault-dna.json) — avoids rescan on import',
-    },
-    {
-        id: 'semantic-index',
-        label: 'Semantic Index',
-        root: 'vault',
-        dir: '.obsidian-agent/semantic-index',
-        recursive: false,
-        description: 'Vectra embedding index — can be rebuilt by re-indexing',
-    },
-    {
-        id: 'logs',
-        label: 'Operation Logs',
-        root: 'plugin',
-        dir: 'logs',
-        recursive: false,
-        description: 'Agent operation log history',
-    },
-];
+/** Category IDs (stable, used for toggles and manifest keys) */
+const CATEGORY_IDS = [
+    'settings', 'memory', 'history', 'workflows', 'rules',
+    'skills', 'plugin-skills', 'vault-dna', 'semantic-index', 'logs',
+] as const;
+
+/** Build categories with translated labels (called at render time so t() picks up the active locale) */
+function getCategories(): BackupCategory[] {
+    return [
+        {
+            id: 'settings',
+            label: t('settings.backup.catSettings'),
+            root: 'plugin',
+            dir: null,
+            recursive: false,
+            description: t('settings.backup.catSettingsDesc'),
+        },
+        {
+            id: 'memory',
+            label: t('settings.backup.catMemory'),
+            root: 'plugin',
+            dir: 'memory',
+            recursive: true,
+            description: t('settings.backup.catMemoryDesc'),
+        },
+        {
+            id: 'history',
+            label: t('settings.backup.catHistory'),
+            root: 'plugin',
+            dir: 'history',
+            recursive: false,
+            description: t('settings.backup.catHistoryDesc'),
+        },
+        {
+            id: 'workflows',
+            label: t('settings.backup.catWorkflows'),
+            root: 'vault',
+            dir: '.obsidian-agent/workflows',
+            recursive: false,
+            description: t('settings.backup.catWorkflowsDesc'),
+        },
+        {
+            id: 'rules',
+            label: t('settings.backup.catRules'),
+            root: 'vault',
+            dir: '.obsidian-agent/rules',
+            recursive: false,
+            description: t('settings.backup.catRulesDesc'),
+        },
+        {
+            id: 'skills',
+            label: t('settings.backup.catSkills'),
+            root: 'vault',
+            dir: '.obsidian-agent/skills',
+            recursive: true,
+            description: t('settings.backup.catSkillsDesc'),
+        },
+        {
+            id: 'plugin-skills',
+            label: t('settings.backup.catPluginSkills'),
+            root: 'vault',
+            dir: '.obsidian-agent/plugin-skills',
+            recursive: false,
+            description: t('settings.backup.catPluginSkillsDesc'),
+        },
+        {
+            id: 'vault-dna',
+            label: t('settings.backup.catVaultDNA'),
+            root: 'vault',
+            dir: null,
+            recursive: false,
+            description: t('settings.backup.catVaultDNADesc'),
+        },
+        {
+            id: 'semantic-index',
+            label: t('settings.backup.catSemanticIndex'),
+            root: 'vault',
+            dir: '.obsidian-agent/semantic-index',
+            recursive: false,
+            description: t('settings.backup.catSemanticIndexDesc'),
+        },
+        {
+            id: 'logs',
+            label: t('settings.backup.catLogs'),
+            root: 'plugin',
+            dir: 'logs',
+            recursive: false,
+            description: t('settings.backup.catLogsDesc'),
+        },
+    ];
+}
 
 // ── Backup manifest types ────────────────────────────────────────────────────
 
@@ -115,9 +125,9 @@ const BACKUP_VERSION = 1;
 let _pendingImport: BackupManifest | null = null;
 let _importToggles: Record<string, boolean> = {};
 const _exportToggles: Record<string, boolean> = (() => {
-    const t: Record<string, boolean> = {};
-    for (const cat of CATEGORIES) t[cat.id] = true;
-    return t;
+    const toggles: Record<string, boolean> = {};
+    for (const id of CATEGORY_IDS) toggles[id] = true;
+    return toggles;
 })();
 
 // ── BackupTab ────────────────────────────────────────────────────────────────
@@ -132,7 +142,7 @@ export class BackupTab {
     build(containerEl: HTMLElement): void {
         containerEl.createEl('p', {
             cls: 'agent-settings-desc',
-            text: 'Export and import plugin data for backup or migration to another device.',
+            text: t('settings.backup.desc'),
         });
 
         this.buildExportSection(containerEl);
@@ -143,11 +153,11 @@ export class BackupTab {
 
     private buildExportSection(container: HTMLElement): void {
         const section = container.createDiv('agent-backup-section');
-        section.createEl('h4', { text: 'Export' });
+        section.createEl('h4', { text: t('settings.backup.headingExport') });
 
         // Category checkboxes with live stats
         const list = section.createDiv('agent-backup-category-list');
-        for (const cat of CATEGORIES) {
+        for (const cat of getCategories()) {
             const row = list.createDiv('agent-backup-category-row');
             const label = row.createEl('label', { cls: 'agent-backup-label' });
 
@@ -171,7 +181,7 @@ export class BackupTab {
         }
 
         const btnRow = section.createDiv('agent-backup-row');
-        const exportBtn = btnRow.createEl('button', { text: 'Export backup', cls: 'mod-cta' });
+        const exportBtn = btnRow.createEl('button', { text: t('settings.backup.export'), cls: 'mod-cta' });
         exportBtn.addEventListener('click', () => this.doExport(exportBtn));
     }
 
@@ -200,7 +210,7 @@ export class BackupTab {
 
     private async doExport(btn: HTMLElement): Promise<void> {
         btn.addClass('is-loading');
-        btn.setText('Exporting...');
+        btn.setText(t('settings.backup.exporting'));
 
         try {
             const manifest: BackupManifest = {
@@ -213,7 +223,7 @@ export class BackupTab {
             let totalFiles = 0;
             let selectedCount = 0;
 
-            for (const cat of CATEGORIES) {
+            for (const cat of getCategories()) {
                 if (!_exportToggles[cat.id]) continue;
                 selectedCount++;
 
@@ -258,12 +268,12 @@ export class BackupTab {
             a.click();
             URL.revokeObjectURL(url);
 
-            new Notice(`Backup exported: ${totalFiles} files in ${selectedCount} categories (${this.formatSize(json.length)})`);
+            new Notice(t('settings.backup.exported', { files: totalFiles, categories: selectedCount, size: this.formatSize(json.length) }));
         } catch (e) {
-            new Notice(`Export failed: ${(e as Error).message}`);
+            new Notice(t('settings.backup.exportFailed', { error: (e as Error).message }));
         } finally {
             btn.removeClass('is-loading');
-            btn.setText('Export backup');
+            btn.setText(t('settings.backup.export'));
         }
     }
 
@@ -271,12 +281,12 @@ export class BackupTab {
 
     private buildImportSection(container: HTMLElement): void {
         const section = container.createDiv('agent-backup-section');
-        section.createEl('h4', { text: 'Import' });
+        section.createEl('h4', { text: t('settings.backup.headingImport') });
 
         if (!_pendingImport) {
             // Initial state: just the file picker button
             const btnRow = section.createDiv('agent-backup-row');
-            const importBtn = btnRow.createEl('button', { text: 'Select backup file' });
+            const importBtn = btnRow.createEl('button', { text: t('settings.backup.selectFile') });
             importBtn.addEventListener('click', () => this.pickImportFile());
         } else {
             // Confirmation state: show found categories
@@ -314,7 +324,7 @@ export class BackupTab {
                             },
                         };
                     } else {
-                        new Notice('Invalid backup file -- not recognized as Obsilo backup');
+                        new Notice(t('settings.backup.invalidFile'));
                         return;
                     }
                 } else {

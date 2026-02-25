@@ -1,5 +1,6 @@
 import { App, Notice, Setting, setIcon } from 'obsidian';
 import type ObsidianAgentPlugin from '../../main';
+import { t } from '../../i18n';
 
 
 export class WebSearchTab {
@@ -8,14 +9,14 @@ export class WebSearchTab {
     build(containerEl: HTMLElement): void {
         containerEl.createEl('p', {
             cls: 'agent-settings-desc',
-            text: 'Configure web_fetch (read any URL) and web_search (Brave / Tavily). web_fetch works without an API key; web_search requires one.',
+            text: t('settings.webSearch.desc'),
         });
 
-        containerEl.createEl('h3', { cls: 'agent-settings-section', text: 'General' });
+        containerEl.createEl('h3', { cls: 'agent-settings-section', text: t('settings.webSearch.headingGeneral') });
 
         new Setting(containerEl)
-            .setName('Enable web tools')
-            .setDesc('Allow the agent to fetch web pages and run internet searches. Turn off to keep the agent working entirely within your vault.')
+            .setName(t('settings.webSearch.enableWebTools'))
+            .setDesc(t('settings.webSearch.enableWebToolsDesc'))
             .addToggle((t) =>
                 t.setValue(this.plugin.settings.webTools?.enabled ?? false).onChange(async (v) => {
                     if (!this.plugin.settings.webTools) this.plugin.settings.webTools = { enabled: false, provider: 'none', braveApiKey: '', tavilyApiKey: '' };
@@ -25,16 +26,16 @@ export class WebSearchTab {
                 }),
             );
 
-        containerEl.createEl('h3', { cls: 'agent-settings-section', text: 'Search provider' });
+        containerEl.createEl('h3', { cls: 'agent-settings-section', text: t('settings.webSearch.headingProvider') });
 
         new Setting(containerEl)
-            .setName('Provider')
-            .setDesc('Which service the agent uses for keyword searches. Choose "None" if you only need to fetch specific URLs, not run search queries.')
+            .setName(t('settings.webSearch.provider'))
+            .setDesc(t('settings.webSearch.providerDesc'))
             .addDropdown((d) =>
                 d
-                    .addOption('none', 'None (web_fetch only)')
-                    .addOption('brave', 'Brave Search')
-                    .addOption('tavily', 'Tavily')
+                    .addOption('none', t('settings.webSearch.providerNone'))
+                    .addOption('brave', t('settings.webSearch.providerBrave'))
+                    .addOption('tavily', t('settings.webSearch.providerTavily'))
                     .setValue(this.plugin.settings.webTools?.provider ?? 'none')
                     .onChange(async (v) => {
                         if (!this.plugin.settings.webTools) this.plugin.settings.webTools = { enabled: true, provider: 'none', braveApiKey: '', tavilyApiKey: '' };
@@ -48,12 +49,12 @@ export class WebSearchTab {
 
         if (provider === 'brave' || provider === 'none') {
             const braveKey = new Setting(containerEl)
-                .setName('Brave Search API key')
-                .setDesc('Required for Brave Search. Get a free API key at brave.com/search/api (2,000 searches/month on the free plan).')
-                .addText((t) => {
-                    t.inputEl.type = 'password';
-                    t
-                        .setPlaceholder('BSA...')
+                .setName(t('settings.webSearch.braveKey'))
+                .setDesc(t('settings.webSearch.braveKeyDesc'))
+                .addText((txt) => {
+                    txt.inputEl.type = 'password';
+                    txt
+                        .setPlaceholder(t('settings.webSearch.bravePlaceholder'))
                         .setValue(this.plugin.settings.webTools?.braveApiKey ?? '')
                         .onChange(async (v) => {
                             if (!this.plugin.settings.webTools) this.plugin.settings.webTools = { enabled: true, provider: 'brave', braveApiKey: '', tavilyApiKey: '' };
@@ -66,12 +67,12 @@ export class WebSearchTab {
 
         if (provider === 'tavily' || provider === 'none') {
             const tavilyKey = new Setting(containerEl)
-                .setName('Tavily API key')
-                .setDesc('Required for Tavily Search. Get a free API key at tavily.com (1,000 searches/month on the free plan).')
-                .addText((t) => {
-                    t.inputEl.type = 'password';
-                    t
-                        .setPlaceholder('tvly-...')
+                .setName(t('settings.webSearch.tavilyKey'))
+                .setDesc(t('settings.webSearch.tavilyKeyDesc'))
+                .addText((txt) => {
+                    txt.inputEl.type = 'password';
+                    txt
+                        .setPlaceholder(t('settings.webSearch.tavilyPlaceholder'))
                         .setValue(this.plugin.settings.webTools?.tavilyApiKey ?? '')
                         .onChange(async (v) => {
                             if (!this.plugin.settings.webTools) this.plugin.settings.webTools = { enabled: true, provider: 'tavily', braveApiKey: '', tavilyApiKey: '' };

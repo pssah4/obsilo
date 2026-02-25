@@ -1,16 +1,16 @@
 import { App, Notice, Setting, setIcon } from 'obsidian';
 import type ObsidianAgentPlugin from '../../main';
 import { ContentEditorModal } from './ContentEditorModal';
+import { t } from '../../i18n';
 
 export class WorkflowsTab {
     constructor(private plugin: ObsidianAgentPlugin, private app: App, private rerender: () => void) {}
 
     build(containerEl: HTMLElement): void {
-        containerEl.createEl('h3', { text: 'Workflows' });
+        containerEl.createEl('h3', { text: t('settings.workflows.heading') });
         containerEl.createEl('p', {
             cls: 'agent-settings-desc',
-            text: 'Workflows are triggered by typing /workflow-name in the chat. ' +
-                  'Store workflow files as .md or .txt in your vault at .obsidian-agent/workflows/.',
+            text: t('settings.workflows.desc'),
         });
 
         const workflowLoader = (this.plugin as any).workflowLoader;
@@ -18,13 +18,13 @@ export class WorkflowsTab {
         // ── Create row ───────────────────────────────────────────────────
         const createRow = containerEl.createDiv({ cls: 'agent-rules-create-row' });
         const nameInput = createRow.createEl('input', {
-            type: 'text', placeholder: 'Workflow name (e.g. "daily-review")',
+            type: 'text', placeholder: t('settings.workflows.placeholder'),
             cls: 'agent-rules-name-input',
         });
-        const createBtn = createRow.createEl('button', { text: 'Create workflow', cls: 'mod-cta' });
+        const createBtn = createRow.createEl('button', { text: t('settings.workflows.create'), cls: 'mod-cta' });
 
         // Import button
-        const importBtn = createRow.createEl('button', { text: 'Import', cls: 'agent-rules-import-btn' });
+        const importBtn = createRow.createEl('button', { text: t('settings.workflows.import'), cls: 'agent-rules-import-btn' });
         importBtn.addEventListener('click', () => {
             const fileInput = document.createElement('input');
             fileInput.type = 'file';
@@ -38,7 +38,7 @@ export class WorkflowsTab {
                     await workflowLoader.createWorkflow(nameWithoutExt, content);
                     await refreshList();
                 } catch {
-                    new Notice('Could not import workflow');
+                    new Notice(t('settings.workflows.importFailed'));
                 }
             });
             fileInput.click();
@@ -50,13 +50,13 @@ export class WorkflowsTab {
         const refreshList = async () => {
             listEl.empty();
             if (!workflowLoader) {
-                listEl.createEl('p', { cls: 'agent-empty-state', text: 'Workflow loader not available.' });
+                listEl.createEl('p', { cls: 'agent-empty-state', text: t('settings.workflows.loaderNotAvailable') });
                 return;
             }
             const workflows: { path: string; slug: string; displayName: string }[] =
                 await workflowLoader.discoverWorkflows();
             if (workflows.length === 0) {
-                listEl.createEl('p', { cls: 'agent-empty-state', text: 'No workflows yet. Create one above.' });
+                listEl.createEl('p', { cls: 'agent-empty-state', text: t('settings.workflows.empty') });
                 return;
             }
             for (const wf of workflows) {
@@ -69,17 +69,17 @@ export class WorkflowsTab {
 
                 const editBtn = actions.createEl('button', { cls: 'agent-rules-edit-btn' });
                 setIcon(editBtn, 'pencil');
-                editBtn.setAttribute('aria-label', 'Edit');
+                editBtn.setAttribute('aria-label', t('settings.workflows.edit'));
                 editBtn.addEventListener('click', async () => {
                     const content = await this.app.vault.adapter.read(wf.path);
-                    new ContentEditorModal(this.app, `Edit workflow: ${wf.displayName}`, content, async (newContent) => {
+                    new ContentEditorModal(this.app, t('settings.workflows.editWorkflow', { name: wf.displayName }), content, async (newContent) => {
                         await this.app.vault.adapter.write(wf.path, newContent);
                     }).open();
                 });
 
                 const exportBtn = actions.createEl('button', { cls: 'agent-rules-export-btn' });
                 setIcon(exportBtn, 'download');
-                exportBtn.setAttribute('aria-label', 'Export');
+                exportBtn.setAttribute('aria-label', t('settings.workflows.export'));
                 exportBtn.addEventListener('click', async () => {
                     const content = await this.app.vault.adapter.read(wf.path);
                     const blob = new Blob([content], { type: 'text/markdown' });
@@ -93,7 +93,7 @@ export class WorkflowsTab {
 
                 const delBtn = actions.createEl('button', { cls: 'agent-rules-delete-btn' });
                 setIcon(delBtn, 'trash-2');
-                delBtn.setAttribute('aria-label', 'Delete');
+                delBtn.setAttribute('aria-label', t('settings.workflows.delete'));
                 delBtn.addEventListener('click', async () => {
                     await workflowLoader.deleteWorkflow(wf.path);
                     this.plugin.settings.workflowToggles ??= {};
@@ -125,7 +125,7 @@ export class WorkflowsTab {
             const wPath = await workflowLoader.createWorkflow(name, template);
             nameInput.value = '';
             await refreshList();
-            new ContentEditorModal(this.app, `Edit workflow: ${name}`, template, async (content) => {
+            new ContentEditorModal(this.app, t('settings.workflows.editWorkflow', { name }), template, async (content) => {
                 await this.app.vault.adapter.write(wPath, content);
             }).open();
         });

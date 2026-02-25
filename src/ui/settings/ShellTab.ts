@@ -2,6 +2,7 @@ import { App, Notice, Setting, setIcon } from 'obsidian';
 import type ObsidianAgentPlugin from '../../main';
 import { BUILT_IN_RECIPES } from '../../core/tools/agent/recipeRegistry';
 import { PLUGIN_API_ALLOWLIST } from '../../core/tools/agent/pluginApiAllowlist';
+import { t } from '../../i18n';
 
 
 export class ShellTab {
@@ -10,15 +11,15 @@ export class ShellTab {
     build(containerEl: HTMLElement): void {
         containerEl.createEl('p', {
             cls: 'agent-settings-desc',
-            text: 'Configure how the agent interacts with plugin APIs and external tools. Plugin API calls run in Obsidian\'s JavaScript sandbox. Recipes execute external programs (like Pandoc) with strict parameter validation and no shell expansion.',
+            text: t('settings.shell.desc'),
         });
 
         // ── Plugin API Section ──────────────────────────────────────────────
-        containerEl.createEl('h3', { cls: 'agent-settings-section', text: 'Plugin API' });
+        containerEl.createEl('h3', { cls: 'agent-settings-section', text: t('settings.shell.headingPluginApi') });
 
         new Setting(containerEl)
-            .setName('Enable plugin API calls')
-            .setDesc('Allow the agent to call JavaScript APIs on installed plugins (Dataview queries, Omnisearch, MetaEdit). Runs entirely in Obsidian\'s JS sandbox.')
+            .setName(t('settings.shell.enablePluginApi'))
+            .setDesc(t('settings.shell.enablePluginApiDesc'))
             .addToggle((t) =>
                 t.setValue(this.plugin.settings.pluginApi?.enabled ?? true).onChange(async (v) => {
                     if (!this.plugin.settings.pluginApi) {
@@ -32,10 +33,10 @@ export class ShellTab {
 
         // Show built-in allowlist as Setting items
         if (this.plugin.settings.pluginApi?.enabled !== false) {
-            containerEl.createEl('h4', { cls: 'agent-settings-section', text: 'Built-in Allowlist' });
+            containerEl.createEl('h4', { cls: 'agent-settings-section', text: t('settings.shell.headingAllowlist') });
             containerEl.createEl('p', {
                 cls: 'agent-settings-desc',
-                text: 'Pre-approved plugin methods the agent can call. Read methods auto-approve; write methods require confirmation.',
+                text: t('settings.shell.allowlistDesc'),
             });
 
             // Group by plugin
@@ -48,7 +49,7 @@ export class ShellTab {
 
             for (const [pluginId, methods] of byPlugin) {
                 for (const m of methods) {
-                    const badge = m.isWrite ? ' [write]' : ' [read]';
+                    const badge = m.isWrite ? t('settings.shell.badgeWrite') : t('settings.shell.badgeRead');
                     new Setting(containerEl)
                         .setName(`${pluginId}.${m.method}`)
                         .setDesc(`${m.description}${badge}`);
@@ -59,17 +60,17 @@ export class ShellTab {
             const overrides = this.plugin.settings.pluginApi?.safeMethodOverrides ?? {};
             const overrideKeys = Object.keys(overrides).filter((k) => overrides[k]);
             if (overrideKeys.length > 0) {
-                containerEl.createEl('h4', { cls: 'agent-settings-section', text: 'User Safe-Marked Methods' });
+                containerEl.createEl('h4', { cls: 'agent-settings-section', text: t('settings.shell.headingUserSafe') });
                 containerEl.createEl('p', {
                     cls: 'agent-settings-desc',
-                    text: 'Dynamically discovered methods you marked as safe (read-only). Remove to require approval again.',
+                    text: t('settings.shell.userSafeDesc'),
                 });
                 for (const key of overrideKeys) {
                     new Setting(containerEl)
                         .setName(key)
-                        .setDesc('Marked as safe (read) — auto-approvable')
+                        .setDesc(t('settings.shell.markedSafe'))
                         .addButton((btn) =>
-                            btn.setButtonText('Remove').onClick(async () => {
+                            btn.setButtonText(t('settings.shell.remove')).onClick(async () => {
                                 delete this.plugin.settings.pluginApi.safeMethodOverrides[key];
                                 await this.plugin.saveSettings();
                                 this.rerender();
@@ -80,11 +81,11 @@ export class ShellTab {
         }
 
         // ── Recipe Section ──────────────────────────────────────────────────
-        containerEl.createEl('h3', { cls: 'agent-settings-section', text: 'Recipes (External Tools)' });
+        containerEl.createEl('h3', { cls: 'agent-settings-section', text: t('settings.shell.headingRecipes') });
 
         new Setting(containerEl)
-            .setName('Enable recipes')
-            .setDesc('Allow the agent to run pre-defined recipes for external tools like Pandoc. Programs run via spawn (no shell expansion). Each recipe must be individually enabled below.')
+            .setName(t('settings.shell.enableRecipes'))
+            .setDesc(t('settings.shell.enableRecipesDesc'))
             .addToggle((t) =>
                 t.setValue(this.plugin.settings.recipes?.enabled ?? false).onChange(async (v) => {
                     if (!this.plugin.settings.recipes) {
@@ -97,7 +98,7 @@ export class ShellTab {
             );
 
         if (this.plugin.settings.recipes?.enabled) {
-            containerEl.createEl('h4', { cls: 'agent-settings-section', text: 'Built-in Recipes' });
+            containerEl.createEl('h4', { cls: 'agent-settings-section', text: t('settings.shell.headingBuiltinRecipes') });
 
             const toggles = this.plugin.settings.recipes?.recipeToggles ?? {};
 

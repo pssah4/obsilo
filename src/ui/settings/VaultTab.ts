@@ -1,5 +1,6 @@
 import { App, Notice, Setting, setIcon } from 'obsidian';
 import type ObsidianAgentPlugin from '../../main';
+import { t } from '../../i18n';
 
 
 export class VaultTab {
@@ -8,12 +9,12 @@ export class VaultTab {
     build(containerEl: HTMLElement): void {
         containerEl.createEl('p', {
             cls: 'agent-settings-desc',
-            text: 'Checkpoints snapshot each file before the agent first modifies it. After a task you can undo all changes with one click.',
+            text: t('settings.vault.desc'),
         });
 
         new Setting(containerEl)
-            .setName('Enable checkpoints')
-            .setDesc('Save a backup copy of each file before the agent changes it. After a task you can restore the originals with the Undo button.')
+            .setName(t('settings.vault.enableCheckpoints'))
+            .setDesc(t('settings.vault.enableCheckpointsDesc'))
             .addToggle((t) =>
                 t.setValue(this.plugin.settings.enableCheckpoints ?? true).onChange(async (v) => {
                     this.plugin.settings.enableCheckpoints = v;
@@ -22,8 +23,8 @@ export class VaultTab {
             );
 
         new Setting(containerEl)
-            .setName('Snapshot timeout (seconds)')
-            .setDesc('How long to wait for a file backup to finish before skipping it. Increase if you have very large files. Default: 30.')
+            .setName(t('settings.vault.snapshotTimeout'))
+            .setDesc(t('settings.vault.snapshotTimeoutDesc'))
             .addText((t) =>
                 t
                     .setValue(String(this.plugin.settings.checkpointTimeoutSeconds ?? 30))
@@ -37,8 +38,8 @@ export class VaultTab {
             );
 
         new Setting(containerEl)
-            .setName('Auto-cleanup after task')
-            .setDesc('Delete the backup copies once a task finishes. Saves disk space. Disable if you want to review the backups manually after a task.')
+            .setName(t('settings.vault.autoCleanup'))
+            .setDesc(t('settings.vault.autoCleanupDesc'))
             .addToggle((t) =>
                 t.setValue(this.plugin.settings.checkpointAutoCleanup ?? true).onChange(async (v) => {
                     this.plugin.settings.checkpointAutoCleanup = v;

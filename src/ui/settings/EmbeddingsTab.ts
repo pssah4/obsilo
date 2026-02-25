@@ -6,30 +6,31 @@ import { EMBEDDING_SUGGESTIONS, PROVIDER_LABELS, PROVIDER_COLORS } from './const
 import type { CustomModel } from '../../types/settings';
 import { getModelKey } from '../../types/settings';
 import type { SemanticIndexService } from '../../core/semantic/SemanticIndexService';
+import { t } from '../../i18n';
 
 export class EmbeddingsTab {
     constructor(private plugin: ObsidianAgentPlugin, private app: App, private rerender: () => void) {}
 
     build(containerEl: HTMLElement): void {
-        containerEl.createEl('h3', { cls: 'agent-settings-section', text: 'Embedding Models' });
+        containerEl.createEl('h3', { cls: 'agent-settings-section', text: t('settings.embeddings.headingModels') });
 
         const desc = containerEl.createDiv('model-table-desc');
-        desc.setText('Embedding models power semantic search across your vault. Select exactly one model as the active index.');
+        desc.setText(t('settings.embeddings.modelsDesc'));
 
         // Table header
         const table = containerEl.createDiv('model-table embedding-table');
         const header = table.createDiv('model-row model-row-header');
-        header.createDiv({ cls: 'mc-name', text: 'Model' });
-        header.createDiv({ cls: 'mc-provider', text: 'Provider' });
-        header.createDiv({ cls: 'mc-key', text: 'Key' });
-        header.createDiv({ cls: 'mc-enable', text: 'Active' });
+        header.createDiv({ cls: 'mc-name', text: t('settings.embeddings.headerModel') });
+        header.createDiv({ cls: 'mc-provider', text: t('settings.embeddings.headerProvider') });
+        header.createDiv({ cls: 'mc-key', text: t('settings.embeddings.headerKey') });
+        header.createDiv({ cls: 'mc-enable', text: t('settings.embeddings.headerActive') });
         header.createDiv({ cls: 'mc-actions' });
 
         // Built-in local model (always first)
         if ((this.plugin.settings.embeddingModels ?? []).length === 0) {
             const emptyRow = table.createDiv('model-row');
             emptyRow.createDiv('mc-name').createSpan({
-                text: 'No embedding models configured',
+                text: t('settings.embeddings.empty'),
                 cls: 'mc-name-text setting-item-description',
             });
         }
@@ -39,12 +40,12 @@ export class EmbeddingsTab {
         models.forEach((model) => this.renderEmbeddingRow(table, model));
 
         const footer = containerEl.createDiv('model-table-footer');
-        const addBtn = footer.createEl('button', { cls: 'mod-cta model-add-btn', text: '+ Add Embedding Model' });
+        const addBtn = footer.createEl('button', { cls: 'mod-cta model-add-btn', text: t('settings.embeddings.addModel') });
         addBtn.addEventListener('click', () => {
             new ModelConfigModal(this.app, null, async (newModel) => {
                 const key = getModelKey(newModel);
                 if ((this.plugin.settings.embeddingModels ?? []).some((m) => getModelKey(m) === key)) {
-                    new Notice(`"${newModel.name}" already exists`);
+                    new Notice(t('settings.embeddings.alreadyExists', { name: newModel.name }));
                     return;
                 }
                 if (!this.plugin.settings.embeddingModels) this.plugin.settings.embeddingModels = [];
@@ -58,16 +59,16 @@ export class EmbeddingsTab {
         });
 
         // ── Semantic Index ────────────────────────────────────────────────────
-        containerEl.createEl('h3', { cls: 'agent-settings-section', text: 'Semantic Index' });
+        containerEl.createEl('h3', { cls: 'agent-settings-section', text: t('settings.embeddings.headingIndex') });
 
         const activeEmbModel = this.plugin.getActiveEmbeddingModel();
         const embModelDesc = activeEmbModel
-            ? `Using ${activeEmbModel.displayName ?? activeEmbModel.name} (${activeEmbModel.provider}) for embeddings.`
-            : 'No embedding model configured. Add one above to enable semantic search.';
+            ? t('settings.embeddings.usingModel', { name: activeEmbModel.displayName ?? activeEmbModel.name, provider: activeEmbModel.provider })
+            : t('settings.embeddings.noEmbeddingModel');
 
         containerEl.createEl('p', {
             cls: 'agent-settings-desc',
-            text: `Builds a local vector index of all notes for semantic_search. ${embModelDesc}`,
+            text: t('settings.embeddings.indexDesc', { embModelDesc }),
         });
 
         if (!activeEmbModel) {
@@ -78,13 +79,12 @@ export class EmbeddingsTab {
             guide.style.background = 'var(--background-secondary)';
             guide.style.borderRadius = '4px';
             guide.innerHTML = [
-                '<strong>Quick setup:</strong>',
-                '1. Click "Add Embedding Model" above and choose a provider (e.g. OpenAI).',
-                '2. Select a model like <code>text-embedding-3-small</code> (fast, cheap, excellent quality).',
-                '3. Enter your API key, then enable the semantic index below.',
+                `<strong>${t('settings.embeddings.quickSetupTitle')}</strong>`,
+                t('settings.embeddings.quickSetupStep1'),
+                t('settings.embeddings.quickSetupStep2'),
+                t('settings.embeddings.quickSetupStep3'),
                 '',
-                '<strong>Free alternatives:</strong> Ollama or LM Studio run embedding models locally at no cost.',
-                'Install Ollama, pull <code>nomic-embed-text</code>, and add it as an Ollama embedding model above.',
+                `<strong>${t('settings.embeddings.quickSetupFreeTitle')}</strong> ${t('settings.embeddings.quickSetupFreeDesc')}`,
             ].join('<br>');
         }
 
@@ -93,9 +93,9 @@ export class EmbeddingsTab {
         let statusEl: HTMLElement;
 
         const semanticEnableSetting = new Setting(containerEl)
-            .setName('Enable semantic index')
-            .setDesc('Lets the agent find relevant notes by meaning, not just exact keywords. Requires an embedding model. First build may take a few minutes for large vaults.');
-        addInfoButton(semanticEnableSetting, this.app, 'Semantic Index', 'The Semantic Index reads all your notes, breaks them into small sections, and converts each section into a mathematical representation of its meaning (called an "embedding"). When you ask the agent a question, it searches for notes with similar meaning rather than just matching words. This is called Retrieval-Augmented Generation (RAG) and makes the agent much better at finding relevant context in your vault.');
+            .setName(t('settings.embeddings.enableIndex'))
+            .setDesc(t('settings.embeddings.enableIndexDesc'));
+        addInfoButton(semanticEnableSetting, this.app, t('settings.embeddings.infoIndexTitle'), t('settings.embeddings.infoIndexBody'));
         semanticEnableSetting.addToggle((t) =>
             t.setValue(this.plugin.settings.enableSemanticIndex ?? false).onChange(async (v) => {
                 this.plugin.settings.enableSemanticIndex = v;
@@ -118,8 +118,8 @@ export class EmbeddingsTab {
         );
 
         new Setting(containerEl)
-            .setName('Index PDF attachments')
-            .setDesc('Also index PDF files in your vault. Text is extracted from PDFs and indexed alongside your notes. Image-only (scanned) PDFs are skipped automatically.')
+            .setName(t('settings.embeddings.indexPdfs'))
+            .setDesc(t('settings.embeddings.indexPdfsDesc'))
             .addToggle((t) =>
                 t.setValue(this.plugin.settings.semanticIndexPdfs ?? false).onChange(async (v) => {
                     this.plugin.settings.semanticIndexPdfs = v;
@@ -129,37 +129,37 @@ export class EmbeddingsTab {
             );
 
         const buildSetting = new Setting(containerEl)
-            .setName('Build index')
-            .setDesc('Index new and modified notes. Already-indexed notes are skipped. Use "Force Rebuild" to reindex everything from scratch.');
+            .setName(t('settings.embeddings.buildIndexName'))
+            .setDesc(t('settings.embeddings.buildIndexDesc'));
         statusEl = buildSetting.descEl.createDiv('agent-semantic-status');
 
         const refreshStatus = () => {
             statusEl.empty();
             if (!this.plugin.settings.enableSemanticIndex) {
-                statusEl.setText('Semantic index is disabled.');
+                statusEl.setText(t('settings.embeddings.statusDisabled'));
                 return;
             }
             const idx = getIdx();
             if (!idx) {
-                statusEl.setText('Not initialized. Toggle off/on to reload.');
+                statusEl.setText(t('settings.embeddings.statusNotInit'));
                 return;
             }
             if (idx.building) {
                 const p = idx.progressIndexed ?? idx.docCount;
-                const t = idx.progressTotal ?? '?';
-                statusEl.setText(`Building… (${p} / ${t} files)`);
+                const total = idx.progressTotal ?? '?';
+                statusEl.setText(t('settings.embeddings.statusBuilding') + ` (${p} / ${total} files)`);
                 return;
             }
             if (idx.isIndexed) {
                 const br = idx.lastBuildResult;
-                const base = `Ready: ${idx.docCount} notes · Built: ${(idx.lastBuiltAt as Date).toLocaleString()}`;
+                const base = t('settings.embeddings.statusReady', { docCount: idx.docCount, builtAt: (idx.lastBuiltAt as Date).toLocaleString() });
                 if (br && br.errors > 0) {
-                    statusEl.setText(`${base} · ${br.errors} file${br.errors > 1 ? 's' : ''} skipped`);
+                    statusEl.setText(`${base} · ${t('settings.embeddings.statusSkipped', { count: br.errors })}`);
                 } else {
                     statusEl.setText(base);
                 }
             } else {
-                statusEl.setText('Not built yet. Click "Build Index" to start.');
+                statusEl.setText(t('settings.embeddings.statusNotBuilt'));
             }
         };
         refreshStatus();
@@ -179,51 +179,51 @@ export class EmbeddingsTab {
         if (containerEl.parentElement) observer.observe(containerEl.parentElement, { childList: true });
 
         buildSetting.addButton((btn) => {
-                btn.setButtonText('Build Index').onClick(async () => {
+                btn.setButtonText(t('settings.embeddings.buildIndex')).onClick(async () => {
                     const idx = getIdx();
-                    if (!idx) { new Notice('Enable semantic index first.'); return; }
-                    if (idx.building) { new Notice('Already building…'); return; }
+                    if (!idx) { new Notice(t('settings.embeddings.enableFirst')); return; }
+                    if (idx.building) { new Notice(t('settings.embeddings.alreadyBuilding')); return; }
                     idx.setEmbeddingModel(this.plugin.getActiveEmbeddingModel() ?? null);
-                    btn.setButtonText('Building…').setDisabled(true);
+                    btn.setButtonText(t('settings.embeddings.building')).setDisabled(true);
                     cancelBtn.setDisabled(false);
-                    statusEl.setText('Building index…');
+                    statusEl.setText(t('settings.embeddings.statusBuilding'));
                     try {
                         const result = await idx.buildIndex((indexed: number, total: number) => {
-                            statusEl.setText(`Building… (${indexed}/${total})`);
+                            statusEl.setText(`${t('settings.embeddings.building')} (${indexed}/${total})`);
                         });
                         if (result.errors > 0) {
-                            new Notice(`Index built: ${result.indexed}/${result.total} files, ${result.errors} skipped.`);
+                            new Notice(t('settings.embeddings.indexBuilt', { indexed: result.indexed, total: result.total, errors: result.errors }));
                         }
                         refreshStatus();
                     } catch (e) {
-                        statusEl.setText(`Build failed: ${(e as Error).message}`);
+                        statusEl.setText(t('settings.embeddings.statusBuildFailed', { error: (e as Error).message }));
                     } finally {
-                        btn.setButtonText('Build Index').setDisabled(false);
+                        btn.setButtonText(t('settings.embeddings.buildIndex')).setDisabled(false);
                         cancelBtn.setDisabled(true);
                     }
                 });
             })
             .addButton((btn) => {
-                btn.setButtonText('Force Rebuild').setWarning().onClick(async () => {
+                btn.setButtonText(t('settings.embeddings.forceRebuild')).setWarning().onClick(async () => {
                     const idx = getIdx();
-                    if (!idx) { new Notice('Enable semantic index first.'); return; }
-                    if (idx.building) { new Notice('Already building…'); return; }
+                    if (!idx) { new Notice(t('settings.embeddings.enableFirst')); return; }
+                    if (idx.building) { new Notice(t('settings.embeddings.alreadyBuilding')); return; }
                     idx.setEmbeddingModel(this.plugin.getActiveEmbeddingModel() ?? null);
-                    btn.setButtonText('Rebuilding…').setDisabled(true);
+                    btn.setButtonText(t('settings.embeddings.rebuilding')).setDisabled(true);
                     cancelBtn.setDisabled(false);
-                    statusEl.setText('Force rebuild…');
+                    statusEl.setText(t('settings.embeddings.statusForceRebuild'));
                     try {
                         const result = await idx.buildIndex((indexed: number, total: number) => {
-                            statusEl.setText(`Rebuilding… (${indexed}/${total})`);
+                            statusEl.setText(`${t('settings.embeddings.rebuilding')} (${indexed}/${total})`);
                         }, true);
                         if (result.errors > 0) {
-                            new Notice(`Rebuild: ${result.indexed}/${result.total} files, ${result.errors} skipped.`);
+                            new Notice(t('settings.embeddings.indexRebuilt', { indexed: result.indexed, total: result.total, errors: result.errors }));
                         }
                         refreshStatus();
                     } catch (e) {
-                        statusEl.setText(`Rebuild failed: ${(e as Error).message}`);
+                        statusEl.setText(t('settings.embeddings.statusRebuildFailed', { error: (e as Error).message }));
                     } finally {
-                        btn.setButtonText('Force Rebuild').setDisabled(false);
+                        btn.setButtonText(t('settings.embeddings.forceRebuild')).setDisabled(false);
                         cancelBtn.setDisabled(true);
                     }
                 });
@@ -231,22 +231,22 @@ export class EmbeddingsTab {
 
         let cancelBtn: any;
         new Setting(containerEl)
-            .setName('Cancel indexing')
-            .setDesc('Stop the current indexing run. Progress is saved to disk — the next build will resume from where it left off.')
+            .setName(t('settings.embeddings.cancelIndexing'))
+            .setDesc(t('settings.embeddings.cancelIndexingDesc'))
             .addButton((btn) => {
                 cancelBtn = btn;
-                btn.setButtonText('Cancel').setDisabled(true).onClick(() => {
+                btn.setButtonText(t('settings.embeddings.cancel')).setDisabled(true).onClick(() => {
                     getIdx()?.cancelBuild();
                     btn.setDisabled(true);
-                    statusEl.setText('Cancelling…');
+                    statusEl.setText(t('settings.embeddings.statusCancelling'));
                 });
             });
 
         new Setting(containerEl)
-            .setName('Delete index')
-            .setDesc('Remove the on-disk index. Notes are not affected.')
+            .setName(t('settings.embeddings.deleteIndexName'))
+            .setDesc(t('settings.embeddings.deleteIndexDesc'))
             .addButton((btn) => {
-                btn.setButtonText('Delete Index').setWarning().onClick(async () => {
+                btn.setButtonText(t('settings.embeddings.deleteIndex')).setWarning().onClick(async () => {
                     const idx = getIdx();
                     if (idx) await idx.deleteIndex();
                     refreshStatus();
@@ -254,12 +254,12 @@ export class EmbeddingsTab {
             });
 
         // ── Index configuration ───────────────────────────────────────────────
-        containerEl.createEl('h3', { cls: 'agent-settings-section', text: 'Index Configuration' });
+        containerEl.createEl('h3', { cls: 'agent-settings-section', text: t('settings.embeddings.headingConfig') });
 
         const batchSetting = new Setting(containerEl)
-            .setName('Checkpoint interval')
-            .setDesc('How many files to index before saving progress to disk. Smaller = more frequent checkpoints, safer on slow disks. Larger = fewer writes, slightly faster. Default: 20.');
-        addInfoButton(batchSetting, this.app, 'Checkpoint Interval', 'The indexer saves a checkpoint to disk every N files. If indexing is interrupted (Obsidian closed, error), the next run resumes from the last checkpoint — only unindexed or modified files are processed. A smaller interval loses less progress on interruption but writes to disk more often. 10–30 is recommended for most vaults.');
+            .setName(t('settings.embeddings.checkpointInterval'))
+            .setDesc(t('settings.embeddings.checkpointIntervalDesc'));
+        addInfoButton(batchSetting, this.app, t('settings.embeddings.infoCheckpointTitle'), t('settings.embeddings.infoCheckpointBody'));
         batchSetting.addSlider((s) =>
             s.setLimits(10, 200, 10)
                 .setValue(this.plugin.settings.semanticBatchSize ?? 50)
@@ -272,14 +272,14 @@ export class EmbeddingsTab {
         );
 
         const chunkSizeSetting = new Setting(containerEl)
-            .setName('Chunk size')
-            .setDesc('Characters per chunk when indexing notes. Smaller = more precise results, more chunks. Larger = more context per chunk, fewer API calls. Changing this will trigger a full index rebuild.');
+            .setName(t('settings.embeddings.chunkSize'))
+            .setDesc(t('settings.embeddings.chunkSizeDesc'));
         chunkSizeSetting.addDropdown((d) =>
             d.addOptions({
-                '800':  'Small (800 chars) — best for short atomic notes',
-                '1200': 'Medium (1200 chars)',
-                '2000': 'Standard (2000 chars) — default',
-                '3000': 'Large (3000 chars) — best for long journals',
+                '800':  t('settings.embeddings.chunkSmall'),
+                '1200': t('settings.embeddings.chunkMedium'),
+                '2000': t('settings.embeddings.chunkStandard'),
+                '3000': t('settings.embeddings.chunkLarge'),
             })
                 .setValue(String(this.plugin.settings.semanticChunkSize ?? 2000))
                 .onChange(async (v) => {
@@ -287,14 +287,14 @@ export class EmbeddingsTab {
                     this.plugin.settings.semanticChunkSize = newSize;
                     getIdx()?.configure({ chunkSize: newSize });
                     await this.plugin.saveSettings();
-                    new Notice('Chunk size updated. Rebuild the index to apply the new setting.');
+                    new Notice(t('settings.embeddings.chunkSizeUpdated'));
                 }),
         );
 
         const hydeSetting = new Setting(containerEl)
-            .setName('HyDE (Hypothetical Document Embeddings)')
-            .setDesc('Before searching, ask the LLM to write a short hypothetical note that would answer the query. Embed that instead of the raw query — improves recall for vague or abstract questions. Costs one extra LLM call per semantic_search.');
-        addInfoButton(hydeSetting, this.app, 'HyDE', 'HyDE (Hypothetical Document Embeddings) is a technique that improves semantic search recall. Instead of embedding your query directly, the agent first asks the LLM to write a short note that would answer your question. That hypothetical text is then embedded and used for the search. This is especially helpful for vague queries like "what are my goals?" where a direct embedding might not match well. The downside is one extra LLM call per search.');
+            .setName(t('settings.embeddings.hyde'))
+            .setDesc(t('settings.embeddings.hydeDesc'));
+        addInfoButton(hydeSetting, this.app, t('settings.embeddings.infoHydeTitle'), t('settings.embeddings.infoHydeBody'));
         hydeSetting.addToggle((t) =>
             t.setValue(this.plugin.settings.hydeEnabled ?? false).onChange(async (v) => {
                 this.plugin.settings.hydeEnabled = v;
@@ -303,30 +303,30 @@ export class EmbeddingsTab {
         );
 
         const autoIndexOnChangeSetting = new Setting(containerEl)
-            .setName('Auto-index on file changes [BETA]')
-            .setDesc('Re-index a note automatically when saved, created, renamed, or deleted. Safe with API embedding models (e.g. OpenAI text-embedding-3-small).');
+            .setName(t('settings.embeddings.autoIndexOnChange'))
+            .setDesc(t('settings.embeddings.autoIndexOnChangeDesc'));
         autoIndexOnChangeSetting.descEl.createDiv({
             cls: 'setting-risk-note',
-            text: 'Risk: This setting may slow down your vault performance or freeze Obsidian.',
+            text: t('settings.embeddings.riskNote'),
         });
-        addInfoButton(autoIndexOnChangeSetting, this.app, 'Auto-Index on Change', 'When enabled, every file you edit is re-embedded 2 seconds after you stop typing. This works well with API-based embedding models.');
+        addInfoButton(autoIndexOnChangeSetting, this.app, t('settings.embeddings.infoAutoChangeTitle'), t('settings.embeddings.infoAutoChangeBody'));
         autoIndexOnChangeSetting.addToggle((t) =>
             t.setValue(this.plugin.settings.semanticAutoIndexOnChange ?? false).onChange(async (v) => {
                 this.plugin.settings.semanticAutoIndexOnChange = v;
                 await this.plugin.saveSettings();
-                new Notice(v ? 'Auto-index on change enabled. Reload Obsidian to activate.' : 'Auto-index on change disabled. Reload Obsidian to deactivate.');
+                new Notice(v ? t('settings.embeddings.autoIndexEnabled') : t('settings.embeddings.autoIndexDisabled'));
             }),
         );
 
         const autoIndexSetting = new Setting(containerEl)
-            .setName('Auto-index strategy')
-            .setDesc('When to automatically rebuild the index. "On Startup" is best for active vaults. "Never" lets you trigger it manually from the ellipsis menu in the chat.');
-        addInfoButton(autoIndexSetting, this.app, 'Auto-Index Strategy', '"On Startup" rebuilds the index every time Obsidian opens — keeps the index fresh but adds a few seconds to startup time for large vaults. "On Mode Switch" rebuilds whenever you switch agent modes, useful if each mode works with different parts of your vault. "Never" means you control when to rebuild using the "Force Reindex Vault" option in the chat\'s ellipsis menu.');
+            .setName(t('settings.embeddings.autoIndexStrategy'))
+            .setDesc(t('settings.embeddings.autoIndexStrategyDesc'));
+        addInfoButton(autoIndexSetting, this.app, t('settings.embeddings.infoAutoStrategyTitle'), t('settings.embeddings.infoAutoStrategyBody'));
         autoIndexSetting.addDropdown((d) =>
             d.addOptions({
-                never: 'Never (manual only)',
-                startup: 'On Startup',
-                'mode-switch': 'On Mode Switch',
+                never: t('settings.embeddings.autoIndexNever'),
+                startup: t('settings.embeddings.autoIndexStartup'),
+                'mode-switch': t('settings.embeddings.autoIndexModeSwitch'),
             })
                 .setValue(this.plugin.settings.semanticAutoIndex ?? 'never')
                 .onChange(async (v) => {
@@ -336,9 +336,9 @@ export class EmbeddingsTab {
         );
 
         const excludedSetting = new Setting(containerEl)
-            .setName('Excluded folders')
-            .setDesc('Folders to skip when indexing.');
-        addInfoButton(excludedSetting, this.app, 'Excluded Folders', 'Use this to skip folders that contain files you do not want the agent to search through — for example, attachment folders full of images or PDFs, template folders, or private journals. Enter the folder path relative to your vault root, one per line.');
+            .setName(t('settings.embeddings.excludedFolders'))
+            .setDesc(t('settings.embeddings.excludedFoldersDesc'));
+        addInfoButton(excludedSetting, this.app, t('settings.embeddings.infoExcludedTitle'), t('settings.embeddings.infoExcludedBody'));
 
         const excludedFolders = this.plugin.settings.semanticExcludedFolders ?? [];
 
@@ -365,7 +365,7 @@ export class EmbeddingsTab {
 
         const folderInput = excludedSetting.controlEl.createEl('input', {
             cls: 'excluded-folder-input',
-            attr: { type: 'text', placeholder: 'Type / to browse folders' },
+            attr: { type: 'text', placeholder: t('settings.embeddings.folderPlaceholder') },
         });
 
         // Folder suggest dropdown
@@ -392,13 +392,13 @@ export class EmbeddingsTab {
         });
 
         const storageSetting = new Setting(containerEl)
-            .setName('Storage location')
-            .setDesc('"Obsidian Sync" stores the index inside the plugin folder and syncs it across your devices. "Local" stores it outside the vault so it is never synced.');
-        addInfoButton(storageSetting, this.app, 'Storage Location', 'If you use Obsidian Sync, choose "Obsidian Sync" so the index is available on all your devices without rebuilding it. If you do not use Obsidian Sync, or if the index is too large to sync, choose "Local" to store it in a separate folder outside your vault.');
+            .setName(t('settings.embeddings.storageLocation'))
+            .setDesc(t('settings.embeddings.storageLocationDesc'));
+        addInfoButton(storageSetting, this.app, t('settings.embeddings.infoStorageTitle'), t('settings.embeddings.infoStorageBody'));
         storageSetting.addDropdown((d) =>
             d.addOptions({
-                'obsidian-sync': 'Obsidian Sync (inside plugin folder)',
-                local: 'Local (outside vault, no sync)',
+                'obsidian-sync': t('settings.embeddings.storageSync'),
+                local: t('settings.embeddings.storageLocal'),
             })
                 .setValue(this.plugin.settings.semanticStorageLocation ?? 'obsidian-sync')
                 .onChange(async (v) => {
@@ -439,7 +439,7 @@ export class EmbeddingsTab {
         });
 
         const actionsEl = row.createDiv('mc-actions');
-        const configBtn = actionsEl.createEl('button', { cls: 'mc-action-btn', attr: { title: 'Configure' } });
+        const configBtn = actionsEl.createEl('button', { cls: 'mc-action-btn', attr: { title: t('settings.embeddings.configureModel') } });
         setIcon(configBtn, 'settings');
         configBtn.addEventListener('click', () => {
             new ModelConfigModal(this.app, { ...model }, async (updated) => {
@@ -453,7 +453,7 @@ export class EmbeddingsTab {
             }, true /* forEmbedding */).open();
         });
 
-        const delBtn = actionsEl.createEl('button', { cls: 'mc-action-btn mc-action-del', attr: { title: 'Remove' } });
+        const delBtn = actionsEl.createEl('button', { cls: 'mc-action-btn mc-action-del', attr: { title: t('settings.embeddings.removeModel') } });
         setIcon(delBtn, 'trash');
         delBtn.addEventListener('click', async () => {
             this.plugin.settings.embeddingModels = (this.plugin.settings.embeddingModels ?? []).filter(
