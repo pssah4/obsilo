@@ -1,4 +1,5 @@
 import { App, Modal } from 'obsidian';
+import { t } from '../../i18n';
 
 export class ContentEditorModal extends Modal {
     private readonly initialContent: string;
@@ -23,8 +24,8 @@ export class ContentEditorModal extends Modal {
         textarea.setAttribute('spellcheck', 'false');
 
         const btnRow = contentEl.createDiv({ cls: 'content-editor-btn-row' });
-        const saveBtn = btnRow.createEl('button', { text: 'Save', cls: 'mod-cta' });
-        const cancelBtn = btnRow.createEl('button', { text: 'Cancel' });
+        const saveBtn = btnRow.createEl('button', { text: t('modal.modelConfig.save'), cls: 'mod-cta' });
+        const cancelBtn = btnRow.createEl('button', { text: t('modal.modelConfig.cancel') });
 
         saveBtn.addEventListener('click', () => {
             this.onSave(textarea.value);

@@ -10,6 +10,7 @@ import { ContentEditorModal } from './ContentEditorModal';
 import { SystemPromptPreviewModal } from './SystemPromptPreviewModal';
 import { NewModeModal } from './NewModeModal';
 import { addInfoButton } from './utils';
+import { t } from '../../i18n';
 
 export class ModesTab {
     constructor(private plugin: ObsidianAgentPlugin, private app: App, private rerender: () => void, private modeService?: any) {}
@@ -39,9 +40,9 @@ export class ModesTab {
         const refreshSelect = () => {
             select.empty();
             const groups: { label: string; modes: ModeConfig[] }[] = [
-                { label: 'Built-in', modes: BUILT_IN_MODES },
-                { label: 'Global (all vaults)', modes: (this.plugin as any).modeService?.getGlobalModes?.() ?? [] },
-                { label: 'This Vault', modes: this.plugin.settings.customModes.filter((m) => m.source === 'vault' && !m.slug.endsWith('__custom') && !builtInSlugs.has(m.slug)) },
+                { label: t('settings.modes.groupBuiltIn'), modes: BUILT_IN_MODES },
+                { label: t('settings.modes.groupGlobal'), modes: (this.plugin as any).modeService?.getGlobalModes?.() ?? [] },
+                { label: t('settings.modes.groupVault'), modes: this.plugin.settings.customModes.filter((m) => m.source === 'vault' && !m.slug.endsWith('__custom') && !builtInSlugs.has(m.slug)) },
             ];
             for (const group of groups) {
                 if (group.modes.length === 0) continue;
@@ -56,8 +57,8 @@ export class ModesTab {
         refreshSelect();
 
         const btnGroup = topRow.createDiv('modes-btn-group');
-        const newBtn = btnGroup.createEl('button', { text: '+ New', cls: 'mod-cta modes-top-btn' });
-        const importBtn = btnGroup.createEl('button', { text: 'Import', cls: 'modes-top-btn' });
+        const newBtn = btnGroup.createEl('button', { text: t('settings.modes.newMode'), cls: 'mod-cta modes-top-btn' });
+        const importBtn = btnGroup.createEl('button', { text: t('settings.modes.import'), cls: 'modes-top-btn' });
 
         // ── Form area ─────────────────────────────────────────────────────────
         const formArea = containerEl.createDiv('modes-form-area');
@@ -125,17 +126,17 @@ export class ModesTab {
             if (isBuiltIn && vaultOverride) {
                 const badge = formArea.createDiv('modes-customized-badge');
                 setIcon(badge.createSpan('modes-customized-icon'), 'pencil');
-                badge.createEl('span', { cls: 'modes-customized-text', text: 'This mode has been customised' });
+                badge.createEl('span', { cls: 'modes-customized-text', text: t('settings.modes.customized') });
             }
 
             // ── Model Selection ───────────────────────────────────────────────
             const modelSetting = new Setting(formArea)
-                .setName('Model')
-                .setDesc('Which model this mode uses. Falls back to the globally selected model if not set.');
+                .setName(t('settings.modes.model'))
+                .setDesc(t('settings.modes.modelDesc'));
             const models = this.plugin.settings.activeModels;
             const currentModeModelKey = this.plugin.settings.modeModelKeys?.[slug] ?? '';
             modelSetting.addDropdown((dd) => {
-                dd.addOption('', '— Use global model —');
+                dd.addOption('', t('settings.modes.useGlobalModel'));
                 for (const m of models) {
                     const key = getModelKey(m);
                     dd.addOption(key, m.displayName ?? m.name);
@@ -151,14 +152,14 @@ export class ModesTab {
 
             // ── Name ─────────────────────────────────────────────────────────
             new Setting(formArea)
-                .setName('Name')
-                .addText((t) => {
-                    t.setValue(mode.name);
+                .setName(t('settings.modes.name'))
+                .addText((txt) => {
+                    txt.setValue(mode.name);
                     // Name is read-only for built-in modes (slug must remain stable)
                     if (isBuiltIn) {
-                        t.inputEl.disabled = true;
+                        txt.inputEl.disabled = true;
                     } else {
-                        t.onChange(async (v) => {
+                        txt.onChange(async (v) => {
                             getOrCreateEditable().name = v;
                             await saveMode();
                             refreshSelect();
@@ -168,14 +169,14 @@ export class ModesTab {
 
             // ── Slug (always read-only) ───────────────────────────────────────
             new Setting(formArea)
-                .setName('Slug')
-                .addText((t) => { t.setValue(mode.slug); t.inputEl.disabled = true; });
+                .setName(t('settings.modes.slug'))
+                .addText((txt) => { txt.setValue(mode.slug); txt.inputEl.disabled = true; });
 
             // ── Short description ─────────────────────────────────────────────
             const descWrap = formArea.createDiv('modes-field');
-            descWrap.createEl('div', { cls: 'modes-field-label', text: 'Short description (for humans)' });
-            descWrap.createEl('div', { cls: 'modes-field-desc', text: 'Brief description shown in the mode selector dropdown.' });
-            const descTextarea = descWrap.createEl('textarea', { cls: 'modes-textarea', attr: { placeholder: 'Brief description...' } });
+            descWrap.createEl('div', { cls: 'modes-field-label', text: t('settings.modes.shortDesc') });
+            descWrap.createEl('div', { cls: 'modes-field-desc', text: t('settings.modes.shortDescHint') });
+            const descTextarea = descWrap.createEl('textarea', { cls: 'modes-textarea', attr: { placeholder: t('settings.modes.shortDescPlaceholder') } });
             descTextarea.value = mode.description || '';
             descTextarea.rows = 2;
             descTextarea.addEventListener('input', async () => {
@@ -186,14 +187,14 @@ export class ModesTab {
 
             // ── When to Use ───────────────────────────────────────────────────
             const wtuWrap = formArea.createDiv('modes-field');
-            wtuWrap.createEl('div', { cls: 'modes-field-label', text: 'When to Use (optional)' });
+            wtuWrap.createEl('div', { cls: 'modes-field-label', text: t('settings.modes.whenToUse') });
             wtuWrap.createEl('div', {
                 cls: 'modes-field-desc',
-                text: 'Guidance for the Orchestrator when deciding which mode to delegate a subtask to.',
+                text: t('settings.modes.whenToUseHint'),
             });
             const wtuTextarea = wtuWrap.createEl('textarea', {
                 cls: 'modes-textarea',
-                attr: { placeholder: 'Describe when this mode should be chosen...' },
+                attr: { placeholder: t('settings.modes.whenToUsePlaceholder') },
             });
             wtuTextarea.value = mode.whenToUse ?? '';
             wtuTextarea.rows = 3;
@@ -206,7 +207,7 @@ export class ModesTab {
             // ── Available Tools ───────────────────────────────────────────────
             const toolsWrap = formArea.createDiv('modes-field');
             const toolsHeaderRow = toolsWrap.createDiv('modes-tools-header');
-            toolsHeaderRow.createEl('div', { cls: 'modes-field-label', text: 'Available Tools' });
+            toolsHeaderRow.createEl('div', { cls: 'modes-field-label', text: t('settings.modes.availableTools') });
 
             let toolsEditMode = false;
             const toolsBody = toolsWrap.createDiv('modes-tools-body');
@@ -215,7 +216,7 @@ export class ModesTab {
                 toolsBody.empty();
                 const enabled = mode.toolGroups.filter((g) => g in TOOL_GROUP_META);
                 if (enabled.length === 0) {
-                    toolsBody.createEl('span', { cls: 'modes-tools-none', text: 'None' });
+                    toolsBody.createEl('span', { cls: 'modes-tools-none', text: t('settings.modes.noTools') });
                 } else {
                     toolsBody.createEl('span', {
                         cls: 'modes-tools-list',
@@ -265,7 +266,7 @@ export class ModesTab {
                         if (!enabled) return '0 / ' + TOOL_GROUP_META[grp].tools.length;
                         const override = this.plugin.settings.modeToolOverrides?.[slug];
                         if (!override) return meta.tools.length + ' / ' + meta.tools.length;
-                        const active = meta.tools.filter((t) => override.includes(t)).length;
+                        const active = meta.tools.filter((tn) => override.includes(tn)).length;
                         return `${active} / ${meta.tools.length}`;
                     };
                     const badgeEl = summary.createEl('span', {
@@ -298,7 +299,7 @@ export class ModesTab {
                             if (toolCb.checked) {
                                 if (!allActiveTools.includes(toolName)) allActiveTools = [...allActiveTools, toolName];
                             } else {
-                                allActiveTools = allActiveTools.filter((t) => t !== toolName);
+                                allActiveTools = allActiveTools.filter((tn) => tn !== toolName);
                             }
                             await (this.plugin as any).modeService?.setModeToolOverride(slug, allActiveTools);
                             badgeEl.setText(getCountBadge(group, isGroupEnabled));
@@ -312,12 +313,12 @@ export class ModesTab {
             // "Edit tools" button — hidden for Ask mode (protected)
             if (slug !== 'ask') {
                 const editToolsBtn = toolsHeaderRow.createEl('button', {
-                    text: 'Edit tools',
+                    text: t('settings.modes.editTools'),
                     cls: 'modes-edit-tools-btn',
                 });
                 editToolsBtn.addEventListener('click', () => {
                     toolsEditMode = !toolsEditMode;
-                    editToolsBtn.setText(toolsEditMode ? 'Done' : 'Edit tools');
+                    editToolsBtn.setText(toolsEditMode ? t('settings.modes.done') : t('settings.modes.editTools'));
                     if (toolsEditMode) renderToolsEdit();
                     else renderToolsReadOnly();
                 });
@@ -327,10 +328,10 @@ export class ModesTab {
             const mcpServerNames = Object.keys(this.plugin.settings.mcpServers ?? {});
             if (mcpServerNames.length > 0) {
                 const mcpWrap = formArea.createDiv('modes-field');
-                mcpWrap.createEl('div', { cls: 'modes-field-label', text: 'Allowed MCP Servers' });
+                mcpWrap.createEl('div', { cls: 'modes-field-label', text: t('settings.modes.allowedMcpServers') });
                 mcpWrap.createEl('div', {
                     cls: 'modes-field-desc',
-                    text: 'MCP servers available in this mode. All checked = all servers allowed (default).',
+                    text: t('settings.modes.allowedMcpServersHint'),
                 });
                 const mcpCbList = mcpWrap.createDiv('modes-skills-list');
                 const modeMcpAllowed = this.plugin.settings.modeMcpServers?.[slug];
@@ -363,7 +364,7 @@ export class ModesTab {
             if (skillsManager) {
                 const skillsWrap = formArea.createDiv('modes-field');
                 const skillsHeaderRow = skillsWrap.createDiv('modes-tools-header');
-                skillsHeaderRow.createEl('div', { cls: 'modes-field-label', text: 'Allowed Skills' });
+                skillsHeaderRow.createEl('div', { cls: 'modes-field-label', text: t('settings.modes.allowedSkills') });
 
                 let skillsEditMode = false;
                 const skillsBody = skillsWrap.createDiv('modes-tools-body');
@@ -381,7 +382,7 @@ export class ModesTab {
                 const renderSkillsReadOnly = () => {
                     skillsBody.empty();
                     if (cachedSkills.length === 0) {
-                        skillsBody.createEl('span', { cls: 'modes-tools-none', text: 'No skills found' });
+                        skillsBody.createEl('span', { cls: 'modes-tools-none', text: t('settings.modes.noSkills') });
                         return;
                     }
                     const allowedSet = getSkillAllowedSet();
@@ -389,10 +390,10 @@ export class ModesTab {
                     if (allowed.length === cachedSkills.length) {
                         skillsBody.createEl('span', {
                             cls: 'modes-tools-list',
-                            text: `All skills (${cachedSkills.length})`,
+                            text: t('settings.modes.allSkills', { count: cachedSkills.length }),
                         });
                     } else if (allowed.length === 0) {
-                        skillsBody.createEl('span', { cls: 'modes-tools-none', text: 'None' });
+                        skillsBody.createEl('span', { cls: 'modes-tools-none', text: t('settings.modes.noTools') });
                     } else {
                         skillsBody.createEl('span', {
                             cls: 'modes-tools-list',
@@ -404,7 +405,7 @@ export class ModesTab {
                 const renderSkillsEdit = () => {
                     skillsBody.empty();
                     if (cachedSkills.length === 0) {
-                        skillsBody.createEl('span', { cls: 'modes-tools-none', text: 'No skills found' });
+                        skillsBody.createEl('span', { cls: 'modes-tools-none', text: t('settings.modes.noSkills') });
                         return;
                     }
                     const allowedSet = getSkillAllowedSet();
@@ -433,7 +434,7 @@ export class ModesTab {
                 };
 
                 // Show loading, then render read-only once skills are loaded
-                skillsBody.createEl('span', { cls: 'modes-loading-hint', text: 'Loading...' });
+                skillsBody.createEl('span', { cls: 'modes-loading-hint', text: t('settings.modes.loading') });
                 (async () => {
                     cachedSkills = await skillsManager.discoverSkills();
                     renderSkillsReadOnly();
@@ -441,12 +442,12 @@ export class ModesTab {
 
                 // "Edit skills" button
                 const editSkillsBtn = skillsHeaderRow.createEl('button', {
-                    text: 'Edit skills',
+                    text: t('settings.modes.editSkills'),
                     cls: 'modes-edit-tools-btn',
                 });
                 editSkillsBtn.addEventListener('click', () => {
                     skillsEditMode = !skillsEditMode;
-                    editSkillsBtn.setText(skillsEditMode ? 'Done' : 'Edit skills');
+                    editSkillsBtn.setText(skillsEditMode ? t('settings.modes.done') : t('settings.modes.editSkills'));
                     if (skillsEditMode) renderSkillsEdit();
                     else renderSkillsReadOnly();
                 });
@@ -454,10 +455,10 @@ export class ModesTab {
 
             // ── Role Definition ───────────────────────────────────────────────
             const roleWrap = formArea.createDiv('modes-field');
-            roleWrap.createEl('div', { cls: 'modes-field-label', text: 'Role Definition' });
+            roleWrap.createEl('div', { cls: 'modes-field-label', text: t('settings.modes.roleDefinition') });
             roleWrap.createEl('div', {
                 cls: 'modes-field-desc',
-                text: 'Core system prompt defining this agent\'s expertise and personality.',
+                text: t('settings.modes.roleDefinitionHint'),
             });
             const roleTextarea = roleWrap.createEl('textarea', { cls: 'modes-textarea' });
             roleTextarea.value = mode.roleDefinition || '';
@@ -471,14 +472,14 @@ export class ModesTab {
 
             // ── Mode-specific Custom Instructions ─────────────────────────────
             const ciWrap = formArea.createDiv('modes-field');
-            ciWrap.createEl('div', { cls: 'modes-field-label', text: 'Mode-specific Custom Instructions (optional)' });
+            ciWrap.createEl('div', { cls: 'modes-field-label', text: t('settings.modes.customInstructions') });
             ciWrap.createEl('div', {
                 cls: 'modes-field-desc',
-                text: `Behavioral guidelines appended after the role definition for ${mode.name} mode.`,
+                text: t('settings.modes.customInstructionsHint', { mode: mode.name }),
             });
             const ciTextarea = ciWrap.createEl('textarea', {
                 cls: 'modes-textarea',
-                attr: { placeholder: `Add behavioral guidelines specific to ${mode.name} mode...` },
+                attr: { placeholder: t('settings.modes.customInstructionsPlaceholder', { mode: mode.name }) },
             });
             // Read from override (preferred) or legacy __custom entry
             const legacyCi = this.plugin.settings.customModes.find((m) => m.slug === `${slug}__custom`);
@@ -503,9 +504,9 @@ export class ModesTab {
 
             const isActive = this.plugin.settings.currentMode === slug;
             if (isActive) {
-                bottomBar.createEl('span', { cls: 'modes-active-badge', text: '✓ Active mode' });
+                bottomBar.createEl('span', { cls: 'modes-active-badge', text: t('settings.modes.activeMode') });
             } else {
-                const setBtn = bottomBar.createEl('button', { text: 'Set Active', cls: 'mod-cta' });
+                const setBtn = bottomBar.createEl('button', { text: t('settings.modes.setActive'), cls: 'mod-cta' });
                 setBtn.addEventListener('click', async () => {
                     this.plugin.settings.currentMode = slug;
                     await this.plugin.saveSettings();
@@ -514,7 +515,7 @@ export class ModesTab {
             }
 
             // Preview System Prompt
-            const previewBtn = bottomBar.createEl('button', { text: 'Preview Prompt', cls: 'modes-preview-btn' });
+            const previewBtn = bottomBar.createEl('button', { text: t('settings.modes.previewPrompt'), cls: 'modes-preview-btn' });
             previewBtn.addEventListener('click', () => {
                 const allModes = [
                     ...BUILT_IN_MODES,
@@ -530,7 +531,7 @@ export class ModesTab {
             });
 
             // Export
-            const exportBtn = bottomBar.createEl('button', { text: 'Export', cls: 'modes-export-btn' });
+            const exportBtn = bottomBar.createEl('button', { text: t('settings.modes.export'), cls: 'modes-export-btn' });
             exportBtn.addEventListener('click', () => {
                 const exportData: Partial<ModeConfig> = { ...mode };
                 delete (exportData as any).source;
@@ -550,7 +551,7 @@ export class ModesTab {
                     (m) => (m.slug === slug && m.source === 'vault') || m.slug === `${slug}__custom`,
                 );
                 const restoreBtn = bottomBar.createEl('button', {
-                    text: 'Restore defaults',
+                    text: t('settings.modes.restoreDefaults'),
                     cls: 'modes-restore-btn',
                 });
                 if (!hasOverride) restoreBtn.disabled = true;
@@ -565,7 +566,7 @@ export class ModesTab {
                         delete this.plugin.settings.modeModelKeys[slug];
                     }
                     await this.plugin.saveSettings();
-                    new Notice(`${mode.name} restored to defaults`);
+                    new Notice(t('settings.modes.restored', { name: mode.name }));
                     renderForm(slug);
                 });
             }
@@ -573,7 +574,7 @@ export class ModesTab {
             // Delete (non-built-in modes only)
             if (!isBuiltIn) {
                 const deleteBtn = bottomBar.createEl('button', {
-                    text: 'Delete',
+                    text: t('settings.modes.delete'),
                     cls: 'mod-warning modes-delete-btn',
                 });
                 deleteBtn.addEventListener('click', async () => {
@@ -621,21 +622,21 @@ export class ModesTab {
                 try {
                     // M-1: Validate JSON size and structure before accepting imported mode
                     if (text.length > 500_000) {
-                        new Notice('Mode file too large (max 500 KB)');
+                        new Notice(t('settings.modes.fileTooLarge'));
                         return;
                     }
                     let parsed: any;
                     try {
                         parsed = JSON.parse(text);
                     } catch {
-                        new Notice('Invalid mode file: not valid JSON');
+                        new Notice(t('settings.modes.invalidJson'));
                         return;
                     }
                     if (!parsed || typeof parsed !== 'object' ||
                         typeof parsed.slug !== 'string' ||
                         typeof parsed.name !== 'string' ||
                         typeof parsed.roleDefinition !== 'string') {
-                        new Notice('Invalid mode file: missing slug, name, or roleDefinition');
+                        new Notice(t('settings.modes.invalidMode'));
                         return;
                     }
                     parsed.source = 'vault';
@@ -649,9 +650,9 @@ export class ModesTab {
                     this.plugin.settings.customModes.push(parsed);
                     await this.plugin.saveSettings();
                     this.rerender();
-                    new Notice(`Mode "${parsed.name}" imported`);
+                    new Notice(t('settings.modes.importSuccess', { name: parsed.name }));
                 } catch {
-                    new Notice('Failed to parse mode file');
+                    new Notice(t('settings.modes.parseFailed'));
                 }
             });
             input.click();
@@ -659,14 +660,14 @@ export class ModesTab {
 
         // ── Global Custom Instructions ────────────────────────────────────────
         const globalSection = containerEl.createDiv('modes-global-section');
-        globalSection.createEl('h3', { text: 'Custom Instructions for All Modes' });
+        globalSection.createEl('h3', { text: t('settings.modes.globalCustomInstructions') });
         globalSection.createEl('p', {
             cls: 'modes-field-desc',
-            text: 'These instructions are appended to the system prompt for every mode. Use them to set global behavior, language preferences, or formatting rules that apply across all agents.',
+            text: t('settings.modes.globalCustomInstructionsDesc'),
         });
         const globalTextarea = globalSection.createEl('textarea', {
             cls: 'modes-textarea',
-            attr: { placeholder: 'e.g. Always respond in German. Never use bullet points with more than 5 items.' },
+            attr: { placeholder: t('settings.modes.globalInstructionsPlaceholder') },
         });
         globalTextarea.value = this.plugin.settings.globalCustomInstructions ?? '';
         globalTextarea.rows = 5;

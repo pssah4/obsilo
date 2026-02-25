@@ -15,6 +15,7 @@ import type { CustomModel, ProviderType } from '../../types/settings';
 import { parseCodeSnippet, getModelDefaults, type ParsedCodeConfig } from '../../core/config/CodeConfigParser';
 import { PROVIDER_LABELS, PROVIDER_COLORS } from './constants';
 import { testModelConnection } from './testModelConnection';
+import { t } from '../../i18n';
 
 const PROVIDER_OPTIONS: ProviderType[] = [
     'anthropic', 'openai', 'azure', 'ollama', 'lmstudio', 'openrouter', 'custom',
@@ -65,13 +66,13 @@ export class CodeImportModal extends Modal {
 
         // Title with experimental tag
         const titleRow = contentEl.createDiv('cim-title-row');
-        titleRow.createEl('h3', { text: 'Import Models from Code', cls: 'cim-title' });
-        titleRow.createSpan({ cls: 'cim-experimental-tag', text: 'Experimental' });
+        titleRow.createEl('h3', { text: t('modal.codeImport.title'), cls: 'cim-title' });
+        titleRow.createSpan({ cls: 'cim-experimental-tag', text: t('modal.codeImport.tag') });
 
         // Instructions
         contentEl.createDiv({
             cls: 'cim-instructions',
-            text: 'Paste an API code snippet (Python, JavaScript, or curl) to automatically extract model configuration.',
+            text: t('modal.codeImport.instructions'),
         });
 
         // Textarea
@@ -117,7 +118,7 @@ export class CodeImportModal extends Modal {
 
         // Parse button
         const parseRow = contentEl.createDiv('cim-parse-row');
-        const parseBtn = parseRow.createEl('button', { cls: 'cim-parse-btn', text: 'Parse Snippet' });
+        const parseBtn = parseRow.createEl('button', { cls: 'cim-parse-btn', text: t('modal.codeImport.parse') });
         parseBtn.addEventListener('click', () => this.runParse(textarea.value));
 
         // Preview section (hidden until parsed)
@@ -130,14 +131,14 @@ export class CodeImportModal extends Modal {
 
         // API Key input
         const akRow = contentEl.createDiv('cim-apikey-row');
-        akRow.createDiv({ cls: 'cim-apikey-label', text: 'API Key' });
+        akRow.createDiv({ cls: 'cim-apikey-label', text: t('modal.codeImport.apiKey') });
         akRow.createDiv({
             cls: 'cim-apikey-desc',
-            text: 'Optional. You can also add it later in each model\'s settings.',
+            text: t('modal.codeImport.apiKeyDesc'),
         });
         const akInput = akRow.createEl('input', {
             cls: 'cim-apikey-input',
-            attr: { type: 'password', placeholder: 'sk-...' },
+            attr: { type: 'password', placeholder: t('modal.codeImport.apiKeyPlaceholder') },
         });
         akInput.addEventListener('input', () => {
             this.apiKeyInput = akInput.value.trim();
@@ -145,9 +146,9 @@ export class CodeImportModal extends Modal {
 
         // Temperature input
         const tempRow = contentEl.createDiv('cim-temp-row');
-        tempRow.createDiv({ cls: 'cim-temp-label', text: 'Temperature' });
+        tempRow.createDiv({ cls: 'cim-temp-label', text: t('modal.codeImport.temperature') });
         this.tempNoteEl = tempRow.createDiv({ cls: 'cim-temp-desc' });
-        this.tempNoteEl.setText('Default for agent behavior. Will be auto-adjusted per model if needed.');
+        this.tempNoteEl.setText(t('modal.codeImport.temperatureDesc'));
         this.tempInputEl = tempRow.createEl('input', {
             cls: 'cim-temp-input',
             attr: { type: 'number', step: '0.1', min: '0', max: '2', value: '0.2' },
@@ -165,7 +166,7 @@ export class CodeImportModal extends Modal {
         const testRow = contentEl.createDiv('cim-test-row');
         this.testBtn = testRow.createEl('button', {
             cls: 'cim-test-btn',
-            text: 'Test Connection',
+            text: t('modal.codeImport.testConnection'),
         }) as HTMLButtonElement;
         this.testBtn.disabled = true;
         this.testBtn.addEventListener('click', () => this.runTestConnection());
@@ -173,12 +174,12 @@ export class CodeImportModal extends Modal {
 
         // Actions bar
         const actions = contentEl.createDiv('cim-actions');
-        const cancelBtn = actions.createEl('button', { text: 'Cancel' });
+        const cancelBtn = actions.createEl('button', { text: t('modal.codeImport.cancel') });
         cancelBtn.addEventListener('click', () => this.close());
 
         this.importBtn = actions.createEl('button', {
             cls: 'mod-cta cim-import-btn',
-            text: 'Import',
+            text: t('modal.codeImport.import'),
         }) as HTMLButtonElement;
         this.importBtn.disabled = true;
         this.importBtn.addEventListener('click', () => this.doImport());
@@ -206,7 +207,7 @@ export class CodeImportModal extends Modal {
         }
         if (this.importBtn) {
             this.importBtn.disabled = true;
-            this.importBtn.setText('Import');
+            this.importBtn.setText(t('modal.codeImport.import'));
         }
         if (this.testBtn) this.testBtn.disabled = true;
         if (this.testResultEl) {
@@ -231,7 +232,7 @@ export class CodeImportModal extends Modal {
                 this.tempInputEl.disabled = true;
             }
             if (this.tempNoteEl) {
-                this.tempNoteEl.setText(defaults.note ?? `Fixed at ${defaults.temperature} by the API.`);
+                this.tempNoteEl.setText(defaults.note ?? t('modal.codeImport.temperatureFixed', { temperature: String(defaults.temperature) }));
                 this.tempNoteEl.addClass('cim-temp-fixed');
             }
         } else {
@@ -241,7 +242,7 @@ export class CodeImportModal extends Modal {
                 this.tempInputEl.disabled = false;
             }
             if (this.tempNoteEl) {
-                this.tempNoteEl.setText('Default for agent behavior. Will be auto-adjusted per model if needed.');
+                this.tempNoteEl.setText(t('modal.codeImport.temperatureDesc'));
                 this.tempNoteEl.removeClass('cim-temp-fixed');
             }
         }
@@ -278,7 +279,7 @@ export class CodeImportModal extends Modal {
         } else {
             // Manual provider selector fallback
             const sel = header.createEl('select', { cls: 'cim-provider-sel' });
-            sel.createEl('option', { value: '', text: '-- Select provider --' });
+            sel.createEl('option', { value: '', text: t('modal.codeImport.selectProviderDropdown') });
             for (const prov of PROVIDER_OPTIONS) {
                 sel.createEl('option', { value: prov, text: PROVIDER_LABELS[prov] ?? prov });
             }
@@ -294,12 +295,12 @@ export class CodeImportModal extends Modal {
         // Config fields
         if (p.baseUrl) {
             const row = box.createDiv('cim-preview-field');
-            row.createSpan({ cls: 'cim-field-label', text: 'Base URL' });
+            row.createSpan({ cls: 'cim-field-label', text: t('modal.codeImport.baseUrl') });
             row.createSpan({ cls: 'cim-field-value', text: p.baseUrl });
         }
         if (p.apiVersion) {
             const row = box.createDiv('cim-preview-field');
-            row.createSpan({ cls: 'cim-field-label', text: 'API Version' });
+            row.createSpan({ cls: 'cim-field-label', text: t('modal.codeImport.apiVersion') });
             row.createSpan({ cls: 'cim-field-value', text: p.apiVersion });
         }
 
@@ -334,7 +335,7 @@ export class CodeImportModal extends Modal {
         const section = box.createDiv('cim-models-section');
         section.createDiv({
             cls: 'cim-models-header',
-            text: `Models found (${this.parsed.modelNames.length}):`,
+            text: t('modal.codeImport.modelsFound', { count: this.parsed.modelNames.length }),
         });
 
         const list = section.createDiv('cim-models-list');
@@ -352,7 +353,7 @@ export class CodeImportModal extends Modal {
 
             item.createSpan({ cls: 'cim-model-name', text: name });
             if (isDuplicate) {
-                item.createSpan({ cls: 'cim-model-dup', text: '(already exists)' });
+                item.createSpan({ cls: 'cim-model-dup', text: t('modal.codeImport.duplicate') });
             }
 
             // Show model-specific constraint notes
@@ -372,13 +373,13 @@ export class CodeImportModal extends Modal {
 
         if (count > 0 && hasProvider) {
             this.importBtn.disabled = false;
-            this.importBtn.setText(`Import ${count} Model${count > 1 ? 's' : ''}`);
+            this.importBtn.setText(t('modal.codeImport.importCount', { count }));
         } else {
             this.importBtn.disabled = true;
             if (!hasProvider) {
-                this.importBtn.setText('Select a provider');
+                this.importBtn.setText(t('modal.codeImport.selectProvider'));
             } else {
-                this.importBtn.setText('No models found');
+                this.importBtn.setText(t('modal.codeImport.noModels'));
             }
         }
 
@@ -417,7 +418,7 @@ export class CodeImportModal extends Modal {
 
         // UI: show loading state
         this.testBtn.disabled = true;
-        this.testBtn.setText('Testing...');
+        this.testBtn.setText(t('modal.codeImport.testingConnection'));
         this.testResultEl.empty();
         this.testResultEl.style.display = '';
         this.testResultEl.className = 'cim-test-result';
@@ -441,7 +442,7 @@ export class CodeImportModal extends Modal {
                 const detail = result.detail ?? '';
                 if (detail.includes('temperature') && detail.includes('unsupported')) {
                     const hint = this.testResultEl.createDiv('cim-test-hint');
-                    hint.setText('Hint: This model may require a fixed temperature. Try setting temperature to 1.0 above.');
+                    hint.setText(t('modal.codeImport.tempHint'));
 
                     // Auto-fix: set temperature to 1.0
                     if (this.tempInputEl) {
@@ -460,11 +461,11 @@ export class CodeImportModal extends Modal {
             const resultIcon = this.testResultEl.createSpan('cim-test-icon');
             setIcon(resultIcon, 'x');
             this.testResultEl.addClass('cim-test-fail');
-            this.testResultEl.createSpan({ text: err?.message ?? 'Connection test failed' });
+            this.testResultEl.createSpan({ text: err?.message ?? t('modal.codeImport.testFailed') });
         }
 
         this.testBtn.disabled = false;
-        this.testBtn.setText('Test Connection');
+        this.testBtn.setText(t('modal.codeImport.testConnection'));
     }
 
     // ── Import ────────────────────────────────────────────────────────────
@@ -474,13 +475,13 @@ export class CodeImportModal extends Modal {
 
         const provider = this.parsed.provider ?? this.providerOverride;
         if (!provider) {
-            new Notice('Please select a provider.');
+            new Notice(t('modal.codeImport.selectProviderNotice'));
             return;
         }
 
         const modelNames = this.parsed.modelNames;
         if (modelNames.length === 0) {
-            new Notice('No models found.');
+            new Notice(t('modal.codeImport.noModelsNotice'));
             return;
         }
 

@@ -1,4 +1,5 @@
 import { App, Modal } from 'obsidian';
+import { t } from '../../i18n';
 
 export class SystemPromptPreviewModal extends Modal {
     private modeName: string;
@@ -13,14 +14,14 @@ export class SystemPromptPreviewModal extends Modal {
     onOpen(): void {
         const { contentEl } = this;
         contentEl.addClass('system-prompt-preview-modal');
-        contentEl.createEl('h2', { text: `System Prompt — ${this.modeName}` });
+        contentEl.createEl('h2', { text: t('modal.promptPreview.title', { mode: this.modeName }) });
 
-        const copyBtn = contentEl.createEl('button', { text: 'Copy to clipboard', cls: 'mod-cta' });
+        const copyBtn = contentEl.createEl('button', { text: t('modal.promptPreview.copy'), cls: 'mod-cta' });
         copyBtn.style.marginBottom = '12px';
         copyBtn.addEventListener('click', async () => {
             await navigator.clipboard.writeText(this.prompt);
-            copyBtn.setText('Copied!');
-            setTimeout(() => copyBtn.setText('Copy to clipboard'), 2000);
+            copyBtn.setText(t('modal.promptPreview.copied'));
+            setTimeout(() => copyBtn.setText(t('modal.promptPreview.copy')), 2000);
         });
 
         const pre = contentEl.createEl('pre', { cls: 'system-prompt-preview-pre' });

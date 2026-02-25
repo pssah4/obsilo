@@ -2,6 +2,7 @@ import { App, Modal, Notice, setIcon } from 'obsidian';
 import type { CustomModel, ProviderType } from '../../types/settings';
 import { PROVIDER_LABELS, PROVIDER_COLORS, MODEL_SUGGESTIONS, EMBEDDING_PROVIDERS, EMBEDDING_SUGGESTIONS } from './constants';
 import { testModelConnection, testEmbeddingConnection, fetchProviderModels, fetchOllamaModels, fetchEmbeddingModels, isTemperatureFixed, maxTemperature } from './testModelConnection';
+import { t } from '../../i18n';
 
 export class ModelConfigModal extends Modal {
     private model: CustomModel;
@@ -70,8 +71,8 @@ export class ModelConfigModal extends Modal {
         contentEl.addClass('model-config-modal');
         contentEl.createEl('h3', {
             text: this.isNew
-                ? (this.forEmbedding ? 'Add Embedding Model' : 'Add Model')
-                : `Configure — ${this.model.displayName ?? this.model.name}`,
+                ? (this.forEmbedding ? t('modal.modelConfig.addEmbedding') : t('modal.modelConfig.addModel'))
+                : t('modal.modelConfig.configure', { name: this.model.displayName ?? this.model.name }),
             cls: 'modal-title',
         });
         this.buildForm(contentEl);
@@ -97,7 +98,7 @@ export class ModelConfigModal extends Modal {
         this.providerGuideEl = form.createDiv('mcm-guide');
 
         // ── Provider ─────────────────────────────────────────────────────
-        const provRow = row('Provider');
+        const provRow = row(t('modal.modelConfig.provider'));
         const provSel = provRow.createEl('select', { cls: 'mcm-select' });
         (this.forEmbedding ? EMBEDDING_PROVIDERS : ['anthropic', 'openai', 'ollama', 'lmstudio', 'openrouter', 'azure', 'custom'] as ProviderType[]).forEach((p) => {
             const opt = provSel.createEl('option', { value: p, text: PROVIDER_LABELS[p] });
@@ -112,11 +113,11 @@ export class ModelConfigModal extends Modal {
         // ── Quick Pick (suggestions per provider) ─────────────────────────
         this.suggestRow = form.createDiv('mcm-row mcm-suggest-row');
         const suggestLabel = this.suggestRow.createDiv('mcm-label');
-        suggestLabel.createSpan({ text: 'Quick Pick' });
-        suggestLabel.createSpan({ text: 'Select to pre-fill Model ID', cls: 'mcm-desc' });
+        suggestLabel.createSpan({ text: t('modal.modelConfig.quickPick') });
+        suggestLabel.createSpan({ text: t('modal.modelConfig.quickPickDesc'), cls: 'mcm-desc' });
         const suggestControls = this.suggestRow.createDiv('mcm-suggest-controls');
         this.suggestSelEl = suggestControls.createEl('select', { cls: 'mcm-select mcm-suggest-sel' });
-        this.suggestSelEl.createEl('option', { value: '', text: '— pick a model —', attr: { disabled: '', selected: '' } });
+        this.suggestSelEl.createEl('option', { value: '', text: t('modal.modelConfig.pickModel'), attr: { disabled: '', selected: '' } });
         this.suggestSelEl.addEventListener('change', () => {
             const val = this.suggestSelEl!.value;
             if (!val) return;
@@ -135,8 +136,8 @@ export class ModelConfigModal extends Modal {
             this.suggestSelEl!.selectedIndex = 0;
             this.updateTemperatureUI();
         });
-        // ↻ Fetch button — fetches current model list from the provider's API
-        const fetchBtn = suggestControls.createEl('button', { cls: 'mcm-fetch-btn', attr: { title: 'Fetch current models from provider API' } });
+        // Fetch button — fetches current model list from the provider's API
+        const fetchBtn = suggestControls.createEl('button', { cls: 'mcm-fetch-btn', attr: { title: t('modal.modelConfig.fetchModels') } });
         setIcon(fetchBtn, 'refresh-cw');
         fetchBtn.addEventListener('click', async () => {
             if (!this.suggestSelEl) return;
@@ -147,7 +148,7 @@ export class ModelConfigModal extends Modal {
                     ? await fetchEmbeddingModels(this.formProvider, this.formApiKey, this.formBaseUrl || undefined, this.formApiVersion || undefined)
                     : await fetchProviderModels(this.formProvider, this.formApiKey, this.formBaseUrl || undefined);
                 this.suggestSelEl.options.length = 0;
-                this.suggestSelEl.createEl('option', { value: '', text: `— ${models.length} models fetched —`, attr: { disabled: '', selected: '' } });
+                this.suggestSelEl.createEl('option', { value: '', text: t('modal.modelConfig.modelsFetched', { count: models.length }), attr: { disabled: '', selected: '' } });
                 // For OpenRouter chat models, group by vendor prefix
                 if (!this.forEmbedding && this.formProvider === 'openrouter') {
                     const groups = new Map<string, typeof models>();
@@ -175,7 +176,7 @@ export class ModelConfigModal extends Modal {
             } catch (e: any) {
                 // requestUrl can throw a Response-like object (no .message) — handle both
                 const errMsg = e?.message ?? (e?.status ? `HTTP ${e.status}` : String(e));
-                new Notice(`Failed to fetch models: ${errMsg}`);
+                new Notice(t('modal.modelConfig.fetchFailed', { error: errMsg }));
             } finally {
                 fetchBtn.disabled = false;
                 setIcon(fetchBtn, 'refresh-cw');
@@ -183,10 +184,10 @@ export class ModelConfigModal extends Modal {
         });
 
         // ── Model ID ─────────────────────────────────────────────────────
-        const nameRow = row('Model ID', 'Exact ID used in API calls');
+        const nameRow = row(t('modal.modelConfig.modelId'), t('modal.modelConfig.modelIdDesc'));
         this.nameInputEl = nameRow.createEl('input', {
             cls: 'mcm-input',
-            attr: { type: 'text', placeholder: 'gpt-4o' },
+            attr: { type: 'text', placeholder: t('modal.modelConfig.modelIdPlaceholder') },
         });
         this.nameInputEl.value = this.formName;
         this.nameInputEl.addEventListener('input', () => (this.formName = this.nameInputEl!.value.trim()));
@@ -201,10 +202,10 @@ export class ModelConfigModal extends Modal {
         this.buildCustomBrowser(this.customBrowserRow);
 
         // ── Display Name ──────────────────────────────────────────────────
-        const dnRow = row('Display Name', 'Label in chat toolbar');
+        const dnRow = row(t('modal.modelConfig.displayName'), t('modal.modelConfig.displayNameDesc'));
         this.dnInputEl = dnRow.createEl('input', {
             cls: 'mcm-input',
-            attr: { type: 'text', placeholder: this.formName || 'e.g. My GPT-4o' },
+            attr: { type: 'text', placeholder: this.formName || t('modal.modelConfig.displayNamePlaceholder', { name: 'GPT-4o' }) },
         });
         this.dnInputEl.value = this.formDisplayName;
         this.dnInputEl.addEventListener('input', () => (this.formDisplayName = this.dnInputEl!.value));
@@ -212,11 +213,11 @@ export class ModelConfigModal extends Modal {
         // ── API Key ───────────────────────────────────────────────────────
         this.apiKeyRow = form.createDiv('mcm-row');
         const akLabel = this.apiKeyRow.createDiv('mcm-label');
-        akLabel.createSpan({ text: 'API Key' });
+        akLabel.createSpan({ text: t('modal.modelConfig.apiKey') });
         this.apiKeyDescEl = akLabel.createSpan({ cls: 'mcm-desc' });
         const akInput = this.apiKeyRow.createEl('input', {
             cls: 'mcm-input',
-            attr: { type: 'password', placeholder: 'sk-...' },
+            attr: { type: 'password', placeholder: t('modal.modelConfig.apiKeyPlaceholder') },
         });
         akInput.value = this.formApiKey;
         akInput.addEventListener('input', () => (this.formApiKey = akInput.value.trim()));
@@ -224,7 +225,7 @@ export class ModelConfigModal extends Modal {
         // ── Base URL ──────────────────────────────────────────────────────
         this.baseUrlRow = form.createDiv('mcm-row');
         const buLabel = this.baseUrlRow.createDiv('mcm-label');
-        buLabel.createSpan({ text: 'Base URL' });
+        buLabel.createSpan({ text: t('modal.modelConfig.baseUrl') });
         this.baseUrlDescEl = buLabel.createSpan({ cls: 'mcm-desc' });
         const buInput = this.baseUrlRow.createEl('input', {
             cls: 'mcm-input',
@@ -236,20 +237,20 @@ export class ModelConfigModal extends Modal {
         // ── API Version (Azure + some enterprise gateways) ───────────────
         this.apiVersionRow = form.createDiv('mcm-row');
         const avLabel = this.apiVersionRow.createDiv('mcm-label');
-        avLabel.createSpan({ text: 'API Version' });
-        avLabel.createSpan({ text: 'Required by Azure OpenAI (e.g. 2024-10-21)', cls: 'mcm-desc' });
+        avLabel.createSpan({ text: t('modal.modelConfig.apiVersion') });
+        avLabel.createSpan({ text: t('modal.modelConfig.apiVersionDesc'), cls: 'mcm-desc' });
         const avInput = this.apiVersionRow.createEl('input', {
             cls: 'mcm-input mcm-input-sm',
-            attr: { type: 'text', placeholder: '2024-10-21' },
+            attr: { type: 'text', placeholder: t('modal.modelConfig.apiVersionPlaceholder') },
         });
         avInput.value = this.formApiVersion;
         avInput.addEventListener('input', () => (this.formApiVersion = avInput.value.trim()));
 
         // ── Max Tokens ────────────────────────────────────────────────────
-        const mtRow = row('Max Tokens', 'Max length of the response');
+        const mtRow = row(t('modal.modelConfig.maxTokens'), t('modal.modelConfig.maxTokensDesc'));
         const mtInput = mtRow.createEl('input', {
             cls: 'mcm-input mcm-input-sm',
-            attr: { type: 'number', placeholder: '8192' },
+            attr: { type: 'number', placeholder: t('modal.modelConfig.maxTokensPlaceholder') },
         });
         mtInput.value = String(this.formMaxTokens);
         mtInput.addEventListener('input', () => {
@@ -261,15 +262,15 @@ export class ModelConfigModal extends Modal {
         if (!this.forEmbedding) {
             this.temperatureRow = form.createDiv('mcm-row mcm-temperature-row');
             const tempLabel = this.temperatureRow.createDiv('mcm-label');
-            tempLabel.createSpan({ text: 'Temperature' });
-            tempLabel.createSpan({ text: 'Randomness of responses (0 = deterministic, higher = creative)', cls: 'mcm-desc' });
+            tempLabel.createSpan({ text: t('modal.modelConfig.temperature') });
+            tempLabel.createSpan({ text: t('modal.modelConfig.temperatureDesc'), cls: 'mcm-desc' });
 
             const tempControls = this.temperatureRow.createDiv('mcm-temperature-controls');
 
             const toggleWrap = tempControls.createDiv('mcm-temperature-toggle');
             const toggleChk = toggleWrap.createEl('input', { attr: { type: 'checkbox' } });
             toggleChk.checked = this.formTemperatureEnabled;
-            toggleWrap.createSpan({ text: 'Custom temperature', cls: 'mcm-temperature-toggle-label' });
+            toggleWrap.createSpan({ text: t('modal.modelConfig.customTemperature'), cls: 'mcm-temperature-toggle-label' });
 
             const sliderWrap = tempControls.createDiv('mcm-temperature-slider-wrap');
             this.temperatureSliderEl = sliderWrap.createEl('input', {
@@ -305,13 +306,13 @@ export class ModelConfigModal extends Modal {
     private buildActions(el: HTMLElement): void {
         const bar = el.createDiv('mcm-actions');
 
-        this.testBtn = bar.createEl('button', { cls: 'mcm-btn-test', text: 'Test Connection' });
+        this.testBtn = bar.createEl('button', { cls: 'mcm-btn-test', text: t('modal.modelConfig.testConnection') });
         this.testBtn.addEventListener('click', () => this.runTest());
 
-        const saveBtn = bar.createEl('button', { cls: 'mod-cta', text: this.isNew ? 'Add' : 'Save' });
+        const saveBtn = bar.createEl('button', { cls: 'mod-cta', text: this.isNew ? t('modal.modelConfig.add') : t('modal.modelConfig.save') });
         saveBtn.addEventListener('click', () => this.save());
 
-        const cancelBtn = bar.createEl('button', { text: 'Cancel' });
+        const cancelBtn = bar.createEl('button', { text: t('modal.modelConfig.cancel') });
         cancelBtn.addEventListener('click', () => this.close());
     }
 
@@ -364,20 +365,20 @@ export class ModelConfigModal extends Modal {
         // Update inline field hints
         if (this.apiKeyDescEl) {
             const hints: Record<string, string> = {
-                anthropic: 'Starts with sk-ant-...',
-                openai: 'Starts with sk-...',
-                openrouter: 'Starts with sk-or-...',
-                azure: 'Your Azure OpenAI API key',
-                custom: 'Leave empty for local services',
+                anthropic: t('modal.modelConfig.keyHint.anthropic'),
+                openai: t('modal.modelConfig.keyHint.openai'),
+                openrouter: t('modal.modelConfig.keyHint.openrouter'),
+                azure: t('modal.modelConfig.keyHint.azure'),
+                custom: t('modal.modelConfig.keyHint.local'),
             };
             this.apiKeyDescEl.setText(hints[p] ?? '');
         }
         if (this.baseUrlDescEl) {
             const hints: Record<string, string> = {
-                ollama: 'Default: http://localhost:11434',
-                lmstudio: 'Default: http://localhost:1234 (no /v1 needed)',
-                azure: 'Your endpoint up to /openai, e.g. https://your-resource.openai.azure.com/openai',
-                custom: 'Include /v1 suffix, e.g. http://localhost:1234/v1',
+                ollama: t('modal.modelConfig.urlHint.ollama'),
+                lmstudio: t('modal.modelConfig.urlHint.lmstudio'),
+                azure: t('modal.modelConfig.urlHint.azure'),
+                custom: t('modal.modelConfig.urlHint.custom'),
             };
             this.baseUrlDescEl.setText(hints[p] ?? '');
         }
@@ -408,7 +409,7 @@ export class ModelConfigModal extends Modal {
             this.temperatureSliderEl.disabled = true;
             if (this.temperatureValueEl) this.temperatureValueEl.setText('1.00');
             if (this.temperatureNoteEl) {
-                this.temperatureNoteEl.setText('This model only accepts temperature = 1.0 (enforced by the API).');
+                this.temperatureNoteEl.setText(t('modal.modelConfig.temperatureFixed'));
                 this.temperatureNoteEl.style.display = '';
             }
             this.temperatureRow.querySelectorAll('input[type=checkbox]').forEach((el: Element) => {
@@ -430,121 +431,69 @@ export class ModelConfigModal extends Modal {
     private renderProviderGuide(container: HTMLElement, provider: ProviderType): void {
         const guide = container.createDiv('mcm-guide-inner');
 
-        const link = (text: string, url: string): HTMLElement => {
-            const a = createEl('a', { text, href: url });
-            a.setAttribute('target', '_blank');
-            a.setAttribute('rel', 'noopener noreferrer');
-            return a;
-        };
-
         if (provider === 'anthropic') {
-            guide.createEl('strong', { text: 'How to get your Anthropic API key:' });
+            guide.createEl('strong', { text: t('guide.anthropic.heading') });
             const steps = guide.createEl('ol', { cls: 'mcm-guide-steps' });
-            const s1 = steps.createEl('li');
-            s1.appendText('Go to ');
-            s1.appendChild(link('console.anthropic.com', 'https://console.anthropic.com'));
-            s1.appendText(' and sign in (or create an account).');
-            steps.createEl('li', { text: 'Click "API Keys" in the left sidebar.' });
-            steps.createEl('li', { text: 'Click "Create Key", give it a name, and copy it.' });
-            steps.createEl('li', { text: 'Paste the key (starts with sk-ant-...) into the API Key field above.' });
-            guide.createDiv({ cls: 'mcm-guide-tip', text: '💡 Recommended model: claude-sonnet-4-5-20250929 (good balance of speed and quality).' });
+            steps.createEl('li', { text: t('guide.anthropic.step1') });
+            steps.createEl('li', { text: t('guide.anthropic.step2') });
+            steps.createEl('li', { text: t('guide.anthropic.step3') });
+            steps.createEl('li', { text: t('guide.anthropic.step4') });
+            guide.createDiv({ cls: 'mcm-guide-tip', text: t('guide.anthropic.tip') });
 
         } else if (provider === 'openai') {
-            guide.createEl('strong', { text: 'How to get your OpenAI API key:' });
+            guide.createEl('strong', { text: t('guide.openai.heading') });
             const steps = guide.createEl('ol', { cls: 'mcm-guide-steps' });
-            const s1 = steps.createEl('li');
-            s1.appendText('Go to ');
-            s1.appendChild(link('platform.openai.com', 'https://platform.openai.com'));
-            s1.appendText(' and sign in.');
-            steps.createEl('li', { text: 'Click your name (top right) → "API keys".' });
-            steps.createEl('li', { text: 'Click "Create new secret key" and copy it immediately (you can\'t see it again).' });
-            steps.createEl('li', { text: 'Paste the key (starts with sk-...) into the API Key field above.' });
-            guide.createDiv({ cls: 'mcm-guide-tip', text: '💡 Recommended model: gpt-4o. Budget alternative: gpt-4o-mini.' });
+            steps.createEl('li', { text: t('guide.openai.step1') });
+            steps.createEl('li', { text: t('guide.openai.step2') });
+            steps.createEl('li', { text: t('guide.openai.step3') });
+            steps.createEl('li', { text: t('guide.openai.step4') });
+            guide.createDiv({ cls: 'mcm-guide-tip', text: t('guide.openai.tip') });
 
         } else if (provider === 'ollama') {
-            guide.createEl('strong', { text: 'How to use Ollama (runs locally, no cost):' });
+            guide.createEl('strong', { text: t('guide.ollama.heading') });
             const steps = guide.createEl('ol', { cls: 'mcm-guide-steps' });
-            const s1 = steps.createEl('li');
-            s1.appendText('Install Ollama from ');
-            s1.appendChild(link('ollama.ai', 'https://ollama.ai'));
-            s1.appendText('.');
-            const s2 = steps.createEl('li');
-            s2.appendText('Open a Terminal and pull a model, e.g.: ');
-            s2.createEl('code', { text: 'ollama pull llama3.2' });
-            const s3 = steps.createEl('li');
-            s3.appendText('Ollama starts automatically. The Base URL is ');
-            s3.createEl('code', { text: 'http://localhost:11434' });
-            s3.appendText(' by default.');
-            steps.createEl('li', { text: 'Enter the model name exactly as pulled (e.g. llama3.2) into Model ID above.' });
-            guide.createDiv({ cls: 'mcm-guide-tip', text: '💡 Not all models support tool use. Recommended: qwen2.5:7b, llama3.2, mistral.' });
+            steps.createEl('li', { text: t('guide.ollama.step1') });
+            steps.createEl('li', { text: t('guide.ollama.step2') });
+            steps.createEl('li', { text: t('guide.ollama.step3') });
+            steps.createEl('li', { text: t('guide.ollama.step4') });
+            guide.createDiv({ cls: 'mcm-guide-tip', text: t('guide.ollama.tip') });
 
         } else if (provider === 'openrouter') {
-            guide.createEl('strong', { text: 'How to use OpenRouter (access 100+ models with one key):' });
+            guide.createEl('strong', { text: t('guide.openrouter.heading') });
             const steps = guide.createEl('ol', { cls: 'mcm-guide-steps' });
-            const s1 = steps.createEl('li');
-            s1.appendText('Go to ');
-            s1.appendChild(link('openrouter.ai', 'https://openrouter.ai'));
-            s1.appendText(' and create a free account.');
-            steps.createEl('li', { text: 'Click your avatar (top right) → Keys → Create Key.' });
-            steps.createEl('li', { text: 'Copy the key (starts with sk-or-...) and paste it into the API Key field above.' });
-            steps.createEl('li', { text: 'Enter the Model ID — use the exact OpenRouter model name, e.g. anthropic/claude-3.5-sonnet or openai/gpt-4o.' });
-            const s5 = steps.createEl('li');
-            s5.appendText('Browse all available models at ');
-            s5.appendChild(link('openrouter.ai/models', 'https://openrouter.ai/models'));
-            s5.appendText('.');
-            guide.createDiv({ cls: 'mcm-guide-tip', text: '💡 The Base URL is pre-configured. Many models have a free tier — look for ":free" in the model name.' });
+            steps.createEl('li', { text: t('guide.openrouter.step1') });
+            steps.createEl('li', { text: t('guide.openrouter.step2') });
+            steps.createEl('li', { text: t('guide.openrouter.step3') });
+            steps.createEl('li', { text: t('guide.openrouter.step4') });
+            steps.createEl('li', { text: t('guide.openrouter.step5') });
+            guide.createDiv({ cls: 'mcm-guide-tip', text: t('guide.openrouter.tip') });
 
         } else if (provider === 'azure') {
-            guide.createEl('strong', { text: 'How to use Azure OpenAI (enterprise deployments):' });
+            guide.createEl('strong', { text: t('guide.azure.heading') });
             const steps = guide.createEl('ol', { cls: 'mcm-guide-steps' });
-            steps.createEl('li', { text: 'In the Azure Portal, open your Azure OpenAI resource.' });
-            const s2 = steps.createEl('li');
-            s2.appendText('Under "Resource Management" → "Keys and Endpoint", copy the ');
-            s2.createEl('strong', { text: 'Key' });
-            s2.appendText(' and the ');
-            s2.createEl('strong', { text: 'Endpoint' });
-            s2.appendText(' URL.');
-            const s3 = steps.createEl('li');
-            s3.appendText('In ');
-            s3.createEl('strong', { text: 'Base URL' });
-            s3.appendText(', enter: ');
-            s3.createEl('code', { text: '{endpoint}/openai' });
-            s3.appendText(' (e.g. ');
-            s3.createEl('code', { text: 'https://my-resource.openai.azure.com/openai' });
-            s3.appendText(').');
-            const s4 = steps.createEl('li');
-            s4.appendText('In ');
-            s4.createEl('strong', { text: 'Model ID' });
-            s4.appendText(', enter the exact ');
-            s4.createEl('strong', { text: 'deployment name' });
-            s4.appendText(' from Azure AI Studio (e.g. ');
-            s4.createEl('code', { text: 'gpt-4o' });
-            s4.appendText(').');
-            steps.createEl('li', { text: 'Set the API Version to match what your deployment supports (default: 2024-10-21).' });
-            guide.createDiv({ cls: 'mcm-guide-tip', text: '💡 For enterprise API gateways that route to Azure OpenAI: use the gateway base URL (up to /openai), deployment name as Model ID, and your gateway API key.' });
+            steps.createEl('li', { text: t('guide.azure.step1') });
+            steps.createEl('li', { text: t('guide.azure.step2') });
+            steps.createEl('li', { text: t('guide.azure.step3') });
+            steps.createEl('li', { text: t('guide.azure.step4') });
+            steps.createEl('li', { text: t('guide.azure.step5') });
+            guide.createDiv({ cls: 'mcm-guide-tip', text: t('guide.azure.tip') });
 
         } else if (provider === 'lmstudio') {
-            guide.createEl('strong', { text: 'How to use LM Studio (local models, no cost, no API key):' });
+            guide.createEl('strong', { text: t('guide.lmstudio.heading') });
             const steps = guide.createEl('ol', { cls: 'mcm-guide-steps' });
-            const s1 = steps.createEl('li');
-            s1.appendText('Download LM Studio from ');
-            s1.appendChild(link('lmstudio.ai', 'https://lmstudio.ai'));
-            s1.appendText(' and install a model of your choice.');
-            const s2 = steps.createEl('li');
-            s2.appendText('In LM Studio, go to the ');
-            s2.createEl('strong', { text: 'Developer' });
-            s2.appendText(' tab (left sidebar) and start the Local Server.');
-            steps.createEl('li', { text: 'The default Base URL is http://localhost:1234 — no API key needed.' });
-            steps.createEl('li', { text: 'Click "Browse available models" below to pick a loaded model.' });
-            guide.createDiv({ cls: 'mcm-guide-tip', text: '💡 Make sure to load a model in LM Studio before starting the server, otherwise no models will appear.' });
+            steps.createEl('li', { text: t('guide.lmstudio.step1') });
+            steps.createEl('li', { text: t('guide.lmstudio.step2') });
+            steps.createEl('li', { text: t('guide.lmstudio.step3') });
+            steps.createEl('li', { text: t('guide.lmstudio.step4') });
+            guide.createDiv({ cls: 'mcm-guide-tip', text: t('guide.lmstudio.tip') });
 
         } else if (provider === 'custom') {
-            guide.createEl('strong', { text: 'OpenAI-compatible API (Mistral, Groq, etc.):' });
+            guide.createEl('strong', { text: t('guide.custom.heading') });
             const table = guide.createEl('table', { cls: 'mcm-guide-table' });
             const rows: [string, string, string][] = [
-                ['Mistral', 'Get key at console.mistral.ai → API Keys', 'https://api.mistral.ai/v1'],
-                ['Groq', 'Get key at console.groq.com → API Keys', 'https://api.groq.com/openai/v1'],
-                ['OpenRouter', 'Get key at openrouter.ai → Keys', 'https://openrouter.ai/api/v1'],
+                ['Mistral', 'Get key at console.mistral.ai \u2192 API Keys', 'https://api.mistral.ai/v1'],
+                ['Groq', 'Get key at console.groq.com \u2192 API Keys', 'https://api.groq.com/openai/v1'],
+                ['OpenRouter', 'Get key at openrouter.ai \u2192 Keys', 'https://openrouter.ai/api/v1'],
             ];
             rows.forEach(([service, hint, url]) => {
                 const tr = table.createEl('tr');
@@ -553,28 +502,28 @@ export class ModelConfigModal extends Modal {
                 td.createSpan({ text: hint });
                 tr.createEl('td', { cls: 'mcm-guide-url' }).createEl('code', { text: url });
             });
-            guide.createDiv({ cls: 'mcm-guide-tip', text: '💡 Any OpenAI-compatible endpoint. Enter the base URL with /v1 suffix and your API key.' });
+            guide.createDiv({ cls: 'mcm-guide-tip', text: t('guide.custom.tip') });
         }
     }
 
     private buildOllamaBrowser(container: HTMLElement): void {
         const browseBtn = container.createEl('button', { cls: 'mcm-browse-btn' });
         setIcon(browseBtn.createSpan('mcm-browse-icon'), 'list');
-        const browseLabelEl = browseBtn.createSpan({ text: 'Browse installed models' });
+        const browseLabelEl = browseBtn.createSpan({ text: t('modal.modelConfig.browseInstalled') });
 
         const listEl = container.createDiv('mcm-model-list');
         listEl.style.display = 'none';
 
         browseBtn.addEventListener('click', async () => {
             browseBtn.disabled = true;
-            browseLabelEl.setText('Loading…');
+            browseLabelEl.setText(t('modal.modelConfig.loadingModels'));
             listEl.empty();
             try {
                 const baseUrl = this.formBaseUrl || 'http://localhost:11434';
                 const models = await fetchOllamaModels(baseUrl);
                 listEl.style.display = '';
                 if (models.length === 0) {
-                    listEl.createDiv({ cls: 'mcm-model-empty', text: 'No models found. Pull one first, e.g.: ollama pull llama3.2' });
+                    listEl.createDiv({ cls: 'mcm-model-empty', text: t('modal.modelConfig.noModelsOllama') });
                 } else {
                     models.forEach((name) => {
                         const item = listEl.createEl('button', { cls: 'mcm-model-item', text: name });
@@ -592,32 +541,32 @@ export class ModelConfigModal extends Modal {
                 listEl.style.display = '';
                 listEl.createDiv({
                     cls: 'mcm-model-empty',
-                    text: 'Cannot reach Ollama. Make sure it is running, then try again.',
+                    text: t('modal.modelConfig.ollamaUnreachable'),
                 });
             }
             browseBtn.disabled = false;
-            browseLabelEl.setText('Browse installed models');
+            browseLabelEl.setText(t('modal.modelConfig.browseInstalled'));
         });
     }
 
-    /** Browse models from an OpenAI-compatible local or remote server (LM Studio, Mistral, Groq…) */
+    /** Browse models from an OpenAI-compatible local or remote server (LM Studio, Mistral, Groq...) */
     private buildCustomBrowser(container: HTMLElement): void {
         const browseBtn = container.createEl('button', { cls: 'mcm-browse-btn' });
         setIcon(browseBtn.createSpan('mcm-browse-icon'), 'list');
-        const browseLabelEl = browseBtn.createSpan({ text: 'Browse available models' });
+        const browseLabelEl = browseBtn.createSpan({ text: t('modal.modelConfig.browseAvailable') });
 
         const listEl = container.createDiv('mcm-model-list');
         listEl.style.display = 'none';
 
         browseBtn.addEventListener('click', async () => {
             browseBtn.disabled = true;
-            browseLabelEl.setText('Loading…');
+            browseLabelEl.setText(t('modal.modelConfig.loadingModels'));
             listEl.empty();
             try {
                 const models = await fetchProviderModels('custom', this.formApiKey, this.formBaseUrl || undefined);
                 listEl.style.display = '';
                 if (models.length === 0) {
-                    listEl.createDiv({ cls: 'mcm-model-empty', text: 'No models found at this Base URL.' });
+                    listEl.createDiv({ cls: 'mcm-model-empty', text: t('modal.modelConfig.noModelsUrl') });
                 } else {
                     models.forEach(({ id }) => {
                         const item = listEl.createEl('button', { cls: 'mcm-model-item', text: id });
@@ -633,13 +582,14 @@ export class ModelConfigModal extends Modal {
                 }
             } catch (e: any) {
                 listEl.style.display = '';
+                const errMsg = e?.message ?? 'Unknown error';
                 listEl.createDiv({
                     cls: 'mcm-model-empty',
-                    text: `Cannot reach server: ${e?.message ?? 'Unknown error'}. Check Base URL and try again.`,
+                    text: t('modal.modelConfig.serverUnreachable', { error: errMsg }),
                 });
             }
             browseBtn.disabled = false;
-            browseLabelEl.setText('Browse available models');
+            browseLabelEl.setText(t('modal.modelConfig.browseAvailable'));
         });
     }
 
@@ -653,15 +603,15 @@ export class ModelConfigModal extends Modal {
             apiVersion: this.formApiVersion || undefined,
             enabled: true,
         };
-        if (!m.name) { this.showTestResult(false, 'Enter a Model ID first', undefined); return; }
+        if (!m.name) { this.showTestResult(false, t('modal.modelConfig.enterModelIdFirst'), undefined); return; }
         this.testBtn.disabled = true;
-        this.testBtn.setText('Testing…');
+        this.testBtn.setText(t('modal.modelConfig.testing'));
         this.testResultEl.style.display = 'none';
         const res = this.forEmbedding
             ? await testEmbeddingConnection(m)
             : await testModelConnection(m);
         this.testBtn.disabled = false;
-        this.testBtn.setText('Test Connection');
+        this.testBtn.setText(t('modal.modelConfig.testConnection'));
         this.showTestResult(res.ok, res.message, res.detail);
     }
 
@@ -680,7 +630,7 @@ export class ModelConfigModal extends Modal {
 
     private save(): void {
         const name = this.formName || this.model.name;
-        if (!name) { new Notice('Model ID is required'); return; }
+        if (!name) { new Notice(t('modal.modelConfig.modelIdRequired')); return; }
         this.onSave({
             ...this.model,
             name,

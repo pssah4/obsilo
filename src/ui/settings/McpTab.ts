@@ -2,6 +2,7 @@ import { App, Modal, Notice, Setting, setIcon } from 'obsidian';
 import type ObsidianAgentPlugin from '../../main';
 import { ContentEditorModal } from './ContentEditorModal';
 import type { McpServerConfig } from '../../types/settings';
+import { t } from '../../i18n';
 
 export class McpTab {
     constructor(private plugin: ObsidianAgentPlugin, private app: App, private rerender: () => void) {}
@@ -9,14 +10,13 @@ export class McpTab {
     build(containerEl: HTMLElement): void {
         containerEl.createEl('p', {
             cls: 'agent-settings-desc',
-            text: 'Connect external tools and data sources via the Model Context Protocol (MCP). ' +
-                  'Each server exposes tools the agent can call using use_mcp_tool.',
+            text: t('settings.mcp.desc'),
         });
 
         const mcpClient = this.plugin.mcpClient;
 
         // ── Add server button ──────────────────────────────────────────────────
-        const addBtn = containerEl.createEl('button', { text: 'Add Server', cls: 'mod-cta agent-mcp-add-btn' });
+        const addBtn = containerEl.createEl('button', { text: t('settings.mcp.addServer'), cls: 'mod-cta agent-mcp-add-btn' });
 
         // ── Server list ────────────────────────────────────────────────────────
         const listEl = containerEl.createDiv({ cls: 'agent-mcp-list' });
@@ -28,7 +28,7 @@ export class McpTab {
             if (names.length === 0) {
                 listEl.createEl('p', {
                     cls: 'agent-settings-desc',
-                    text: 'No MCP servers configured. Click "Add Server" to get started.',
+                    text: t('settings.mcp.empty'),
                 });
                 return;
             }
@@ -53,7 +53,7 @@ export class McpTab {
                     const toolCount = conn?.tools.length ?? 0;
                     info.createSpan({
                         cls: 'agent-mcp-server-tools',
-                        text: `${toolCount} tool${toolCount !== 1 ? 's' : ''}`,
+                        text: t('settings.mcp.toolCount', { count: toolCount }),
                     });
                 }
 
@@ -61,13 +61,13 @@ export class McpTab {
                 const actions = row.createDiv({ cls: 'agent-rules-actions' });
 
                 if (status === 'connected') {
-                    const disconnBtn = actions.createEl('button', { text: 'Disconnect' });
+                    const disconnBtn = actions.createEl('button', { text: t('settings.mcp.disconnect') });
                     disconnBtn.addEventListener('click', async () => {
                         await mcpClient?.disconnect(name);
                         renderList();
                     });
                 } else if (status !== 'connecting') {
-                    const connBtn = actions.createEl('button', { text: status === 'error' ? 'Retry' : 'Connect' });
+                    const connBtn = actions.createEl('button', { text: status === 'error' ? t('settings.mcp.retry') : t('settings.mcp.connect') });
                     connBtn.addEventListener('click', async () => {
                         if (mcpClient) {
                             await mcpClient.connect(name, config);
@@ -78,12 +78,12 @@ export class McpTab {
 
                 const editBtn = actions.createEl('button', { cls: 'agent-rules-edit-btn' });
                 setIcon(editBtn, 'pencil');
-                editBtn.setAttribute('aria-label', 'Edit');
+                editBtn.setAttribute('aria-label', t('settings.mcp.edit'));
                 editBtn.addEventListener('click', () => openAddModal(name, config));
 
                 const delBtn = actions.createEl('button', { cls: 'agent-rules-delete-btn' });
                 setIcon(delBtn, 'trash-2');
-                delBtn.setAttribute('aria-label', 'Delete');
+                delBtn.setAttribute('aria-label', t('settings.mcp.delete'));
                 delBtn.addEventListener('click', async () => {
                     if (mcpClient) await mcpClient.disconnect(name);
                     delete this.plugin.settings.mcpServers[name];
@@ -96,12 +96,12 @@ export class McpTab {
         // ── Add/Edit modal ─────────────────────────────────────────────────────
         const openAddModal = (editName?: string, editConfig?: import('../../types/settings').McpServerConfig) => {
             const modal = new Modal(this.app);
-            modal.titleEl.setText(editName ? `Edit Server: ${editName}` : 'Add MCP Server');
+            modal.titleEl.setText(editName ? t('settings.mcp.editServer', { name: editName }) : t('settings.mcp.addServerTitle'));
 
             const { contentEl } = modal;
 
             const nameInput = contentEl.createEl('input', {
-                type: 'text', placeholder: 'Server name (e.g. "filesystem")',
+                type: 'text', placeholder: t('settings.mcp.namePlaceholder'),
                 cls: 'agent-mcp-modal-input',
             }) as HTMLInputElement;
             nameInput.value = editName ?? '';
@@ -115,35 +115,35 @@ export class McpTab {
 
             // stdio fields
             const stdioSection = contentEl.createDiv({ cls: 'agent-mcp-section' });
-            stdioSection.createEl('label', { text: 'Command' });
+            stdioSection.createEl('label', { text: t('settings.mcp.labelCommand') });
             const cmdInput = stdioSection.createEl('input', {
-                type: 'text', placeholder: 'e.g. npx',
+                type: 'text', placeholder: t('settings.mcp.commandPlaceholder'),
                 cls: 'agent-mcp-modal-input',
             }) as HTMLInputElement;
             cmdInput.value = editConfig?.command ?? '';
 
-            stdioSection.createEl('label', { text: 'Args (space-separated)' });
+            stdioSection.createEl('label', { text: t('settings.mcp.labelArgs') });
             const argsInput = stdioSection.createEl('input', {
-                type: 'text', placeholder: 'e.g. -y @modelcontextprotocol/server-filesystem /path',
+                type: 'text', placeholder: t('settings.mcp.argsPlaceholder'),
                 cls: 'agent-mcp-modal-input',
             }) as HTMLInputElement;
             argsInput.value = (editConfig?.args ?? []).join(' ');
 
-            stdioSection.createEl('label', { text: 'Env (KEY=VALUE, one per line)' });
+            stdioSection.createEl('label', { text: t('settings.mcp.labelEnv') });
             const envInput = stdioSection.createEl('textarea', { cls: 'agent-mcp-modal-input' }) as HTMLTextAreaElement;
             envInput.rows = 3;
             envInput.value = Object.entries(editConfig?.env ?? {}).map(([k, v]) => `${k}=${v}`).join('\n');
 
             // URL fields (sse / streamable-http)
             const urlSection = contentEl.createDiv({ cls: 'agent-mcp-section' });
-            urlSection.createEl('label', { text: 'URL' });
+            urlSection.createEl('label', { text: t('settings.mcp.labelUrl') });
             const urlInput = urlSection.createEl('input', {
-                type: 'text', placeholder: 'e.g. http://localhost:3000/sse',
+                type: 'text', placeholder: t('settings.mcp.urlPlaceholder'),
                 cls: 'agent-mcp-modal-input',
             }) as HTMLInputElement;
             urlInput.value = editConfig?.url ?? '';
 
-            urlSection.createEl('label', { text: 'Headers (KEY=VALUE, one per line)' });
+            urlSection.createEl('label', { text: t('settings.mcp.labelHeaders') });
             const headersInput = urlSection.createEl('textarea', { cls: 'agent-mcp-modal-input' }) as HTMLTextAreaElement;
             headersInput.rows = 3;
             headersInput.value = Object.entries(editConfig?.headers ?? {}).map(([k, v]) => `${k}=${v}`).join('\n');
@@ -156,15 +156,15 @@ export class McpTab {
             updateSections();
             typeSelect.addEventListener('change', updateSections);
 
-            contentEl.createEl('label', { text: 'Timeout (seconds)' });
+            contentEl.createEl('label', { text: t('settings.mcp.labelTimeout') });
             const timeoutInput = contentEl.createEl('input', {
-                type: 'number', placeholder: '60',
+                type: 'number', placeholder: t('settings.mcp.timeoutPlaceholder'),
                 cls: 'agent-mcp-modal-input',
             }) as HTMLInputElement;
             timeoutInput.value = String(editConfig?.timeout ?? 60);
 
             // Save button
-            const saveBtn = contentEl.createEl('button', { text: 'Save & Connect', cls: 'mod-cta agent-mcp-modal-save' });
+            const saveBtn = contentEl.createEl('button', { text: t('settings.mcp.saveConnect'), cls: 'mod-cta agent-mcp-modal-save' });
             saveBtn.addEventListener('click', async () => {
                 const serverName = (editName ?? nameInput.value.trim());
                 if (!serverName) return;
