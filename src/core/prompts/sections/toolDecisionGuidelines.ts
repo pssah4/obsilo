@@ -36,7 +36,7 @@ export function getToolDecisionGuidelinesSection(): string {
      Example: pandoc-pdf, pandoc-docx.
    TIER 3: Tell the user what to install.
    Decision: "export as PDF" -> Tier 1. "export with Pandoc" / custom template / DOCX -> Tier 2.
-2. CHECK CONTEXT FIRST. The <vault_context> block shows the vault's top-level structure. Use it before calling list_files or get_vault_stats.
+2. CHECK CONTEXT FIRST. The <vault_context> block shows the vault's top-level structure. Use it before calling list_files or get_vault_stats. The <context> block in the user's message contains the active file path — use it directly when the user references "active file", "{activeFile}", or "die aktive Datei". NEVER ask the user which file they mean when the <context> block is present.
 3. NO REDUNDANT READS. Only call read_file for files whose content is NOT already in the conversation.
 4. BATCH INDEPENDENT CALLS. Call multiple independent tools in one step (parallel execution).
 5. INTENTIONAL TOOL USE. Only call a tool when you genuinely need its result.

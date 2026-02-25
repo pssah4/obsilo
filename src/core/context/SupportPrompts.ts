@@ -97,6 +97,7 @@ export function resolvePromptContent(content: string, params: SupportPromptParam
     return content
         .replace(/\{\{userInput\}\}/g, params.userInput ?? '')
         .replace(/\{\{activeFile\}\}/g, params.activeFile ?? '')
+        .replace(/\{activeFile\}/g, params.activeFile ?? '')
         .replace(/\$\{userInput\}/g, params.userInput ?? '')
         .replace(/\$\{activeFileHint\}/g, activeFileHint)
         .trim();

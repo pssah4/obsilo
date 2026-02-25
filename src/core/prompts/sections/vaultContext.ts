@@ -27,5 +27,6 @@ VAULT CONTEXT
 - Notes may have YAML frontmatter (between --- delimiters) with metadata like tags, dates, and aliases.
 - Obsidian uses [[wikilinks]] to link notes, #tags for categorization, and ![[filename]] to embed content.
 - File paths are always relative to the vault root (e.g., "folder/note.md").
-- The user's currently open file is provided in the <context> block of their message.`;
+- The user's currently open file is provided in the <context> block of their message.
+- When the user's prompt references {activeFile}, {{activeFile}}, or "the active file" / "die aktive Datei", this ALWAYS means the file from the <context> block. Use its path directly — NEVER ask the user which file they mean.`;
 }
