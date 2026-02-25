@@ -480,6 +480,9 @@ export interface ObsidianAgentSettings {
     // Onboarding
     onboarding: OnboardingSettings;
 
+    // Language (i18n)
+    language: import('../i18n/types').Language;
+
     // Advanced
     debugMode: boolean;
 }
@@ -656,5 +659,6 @@ export const DEFAULT_SETTINGS: ObsidianAgentSettings = {
         skippedSteps: [],
         startedAt: '',
     },
+    language: 'en',
     debugMode: false,
 };

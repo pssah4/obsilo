@@ -28,6 +28,7 @@ import type { ApiHandler } from './api/types';
 import type { ToolUse, ToolCallbacks } from './core/tools/types';
 import { BUILT_IN_MODES } from './core/modes/builtinModes';
 import { mergeDefaultPrompts } from './core/prompts/defaultPrompts';
+import { initI18n } from './i18n';
 
 /**
  * Obsidian Agent Plugin
@@ -85,6 +86,9 @@ export default class ObsidianAgentPlugin extends Plugin {
 
         // 1. Load settings
         await this.loadSettings();
+
+        // 1b. Initialize i18n with user's language preference
+        await initI18n(this.settings.language);
 
         // 2. Initialize core services
         // Governance: ignore/protected path rules
