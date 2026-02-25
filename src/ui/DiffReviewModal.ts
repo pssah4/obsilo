@@ -11,6 +11,7 @@
  */
 
 import { App, Modal, setIcon } from 'obsidian';
+import { t } from '../i18n';
 import { diffLines, getDiffStats } from '../core/utils/diffLines';
 import type { DiffLine } from '../core/utils/diffLines';
 import { parseMarkdownSections } from '../core/utils/markdownSections';
@@ -141,8 +142,8 @@ export class DiffReviewModal extends Modal {
         const fileCount = this.files.length;
         titleEl.setText(
             this.options.mode === 'checkpoint'
-                ? 'Checkpoint Diff'
-                : `Review Changes (${fileCount} file${fileCount !== 1 ? 's' : ''})`,
+                ? t('modal.diffReview.titleCheckpoint')
+                : t('modal.diffReview.titleReview', { count: fileCount }),
         );
 
         // Checkpoint info header
@@ -294,7 +295,7 @@ export class DiffReviewModal extends Modal {
             statsEl.createSpan({ cls: 'diff-stat-removed', text: `-${stats.removed}` });
         }
         if (stats.added === 0 && stats.removed === 0) {
-            statsEl.createSpan({ cls: 'diff-stat-none', text: 'No changes' });
+            statsEl.createSpan({ cls: 'diff-stat-none', text: t('modal.diffReview.noChanges') });
             return;
         }
 
@@ -348,7 +349,7 @@ export class DiffReviewModal extends Modal {
                 for (const l of before) this.renderContextRow(container, l);
                 const btn = container.createEl('button', {
                     cls: 'diff-collapse-btn',
-                    text: `... ${middle.length} unchanged lines`,
+                    text: t('modal.diffReview.unchangedLines', { count: middle.length }),
                 });
                 const captured = middle;
                 btn.addEventListener('click', () => {
@@ -447,13 +448,13 @@ export class DiffReviewModal extends Modal {
             const actions = header.createDiv('diff-section-actions');
 
             const keepBtn = actions.createEl('button', {
-                cls: 'diff-section-btn diff-section-keep', text: 'Keep',
+                cls: 'diff-section-btn diff-section-keep', text: t('modal.diffReview.keep'),
             });
             const undoBtn = actions.createEl('button', {
-                cls: 'diff-section-btn diff-section-undo', text: 'Undo',
+                cls: 'diff-section-btn diff-section-undo', text: t('modal.diffReview.undo'),
             });
             const editBtn = actions.createEl('button', {
-                cls: 'diff-section-btn diff-section-edit', text: 'Edit',
+                cls: 'diff-section-btn diff-section-edit', text: t('modal.diffReview.edit'),
             });
 
             keepBtn.addEventListener('click', () => {
@@ -526,7 +527,7 @@ export class DiffReviewModal extends Modal {
                         for (const l of before) this.renderContextRow(container, l);
                         const btn = container.createEl('button', {
                             cls: 'diff-collapse-btn',
-                            text: `... ${middle.length} unchanged lines`,
+                            text: t('modal.diffReview.unchangedLines', { count: middle.length }),
                         });
                         const captured = middle;
                         btn.addEventListener('click', () => {
@@ -606,7 +607,7 @@ export class DiffReviewModal extends Modal {
         const editorContainer = groupEl.createDiv('diff-section-editor');
 
         const editorLabel = editorContainer.createDiv('diff-section-editor-label');
-        editorLabel.setText('Edit section content:');
+        editorLabel.setText(t('modal.diffReview.editLabel'));
 
         const textarea = editorContainer.createEl('textarea', {
             cls: 'diff-section-textarea',
@@ -617,10 +618,10 @@ export class DiffReviewModal extends Modal {
         const editorFooter = editorContainer.createDiv('diff-section-editor-footer');
 
         const cancelBtn = editorFooter.createEl('button', {
-            cls: 'diff-section-btn', text: 'Cancel',
+            cls: 'diff-section-btn', text: t('modal.diffReview.cancelEdit'),
         });
         const applyBtn = editorFooter.createEl('button', {
-            cls: 'diff-section-btn mod-cta', text: 'Apply Edit',
+            cls: 'diff-section-btn mod-cta', text: t('modal.diffReview.applyEdit'),
         });
 
         cancelBtn.addEventListener('click', () => {
@@ -660,7 +661,7 @@ export class DiffReviewModal extends Modal {
 
         if (this.options.mode === 'review') {
             const undoAllBtn = footer.createEl('button', {
-                cls: 'diff-review-btn diff-review-reject-all', text: 'Undo All',
+                cls: 'diff-review-btn diff-review-reject-all', text: t('modal.diffReview.undoAll'),
             });
             undoAllBtn.addEventListener('click', () => {
                 for (const file of this.files) {
@@ -673,7 +674,7 @@ export class DiffReviewModal extends Modal {
             });
 
             this.applyBtn = footer.createEl('button', {
-                cls: 'diff-review-btn diff-review-accept-selected', text: 'Apply Selected',
+                cls: 'diff-review-btn diff-review-accept-selected', text: t('modal.diffReview.applySelected'),
             });
             (this.applyBtn as HTMLButtonElement).disabled = true;
             this.applyBtn.addEventListener('click', () => {
@@ -691,7 +692,7 @@ export class DiffReviewModal extends Modal {
             });
 
             const keepAllBtn = footer.createEl('button', {
-                cls: 'mod-cta diff-review-btn', text: 'Keep All',
+                cls: 'mod-cta diff-review-btn', text: t('modal.diffReview.keepAll'),
             });
             keepAllBtn.addEventListener('click', () => {
                 this.resolved = true;
@@ -701,22 +702,22 @@ export class DiffReviewModal extends Modal {
         }
 
         if (this.options.mode === 'checkpoint') {
-            footer.createEl('button', { text: 'Close' })
+            footer.createEl('button', { text: t('modal.diffReview.close') })
                 .addEventListener('click', () => this.close());
 
             if (this.options.onRestore) {
                 const restoreBtn = footer.createEl('button', {
-                    cls: 'mod-cta', text: 'Restore to this checkpoint',
+                    cls: 'mod-cta', text: t('modal.diffReview.restoreCheckpoint'),
                 });
                 restoreBtn.addEventListener('click', async () => {
-                    restoreBtn.setText('Restoring...');
+                    restoreBtn.setText(t('modal.diffReview.restoring'));
                     (restoreBtn as HTMLButtonElement).disabled = true;
                     try {
                         await this.options.onRestore!();
-                        restoreBtn.setText('Restored');
+                        restoreBtn.setText(t('modal.diffReview.restored'));
                         restoreBtn.addClass('checkpoint-restored');
                     } catch {
-                        restoreBtn.setText('Failed');
+                        restoreBtn.setText(t('modal.diffReview.failed'));
                     }
                 });
             }

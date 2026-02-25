@@ -6,6 +6,7 @@ import { getModelKey } from '../../types/settings';
 import { BUILT_IN_MODES } from '../../core/modes/builtinModes';
 import { TOOL_GROUP_META } from './constants';
 import { GlobalModeStore } from '../../core/modes/GlobalModeStore';
+import { t } from '../../i18n';
 
 export class NewModeModal extends Modal {
     private plugin: ObsidianAgentPlugin;
@@ -22,7 +23,7 @@ export class NewModeModal extends Modal {
     onOpen(): void {
         const { contentEl } = this;
         contentEl.addClass('new-mode-modal');
-        contentEl.createEl('h2', { text: 'New Mode' });
+        contentEl.createEl('h2', { text: t('modal.newMode.title') });
 
         let slug = '';
         let name = '';
@@ -37,10 +38,10 @@ export class NewModeModal extends Modal {
 
         // ── Model ─────────────────────────────────────────────────────────────
         const modelSetting = new Setting(contentEl)
-            .setName('Model')
-            .setDesc('Which model this mode uses. Falls back to the global model if not set.');
+            .setName(t('modal.newMode.model'))
+            .setDesc(t('modal.newMode.modelDesc'));
         modelSetting.addDropdown((dd) => {
-            dd.addOption('', '— Use global model —');
+            dd.addOption('', t('modal.newMode.useGlobalModel'));
             for (const m of this.plugin.settings.activeModels) {
                 const key = getModelKey(m);
                 dd.addOption(key, m.displayName ?? m.name);
@@ -52,9 +53,9 @@ export class NewModeModal extends Modal {
         // ── Name ──────────────────────────────────────────────────────────────
         let slugInput: HTMLInputElement | null = null;
         new Setting(contentEl)
-            .setName('Name')
-            .setDesc('Display name (e.g. "Daily Planner")')
-            .addText((t) => t.onChange((v) => {
+            .setName(t('modal.newMode.name'))
+            .setDesc(t('modal.newMode.nameDesc'))
+            .addText((cb) => cb.onChange((v) => {
                 name = v;
                 const computed = v.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
                 slug = computed;
@@ -63,36 +64,36 @@ export class NewModeModal extends Modal {
 
         // ── Slug ──────────────────────────────────────────────────────────────
         const slugSetting = new Setting(contentEl)
-            .setName('Slug')
-            .setDesc('Auto-generated from name. Used internally and in file names.');
-        slugSetting.addText((t) => {
-            slugInput = t.inputEl;
-            t.onChange((v) => { slug = v; });
+            .setName(t('modal.newMode.slug'))
+            .setDesc(t('modal.newMode.slugDesc'));
+        slugSetting.addText((cb) => {
+            slugInput = cb.inputEl;
+            cb.onChange((v) => { slug = v; });
         });
 
         // ── Short description ─────────────────────────────────────────────────
-        contentEl.createEl('div', { cls: 'new-mode-field-label', text: 'Short description (for humans)' });
-        contentEl.createEl('div', { cls: 'new-mode-field-desc', text: 'Brief description shown in the mode selector dropdown.' });
+        contentEl.createEl('div', { cls: 'new-mode-field-label', text: t('modal.newMode.shortDesc') });
+        contentEl.createEl('div', { cls: 'new-mode-field-desc', text: t('modal.newMode.shortDescHint') });
         const descTextarea = contentEl.createEl('textarea', {
             cls: 'new-mode-textarea',
-            attr: { placeholder: 'Brief description...' },
+            attr: { placeholder: t('modal.newMode.shortDescPlaceholder') },
         });
         descTextarea.rows = 2;
         descTextarea.addEventListener('input', () => { description = descTextarea.value; });
 
         // ── When to Use ───────────────────────────────────────────────────────
-        contentEl.createEl('div', { cls: 'new-mode-field-label', text: 'When to Use (optional)' });
-        contentEl.createEl('div', { cls: 'new-mode-field-desc', text: 'Guidance for the Orchestrator when deciding which mode to use.' });
+        contentEl.createEl('div', { cls: 'new-mode-field-label', text: t('modal.newMode.whenToUse') });
+        contentEl.createEl('div', { cls: 'new-mode-field-desc', text: t('modal.newMode.whenToUseHint') });
         const wtuTextarea = contentEl.createEl('textarea', {
             cls: 'new-mode-textarea',
-            attr: { placeholder: 'Describe when this mode should be chosen...' },
+            attr: { placeholder: t('modal.newMode.whenToUsePlaceholder') },
         });
         wtuTextarea.rows = 3;
         wtuTextarea.addEventListener('input', () => { whenToUse = wtuTextarea.value; });
 
         // ── Available Tools ───────────────────────────────────────────────────
         const toolsWrap = contentEl.createDiv('new-mode-groups');
-        toolsWrap.createEl('label', { cls: 'new-mode-groups-label', text: 'Available Tools' });
+        toolsWrap.createEl('label', { cls: 'new-mode-groups-label', text: t('modal.newMode.availableTools') });
         const groupGrid = toolsWrap.createDiv('new-mode-groups-grid');
 
         for (const [group, meta] of Object.entries(TOOL_GROUP_META)) {
@@ -109,34 +110,34 @@ export class NewModeModal extends Modal {
         }
 
         // ── Role Definition ───────────────────────────────────────────────────
-        contentEl.createEl('label', { cls: 'new-mode-field-label', text: 'Role Definition' });
-        contentEl.createEl('div', { cls: 'new-mode-field-desc', text: "Define the agent's expertise and personality." });
+        contentEl.createEl('label', { cls: 'new-mode-field-label', text: t('modal.newMode.roleDefinition') });
+        contentEl.createEl('div', { cls: 'new-mode-field-desc', text: t('modal.newMode.roleDefinitionHint') });
         const roleTextarea = contentEl.createEl('textarea', {
             cls: 'new-mode-textarea',
-            attr: { placeholder: "Describe the agent's identity, behavior, and focus area..." },
+            attr: { placeholder: t('modal.newMode.roleDefinitionPlaceholder') },
         });
         roleTextarea.rows = 6;
         roleTextarea.addEventListener('input', () => { roleDefinition = roleTextarea.value; });
 
         // ── Custom Instructions ───────────────────────────────────────────────
-        contentEl.createEl('label', { cls: 'new-mode-field-label', text: 'Mode-specific Custom Instructions (optional)' });
-        contentEl.createEl('div', { cls: 'new-mode-field-desc', text: 'Additional behavioral guidelines for this mode.' });
+        contentEl.createEl('label', { cls: 'new-mode-field-label', text: t('modal.newMode.customInstructions') });
+        contentEl.createEl('div', { cls: 'new-mode-field-desc', text: t('modal.newMode.customInstructionsHint') });
         const ciTextarea = contentEl.createEl('textarea', {
             cls: 'new-mode-textarea',
-            attr: { placeholder: 'Additional guidelines...' },
+            attr: { placeholder: t('modal.newMode.customInstructionsPlaceholder') },
         });
         ciTextarea.rows = 3;
         ciTextarea.addEventListener('input', () => { customInstructions = ciTextarea.value; });
 
         // ── Save Location ─────────────────────────────────────────────────────
         const locationWrap = contentEl.createDiv('new-mode-location');
-        locationWrap.createEl('div', { cls: 'new-mode-field-label', text: 'Save Location' });
-        locationWrap.createEl('div', { cls: 'new-mode-field-desc', text: 'Global modes are available in all your Obsidian vaults.' });
+        locationWrap.createEl('div', { cls: 'new-mode-field-label', text: t('modal.newMode.saveLocation') });
+        locationWrap.createEl('div', { cls: 'new-mode-field-desc', text: t('modal.newMode.saveLocationHint') });
         const locGrid = locationWrap.createDiv('new-mode-loc-grid');
 
         for (const opt of [
-            { value: 'vault' as const, label: 'This Vault', desc: 'Only in this vault' },
-            { value: 'global' as const, label: 'Global', desc: 'All vaults on this machine' },
+            { value: 'vault' as const, label: t('modal.newMode.thisVault'), desc: t('modal.newMode.thisVaultHint') },
+            { value: 'global' as const, label: t('modal.newMode.global'), desc: t('modal.newMode.globalHint') },
         ]) {
             const row = locGrid.createDiv('new-mode-loc-row');
             const radio = row.createEl('input', { type: 'radio', attr: { name: 'save-location', value: opt.value } });
@@ -149,10 +150,10 @@ export class NewModeModal extends Modal {
 
         // ── Actions ───────────────────────────────────────────────────────────
         const actions = contentEl.createDiv('new-mode-actions');
-        const saveBtn = actions.createEl('button', { text: 'Create Mode', cls: 'mod-cta' });
+        const saveBtn = actions.createEl('button', { text: t('modal.newMode.create'), cls: 'mod-cta' });
         saveBtn.addEventListener('click', async () => {
-            if (!name.trim()) { new Notice('Name is required'); return; }
-            if (!roleDefinition.trim()) { new Notice('Role definition is required'); return; }
+            if (!name.trim()) { new Notice(t('modal.newMode.nameRequired')); return; }
+            if (!roleDefinition.trim()) { new Notice(t('modal.newMode.roleRequired')); return; }
 
             const allSlugs = [
                 ...BUILT_IN_MODES.map((m) => m.slug),
@@ -193,7 +194,7 @@ export class NewModeModal extends Modal {
             this.close();
         });
 
-        const cancelBtn = actions.createEl('button', { text: 'Cancel' });
+        const cancelBtn = actions.createEl('button', { text: t('modal.newMode.cancel') });
         cancelBtn.addEventListener('click', () => this.close());
     }
 

@@ -96,8 +96,8 @@ export class EmbeddingsTab {
             .setName(t('settings.embeddings.enableIndex'))
             .setDesc(t('settings.embeddings.enableIndexDesc'));
         addInfoButton(semanticEnableSetting, this.app, t('settings.embeddings.infoIndexTitle'), t('settings.embeddings.infoIndexBody'));
-        semanticEnableSetting.addToggle((t) =>
-            t.setValue(this.plugin.settings.enableSemanticIndex ?? false).onChange(async (v) => {
+        semanticEnableSetting.addToggle((toggle) =>
+            toggle.setValue(this.plugin.settings.enableSemanticIndex ?? false).onChange(async (v) => {
                 this.plugin.settings.enableSemanticIndex = v;
                 await this.plugin.saveSettings();
                 if (v) {
@@ -295,8 +295,8 @@ export class EmbeddingsTab {
             .setName(t('settings.embeddings.hyde'))
             .setDesc(t('settings.embeddings.hydeDesc'));
         addInfoButton(hydeSetting, this.app, t('settings.embeddings.infoHydeTitle'), t('settings.embeddings.infoHydeBody'));
-        hydeSetting.addToggle((t) =>
-            t.setValue(this.plugin.settings.hydeEnabled ?? false).onChange(async (v) => {
+        hydeSetting.addToggle((toggle) =>
+            toggle.setValue(this.plugin.settings.hydeEnabled ?? false).onChange(async (v) => {
                 this.plugin.settings.hydeEnabled = v;
                 await this.plugin.saveSettings();
             }),
@@ -310,8 +310,8 @@ export class EmbeddingsTab {
             text: t('settings.embeddings.riskNote'),
         });
         addInfoButton(autoIndexOnChangeSetting, this.app, t('settings.embeddings.infoAutoChangeTitle'), t('settings.embeddings.infoAutoChangeBody'));
-        autoIndexOnChangeSetting.addToggle((t) =>
-            t.setValue(this.plugin.settings.semanticAutoIndexOnChange ?? false).onChange(async (v) => {
+        autoIndexOnChangeSetting.addToggle((toggle) =>
+            toggle.setValue(this.plugin.settings.semanticAutoIndexOnChange ?? false).onChange(async (v) => {
                 this.plugin.settings.semanticAutoIndexOnChange = v;
                 await this.plugin.saveSettings();
                 new Notice(v ? t('settings.embeddings.autoIndexEnabled') : t('settings.embeddings.autoIndexDisabled'));

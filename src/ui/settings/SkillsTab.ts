@@ -282,10 +282,10 @@ export class SkillsTab {
         const thead = table.createEl('thead');
         const hr = thead.createEl('tr');
         hr.createEl('th', { text: '', cls: 'agent-skill-th-status' }); // installed dot
-        hr.createEl('th', { text: 'Plugin' });
-        hr.createEl('th', { text: 'Commands', cls: 'agent-skill-th-cmds' });
+        hr.createEl('th', { text: t('settings.skills.headerPlugin') });
+        hr.createEl('th', { text: t('settings.skills.headerCommands'), cls: 'agent-skill-th-cmds' });
         hr.createEl('th', { text: '', cls: 'agent-skill-th-actions' }); // view buttons
-        hr.createEl('th', { text: 'Agent', cls: 'agent-skill-th-toggle' }); // agent toggle
+        hr.createEl('th', { text: t('settings.skills.headerAgent'), cls: 'agent-skill-th-toggle' }); // agent toggle
 
         const tbody = table.createEl('tbody');
 
@@ -304,7 +304,7 @@ export class SkillsTab {
             const statusTd = tr.createEl('td', { cls: 'agent-skill-status-cell' });
             const dot = statusTd.createSpan({ cls: 'agent-skill-dot' });
             dot.addClass(skill.enabled ? 'agent-skill-dot-on' : 'agent-skill-dot-off');
-            dot.setAttribute('aria-label', skill.enabled ? 'Installed & enabled' : 'Disabled in Obsidian');
+            dot.setAttribute('aria-label', skill.enabled ? t('settings.skills.installed') : t('settings.skills.disabled'));
 
             // Name + description
             const nameTd = tr.createEl('td', { cls: 'agent-skill-name-cell' });
@@ -321,20 +321,20 @@ export class SkillsTab {
 
             // Edit skill file
             const editSkillBtn = actionsTd.createEl('button', {
-                cls: 'agent-skill-action-btn', attr: { 'aria-label': 'Edit skill file' },
+                cls: 'agent-skill-action-btn', attr: { 'aria-label': t('settings.skills.editFile') },
             });
             setIcon(editSkillBtn, 'pencil');
             editSkillBtn.addEventListener('click', () => this.openSkillFile(skill));
 
             // View README (if exists)
             const docsBtn = actionsTd.createEl('button', {
-                cls: 'agent-skill-action-btn', attr: { 'aria-label': 'View README' },
+                cls: 'agent-skill-action-btn', attr: { 'aria-label': t('settings.skills.viewReadme') },
             });
             setIcon(docsBtn, 'book-open');
             this.checkReadmeExists(skill.id).then((exists) => {
                 if (!exists) {
                     docsBtn.addClass('agent-skill-action-btn-faint');
-                    docsBtn.setAttribute('aria-label', 'No README available');
+                    docsBtn.setAttribute('aria-label', t('settings.skills.noReadme'));
                 }
             });
             docsBtn.addEventListener('click', () => this.openReadmeFile(skill));
@@ -359,11 +359,11 @@ export class SkillsTab {
         const path = `${this.skillsDir}/${skill.id}.skill.md`;
         try {
             const content = await this.app.vault.adapter.read(path);
-            new ContentEditorModal(this.app, `Skill: ${skill.name}`, content, async (updated) => {
+            new ContentEditorModal(this.app, t('settings.skills.skillDetail', { name: skill.name }), content, async (updated) => {
                 await this.app.vault.adapter.write(path, updated);
             }).open();
         } catch {
-            new Notice(`Skill file not found: ${skill.id}.skill.md`);
+            new Notice(t('settings.skills.fileNotFound', { id: skill.id }));
         }
     }
 
@@ -371,11 +371,11 @@ export class SkillsTab {
         const path = `${this.skillsDir}/${skill.id}.readme.md`;
         try {
             const content = await this.app.vault.adapter.read(path);
-            new ContentEditorModal(this.app, `README: ${skill.name}`, content, async (updated) => {
+            new ContentEditorModal(this.app, t('settings.skills.readme', { name: skill.name }), content, async (updated) => {
                 await this.app.vault.adapter.write(path, updated);
             }).open();
         } catch {
-            new Notice(`No README available for ${skill.name}. Run "Rescan Vault" to fetch READMEs.`);
+            new Notice(t('settings.skills.noReadmeAvailable', { name: skill.name }));
         }
     }
 

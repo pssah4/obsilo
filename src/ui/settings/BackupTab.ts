@@ -339,7 +339,7 @@ export class BackupTab {
 
                 this.rerender();
             } catch (e) {
-                new Notice(`Import failed: ${(e as Error).message}`);
+                new Notice(t('settings.backup.importFailed', { error: (e as Error).message }));
             }
         });
         input.click();
@@ -356,12 +356,13 @@ export class BackupTab {
 
         container.createEl('p', {
             cls: 'agent-backup-import-info',
-            text: `Backup from ${dateStr} (v${data.version})`,
+            text: t('settings.backup.backupFrom', { date: dateStr, version: data.version }),
         });
 
+        const categories = getCategories();
         const list = container.createDiv('agent-backup-category-list');
         for (const [catId, catData] of Object.entries(data.categories)) {
-            const catDef = CATEGORIES.find((c) => c.id === catId);
+            const catDef = categories.find((c) => c.id === catId);
             const fileCount = Object.keys(catData.files).length;
             const totalSize = Object.values(catData.files)
                 .reduce((sum, f) => sum + f.content.length, 0);
@@ -388,15 +389,15 @@ export class BackupTab {
 
         container.createEl('p', {
             cls: 'agent-backup-warning',
-            text: 'Existing files will be overwritten.',
+            text: t('settings.backup.overwriteWarning'),
         });
 
         const btnRow = container.createDiv('agent-backup-row');
 
-        const confirmBtn = btnRow.createEl('button', { text: 'Confirm import', cls: 'mod-cta' });
+        const confirmBtn = btnRow.createEl('button', { text: t('settings.backup.confirmImport'), cls: 'mod-cta' });
         confirmBtn.addEventListener('click', () => this.doImport(confirmBtn));
 
-        const cancelBtn = btnRow.createEl('button', { text: 'Cancel' });
+        const cancelBtn = btnRow.createEl('button', { text: t('settings.backup.cancel') });
         cancelBtn.addEventListener('click', () => {
             _pendingImport = null;
             _importToggles = {};
@@ -407,7 +408,7 @@ export class BackupTab {
     private async doImport(btn: HTMLElement): Promise<void> {
         if (!_pendingImport) return;
         btn.addClass('is-loading');
-        btn.setText('Importing...');
+        btn.setText(t('settings.backup.importing'));
 
         try {
             let totalFiles = 0;
@@ -435,7 +436,7 @@ export class BackupTab {
                         totalFiles++;
                     }
                 } else {
-                    const catDef = CATEGORIES.find((c) => c.id === catId);
+                    const catDef = getCategories().find((c) => c.id === catId);
                     if (!catDef) continue;
 
                     const baseDir = this.resolveDir(catDef);
@@ -450,13 +451,13 @@ export class BackupTab {
 
             _pendingImport = null;
             _importToggles = {};
-            new Notice(`Backup imported: ${totalFiles} files in ${selectedCount} categories. Reload Obsidian for full effect.`);
+            new Notice(t('settings.backup.imported', { files: totalFiles, categories: selectedCount }));
             this.rerender();
         } catch (e) {
-            new Notice(`Import failed: ${(e as Error).message}`);
+            new Notice(t('settings.backup.importFailed', { error: (e as Error).message }));
         } finally {
             btn.removeClass('is-loading');
-            btn.setText('Confirm import');
+            btn.setText(t('settings.backup.confirmImport'));
         }
     }
 
