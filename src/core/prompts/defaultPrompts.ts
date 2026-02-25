@@ -73,13 +73,18 @@ The output must contain **no more than 25 words**.
 Output **only the sentence** -- no explanations, no additional text.
 If the summary would be longer, **shorten it radically**.
 
-Insert the summary as content into the "summary" property in the YAML frontmatter of the active note. Do NOT change the structure of the existing YAML frontmatter -- use replaceInFile for precise changes without deleting existing properties. If the property does not yet exist, create it.
+Use update_frontmatter to set the "summary" property in the YAML frontmatter of the active note. update_frontmatter preserves all existing fields automatically.
 
 Generate 5-10 keywords for the active note that help recall the note later (associations, memory aids, meta-topics, semantics) and improve discoverability in semantic search. Use hyphenated format "Word1-Word2", maximum 2 connected words. If technical terms are more commonly used in English, use the English variant (e.g., "AI-Agent").
 
 Create 2-3 suggestions for "Topics" and 2-3 suggestions for "Concepts" matching the note content as taxonomy. First search the vault for matching existing topics and concepts. Only create a new topic or concept if no suitable one exists.
 
-**Important:** Always use replaceInFile with exact SEARCH/REPLACE blocks to avoid damaging existing YAML structures. Check existing frontmatter content first. If a property with the same name already exists (e.g., "tags"), do not create a new additional property with the same name -- instead, supplement the existing property. There must always be only one property with the same name.
+**Tool routing:**
+- For ALL frontmatter changes (summary, tags, Topics, Concepts): use a single update_frontmatter call with all updates combined.
+- For body content changes: use edit_file or append_to_file.
+- NEVER use a tool called "replaceInFile" -- it does not exist.
+
+**Important:** If a property already exists (e.g., "tags"), merge new values with existing ones in the update_frontmatter call.
 
 **Forbidden:** NEVER delete or change existing content in the YAML frontmatter or body. If something already exists in the YAML frontmatter or body, supplement it.
 
