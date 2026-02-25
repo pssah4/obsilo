@@ -108,7 +108,7 @@ export class CreateBaseTool extends BaseTool<'create_base'> {
             // Build the filter conditions
             const filterConditions: string[] = [];
             if (filterProp && filterValues.length > 0) {
-                const quotedValues = filterValues.map((v) => `"${v.replace(/"/g, '\\"')}"`).join(', ');
+                const quotedValues = filterValues.map((v) => `"${v.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`).join(', ');
                 filterConditions.push(`${filterProp}.containsAny(${quotedValues})`);
             }
             if (excludeTemplates) {

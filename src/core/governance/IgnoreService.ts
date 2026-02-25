@@ -144,8 +144,9 @@ export class IgnoreService {
         if (p.length > 200) return false;
         if (/(\*\*){3,}/.test(p)) return false;
 
-        // Convert glob to regex
+        // Convert glob to regex (escape backslashes first to prevent double-escaping)
         const regexStr = p
+            .replace(/\\/g, '\\\\') // escape backslashes first
             .replace(/\./g, '\\.') // escape dots
             .replace(/\*\*/g, '§DOUBLESTAR§')
             .replace(/\*/g, '[^/]*')

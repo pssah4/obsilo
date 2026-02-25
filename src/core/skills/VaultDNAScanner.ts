@@ -571,7 +571,7 @@ export class VaultDNAScanner {
             `plugin-type: ${skill.source === 'core' ? 'core' : 'community'}`,
             `status: ${skill.enabled ? 'enabled' : 'disabled'}`,
             `class: ${skill.classification}`,
-            `description: "${skill.description.replace(/"/g, '\\"')}"`,
+            `description: "${skill.description.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`,
             `has-settings: ${!isEmpty}`,
             ...(setupHint ? ['needs-setup: true'] : []),
             ...(commandsYaml ? [`commands:\n${commandsYaml}`] : []),

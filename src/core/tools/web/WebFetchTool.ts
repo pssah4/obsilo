@@ -171,17 +171,24 @@ export class WebFetchTool extends BaseTool<'web_fetch'> {
     private htmlToMarkdown(html: string): string {
         let md = html;
 
-        // Remove DOCTYPE, comments
+        // Remove DOCTYPE, comments (loop to handle nested/reconstructed sequences)
         md = md.replace(/<!DOCTYPE[^>]*>/gi, '');
-        md = md.replace(/<!--[\s\S]*?-->/g, '');
+        while (/<!--[\s\S]*?-->/g.test(md)) {
+            md = md.replace(/<!--[\s\S]*?-->/g, '');
+        }
 
         // Remove <head> entirely (scripts, styles, meta)
-        md = md.replace(/<head[\s\S]*?<\/head>/gi, '');
+        md = md.replace(/<head[\s\S]*?<\/head[^>]*>/gi, '');
 
-        // Remove script and style blocks
-        md = md.replace(/<script[\s\S]*?<\/script>/gi, '');
-        md = md.replace(/<style[\s\S]*?<\/style>/gi, '');
-        md = md.replace(/<noscript[\s\S]*?<\/noscript>/gi, '');
+        // Remove script and style blocks (loop to handle nested/reconstructed tags,
+        // [^>]* in closing tag handles malformed end tags like </script \n bar>)
+        while (/<script[\s\S]*?<\/script[^>]*>/gi.test(md)) {
+            md = md.replace(/<script[\s\S]*?<\/script[^>]*>/gi, '');
+        }
+        while (/<style[\s\S]*?<\/style[^>]*>/gi.test(md)) {
+            md = md.replace(/<style[\s\S]*?<\/style[^>]*>/gi, '');
+        }
+        md = md.replace(/<noscript[\s\S]*?<\/noscript[^>]*>/gi, '');
 
         // Remove nav, footer, aside, header — usually not main content
         md = md.replace(/<nav[\s\S]*?<\/nav>/gi, '');
@@ -236,11 +243,14 @@ export class WebFetchTool extends BaseTool<'web_fetch'> {
         md = md.replace(/<\/tr>/gi, '|\n');
         md = md.replace(/<[^>]*(tr|table|thead|tbody|tfoot)[^>]*>/gi, '\n');
 
+        // Final safety pass: remove any script/style fragments that survived conversion
+        md = md.replace(/<\/?script[^>]*>/gi, '');
+        md = md.replace(/<\/?style[^>]*>/gi, '');
+
         // Strip remaining HTML tags
         md = md.replace(/<[^>]+>/g, '');
 
-        // Decode common HTML entities
-        md = md.replace(/&amp;/g, '&');
+        // Decode common HTML entities (&amp; last to prevent double-unescaping)
         md = md.replace(/&lt;/g, '<');
         md = md.replace(/&gt;/g, '>');
         md = md.replace(/&quot;/g, '"');
@@ -249,6 +259,7 @@ export class WebFetchTool extends BaseTool<'web_fetch'> {
         md = md.replace(/&mdash;/g, '—');
         md = md.replace(/&ndash;/g, '–');
         md = md.replace(/&hellip;/g, '...');
+        md = md.replace(/&amp;/g, '&');
         md = md.replace(/&#(\d+);/g, (_, code) => String.fromCharCode(parseInt(code, 10)));
         md = md.replace(/&#x([0-9a-f]+);/gi, (_, code) =>
             String.fromCharCode(parseInt(code, 16))

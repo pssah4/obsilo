@@ -8,7 +8,7 @@
     "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
     "deploy": "npm run build && ./deploy-local.sh",
     "version": "node version-bump.mjs && git add manifest.json versions.json",
-    "lint": "eslint src --ext .ts",
+    "lint": "eslint src/",
     "format": "prettier --write 'src/**/*.ts'",
     "codeql:db": "codeql database create codeql-db --language=javascript --source-root=src/ --overwrite",
     "codeql:analyze": "codeql database analyze codeql-db --format=sarif-latest --output=codeql-results.sarif codeql/javascript-queries:codeql-suites/javascript-security-and-quality.qls",
@@ -28,17 +28,18 @@
   "devDependencies": {
     "@types/node": "^20.11.0",
     "@types/uuid": "^9.0.7",
-    "@typescript-eslint/eslint-plugin": "^6.19.0",
-    "@typescript-eslint/parser": "^6.19.0",
+    "@typescript-eslint/eslint-plugin": "^8.56.1",
+    "@typescript-eslint/parser": "^8.56.1",
     "builtin-modules": "3.3.0",
-    "esbuild": "0.19.12",
-    "eslint": "^8.56.0",
-    "eslint-plugin-no-unsanitized": "^4.0.2",
+    "esbuild": "^0.27.3",
+    "eslint": "^9.39.3",
+    "eslint-plugin-no-unsanitized": "^4.1.5",
     "eslint-plugin-security": "^4.0.0",
     "obsidian": "latest",
     "prettier": "^3.2.4",
     "tslib": "2.6.2",
-    "typescript": "5.3.3"
+    "typescript": "5.3.3",
+    "typescript-eslint": "^8.56.1"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.30.0",

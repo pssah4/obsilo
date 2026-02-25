@@ -104,12 +104,13 @@ function detectProviderJS(code: string): ProviderType | undefined {
 
 function detectProviderCurl(code: string): ProviderType | undefined {
     // URL-path-based detection (most specific — enterprise gateways, Bedrock proxies)
+    // These are intentionally substring matches within multi-line curl commands, not URL validators.
     if (/\/anthropic\/model\//i.test(code) || /anthropic\.claude/i.test(code)) return 'anthropic';
-    if (/api\.anthropic\.com/i.test(code)) return 'anthropic';
+    if (/\bapi\.anthropic\.com\b/i.test(code)) return 'anthropic'; // lgtm[js/regex-missing-anchor]
     // Azure-specific domain or URL path patterns
-    if (/openai\.azure\.com/i.test(code)) return 'azure';
+    if (/\bopenai\.azure\.com\b/i.test(code)) return 'azure'; // lgtm[js/regex-missing-anchor]
     if (/\/openai\/deployments\//i.test(code)) return 'azure';
-    if (/api\.openai\.com/i.test(code)) return 'openai';
+    if (/\bapi\.openai\.com\b/i.test(code)) return 'openai'; // lgtm[js/regex-missing-anchor]
     if (/openrouter\.ai/i.test(code)) return 'openrouter';
     // Header-based fallback — api-key header alone is NOT enough for Azure
     // (enterprise gateways also use api-key headers). Require Azure-specific URL pattern.
