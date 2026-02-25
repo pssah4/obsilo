@@ -29,7 +29,7 @@ export { ContentEditorModal } from './settings/ContentEditorModal';
 
 // ---------------------------------------------------------------------------
 
-type TabId = 'providers' | 'agent-behaviour' | 'vault' | 'advanced';
+type TabId = 'providers' | 'agent-behaviour' | 'vault' | 'advanced' | 'language';
 
 export class AgentSettingsTab extends PluginSettingTab {
     plugin: ObsidianAgentPlugin;
@@ -77,6 +77,7 @@ export class AgentSettingsTab extends PluginSettingTab {
             { id: 'agent-behaviour', label: t('settings.group.agentBehaviour'), icon: 'users-round'  },
             { id: 'vault',           label: t('settings.group.vault'),           icon: 'server'       },
             { id: 'advanced',        label: t('settings.group.advanced'),        icon: 'settings-2'   },
+            { id: 'language',        label: t('settings.tab.language'),          icon: 'globe'        },
         ];
         tabs.forEach(({ id, label, icon }) => {
             const btn = nav.createEl('button', {
@@ -102,6 +103,7 @@ export class AgentSettingsTab extends PluginSettingTab {
         if (this.activeTab === 'agent-behaviour') this.buildAgentBehaviourTab(content);
         if (this.activeTab === 'vault')           new VaultTab(this.plugin, this.app, () => this.display()).build(content);
         if (this.activeTab === 'advanced')        this.buildAdvancedTab(content);
+        if (this.activeTab === 'language')        new LanguageTab(this.plugin, this.app, () => this.display()).build(content);
     }
 
     // ---------------------------------------------------------------------------
@@ -208,7 +210,6 @@ export class AgentSettingsTab extends PluginSettingTab {
                 { id: 'log',       label: t('settings.tab.log')       },
                 { id: 'debug',     label: t('settings.tab.debug')     },
                 { id: 'backup',    label: t('settings.tab.backup')    },
-                { id: 'language',  label: t('settings.tab.language')  },
             ],
             this.activeAdvancedSubTab,
             (id) => { this.activeAdvancedSubTab = id; this.display(); },
@@ -220,6 +221,5 @@ export class AgentSettingsTab extends PluginSettingTab {
         if (this.activeAdvancedSubTab === 'log')       new LogTab(this.plugin, this.app, rerender).build(content);
         if (this.activeAdvancedSubTab === 'debug')     new DebugTab(this.plugin, this.app, rerender).build(content);
         if (this.activeAdvancedSubTab === 'backup')    new BackupTab(this.plugin, this.app, rerender).build(content);
-        if (this.activeAdvancedSubTab === 'language')  new LanguageTab(this.plugin, this.app, rerender).build(content);
     }
 }

@@ -7,12 +7,20 @@
 
 import { setIcon } from 'obsidian';
 import type { ConversationMeta, ConversationStore } from '../../core/history/ConversationStore';
+import { t } from '../../i18n';
 
 // ---------------------------------------------------------------------------
 // Date grouping helpers
 // ---------------------------------------------------------------------------
 
-type DateGroup = 'Today' | 'Yesterday' | 'This Week' | 'Older';
+type DateGroup = 'today' | 'yesterday' | 'thisWeek' | 'older';
+
+const DATE_GROUP_KEYS: Record<DateGroup, string> = {
+    today: 'ui.history.today',
+    yesterday: 'ui.history.yesterday',
+    thisWeek: 'ui.history.thisWeek',
+    older: 'ui.history.older',
+};
 
 function getDateGroup(isoDate: string): DateGroup {
     const date = new Date(isoDate);
@@ -21,10 +29,10 @@ function getDateGroup(isoDate: string): DateGroup {
     const yesterdayStart = new Date(todayStart.getTime() - 86_400_000);
     const weekStart = new Date(todayStart.getTime() - todayStart.getDay() * 86_400_000);
 
-    if (date >= todayStart) return 'Today';
-    if (date >= yesterdayStart) return 'Yesterday';
-    if (date >= weekStart) return 'This Week';
-    return 'Older';
+    if (date >= todayStart) return 'today';
+    if (date >= yesterdayStart) return 'yesterday';
+    if (date >= weekStart) return 'thisWeek';
+    return 'older';
 }
 
 function formatTime(isoDate: string): string {
@@ -104,7 +112,7 @@ export class HistoryPanel {
 
         // Header
         const header = this.panelEl.createDiv({ cls: 'history-panel-header' });
-        header.createSpan({ cls: 'history-panel-title', text: 'Chat History' });
+        header.createSpan({ cls: 'history-panel-title', text: t('ui.history.title') });
         const closeBtn = header.createEl('button', { cls: 'history-panel-close clickable-icon' });
         setIcon(closeBtn, 'x');
         closeBtn.addEventListener('click', () => this.close());
@@ -113,7 +121,7 @@ export class HistoryPanel {
         const filterRow = this.panelEl.createDiv({ cls: 'history-panel-filter' });
         const filterInput = filterRow.createEl('input', {
             type: 'text',
-            placeholder: 'Filter...',
+            placeholder: t('ui.history.filter'),
             cls: 'history-panel-filter-input',
         });
         filterInput.value = this.filterText;
@@ -137,13 +145,13 @@ export class HistoryPanel {
         }
 
         if (conversations.length === 0) {
-            container.createDiv({ cls: 'history-panel-empty', text: 'No conversations yet' });
+            container.createDiv({ cls: 'history-panel-empty', text: t('ui.history.empty') });
             return;
         }
 
         // Group by date
         const groups = new Map<DateGroup, ConversationMeta[]>();
-        const order: DateGroup[] = ['Today', 'Yesterday', 'This Week', 'Older'];
+        const order: DateGroup[] = ['today', 'yesterday', 'thisWeek', 'older'];
         for (const c of conversations) {
             const group = getDateGroup(c.updated);
             if (!groups.has(group)) groups.set(group, []);
@@ -154,7 +162,7 @@ export class HistoryPanel {
             const items = groups.get(groupName);
             if (!items || items.length === 0) continue;
 
-            container.createDiv({ cls: 'history-group-label', text: groupName });
+            container.createDiv({ cls: 'history-group-label', text: t(DATE_GROUP_KEYS[groupName]) });
 
             for (const conv of items) {
                 const row = container.createDiv({
@@ -164,11 +172,11 @@ export class HistoryPanel {
                 const info = row.createDiv({ cls: 'history-row-info' });
                 info.createDiv({ cls: 'history-row-title', text: conv.title });
                 const meta = info.createDiv({ cls: 'history-row-meta' });
-                const timeStr = groupName === 'Today' || groupName === 'Yesterday'
+                const timeStr = groupName === 'today' || groupName === 'yesterday'
                     ? formatTime(conv.updated)
                     : formatDate(conv.updated);
                 meta.createSpan({ text: timeStr });
-                meta.createSpan({ text: ` \u00B7 ${conv.messageCount} msgs` });
+                meta.createSpan({ text: ` \u00B7 ${t('ui.history.messageCount', { count: conv.messageCount })}` });
 
                 // Delete button (visible on hover)
                 const delBtn = row.createEl('button', { cls: 'history-row-delete clickable-icon' });

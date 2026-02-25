@@ -17,6 +17,7 @@ import { HistoryPanel } from './sidebar/HistoryPanel';
 import type { UiMessage } from '../core/history/ConversationStore';
 import { MemoryRetriever } from '../core/memory/MemoryRetriever';
 import { OnboardingService } from '../core/memory/OnboardingService';
+import { t } from '../i18n';
 
 export const VIEW_TYPE_AGENT_SIDEBAR = 'obsidian-agent-sidebar';
 
@@ -93,7 +94,7 @@ export class AgentSidebarView extends ItemView {
     }
 
     getDisplayText(): string {
-        return 'Obsilo Agent';
+        return t('ui.sidebar.title');
     }
 
     getIcon(): string {
@@ -144,14 +145,14 @@ export class AgentSidebarView extends ItemView {
         const header = container.createDiv('agent-header');
 
         const titleRow = header.createDiv('agent-title');
-        titleRow.createSpan('agent-title-text').setText('Obsilo Agent');
+        titleRow.createSpan('agent-title-text').setText(t('ui.sidebar.title'));
 
         const headerRight = header.createDiv('agent-header-right');
 
         // Settings button — moved here from toolbar
         const settingsBtn = headerRight.createEl('button', {
             cls: 'header-button',
-            attr: { 'aria-label': 'Settings' },
+            attr: { 'aria-label': t('ui.sidebar.settings') },
         });
         setIcon(settingsBtn.createSpan('toolbar-icon'), 'settings');
         settingsBtn.addEventListener('click', () => {
@@ -162,7 +163,7 @@ export class AgentSidebarView extends ItemView {
         // History button — opens conversation history panel
         const historyBtn = headerRight.createEl('button', {
             cls: 'header-button',
-            attr: { 'aria-label': 'Chat History' },
+            attr: { 'aria-label': t('ui.sidebar.chatHistory') },
         });
         setIcon(historyBtn.createSpan('toolbar-icon'), 'history');
         historyBtn.addEventListener('click', () => this.historyPanel?.toggle());
@@ -170,7 +171,7 @@ export class AgentSidebarView extends ItemView {
         // New Chat button — clears conversation history
         const newChatBtn = headerRight.createEl('button', {
             cls: 'header-button',
-            attr: { 'aria-label': 'New chat' },
+            attr: { 'aria-label': t('ui.sidebar.newChat') },
         });
         setIcon(newChatBtn.createSpan('toolbar-icon'), 'plus');
         newChatBtn.addEventListener('click', () => this.clearConversation());
@@ -208,7 +209,7 @@ export class AgentSidebarView extends ItemView {
 
         this.textarea = inputWrapper.createEl('textarea', {
             cls: 'chat-textarea',
-            attr: { placeholder: 'Type your message here...', rows: '3' },
+            attr: { placeholder: t('ui.sidebar.placeholder'), rows: '3' },
         });
 
         // Initialize autocomplete handler after textarea is created
@@ -276,7 +277,7 @@ export class AgentSidebarView extends ItemView {
         // Mode button (left)
         this.modeButton = toolbarLeft.createEl('button', {
             cls: 'toolbar-button mode-button',
-            attr: { 'aria-label': 'Select mode' },
+            attr: { 'aria-label': t('ui.sidebar.selectMode') },
         });
         this.updateModeButton();
         this.modeButton.addEventListener('click', (e) => this.showModeMenu(e));
@@ -284,7 +285,7 @@ export class AgentSidebarView extends ItemView {
         // Model button (left, after mode)
         this.modelButton = toolbarLeft.createEl('button', {
             cls: 'toolbar-button model-button',
-            attr: { 'aria-label': 'Select model' },
+            attr: { 'aria-label': t('ui.sidebar.selectModel') },
         });
         this.updateModelButton();
         this.modelButton.addEventListener('click', (e) => this.showModelMenu(e));
@@ -292,7 +293,7 @@ export class AgentSidebarView extends ItemView {
         // Tool picker button (ghost style) — hidden for Ask mode
         this.toolPickerButton = toolbarLeft.createEl('button', {
             cls: 'toolbar-button toolbar-ghost tool-picker-button',
-            attr: { 'aria-label': 'Select tools' },
+            attr: { 'aria-label': t('ui.sidebar.selectTools') },
         });
         setIcon(this.toolPickerButton.createSpan('toolbar-icon'), 'pocket-knife');
         this.toolPickerButton.addEventListener('click', (e) => this.toolPicker.show(e, this.toolPickerButton!, this.containerEl as HTMLElement));
@@ -301,7 +302,7 @@ export class AgentSidebarView extends ItemView {
         // Web search toggle (globe icon) — quick toggle for webTools.enabled
         this.webToggleButton = toolbarLeft.createEl('button', {
             cls: 'toolbar-button toolbar-ghost web-toggle-button',
-            attr: { 'aria-label': 'Toggle web search' },
+            attr: { 'aria-label': t('ui.sidebar.toggleWebSearch') },
         });
         setIcon(this.webToggleButton.createSpan('toolbar-icon'), 'globe');
         this.webToggleButton.addEventListener('click', () => this.toggleWebSearch());
@@ -310,7 +311,7 @@ export class AgentSidebarView extends ItemView {
         // Attach file button (ghost style)
         const attachBtn = toolbarLeft.createEl('button', {
             cls: 'toolbar-button toolbar-ghost attach-button',
-            attr: { 'aria-label': 'Attach file' },
+            attr: { 'aria-label': t('ui.sidebar.attachFile') },
         });
         setIcon(attachBtn.createSpan('toolbar-icon'), 'paperclip');
         attachBtn.addEventListener('click', () => this.attachments.openFilePicker());
@@ -318,7 +319,7 @@ export class AgentSidebarView extends ItemView {
         // Vault file button — inserts @ and triggers autocomplete
         const vaultBtn = toolbarLeft.createEl('button', {
             cls: 'toolbar-button toolbar-ghost vault-attach-button',
-            attr: { 'aria-label': 'Add vault file' },
+            attr: { 'aria-label': t('ui.sidebar.addVaultFile') },
         });
         setIcon(vaultBtn.createSpan('toolbar-icon'), 'at-sign');
         vaultBtn.addEventListener('click', () => {
@@ -328,7 +329,7 @@ export class AgentSidebarView extends ItemView {
         // Ellipsis options menu button
         const ellipsisBtn = toolbarLeft.createEl('button', {
             cls: 'toolbar-button toolbar-ghost ellipsis-button',
-            attr: { 'aria-label': 'More options' },
+            attr: { 'aria-label': t('ui.sidebar.moreOptions') },
         });
         setIcon(ellipsisBtn.createSpan('toolbar-icon'), 'ellipsis');
         ellipsisBtn.addEventListener('click', (e) => this.showOptionsMenu(e));
@@ -336,7 +337,7 @@ export class AgentSidebarView extends ItemView {
         // Feature 3: Stop button (hidden by default, shown when task is running)
         this.stopButton = toolbarRight.createEl('button', {
             cls: 'toolbar-button stop-button',
-            attr: { 'aria-label': 'Stop' },
+            attr: { 'aria-label': t('ui.sidebar.stop') },
         });
         setIcon(this.stopButton.createSpan('toolbar-icon'), 'square');
         this.stopButton.style.display = 'none';
@@ -345,7 +346,7 @@ export class AgentSidebarView extends ItemView {
         // Send button
         this.sendButton = toolbarRight.createEl('button', {
             cls: 'toolbar-button send-button',
-            attr: { 'aria-label': 'Send message' },
+            attr: { 'aria-label': t('ui.sidebar.send') },
         });
         setIcon(this.sendButton.createSpan('toolbar-icon'), 'send-horizontal');
         this.sendButton.addEventListener('click', () => this.handleSendMessage());
@@ -405,12 +406,12 @@ export class AgentSidebarView extends ItemView {
         this.modelButton.empty();
         const effectiveKey = this.getEffectiveModelKey();
         const model = this.plugin.settings.activeModels.find((m) => getModelKey(m) === effectiveKey);
-        const label = model ? (model.displayName ?? model.name) : 'No model';
+        const label = model ? (model.displayName ?? model.name) : t('ui.sidebar.noModel');
         const hasModeOverride = !!this.plugin.settings.modeModelKeys?.[this.plugin.settings.currentMode];
         this.modelButton.createSpan('model-label').setText(label);
         setIcon(this.modelButton.createSpan('mode-chevron'), 'chevron-down');
         (this.modelButton as HTMLButtonElement).title = hasModeOverride
-            ? `${label} (mode override)`
+            ? t('ui.sidebar.modeOverride', { label })
             : label;
     }
 
@@ -424,7 +425,7 @@ export class AgentSidebarView extends ItemView {
 
         if (enabled.length === 0) {
             menu.addItem((item) =>
-                item.setTitle('No models enabled — open Settings').setIcon('settings').onClick(() => {
+                item.setTitle(t('ui.sidebar.noModelsEnabled')).setIcon('settings').onClick(() => {
                     (this.app as any).setting?.open();
                     (this.app as any).setting?.openTabById('obsidian-agent');
                 }),
@@ -433,10 +434,10 @@ export class AgentSidebarView extends ItemView {
             // Option to clear mode override (use global default)
             if (modeOverrideKey) {
                 const globalModel = this.plugin.settings.activeModels.find((m) => getModelKey(m) === globalKey);
-                const globalLabel = globalModel ? (globalModel.displayName ?? globalModel.name) : 'global default';
+                const globalLabel = globalModel ? (globalModel.displayName ?? globalModel.name) : t('ui.sidebar.globalDefault');
                 menu.addItem((item) =>
                     item
-                        .setTitle(`Use global default (${globalLabel})`)
+                        .setTitle(t('ui.sidebar.useGlobalDefault', { label: globalLabel }))
                         .setIcon('rotate-ccw')
                         .onClick(async () => {
                             if (this.plugin.settings.modeModelKeys) {
@@ -500,7 +501,7 @@ export class AgentSidebarView extends ItemView {
         if (newState) {
             const provider = this.plugin.settings.webTools.provider;
             if (!provider || provider === 'none') {
-                new Notice('Web search enabled. Set a search provider in Settings > Web Search.');
+                new Notice(t('notice.webSearchEnabled'));
             }
         }
     }
@@ -629,10 +630,10 @@ export class AgentSidebarView extends ItemView {
         if (ob.completed || ob.startedAt || !this.plugin.memoryService) return;
 
         const welcomeText = [
-            '## Willkommen bei Obsilo',
+            `## ${t('onboarding.welcome.heading')}`,
             '',
-            'Bevor wir loslegen, brauche ich Zugang zu einem KI-Modell.',
-            'Das geht schnell -- und kostenlos.',
+            t('onboarding.welcome.modelNeeded'),
+            t('onboarding.welcome.quickFree'),
         ].join('\n');
 
         const wrapper = this.chatContainer.createDiv('message assistant-message');
@@ -643,7 +644,7 @@ export class AgentSidebarView extends ItemView {
 
         const freeBtn = btnRow.createEl('button', {
             cls: 'setup-welcome-btn setup-welcome-btn-primary',
-            text: 'Kostenlos testen (Google)',
+            text: t('onboarding.welcome.freeButton'),
         });
         freeBtn.addEventListener('click', () => {
             this.disableOnboardingButtons(btnRow);
@@ -652,7 +653,7 @@ export class AgentSidebarView extends ItemView {
 
         const ownBtn = btnRow.createEl('button', {
             cls: 'setup-welcome-btn setup-welcome-btn-secondary',
-            text: 'Ich habe einen API-Key',
+            text: t('onboarding.welcome.apiKeyButton'),
         });
         ownBtn.addEventListener('click', () => {
             this.disableOnboardingButtons(btnRow);
@@ -673,19 +674,19 @@ export class AgentSidebarView extends ItemView {
         };
 
         const markdown = [
-            'Google bietet mit **Gemini 2.5 Flash** ein sehr gutes KI-Modell -- komplett kostenlos.',
+            t('onboarding.free.intro'),
             '',
-            '**So bekommst du deinen API-Key:**',
+            `**${t('onboarding.free.howTo')}**`,
             '',
-            '1. Oeffne die [Google AI Studio API-Key Seite](https://aistudio.google.com/app/apikey)',
-            '2. Melde dich mit deinem Google-Konto an und akzeptiere die Nutzungsbedingungen',
-            '3. Klicke auf **Create API Key**',
-            '4. Waehle ein bestehendes Projekt oder erstelle ein neues',
-            '5. Kopiere den Key',
+            t('onboarding.free.step1'),
+            t('onboarding.free.step2'),
+            t('onboarding.free.step3'),
+            t('onboarding.free.step4'),
+            t('onboarding.free.step5'),
             '',
-            '> Keine Kreditkarte noetig. [Pricing](https://ai.google.dev/gemini-api/docs/pricing) | [Rate Limits](https://ai.google.dev/gemini-api/docs/rate-limits)',
+            `> ${t('onboarding.free.noCreditCard')}`,
             '',
-            'Fuege deinen Key einfach hier im Chat ein.',
+            t('onboarding.free.pasteKey'),
         ].join('\n');
 
         this.addAssistantMessage(markdown);
@@ -697,15 +698,15 @@ export class AgentSidebarView extends ItemView {
         this.onboardingKeyState = 'awaiting_provider';
 
         const providers: { label: string; provider: ProviderType; model: string }[] = [
-            { label: 'Anthropic (Claude)', provider: 'anthropic', model: 'claude-sonnet-4-5-20250929' },
-            { label: 'OpenAI (GPT)', provider: 'openai', model: 'gpt-4o' },
-            { label: 'Google (Gemini)', provider: 'custom', model: 'gemini-2.5-flash' },
-            { label: 'OpenRouter', provider: 'openrouter', model: 'anthropic/claude-3.5-sonnet' },
+            { label: t('onboarding.provider.anthropic'), provider: 'anthropic', model: 'claude-sonnet-4-5-20250929' },
+            { label: t('onboarding.provider.openai'), provider: 'openai', model: 'gpt-4o' },
+            { label: t('onboarding.provider.google'), provider: 'custom', model: 'gemini-2.5-flash' },
+            { label: t('onboarding.provider.openrouter'), provider: 'openrouter', model: 'anthropic/claude-3.5-sonnet' },
         ];
 
         const wrapper = this.chatContainer.createDiv('message assistant-message');
         const bubble = wrapper.createDiv('message-bubble');
-        MarkdownRenderer.render(this.app, 'Welchen **Provider** moechtest du verwenden?', bubble, '', this);
+        MarkdownRenderer.render(this.app, t('onboarding.provider.selectPrompt'), bubble, '', this);
 
         const btnRow = bubble.createDiv('setup-welcome-buttons setup-provider-buttons');
         for (const p of providers) {
@@ -717,7 +718,7 @@ export class AgentSidebarView extends ItemView {
                 this.disableOnboardingButtons(btnRow);
                 this.onboardingSelectedProvider = p;
                 this.onboardingKeyState = 'awaiting_key_own';
-                this.addAssistantMessage(`**${p.label}** -- Fuege deinen API-Key hier im Chat ein.`);
+                this.addAssistantMessage(t('onboarding.provider.pasteKey', { label: p.label }));
             });
         }
 
@@ -736,15 +737,15 @@ export class AgentSidebarView extends ItemView {
         const bubble = wrapper.createDiv('message-bubble');
 
         const markdown = [
-            'Kein Modell konfiguriert. Um loszulegen, brauchst du einen API-Key.',
+            t('onboarding.noModel.heading'),
             '',
-            'Google bietet **Gemini 2.5 Flash** kostenlos an -- ohne Kreditkarte:',
+            t('onboarding.noModel.freeOffer'),
             '',
-            '1. Oeffne die [Google AI Studio API-Key Seite](https://aistudio.google.com/app/apikey)',
-            '2. Melde dich an und klicke **Create API Key**',
-            '3. Fuege den Key hier im Chat ein',
+            t('onboarding.noModel.step1'),
+            t('onboarding.noModel.step2'),
+            t('onboarding.noModel.step3'),
             '',
-            'Oder konfiguriere ein Modell in den **Settings**.',
+            t('onboarding.noModel.orSettings'),
         ].join('\n');
 
         MarkdownRenderer.render(this.app, markdown, bubble, '', this);
@@ -753,7 +754,7 @@ export class AgentSidebarView extends ItemView {
 
         const freeBtn = btnRow.createEl('button', {
             cls: 'setup-welcome-btn setup-welcome-btn-primary',
-            text: 'Google Key eingeben',
+            text: t('onboarding.noModel.googleButton'),
         });
         freeBtn.addEventListener('click', () => {
             this.disableOnboardingButtons(btnRow);
@@ -763,12 +764,12 @@ export class AgentSidebarView extends ItemView {
                 model: 'gemini-2.5-flash',
             };
             this.onboardingKeyState = 'awaiting_key_free';
-            this.addAssistantMessage('Fuege deinen Google API-Key hier im Chat ein.');
+            this.addAssistantMessage(t('onboarding.noModel.pasteMessage'));
         });
 
         const settingsBtn = btnRow.createEl('button', {
             cls: 'setup-welcome-btn setup-welcome-btn-secondary',
-            text: 'Settings oeffnen',
+            text: t('onboarding.noModel.settingsButton'),
         });
         settingsBtn.addEventListener('click', () => {
             this.disableOnboardingButtons(btnRow);
@@ -854,7 +855,7 @@ export class AgentSidebarView extends ItemView {
         this.plugin.saveSettings();
         // Clear welcome card, send hidden trigger
         if (this.chatContainer) this.chatContainer.empty();
-        this.sendProgrammaticMessage('Starte das Setup', true);
+        this.sendProgrammaticMessage(t('onboarding.trigger'), true);
     }
 
     /**
@@ -894,7 +895,7 @@ export class AgentSidebarView extends ItemView {
                 ? apiKey.slice(0, 4) + '...' + apiKey.slice(-4)
                 : '****';
             this.addUserMessage(masked);
-            this.addAssistantMessage('Teste Verbindung...');
+            this.addAssistantMessage(t('onboarding.test.testing'));
             this.onboardingKeyState = 'testing';
 
             const provider = this.onboardingSelectedProvider!;
@@ -902,7 +903,7 @@ export class AgentSidebarView extends ItemView {
 
             if (success) {
                 this.addAssistantMessage(
-                    `Verbindung erfolgreich! **${provider.label}** ist konfiguriert.`,
+                    t('onboarding.test.success', { provider: provider.label }),
                 );
                 this.onboardingKeyState = null;
                 this.onboardingSelectedProvider = null;
@@ -913,7 +914,7 @@ export class AgentSidebarView extends ItemView {
                 }
             } else {
                 this.addAssistantMessage(
-                    'Der Key konnte nicht verifiziert werden. Bitte pruefe den Key und versuche es nochmal.',
+                    t('onboarding.test.failed'),
                 );
                 this.onboardingKeyState = provider.model === 'gemini-2.5-flash' && provider.provider === 'custom'
                     ? 'awaiting_key_free'
@@ -1021,7 +1022,7 @@ export class AgentSidebarView extends ItemView {
 
             if (activeModel?.provider === 'ollama') {
                 this.addAssistantMessage(
-                    `**${activeModel.displayName ?? activeModel.name}** could not start. Make sure Ollama is running (\`ollama serve\`) and the model name is correct. Open **Settings -> Obsilo Agent -> Configure** to verify.`,
+                    t('ui.error.ollamaNotRunning', { model: activeModel.displayName ?? activeModel.name }),
                 );
             } else {
                 // No model or no API key — show setup guidance
@@ -1082,14 +1083,14 @@ export class AgentSidebarView extends ItemView {
             stepsSummaryIconEl = summaryEl.createSpan('steps-icon');
             setIcon(stepsSummaryIconEl, 'loader');
             stepsSummaryLabelEl = summaryEl.createSpan('steps-label');
-            stepsSummaryLabelEl.setText('Working…');
+            stepsSummaryLabelEl.setText(t('ui.sidebar.working'));
             stepsBodyEl = stepsBlockEl.createDiv('agent-steps-body');
         };
 
         const updateStepsSummary = (allDone: boolean) => {
             if (!stepsSummaryLabelEl || !stepsSummaryIconEl) return;
             const n = stepsTotal;
-            const label = n === 1 ? '1 Aktion' : `${n} Aktionen`;
+            const label = n === 1 ? t('ui.sidebar.actionSingular') : t('ui.sidebar.actionPlural', { count: n });
             if (allDone) {
                 stepsSummaryLabelEl.setText(label);
                 setIcon(stepsSummaryIconEl, stepsHasError ? 'x' : 'check');
@@ -1127,7 +1128,7 @@ export class AgentSidebarView extends ItemView {
             (stepsBodyEl ?? toolsEl).querySelector('.tool-computing-row')?.remove();
             if (stepsSummaryLabelEl && stepsTotal > 0) {
                 const n = stepsTotal;
-                stepsSummaryLabelEl.setText(n === 1 ? '1 Aktion' : `${n} Aktionen`);
+                stepsSummaryLabelEl.setText(n === 1 ? t('ui.sidebar.actionSingular') : t('ui.sidebar.actionPlural', { count: n }));
             }
         };
 
@@ -1149,8 +1150,8 @@ export class AgentSidebarView extends ItemView {
                         (stepsBodyEl ?? toolsEl).querySelector('.tool-computing-row')?.remove();
                         const row = (stepsBodyEl ?? toolsEl).createDiv('tool-computing-row');
                         setIcon(row.createSpan('tool-computing-icon'), 'loader');
-                        row.createSpan('tool-computing-text').setText('Analyzing results…');
-                        if (stepsSummaryLabelEl) stepsSummaryLabelEl.setText('Analyzing…');
+                        row.createSpan('tool-computing-text').setText(t('ui.sidebar.analyzing'));
+                        if (stepsSummaryLabelEl) stepsSummaryLabelEl.setText(t('ui.sidebar.analyzingShort'));
                         scheduleScroll();
                     }
                 },
@@ -1164,7 +1165,7 @@ export class AgentSidebarView extends ItemView {
                         thinkingEl.empty();
                         const header = thinkingEl.createDiv('thinking-header');
                         setIcon(header.createSpan('thinking-spinner'), 'loader');
-                        header.createSpan('thinking-label').setText('Reasoning…');
+                        header.createSpan('thinking-label').setText(t('ui.sidebar.reasoning'));
                         thinkingEl.createDiv('thinking-content');
                         header.addEventListener('click', () => {
                             const body = thinkingEl.querySelector('.thinking-content') as HTMLElement;
@@ -1184,7 +1185,7 @@ export class AgentSidebarView extends ItemView {
                         const spinner = thinkingEl.querySelector('.thinking-spinner');
                         const label = thinkingEl.querySelector('.thinking-label');
                         if (spinner) setIcon(spinner as HTMLElement, 'chevron-right');
-                        if (label) (label as HTMLElement).setText('Reasoning');
+                        if (label) (label as HTMLElement).setText(t('ui.sidebar.reasoningCollapsed'));
                         const body = thinkingEl.querySelector('.thinking-content') as HTMLElement;
                         if (body) body.style.display = 'none';
                         if (header) (header as HTMLElement).addEventListener('click', () => {
@@ -1377,7 +1378,7 @@ export class AgentSidebarView extends ItemView {
                     // and after the DOM-move (toolsEl.parentElement changes on move).
                     activityActionCount++;
                     const actBadge = toolsEl.closest('.assistant-message')?.querySelector('.todo-activity-badge') as HTMLElement | null;
-                    if (actBadge) actBadge.setText(`${activityActionCount} action${activityActionCount !== 1 ? 's' : ''}`);
+                    if (actBadge) actBadge.setText(t('ui.sidebar.activityCount', { count: activityActionCount }));
                     if (isError) {
                         const actDetails = toolsEl.closest('.todo-activity-log') as HTMLDetailsElement | null;
                         if (actDetails) actDetails.open = true;
@@ -1396,7 +1397,7 @@ export class AgentSidebarView extends ItemView {
                     // Show a subtle badge in the footer to indicate condensing happened
                     if (footerEl) {
                         const badge = footerEl.createSpan('context-condensed-badge');
-                        badge.setText('context condensed');
+                        badge.setText(t('ui.sidebar.contextCondensed'));
                         footerEl.style.display = '';
                     }
                 },
@@ -1407,7 +1408,7 @@ export class AgentSidebarView extends ItemView {
                     // the async save is still in flight.
                     this.plugin.settings.currentMode = newModeSlug;
                     this.updateModeButton();
-                    new Notice(`Switched to ${this.getModeDisplayName(newModeSlug)} mode`);
+                    new Notice(t('notice.modeSwitched', { mode: this.getModeDisplayName(newModeSlug) }));
                     // Auto-index on mode switch if configured
                     if (this.plugin.settings.semanticAutoIndex === 'mode-switch' && this.plugin.semanticIndex) {
                         this.plugin.semanticIndex.buildIndex().catch((e) =>
@@ -1533,7 +1534,7 @@ export class AgentSidebarView extends ItemView {
                         // Tools ran but the model returned no text — show a neutral placeholder
                         // so the user doesn't stare at an empty message bubble.
                         contentEl.empty();
-                        contentEl.createEl('p', { cls: 'message-empty-response', text: '(Keine Antwort vom Agenten)' });
+                        contentEl.createEl('p', { cls: 'message-empty-response', text: t('ui.sidebar.emptyResponse') });
                     }
                     // Show timestamp in footer even without token usage
                     if (footerEl.style.display === 'none') {
@@ -1581,7 +1582,7 @@ export class AgentSidebarView extends ItemView {
                     }
                     // Notify when sidebar is not the active (focused) view
                     if (this.app.workspace.getMostRecentLeaf()?.view !== this) {
-                        new Notice('Agent task complete', 3000);
+                        new Notice(t('notice.taskComplete'), 3000);
                     }
                     // Track assistant UI message for history persistence
                     if (accumulatedText) {
@@ -1593,7 +1594,7 @@ export class AgentSidebarView extends ItemView {
                     if (this.activeConversationId && this.uiMessages.length <= 2 && this.plugin.conversationStore) {
                         const firstUserMsg = this.uiMessages.find((m) => m.role === 'user');
                         if (firstUserMsg) {
-                            const title = firstUserMsg.text.slice(0, 60).replace(/\n/g, ' ').trim() || 'New Conversation';
+                            const title = firstUserMsg.text.slice(0, 60).replace(/\n/g, ' ').trim() || t('ui.sidebar.newConversation');
                             this.plugin.conversationStore.updateMeta(this.activeConversationId, { title }).catch(() => {});
                         }
                     }
@@ -1809,7 +1810,7 @@ export class AgentSidebarView extends ItemView {
         }
 
         const title = this.uiMessages.find((m) => m.role === 'user')?.text.slice(0, 60).replace(/\n/g, ' ').trim()
-            || 'Conversation';
+            || t('ui.sidebar.conversation');
 
         queue.enqueue({
             conversationId: this.activeConversationId,
@@ -1827,7 +1828,7 @@ export class AgentSidebarView extends ItemView {
 
         const data = await store.load(id);
         if (!data) {
-            new Notice('Could not load conversation');
+            new Notice(t('notice.loadConversationFailed'));
             return;
         }
 
@@ -1897,7 +1898,7 @@ export class AgentSidebarView extends ItemView {
         // Show a loading indicator immediately so the user sees something right away
         const loadingEl = contentEl.createDiv('message-loading');
         setIcon(loadingEl.createSpan('message-loading-icon'), 'loader');
-        loadingEl.createSpan('message-loading-text').setText('Working…');
+        loadingEl.createSpan('message-loading-text').setText(t('ui.sidebar.working'));
         // Token usage + timestamp footer
         const footerEl = messageEl.createDiv('message-footer');
         footerEl.style.display = 'none';
@@ -1912,21 +1913,21 @@ export class AgentSidebarView extends ItemView {
         const msg = error.message.toLowerCase();
         const status = (error as any).status ?? (error as any).statusCode;
         if (status === 401 || msg.includes('api key') || msg.includes('authentication')) {
-            return 'Invalid API key — check Settings → Obsilo Agent';
+            return t('ui.error.invalidKey');
         }
         if (status === 404 || msg.includes('not found')) {
-            return 'Model not found — verify the Model ID in Settings → Obsilo Agent';
+            return t('ui.error.modelNotFound');
         }
         if (status === 429 || msg.includes('rate limit')) {
-            return 'Rate limit reached — please wait a moment';
+            return t('ui.error.rateLimit');
         }
         if (status === 529 || msg.includes('overload')) {
-            return 'API overloaded — try again shortly';
+            return t('ui.error.overloaded');
         }
         if (msg.includes('network') || msg.includes('fetch') || msg.includes('econnrefused')) {
-            return 'Network error — check your connection and that Ollama is running';
+            return t('ui.error.network');
         }
-        return 'Error';
+        return t('ui.error.generic');
     }
 
     /**
@@ -1952,7 +1953,7 @@ export class AgentSidebarView extends ItemView {
                 const chip = previewRow.createDiv('message-attachment-chip');
                 setIcon(chip.createSpan('attachment-chip-icon'), 'file-text');
                 chip.createSpan('attachment-chip-name').setText(activeFile.basename);
-                chip.createSpan('attachment-current-badge').setText('Current');
+                chip.createSpan('attachment-current-badge').setText(t('ui.sidebar.currentFile'));
             }
             for (const att of attachments) {
                 const chip = previewRow.createDiv('message-attachment-chip');
@@ -1985,13 +1986,13 @@ export class AgentSidebarView extends ItemView {
         };
 
         // Copy message text
-        makeBtn('copy', 'Copy', () => {
+        makeBtn('copy', t('ui.sidebar.copy'), () => {
             navigator.clipboard.writeText(text);
-            new Notice('Copied.');
+            new Notice(t('notice.copied'));
         });
 
         // Edit and resend: put text back in textarea, remove this message + all following
-        makeBtn('pencil', 'Edit & resend', () => {
+        makeBtn('pencil', t('ui.sidebar.editResend'), () => {
             if (!this.textarea || !this.chatContainer) return;
             this.textarea.value = text;
             this.autoResizeTextarea();
@@ -2048,39 +2049,39 @@ export class AgentSidebarView extends ItemView {
 
         // Refresh Index (current file)
         menu.addItem((item) => {
-            item.setTitle('Refresh Index (Current File)');
+            item.setTitle(t('ui.menu.refreshIndex'));
             item.setIcon('refresh-cw');
             item.onClick(async () => {
                 const activeFile = this.app.workspace.getActiveFile();
-                if (!activeFile) { new Notice('No active file'); return; }
-                if (!this.plugin.semanticIndex) { new Notice('Semantic index is disabled'); return; }
+                if (!activeFile) { new Notice(t('notice.noActiveFile')); return; }
+                if (!this.plugin.semanticIndex) { new Notice(t('notice.semanticDisabled')); return; }
                 await this.plugin.semanticIndex.updateFile(activeFile.path);
-                new Notice('Index refreshed for current file');
+                new Notice(t('notice.indexRefreshed'));
             });
         });
 
         // Force Reindex Vault
         menu.addItem((item) => {
-            item.setTitle('Force Reindex Vault');
+            item.setTitle(t('ui.menu.forceReindex'));
             item.setIcon('database');
             item.onClick(async () => {
-                if (!this.plugin.semanticIndex) { new Notice('Semantic index is disabled'); return; }
-                if (this.plugin.semanticIndex.building) { new Notice('Indexing already in progress'); return; }
-                new Notice('Reindexing vault in background...');
+                if (!this.plugin.semanticIndex) { new Notice(t('notice.semanticDisabled')); return; }
+                if (this.plugin.semanticIndex.building) { new Notice(t('notice.indexingInProgress')); return; }
+                new Notice(t('notice.reindexingVault'));
                 this.plugin.semanticIndex.buildIndex(undefined, true).then(() =>
-                    new Notice('Vault index rebuilt')
-                ).catch((e) => new Notice(`Reindex failed: ${e.message}`));
+                    new Notice(t('notice.vaultIndexRebuilt'))
+                ).catch((e) => new Notice(t('notice.reindexFailed', { error: e.message })));
             });
         });
 
         // Cancel Indexing (only shown while building)
         if (this.plugin.semanticIndex?.building) {
             menu.addItem((item) => {
-                item.setTitle('Cancel Indexing');
+                item.setTitle(t('ui.menu.cancelIndexing'));
                 item.setIcon('x-circle');
                 item.onClick(() => {
                     this.plugin.semanticIndex?.cancelBuild();
-                    new Notice('Indexing cancelled — partial progress saved.');
+                    new Notice(t('notice.indexingCancelled'));
                 });
             });
         }
@@ -2090,7 +2091,7 @@ export class AgentSidebarView extends ItemView {
         // Add Open Note in Context (toggle)
         menu.addItem((item) => {
             const enabled = settings.autoAddActiveFileContext;
-            item.setTitle('Add Open Note in Context');
+            item.setTitle(t('ui.menu.addOpenNote'));
             item.setIcon(enabled ? 'check' : 'file-text');
             item.setChecked(enabled);
             item.onClick(async () => {
@@ -2103,7 +2104,7 @@ export class AgentSidebarView extends ItemView {
         // Auto-accept Edits (toggle)
         menu.addItem((item) => {
             const enabled = settings.autoApproval.noteEdits && settings.autoApproval.vaultChanges;
-            item.setTitle('Auto-accept Edits');
+            item.setTitle(t('ui.menu.autoAcceptEdits'));
             item.setIcon(enabled ? 'check' : 'pencil');
             item.setChecked(enabled);
             item.onClick(async () => {
@@ -2111,7 +2112,7 @@ export class AgentSidebarView extends ItemView {
                 settings.autoApproval.noteEdits = newVal;
                 settings.autoApproval.vaultChanges = newVal;
                 await this.plugin.saveSettings();
-                new Notice(`Auto-accept edits: ${newVal ? 'on' : 'off'}`);
+                new Notice(t('notice.autoAcceptEdits', { value: newVal ? 'on' : 'off' }));
             });
         });
 
@@ -2141,17 +2142,17 @@ export class AgentSidebarView extends ItemView {
      */
     private formatGroupedLabel(name: string, count: number): string {
         const labels: Record<string, [string, string]> = {
-            read_file:        ['Reading file',       'Reading files'],
-            list_files:       ['Listing files',      'Listing files'],
-            search_files:     ['Searching',          'Searching'],
-            get_frontmatter:  ['Reading metadata',   'Reading metadata'],
-            get_linked_notes: ['Finding links',      'Finding links'],
-            search_by_tag:    ['Searching by tag',   'Searching by tag'],
-            get_vault_stats:  ['Vault overview',     'Vault overview'],
-            get_daily_note:   ['Reading daily note', 'Reading daily notes'],
-            web_fetch:        ['Fetching page',      'Fetching pages'],
-            web_search:       ['Searching web',      'Searching web'],
-            semantic_search:  ['Semantic search',    'Semantic searches'],
+            read_file:        [t('ui.toolActivity.readFile'),       t('ui.toolActivity.readFiles')],
+            list_files:       [t('ui.toolActivity.listFiles'),      t('ui.toolActivity.listFiles')],
+            search_files:     [t('ui.toolActivity.searching'),      t('ui.toolActivity.searching')],
+            get_frontmatter:  [t('ui.toolActivity.readingMetadata'),t('ui.toolActivity.readingMetadata')],
+            get_linked_notes: [t('ui.toolActivity.findingLinks'),   t('ui.toolActivity.findingLinks')],
+            search_by_tag:    [t('ui.toolActivity.searchingByTag'), t('ui.toolActivity.searchingByTag')],
+            get_vault_stats:  [t('ui.toolActivity.vaultOverview'),  t('ui.toolActivity.vaultOverview')],
+            get_daily_note:   [t('ui.toolActivity.readingDailyNote'),t('ui.toolActivity.readingDailyNotes')],
+            web_fetch:        [t('ui.toolActivity.fetchingPage'),   t('ui.toolActivity.fetchingPages')],
+            web_search:       [t('ui.toolActivity.searchingWeb'),   t('ui.toolActivity.searchingWeb')],
+            semantic_search:  [t('ui.toolActivity.semanticSearch'), t('ui.toolActivity.semanticSearches')],
         };
         const [singular, plural] = labels[name] ?? [name, name];
         return count === 1 ? singular : `${plural} (${count})`;
@@ -2418,7 +2419,7 @@ export class AgentSidebarView extends ItemView {
             const indicator = bar.createEl('span', { cls: 'sources-indicator' });
             const iconEl = indicator.createSpan('sources-indicator-icon');
             setIcon(iconEl, 'book-open');
-            indicator.createSpan({ text: `${sources.length} Quellen` });
+            indicator.createSpan({ text: t('ui.sidebar.sources', { count: sources.length }) });
             indicator.addEventListener('click', (e) => {
                 e.stopPropagation();
                 this.showSourcesPanel(indicator, sources);
@@ -2435,7 +2436,7 @@ export class AgentSidebarView extends ItemView {
         // Insert at cursor in active note
         // iterateAllLeaves with instanceof is the most reliable way to find a markdown editor
         // because getActiveViewOfType returns null when the sidebar has focus
-        makeBtn('text-cursor-input', 'Insert at cursor', () => {
+        makeBtn('text-cursor-input', t('ui.sidebar.insertAtCursor'), () => {
             let view: MarkdownView | null =
                 this.app.workspace.getActiveViewOfType(MarkdownView) ?? this.lastMarkdownView;
             if (!view) {
@@ -2447,14 +2448,14 @@ export class AgentSidebarView extends ItemView {
             }
             if (view?.editor) {
                 view.editor.replaceSelection(responseText);
-                new Notice('Inserted at cursor.');
+                new Notice(t('notice.insertedAtCursor'));
             } else {
-                new Notice('No open note found — open a note in the editor first.');
+                new Notice(t('notice.noOpenNote'));
             }
         });
 
         // Create new note from response — open in a new leaf (not in sidebar)
-        makeBtn('file-plus', 'Create note from response', async () => {
+        makeBtn('file-plus', t('ui.sidebar.createNote'), async () => {
             const now = new Date();
             // Colons are forbidden in filenames on macOS/Windows — use dashes for HH-MM
             const ts = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}`;
@@ -2465,19 +2466,19 @@ export class AgentSidebarView extends ItemView {
                 const leaf = this.app.workspace.getLeaf(true);
                 await leaf.openFile(file);
             } catch (e) {
-                new Notice(`Could not create note: ${(e as Error).message}`);
+                new Notice(t('notice.createNoteFailed', { error: (e as Error).message }));
             }
         });
 
         // Copy to clipboard
-        makeBtn('copy', 'Copy response', () => {
+        makeBtn('copy', t('ui.sidebar.copyResponse'), () => {
             navigator.clipboard.writeText(responseText).then(() => {
-                new Notice('Copied to clipboard');
+                new Notice(t('notice.copiedToClipboard'));
             });
         });
 
         // Regenerate
-        makeBtn('refresh-cw', 'Regenerate response', () => {
+        makeBtn('refresh-cw', t('ui.sidebar.regenerate'), () => {
             // Remove this message and re-run
             messageEl.remove();
             // Remove last two history entries (assistant + tool_results if any)
@@ -2489,7 +2490,7 @@ export class AgentSidebarView extends ItemView {
         });
 
         // Delete message
-        makeBtn('trash-2', 'Delete response', () => {
+        makeBtn('trash-2', t('ui.sidebar.deleteResponse'), () => {
             messageEl.remove();
         });
     }
@@ -2527,13 +2528,13 @@ export class AgentSidebarView extends ItemView {
 
             const header = planBoxEl.createDiv('todo-box-header');
             setIcon(header.createSpan('todo-box-icon'), 'list-checks');
-            header.createSpan('todo-box-title').setText('Plan');
+            header.createSpan('todo-box-title').setText(t('ui.sidebar.plan'));
             activityBadgeEl = header.createSpan('todo-activity-badge');
 
             planListEl = planBoxEl.createDiv('todo-box-list');
 
             const activityDetails = planBoxEl.createEl('details', { cls: 'todo-activity-log' });
-            activityDetails.createEl('summary', { cls: 'todo-activity-summary', text: 'Activity' });
+            activityDetails.createEl('summary', { cls: 'todo-activity-summary', text: t('ui.sidebar.activity') });
             // DOM-move: relocate toolsEl (with any already-rendered tool calls) into collapsed details
             activityDetails.appendChild(toolsEl);
         } else {
@@ -2594,7 +2595,7 @@ export class AgentSidebarView extends ItemView {
                 });
                 const confirmBtn = card.createEl('button', {
                     cls: 'followup-confirm-btn',
-                    text: 'Auswahl bestaetigen',
+                    text: t('ui.question.confirm'),
                 });
                 confirmBtn.addEventListener('click', () => {
                     if (selected.size === 0) return;
@@ -2613,9 +2614,9 @@ export class AgentSidebarView extends ItemView {
         const inputRow = card.createDiv('question-input-row');
         const input = inputRow.createEl('input', {
             cls: 'question-input',
-            attr: { type: 'text', placeholder: 'Type your answer...' },
+            attr: { type: 'text', placeholder: t('ui.question.placeholder') },
         }) as HTMLInputElement;
-        const submitBtn = inputRow.createEl('button', { cls: 'question-submit-btn', text: 'Answer' });
+        const submitBtn = inputRow.createEl('button', { cls: 'question-submit-btn', text: t('ui.question.answer') });
         const submit = () => {
             const val = input.value.trim();
             if (!val) return;
@@ -2640,11 +2641,11 @@ export class AgentSidebarView extends ItemView {
 
             const group = this.getToolGroup(toolName);
             const groupLabels: Record<string, string> = {
-                'note-edit': 'note edits', 'vault-change': 'vault changes',
-                web: 'web', mcp: 'MCP', read: 'read',
-                mode: 'mode switching', subtask: 'sub-agents',
-                skill: 'plugin skills',
-                'plugin-api': 'plugin API', recipe: 'recipes',
+                'note-edit': t('ui.approval.noteEdits'), 'vault-change': t('ui.approval.vaultChanges'),
+                web: t('ui.approval.web'), mcp: t('ui.approval.mcp'), read: t('ui.approval.read'),
+                mode: t('ui.approval.modeSwitching'), subtask: t('ui.approval.subAgents'),
+                skill: t('ui.approval.pluginSkills'),
+                'plugin-api': t('ui.approval.pluginApi'), recipe: t('ui.approval.recipes'),
             };
 
             // Compact inline row — appears within the tool call area
@@ -2652,12 +2653,12 @@ export class AgentSidebarView extends ItemView {
             const iconSpan = row.createSpan('tool-approval-icon');
             setIcon(iconSpan, 'shield-alert');
             row.createSpan('tool-approval-text').setText(
-                `${this.formatToolLabel(toolName)} — ${groupLabels[group] ?? group} not enabled`
+                t('ui.approval.notEnabled', { tool: this.formatToolLabel(toolName), group: groupLabels[group] ?? group })
             );
 
             const actions = row.createDiv('tool-approval-actions');
-            const allowBtn = actions.createEl('button', { cls: 'tool-approval-btn approval-allow-once', text: 'Allow once' });
-            const enableBtn = actions.createEl('button', { cls: 'tool-approval-btn approval-enable', text: 'Enable in Settings' });
+            const allowBtn = actions.createEl('button', { cls: 'tool-approval-btn approval-allow-once', text: t('ui.approval.allowOnce') });
+            const enableBtn = actions.createEl('button', { cls: 'tool-approval-btn approval-enable', text: t('ui.approval.enableInSettings') });
             const denyBtn = actions.createEl('button', { cls: 'tool-approval-btn approval-deny-small', text: '✕' });
 
             const cleanup = () => row.remove();
@@ -2730,12 +2731,12 @@ export class AgentSidebarView extends ItemView {
             hour: '2-digit',
             minute: '2-digit',
         });
-        label.setText(`Checkpoint · ${allFiles} · ${time}`);
+        label.setText(t('ui.checkpoint.label', { files: allFiles, time }));
 
         // Single restore button that expands into options
         const restoreBtn = marker.createEl('button', {
             cls: 'checkpoint-restore-btn',
-            text: 'Restore Checkpoint',
+            text: t('ui.checkpoint.restore'),
         });
         restoreBtn.addEventListener('click', () => {
             restoreBtn.style.display = 'none';
@@ -2743,13 +2744,13 @@ export class AgentSidebarView extends ItemView {
             const options = marker.createDiv('checkpoint-restore-options');
 
             const keepBtn = options.createEl('button', {
-                cls: 'checkpoint-option-btn', text: 'Keep chat',
+                cls: 'checkpoint-option-btn', text: t('ui.checkpoint.keepChat'),
             });
             const deleteBtn = options.createEl('button', {
-                cls: 'checkpoint-option-btn checkpoint-option-delete', text: 'Delete chat from here',
+                cls: 'checkpoint-option-btn checkpoint-option-delete', text: t('ui.checkpoint.deleteFromHere'),
             });
             const cancelBtn = options.createEl('button', {
-                cls: 'checkpoint-option-btn', text: 'Cancel',
+                cls: 'checkpoint-option-btn', text: t('ui.checkpoint.cancel'),
             });
 
             cancelBtn.addEventListener('click', () => {
@@ -2778,20 +2779,20 @@ export class AgentSidebarView extends ItemView {
     ): Promise<void> {
         optionsEl.querySelectorAll('button').forEach((b) => ((b as HTMLButtonElement).disabled = true));
         optionsEl.empty();
-        optionsEl.setText('Restoring...');
+        optionsEl.setText(t('ui.checkpoint.restoring'));
 
         try {
             console.log('[Checkpoint] Restoring:', JSON.stringify(checkpoint, null, 2));
             const result = await this.plugin.checkpointService?.restore(checkpoint);
             console.log('[Checkpoint] Result:', JSON.stringify(result, null, 2));
             if (!result || result.restored.length === 0) {
-                optionsEl.setText(result?.errors?.length ? 'Error' : 'Nothing to restore');
+                optionsEl.setText(result?.errors?.length ? t('ui.checkpoint.error') : t('ui.checkpoint.nothingToRestore'));
                 return;
             }
 
             optionsEl.remove();
             const successEl = marker.createSpan('checkpoint-restored');
-            successEl.setText(`Restored ${result.restored.length} file(s)`);
+            successEl.setText(t('ui.checkpoint.restored', { count: result.restored.length }));
 
             if (deleteChatFromHere) {
                 this.deleteChatFromCheckpoint(marker);
@@ -2809,7 +2810,7 @@ export class AgentSidebarView extends ItemView {
             this.saveCurrentConversation();
         } catch (e) {
             console.error('[Checkpoint] Restore failed:', e);
-            optionsEl.setText('Failed');
+            optionsEl.setText(t('ui.checkpoint.failed'));
         }
     }
 
@@ -3010,12 +3011,12 @@ export class AgentSidebarView extends ItemView {
         if (!this.chatContainer) return;
         const bar = this.chatContainer.createDiv('undo-bar');
         bar.createSpan('undo-label').setText(
-            `Agent modified ${writeCount} file${writeCount !== 1 ? 's' : ''}.`
+            t('ui.undo.modified', { count: writeCount })
         );
-        const undoBtn = bar.createEl('button', { cls: 'undo-btn', text: '↩ Undo all changes' });
+        const undoBtn = bar.createEl('button', { cls: 'undo-btn', text: t('ui.undo.undoAll') });
         undoBtn.addEventListener('click', async () => {
             (undoBtn as HTMLButtonElement).disabled = true;
-            undoBtn.setText('Restoring…');
+            undoBtn.setText(t('ui.undo.restoring'));
             console.log(`[Undo] Attempting restore for taskId=${taskId} hasService=${!!this.plugin.checkpointService}`);
             try {
                 const result = await this.plugin.checkpointService?.restoreLatestForTask(taskId);
@@ -3023,14 +3024,14 @@ export class AgentSidebarView extends ItemView {
                 bar.empty();
                 if (result && result.restored.length > 0) {
                     bar.createSpan('undo-success').setText(
-                        `Restored ${result.restored.length} file${result.restored.length !== 1 ? 's' : ''}.`
+                        t('ui.undo.restored', { count: result.restored.length })
                     );
                 } else {
-                    bar.createSpan('undo-error').setText('No checkpoint found to restore.');
+                    bar.createSpan('undo-error').setText(t('ui.undo.noCheckpoint'));
                 }
             } catch {
                 bar.empty();
-                bar.createSpan('undo-error').setText('Restore failed — see console.');
+                bar.createSpan('undo-error').setText(t('ui.undo.restoreFailed'));
             }
         });
         this.chatContainer.scrollTo({ top: this.chatContainer.scrollHeight });

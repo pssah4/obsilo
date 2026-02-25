@@ -1,6 +1,7 @@
 import { setIcon, TFile, Notice } from 'obsidian';
 import type { ContentBlock, ImageMediaType } from '../../api/types';
 import type { Vault } from 'obsidian';
+import { t } from '../../i18n';
 
 /** A file (image or text) attached to the current compose turn. */
 export interface AttachmentItem {
@@ -40,7 +41,7 @@ export class AttachmentHandler {
     async processFile(file: File): Promise<void> {
         const MAX_BYTES = 10 * 1024 * 1024; // 10 MB
         if (file.size > MAX_BYTES) {
-            new Notice(`"${file.name}" exceeds the 10 MB limit.`);
+            new Notice(t('ui.attachment.tooLarge', { name: file.name }));
             return;
         }
 
@@ -72,7 +73,7 @@ export class AttachmentHandler {
                 block: { type: 'text', text: `<attached_file name="${file.name}">\n${text}\n</attached_file>` },
             });
         } else {
-            new Notice(`"${file.name}" is not supported. Use images (PNG/JPG/GIF/WebP) or text files.`);
+            new Notice(t('ui.attachment.unsupported', { name: file.name }));
             return;
         }
         this.renderChips();
@@ -87,7 +88,7 @@ export class AttachmentHandler {
             });
             this.renderChips();
         } catch {
-            new Notice(`Could not read "${file.path}"`);
+            new Notice(t('ui.attachment.readFailed', { path: file.path }));
         }
     }
 

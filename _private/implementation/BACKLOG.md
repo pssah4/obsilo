@@ -1,7 +1,7 @@
 # Obsidian Agent — Backlog
 
 > Status: `[x]` fertig · `[~]` in Arbeit · `[ ]` offen · `[-]` zurückgestellt
-> Letzte Aktualisierung: 2026-02-24 (Dokumentations-Komplett-Ueberarbeitung Pre-Release)
+> Letzte Aktualisierung: 2026-02-25 (Localization i18n implementiert)
 
 ---
 
@@ -172,6 +172,20 @@
 | `[x]` | Backup Tab (Export / Import Settings als JSON) | `src/ui/settings/BackupTab.ts` |
 | `[x]` | Debug Tab (Debug Mode Toggle) | `src/ui/settings/DebugTab.ts` |
 | `[x]` | Log Tab (JSONL Audit-Log-Viewer) | `src/ui/settings/LogTab.ts` |
+| `[x]` | Language Tab (Sprachauswahl-Dropdown, 6 Sprachen) | `src/ui/settings/LanguageTab.ts` |
+
+### Localization (i18n)
+| Status | Feature | Datei |
+|--------|---------|-------|
+| `[x]` | i18n-Infrastruktur (t(), setLanguage(), initI18n(), lazy-load) | `src/i18n/index.ts`, `src/i18n/types.ts` |
+| `[x]` | English Locale (937 Keys, vollstaendig) | `src/i18n/locales/en.ts` |
+| `[x]` | Deutsch Locale (937 Keys, vollstaendig) | `src/i18n/locales/de.ts` |
+| `[x]` | Espanol Locale (937 Keys, vollstaendig) | `src/i18n/locales/es.ts` |
+| `[x]` | Japanese Locale (937 Keys, vollstaendig) | `src/i18n/locales/ja.ts` |
+| `[x]` | Simplified Chinese Locale (937 Keys, vollstaendig) | `src/i18n/locales/zh-CN.ts` |
+| `[x]` | Hindi Locale (teilweise, EN-Fallback) | `src/i18n/locales/hi.ts` |
+| `[x]` | Settings-Tabs Migration (17 Tabs + constants.ts) | alle Settings-Tab-Dateien |
+| `[x]` | Chat-UI & Modals Migration | `AgentSidebarView.ts`, alle Modals |
 
 ---
 
@@ -179,7 +193,6 @@
 
 | Priorität | Feature | Spec | Notiz |
 |-----------|---------|------|-------|
-| **Hoch** | **Localization (i18n)** | `FEATURE-localization.md` | 6 Sprachen (en/de/es/ja/zh-CN/hi), Language-Tab, t()-Funktion |
 | Mittel | Mode Export/Import (JSON) | — | Fehlte in Settings-Tab |
 | Niedrig | Settings Reset (Factory Reset) | — | BackupTab hat Export/Import, nur Reset fehlt |
 | Niedrig | Custom Tools (`.ts` Dateien laden) | — | Experimental |
@@ -203,7 +216,7 @@
 
 ## Dokumentation
 
-### Feature-Specs (42 Dateien in `_private/requirements/features/`)
+### Feature-Specs (43 Dateien in `_private/requirements/features/`)
 
 Alle implementierten Features haben eine `FEATURE-*.md` Spec.
 

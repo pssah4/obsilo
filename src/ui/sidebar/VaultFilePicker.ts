@@ -1,5 +1,6 @@
 import type { App, TFile } from 'obsidian';
 import { setIcon } from 'obsidian';
+import { t } from '../../i18n';
 
 /**
  * VaultFilePicker — floating search/multi-select popover for vault files.
@@ -49,7 +50,7 @@ export class VaultFilePicker {
         setIcon(searchIconEl, 'search');
         this.searchInput = searchRow.createEl('input', {
             cls: 'vfp-search-input',
-            attr: { placeholder: 'Search vault files…', type: 'text', spellcheck: 'false' },
+            attr: { placeholder: t('ui.filePicker.search'), type: 'text', spellcheck: 'false' },
         });
 
         // ── List ─────────────────────────────────────────────────────
@@ -58,7 +59,7 @@ export class VaultFilePicker {
         // ── Footer ───────────────────────────────────────────────────
         const footer = this.containerEl.createDiv('vfp-footer');
         this.countEl = footer.createSpan('vfp-count');
-        const addBtn = footer.createEl('button', { cls: 'vfp-add-btn', text: 'Add' });
+        const addBtn = footer.createEl('button', { cls: 'vfp-add-btn', text: t('ui.filePicker.add') });
         addBtn.addEventListener('mousedown', (e) => { e.preventDefault(); this.confirm(); });
 
         // ── Wire up events ────────────────────────────────────────────
@@ -150,7 +151,7 @@ export class VaultFilePicker {
     private updateCount(): void {
         if (!this.countEl) return;
         this.countEl.setText(
-            this.selected.size > 0 ? `${this.selected.size} selected` : '',
+            this.selected.size > 0 ? t('ui.filePicker.selected', { count: this.selected.size }) : '',
         );
     }
 
@@ -167,7 +168,7 @@ export class VaultFilePicker {
             const match = query === ''
                 || activeFile.basename.toLowerCase().includes(query)
                 || activeFile.path.toLowerCase().includes(query);
-            if (match) this.filtered.push({ file: activeFile, label: `Active: ${activeFile.basename}` });
+            if (match) this.filtered.push({ file: activeFile, label: t('ui.filePicker.activeFile', { name: activeFile.basename }) });
         }
 
         // All other markdown files
@@ -185,7 +186,7 @@ export class VaultFilePicker {
         this.listEl.empty();
 
         if (this.filtered.length === 0) {
-            this.listEl.createDiv({ cls: 'vfp-empty', text: 'No files found' });
+            this.listEl.createDiv({ cls: 'vfp-empty', text: t('ui.filePicker.noFiles') });
             return;
         }
 

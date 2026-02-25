@@ -1,6 +1,6 @@
 # FEATURE: Localization (i18n)
 
-**Status:** Planned
+**Status:** Implemented
 **Branch:** `lokalisierung`
 
 ---

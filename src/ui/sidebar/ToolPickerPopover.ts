@@ -2,6 +2,7 @@ import { setIcon } from 'obsidian';
 import type ObsidianAgentPlugin from '../../main';
 import type { ModeService } from '../../core/modes/ModeService';
 import { TOOL_METADATA, GROUP_META, getToolsForGroup } from '../../core/tools/toolMetadata';
+import { t } from '../../i18n';
 
 /**
  * ToolPickerPopover — manages the "pocket-knife" tool/skill/workflow picker.
@@ -32,13 +33,13 @@ export class ToolPickerPopover {
 
         // ── Header ───────────────────────────────────────────────────────────
         const headerEl = popover.createDiv('tool-picker-header');
-        headerEl.createSpan({ cls: 'tool-picker-title', text: 'Configure tools' });
+        headerEl.createSpan({ cls: 'tool-picker-title', text: t('ui.toolPicker.title') });
         const countBadge = headerEl.createSpan('tool-picker-count');
 
         // ── Search ───────────────────────────────────────────────────────────
         const searchInput = popover.createEl('input', {
             cls: 'tool-picker-search',
-            attr: { placeholder: 'Filter tools…', type: 'text', spellcheck: 'false' },
+            attr: { placeholder: t('ui.toolPicker.filter'), type: 'text', spellcheck: 'false' },
         }) as HTMLInputElement;
 
         // ── Scroll container ─────────────────────────────────────────────────
@@ -74,7 +75,7 @@ export class ToolPickerPopover {
         const updateCount = () => {
             let n = 0;
             for (const cb of toolChecks.values()) { if (cb.checked) n++; }
-            countBadge.setText(`${n} selected`);
+            countBadge.setText(t('ui.toolPicker.selected', { count: n }));
         };
 
         // Create a top-level expandable category row
@@ -131,7 +132,7 @@ export class ToolPickerPopover {
         };
 
         // ── Built-In section ─────────────────────────────────────────────────
-        const { catRow: builtInCatRow, catBody: builtInCatBody } = makeTopCat('Built-In');
+        const { catRow: builtInCatRow, catBody: builtInCatBody } = makeTopCat(t('ui.toolPicker.builtIn'));
         const builtInGroupCb = builtInCatRow.createEl('input', { type: 'checkbox' }) as HTMLInputElement;
         builtInGroupCb.className = 'tp-cat-group-cb';
         const allBuiltInTools = mode.toolGroups
@@ -202,7 +203,7 @@ export class ToolPickerPopover {
         // ── MCP Servers section ───────────────────────────────────────────────
         if (mode.toolGroups.includes('mcp')) {
             const servers = Object.keys(this.plugin.settings.mcpServers ?? {});
-            const { catRow: mcpCatRow, catBody: mcpCatBody } = makeTopCat('MCP Servers', servers.length > 0);
+            const { catRow: mcpCatRow, catBody: mcpCatBody } = makeTopCat(t('ui.toolPicker.mcpServers'), servers.length > 0);
             const mcpGroupCb = mcpCatRow.createEl('input', { type: 'checkbox' }) as HTMLInputElement;
             mcpGroupCb.className = 'tp-cat-group-cb';
             const mcpChecks: HTMLInputElement[] = [];
@@ -211,7 +212,7 @@ export class ToolPickerPopover {
                 const activeMcpServers: string[] = this.plugin.settings.activeMcpServers ?? [];
                 for (const serverName of servers) {
                     const cb = makeItemRow(
-                        mcpCatBody, serverName, 'MCP server', 'plug-2',
+                        mcpCatBody, serverName, t('ui.toolPicker.mcpServer'), 'plug-2',
                         activeMcpServers.length === 0 || activeMcpServers.includes(serverName),
                         'tp-item-row tp-item-indent-cat',
                     );
@@ -238,7 +239,7 @@ export class ToolPickerPopover {
                 mcpGroupCb.checked = allMcp;
                 mcpGroupCb.indeterminate = !allMcp && someMcp;
             } else {
-                mcpCatBody.createEl('span', { cls: 'tp-empty-hint', text: 'No MCP servers configured.' });
+                mcpCatBody.createEl('span', { cls: 'tp-empty-hint', text: t('ui.toolPicker.noMcpServers') });
                 mcpGroupCb.checked = false;
                 mcpGroupCb.disabled = true;
             }
@@ -251,16 +252,16 @@ export class ToolPickerPopover {
         }
 
         // ── Skills section (async) ────────────────────────────────────────────
-        const { catRow: skillsCatRow, catBody: skillsCatBody } = makeTopCat('Skills', false);
+        const { catRow: skillsCatRow, catBody: skillsCatBody } = makeTopCat(t('ui.toolPicker.skills'), false);
         const skillsGroupCb = skillsCatRow.createEl('input', { type: 'checkbox' }) as HTMLInputElement;
         skillsGroupCb.className = 'tp-cat-group-cb';
-        skillsCatBody.createEl('span', { cls: 'tp-empty-hint', text: 'Loading…' });
+        skillsCatBody.createEl('span', { cls: 'tp-empty-hint', text: t('ui.toolPicker.loading') });
 
         // ── Workflows section (async) ─────────────────────────────────────────
-        const { catRow: wfCatRow, catBody: wfCatBody } = makeTopCat('Workflows', false);
+        const { catRow: wfCatRow, catBody: wfCatBody } = makeTopCat(t('ui.toolPicker.workflows'), false);
         const wfGroupCb = wfCatRow.createEl('input', { type: 'checkbox' }) as HTMLInputElement;
         wfGroupCb.className = 'tp-cat-group-cb';
-        wfCatBody.createEl('span', { cls: 'tp-empty-hint', text: 'Loading…' });
+        wfCatBody.createEl('span', { cls: 'tp-empty-hint', text: t('ui.toolPicker.loading') });
 
         // ── Position (clamped to container bounds) ──────────────────────────
         const positionPopover = () => {
@@ -327,7 +328,7 @@ export class ToolPickerPopover {
                 try {
                     const skills = await skillsManager.discoverSkills();
                     if (skills.length === 0) {
-                        skillsCatBody.createEl('span', { cls: 'tp-empty-hint', text: 'No skills found.' });
+                        skillsCatBody.createEl('span', { cls: 'tp-empty-hint', text: t('ui.toolPicker.noSkills') });
                         skillsGroupCb.disabled = true;
                     } else {
                         const skillCbs: HTMLInputElement[] = [];
@@ -381,7 +382,7 @@ export class ToolPickerPopover {
                         });
                     }
                 } catch {
-                    skillsCatBody.createEl('span', { cls: 'tp-empty-hint', text: 'Error loading skills.' });
+                    skillsCatBody.createEl('span', { cls: 'tp-empty-hint', text: t('ui.toolPicker.errorSkills') });
                 }
             } else {
                 skillsCatRow.remove();
@@ -394,7 +395,7 @@ export class ToolPickerPopover {
                 try {
                     const workflows = await workflowLoader.discoverWorkflows();
                     if (workflows.length === 0) {
-                        wfCatBody.createEl('span', { cls: 'tp-empty-hint', text: 'No workflows found.' });
+                        wfCatBody.createEl('span', { cls: 'tp-empty-hint', text: t('ui.toolPicker.noWorkflows') });
                         wfGroupCb.disabled = true;
                     } else {
                         const wfCbs: HTMLInputElement[] = [];
@@ -433,7 +434,7 @@ export class ToolPickerPopover {
                         });
                     }
                 } catch {
-                    wfCatBody.createEl('span', { cls: 'tp-empty-hint', text: 'Error loading workflows.' });
+                    wfCatBody.createEl('span', { cls: 'tp-empty-hint', text: t('ui.toolPicker.errorWorkflows') });
                 }
             } else {
                 wfCatRow.remove();
