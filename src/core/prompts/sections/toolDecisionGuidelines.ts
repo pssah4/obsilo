@@ -25,9 +25,14 @@ export function getToolDecisionGuidelinesSection(): string {
    (d) Check dependencies (e.g. Pandoc) — enable/install what's needed.
    Config paths: Community: .obsidian/plugins/{id}/data.json | Core: .obsidian/{id}.json
    NEVER ask the user to configure via Settings UI. Write data.json yourself.
-1c. NEVER CREATE FAKE OUTPUT — When the user asks to export/convert a file (PDF, DOCX, etc.), use the appropriate export tool. NEVER write content to a .pdf/.docx file yourself. If no native command and no recipe exist, tell the user which tool to install.
-1d. PLUGIN API — When you need structured data from a plugin (Dataview queries, Omnisearch results, MetaEdit properties), use call_plugin_api instead of execute_command. It returns actual data. Check the PLUGIN SKILLS section for available API methods per plugin.
-1e. FILE EXPORT / CONVERSION — Confidence-based routing:
+1c. PLUGIN FILE FORMATS — Use dedicated tools for complex plugin formats:
+   For .excalidraw.md files: ALWAYS use create_excalidraw (never write_file).
+   For .canvas files: ALWAYS use generate_canvas (never write_file).
+   For .base files: ALWAYS use create_base (never write_file).
+   These tools handle the complex format automatically — the LLM should never generate raw plugin JSON/YAML.
+1d. NEVER CREATE FAKE OUTPUT — When the user asks to export/convert a file (PDF, DOCX, etc.), use the appropriate export tool. NEVER write content to a .pdf/.docx file yourself. If no native command and no recipe exist, tell the user which tool to install.
+1e. PLUGIN API — When you need structured data from a plugin (Dataview queries, Omnisearch results, MetaEdit properties), use call_plugin_api instead of execute_command. It returns actual data. Check the PLUGIN SKILLS section for available API methods per plugin.
+1f. FILE EXPORT / CONVERSION — Confidence-based routing:
    TIER 1 (prefer): Native Obsidian commands via execute_command.
      Zero dependencies, always available. Example: workspace:export-pdf.
      Note: May open a system dialog the user must confirm.

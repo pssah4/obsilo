@@ -136,6 +136,13 @@ export class ToolRepetitionDetector {
         return union === 0 ? 0 : intersection / union;
     }
 
+    /**
+     * Ordered list of tool names called so far (for episodic memory).
+     */
+    getToolSequence(): string[] {
+        return this.allCalls.map((c) => c.tool);
+    }
+
     reset(): void {
         this.allCalls = [];
         this.recentKeys = [];

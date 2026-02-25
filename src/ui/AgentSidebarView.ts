@@ -1479,6 +1479,26 @@ export class AgentSidebarView extends ItemView {
                     }
                     scheduleScroll();
                 },
+                onEpisodeData: (data) => {
+                    // Episodic memory: record successful multi-tool task (ADR-018, fire-and-forget)
+                    if (this.plugin.episodicExtractor && this.plugin.settings.mastery.enabled) {
+                        const episode = {
+                            userMessage: text,
+                            mode: activeMode.slug,
+                            toolSequence: data.toolSequence,
+                            toolLedger: data.toolLedger,
+                            success: true,
+                            resultSummary: accumulatedText.slice(0, 300),
+                        };
+                        this.plugin.episodicExtractor.recordEpisode(episode).then((ep) => {
+                            if (ep && this.plugin.recipePromotionService) {
+                                this.plugin.recipePromotionService.checkForPromotion(ep).catch((e) =>
+                                    console.warn('[Mastery] Promotion check failed:', e)
+                                );
+                            }
+                        }).catch((e) => console.warn('[Mastery] Episode recording failed:', e));
+                    }
+                },
                 onComplete: () => {
                     // Always clear the loading spinner — covers cases where no text was streamed.
                     removeLoading();
@@ -1724,6 +1744,23 @@ export class AgentSidebarView extends ItemView {
             }
         }
 
+        // Recipe matching (ADR-017) — find procedural recipes before starting the task
+        let recipesSection: string | undefined;
+        if (this.plugin.settings.mastery.enabled && this.plugin.recipeMatchingService) {
+            try {
+                const matches = this.plugin.recipeMatchingService.match(text, activeMode.slug);
+                console.log(`[Mastery] Recipe matching: ${matches.length} match(es) for mode "${activeMode.slug}"`, matches.map(m => `${m.recipe.id} (${m.score.toFixed(2)})`));
+                if (matches.length > 0) {
+                    recipesSection = this.plugin.recipeMatchingService.buildPromptSection(matches);
+                    console.log(`[Mastery] Recipe section injected (${recipesSection.length} chars)`);
+                }
+            } catch (e) {
+                console.warn('[Mastery] Recipe matching failed (non-fatal):', e);
+            }
+        } else {
+            console.log(`[Mastery] Skipped: enabled=${this.plugin.settings.mastery.enabled}, service=${!!this.plugin.recipeMatchingService}`);
+        }
+
         await task.run(
             messageToSend,
             taskId,
@@ -1738,6 +1775,7 @@ export class AgentSidebarView extends ItemView {
             allowedMcpServers,
             memoryContext,
             pluginSkillsSection || undefined,
+            recipesSection,
         );
     }
 

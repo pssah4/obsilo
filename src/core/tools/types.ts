@@ -32,6 +32,7 @@ export type ToolName =
     | 'get_daily_note'
     | 'open_note'
     | 'generate_canvas'
+    | 'create_excalidraw'
     // Web
     | 'web_fetch'
     | 'web_search'

@@ -29,6 +29,10 @@ import type { ToolUse, ToolCallbacks } from './core/tools/types';
 import { BUILT_IN_MODES } from './core/modes/builtinModes';
 import { mergeDefaultPrompts } from './core/prompts/defaultPrompts';
 import { initI18n } from './i18n';
+import { RecipeStore } from './core/mastery/RecipeStore';
+import { RecipeMatchingService } from './core/mastery/RecipeMatchingService';
+import { EpisodicExtractor } from './core/mastery/EpisodicExtractor';
+import { RecipePromotionService } from './core/mastery/RecipePromotionService';
 
 /**
  * Obsidian Agent Plugin
@@ -68,6 +72,10 @@ export default class ObsidianAgentPlugin extends Plugin {
     skillRegistry: SkillRegistry | null = null;
     capabilityGapResolver: CapabilityGapResolver | null = null;
     settingsTab: AgentSettingsTab | null = null;
+    recipeStore: RecipeStore | null = null;
+    recipeMatchingService: RecipeMatchingService | null = null;
+    episodicExtractor: EpisodicExtractor | null = null;
+    recipePromotionService: RecipePromotionService | null = null;
 
     /**
      * Plugin initialization
@@ -204,6 +212,38 @@ export default class ObsidianAgentPlugin extends Plugin {
                 this.semanticIndex?.removeFile(oldPath);
                 this.scheduleFileIndex(file.path);
             }));
+        }
+
+        // Agent Skill Mastery — Procedural Recipes (ADR-017)
+        if (this.settings.mastery.enabled) {
+            this.recipeStore = new RecipeStore(this.app.vault, pluginDir);
+            await this.recipeStore.initialize().catch((e) =>
+                console.warn('[Plugin] RecipeStore init failed (non-fatal):', e)
+            );
+            this.recipeMatchingService = new RecipeMatchingService(this.recipeStore);
+
+            // Episodic memory + recipe promotion (ADR-018)
+            this.episodicExtractor = new EpisodicExtractor(
+                this.app.vault,
+                pluginDir,
+                () => this.semanticIndex,
+            );
+            await this.episodicExtractor.initialize().catch((e) =>
+                console.warn('[Plugin] EpisodicExtractor init failed (non-fatal):', e)
+            );
+            this.recipePromotionService = new RecipePromotionService(
+                this.app.vault,
+                pluginDir,
+                this.recipeStore,
+                () => {
+                    const model = this.getMemoryModel();
+                    if (!model) return null;
+                    return buildApiHandler(modelToLLMProvider(model));
+                },
+            );
+            await this.recipePromotionService.initialize().catch((e) =>
+                console.warn('[Plugin] RecipePromotionService init failed (non-fatal):', e)
+            );
         }
 
         // Chat history service (legacy — only when folder is configured)
@@ -403,6 +443,14 @@ export default class ObsidianAgentPlugin extends Plugin {
         this.settings.vaultDNA.enabled = this.settings.vaultDNA.enabled ?? dnaDefaults.enabled;
         this.settings.vaultDNA.skillToggles = this.settings.vaultDNA.skillToggles ?? dnaDefaults.skillToggles;
         this.settings.vaultDNA.lastScanAt = this.settings.vaultDNA.lastScanAt ?? dnaDefaults.lastScanAt;
+
+        // Deep-merge Mastery settings (ADR-016/017/018)
+        const masteryDefaults = DEFAULT_SETTINGS.mastery;
+        this.settings.mastery = this.settings.mastery ?? masteryDefaults;
+        this.settings.mastery.enabled = this.settings.mastery.enabled ?? masteryDefaults.enabled;
+        this.settings.mastery.recipeBudget = this.settings.mastery.recipeBudget ?? masteryDefaults.recipeBudget;
+        this.settings.mastery.learnedRecipesEnabled = this.settings.mastery.learnedRecipesEnabled ?? masteryDefaults.learnedRecipesEnabled;
+        this.settings.mastery.recipeToggles = this.settings.mastery.recipeToggles ?? masteryDefaults.recipeToggles;
 
         // Enable recipes for existing users — 6 other security layers remain active.
         if (this.settings.recipes && !this.settings.recipes.enabled) {

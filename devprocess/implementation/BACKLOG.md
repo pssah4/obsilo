@@ -1,7 +1,7 @@
 # Obsidian Agent — Backlog
 
 > Status: `[x]` fertig · `[~]` in Arbeit · `[ ]` offen · `[-]` zurückgestellt
-> Letzte Aktualisierung: 2026-02-25 (Localization i18n implementiert)
+> Letzte Aktualisierung: 2026-02-25 (Agent Skill Mastery komplett)
 
 ---
 
@@ -186,6 +186,24 @@
 | `[x]` | Hindi Locale (teilweise, EN-Fallback) | `src/i18n/locales/hi.ts` |
 | `[x]` | Settings-Tabs Migration (17 Tabs + constants.ts) | alle Settings-Tab-Dateien |
 | `[x]` | Chat-UI & Modals Migration | `AgentSidebarView.ts`, alle Modals |
+
+### Agent Skill Mastery
+| Status | Feature | Datei |
+|--------|---------|-------|
+| `[x]` | Rich Tool Descriptions (example, whenToUse, commonMistakes) | `src/core/tools/toolMetadata.ts` |
+| `[x]` | Procedural Recipes (static + learned, keyword + semantic matching) | `src/core/mastery/` |
+| `[x]` | Recipe Prompt Section (injection between skills and rules) | `RecipeMatchingService.buildPromptSection()` |
+| `[x]` | Episodic Task Memory (recording, Vectra indexing) | `src/core/mastery/EpisodicExtractor.ts` |
+| `[x]` | Recipe Promotion (auto-promote 3+ success patterns) | `src/core/mastery/RecipePromotionService.ts` |
+| `[x]` | Mastery Settings (toggle, budget, recipe toggles) | `src/types/settings.ts` |
+
+### Agentic Loop Refactoring (completed)
+| Status | Feature | Datei |
+|--------|---------|-------|
+| `[x]` | ReadFile Content Truncation (20K chars max) | `src/core/tools/vault/ReadFileTool.ts` |
+| `[x]` | ToolRepetitionDetector Rewrite (fuzzy dedup, ledger, recoverable errors) | `src/core/tool-execution/ToolRepetitionDetector.ts` |
+| `[x]` | Pipeline Result Cache (per-task, write-invalidation) | `src/core/tool-execution/ToolExecutionPipeline.ts` |
+| `[x]` | Soft/Hard Limit + Condensing Ledger | `src/core/AgentTask.ts` |
 
 ---
 

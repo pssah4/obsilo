@@ -1,12 +1,16 @@
 /**
  * MemoryRetriever
  *
- * Cross-session context retrieval via semantic search over session summaries.
- * On new conversation start, searches for relevant past sessions and returns
- * formatted context for injection into the system prompt.
+ * Cross-session context retrieval via semantic search over session summaries
+ * and task episodes (ADR-018).
  *
- * Primary path: semantic search over indexed session summaries.
+ * On new conversation start, searches for relevant past sessions and episodes,
+ * then returns formatted context for injection into the system prompt.
+ *
+ * Primary path: semantic search over indexed session summaries + episodes.
  * Fallback (no semantic index): most recent 3 session summaries by file date.
+ *
+ * Budget: 4000 chars total (shared between sessions and episodes).
  */
 
 import type { Vault } from 'obsidian';
@@ -54,18 +58,56 @@ export class MemoryRetriever {
             excerpts = await this.getRecentSessions(topK);
         }
 
-        if (excerpts.length === 0) return '';
-
-        // Format as context block
-        const lines = ['<relevant_sessions>'];
-        for (const { id, excerpt } of excerpts) {
-            const truncated = excerpt.length > 600 ? excerpt.slice(0, 600) + '...' : excerpt;
-            lines.push(`<session id="${id}">`);
-            lines.push(truncated);
-            lines.push('</session>');
-            lines.push('');
+        // Episodic memory: search for similar past task episodes (ADR-018)
+        let episodeExcerpts: Array<{ id: string; excerpt: string }> = [];
+        if (semanticIndex?.isIndexed) {
+            try {
+                const episodeResults = await semanticIndex.searchEpisodes(firstMessage, 3);
+                episodeExcerpts = episodeResults.map((r) => ({
+                    id: r.path.replace('episode:', ''),
+                    excerpt: r.excerpt,
+                }));
+            } catch (e) {
+                console.warn('[MemoryRetriever] Episode search failed (non-fatal):', e);
+            }
         }
-        lines.push('</relevant_sessions>');
+
+        if (excerpts.length === 0 && episodeExcerpts.length === 0) return '';
+
+        // Format as context block — shared budget of 4000 chars
+        const BUDGET = 4000;
+        let charCount = 0;
+        const lines: string[] = [];
+
+        // Sessions first (higher priority)
+        if (excerpts.length > 0) {
+            lines.push('<relevant_sessions>');
+            for (const { id, excerpt } of excerpts) {
+                const truncated = excerpt.length > 600 ? excerpt.slice(0, 600) + '...' : excerpt;
+                if (charCount + truncated.length > BUDGET) break;
+                lines.push(`<session id="${id}">`);
+                lines.push(truncated);
+                lines.push('</session>');
+                lines.push('');
+                charCount += truncated.length + 40; // tag overhead
+            }
+            lines.push('</relevant_sessions>');
+        }
+
+        // Episodes (fill remaining budget)
+        if (episodeExcerpts.length > 0 && charCount < BUDGET) {
+            lines.push('<past_task_episodes>');
+            for (const { id, excerpt } of episodeExcerpts) {
+                const truncated = excerpt.length > 400 ? excerpt.slice(0, 400) + '...' : excerpt;
+                if (charCount + truncated.length > BUDGET) break;
+                lines.push(`<episode id="${id}">`);
+                lines.push(truncated);
+                lines.push('</episode>');
+                lines.push('');
+                charCount += truncated.length + 40;
+            }
+            lines.push('</past_task_episodes>');
+        }
 
         return lines.join('\n');
     }

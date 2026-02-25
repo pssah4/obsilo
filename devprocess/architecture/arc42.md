@@ -102,6 +102,8 @@ Obsidian Agent ist ein Obsidian-Plugin, das einen vollständigen KI-Agenten dire
 
 10. **Hybrid Search (Semantic + BM25 + RRF)** — Kombiniert Vektor-Aehnlichkeit mit TF-IDF/BM25-Keyword-Scoring (inkl. Stemming). Ergebnis-Fusion via Reciprocal Rank Fusion (k=60). Graph Augmentation via 1-Hop-Wikilinks. [ADR-015](ADR-015-hybrid-search-rrf.md)
 
+11. **Agent Skill Mastery (3-Ebenen)** — A) Rich Tool Descriptions mit Examples/When-to-use in ToolMeta [ADR-016](ADR-016-rich-tool-descriptions.md). B) Procedural Recipes: Schritt-fuer-Schritt Rezepte fuer bekannte Tasks, keyword-first Matching, 2000 chars Budget [ADR-017](ADR-017-procedural-recipes.md). C) Episodic Task Memory: Aufzeichnung erfolgreicher Ausfuehrungen ohne extra API-Call, Auto-Promotion zu Rezepten bei 3+ Erfolgen [ADR-018](ADR-018-episodic-task-memory.md).
+
 ---
 
 ## 5. Bausteinsicht

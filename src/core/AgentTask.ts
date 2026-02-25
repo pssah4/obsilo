@@ -50,6 +50,8 @@ export interface AgentTaskCallbacks {
     onContextCondensed?: () => void;
     /** Called when a checkpoint is saved before a write tool */
     onCheckpoint?: (checkpoint: import('./checkpoints/GitCheckpointService').CheckpointInfo) => void;
+    /** Called just before onComplete with tool execution data for episodic memory (ADR-018) */
+    onEpisodeData?: (data: { toolSequence: string[], toolLedger: string }) => void;
     /** Called when an unrecoverable error occurs */
     onError: (error: Error) => void;
 }
@@ -134,6 +136,8 @@ export class AgentTask {
         memoryContext?: string,
         /** Compact plugin skills list from VaultDNA (PAS-1) */
         pluginSkillsSection?: string,
+        /** Pre-matched procedural recipes for the current user message (ADR-017) */
+        recipesSection?: string,
     ): Promise<void> {
         // Resolve mode to ModeConfig
         let activeMode: ModeConfig = this.resolveMode(initialMode);
@@ -250,7 +254,7 @@ export class AgentTask {
         const rebuildPromptCache = () => {
             const allModes = this.modeService?.getAllModes();
             const webEnabled = this.modeService?.isWebEnabled() ?? false;
-            cachedSystemPrompt = buildSystemPromptForMode(activeMode, allModes, globalCustomInstructions, includeTime, rulesContent, skillsSection, mcpClient, allowedMcpServers, memoryContext, pluginSkillsSection, this.depth > 0, webEnabled);
+            cachedSystemPrompt = buildSystemPromptForMode(activeMode, allModes, globalCustomInstructions, includeTime, rulesContent, skillsSection, mcpClient, allowedMcpServers, memoryContext, pluginSkillsSection, this.depth > 0, webEnabled, recipesSection);
             cachedTools = this.modeService
                 ? this.modeService.getToolDefinitions(activeMode)
                 : this.toolRegistry.getToolDefinitions();
@@ -562,6 +566,16 @@ export class AgentTask {
             if (totalInputTokens > 0 || totalOutputTokens > 0) {
                 this.taskCallbacks.onUsage?.(totalInputTokens, totalOutputTokens);
             }
+
+            // Episodic memory: provide tool execution data for recording (ADR-018)
+            const toolSeq = repetitionDetector.getToolSequence();
+            if (toolSeq.length > 0) {
+                this.taskCallbacks.onEpisodeData?.({
+                    toolSequence: toolSeq,
+                    toolLedger: repetitionDetector.getLedger(),
+                });
+            }
+
             this.taskCallbacks.onComplete();
         } catch (error) {
             // AbortError is expected when user cancels — not a real error.
