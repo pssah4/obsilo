@@ -1,23 +1,39 @@
-# Notices and Third-Party Attributions
+Obsilo Agent
+Copyright 2025 Sebastian Hanke
 
-## Kilo Code
+Licensed under the Apache License, Version 2.0.
+A copy of the license is included in this repository as LICENSE.
 
-Portions of this software are adapted from **Kilo Code**
-(https://github.com/Kilo-Org/kilocode), licensed under the Apache License,
-Version 2.0.
+=========================================================================
 
-Copyright (c) Kilo Code Contributors
+This product includes software adapted from Kilo Code
+(https://github.com/Kilo-Org/kilocode).
+Copyright 2025- Kilo Code LLC.
+Licensed under the Apache License, Version 2.0.
+
+Kilo Code is a fork of Roo Code, which is a fork of Cline.
+Original work: Copyright 2025 Cline Bot Inc.
+Modified work (Roo Code): Copyright 2025 Roo Veterinary Inc.
+Modified work (Kilo Code): Copyright 2025- Kilo Code LLC.
+
+This product also includes software developed by Continue Dev, Inc.
+Copyright 2023 Continue Dev, Inc.
+Licensed under the Apache License, Version 2.0.
 
 The following components are derived from or inspired by Kilo Code:
 
-- `src/api/types.ts` — ApiHandler interface, ApiStream, MessageParam, ContentBlock
-- `src/api/index.ts` — buildApiHandler factory pattern
-- `src/api/providers/anthropic.ts` — Anthropic streaming provider
-- `src/api/providers/openai.ts` — OpenAI-compatible streaming provider
-- `src/core/AgentTask.ts` — Conversation loop (adapted from Task.ts)
-- `src/core/systemPrompt.ts` — System prompt architecture (adapted from system.ts)
-- `src/core/tools/` — Tool execution pipeline and BaseTool pattern
+- src/api/ -- API handler interfaces, streaming providers, factory patterns
+- src/core/AgentTask.ts -- Conversation loop (adapted from Task.ts)
+- src/core/systemPrompt.ts -- System prompt architecture (adapted from system.ts)
+- src/core/tools/ -- Tool execution pipeline and BaseTool pattern
+- src/core/context/ -- Context loader architecture
+- src/core/modes/ -- Mode system and definitions
+- src/core/skills/ -- Skills and workflow system
+- src/ui/ -- Sidebar UI patterns
 
-A copy of the Apache License 2.0 is included in this repository as `LICENSE`.
+=========================================================================
 
-
+Portions of the agent identity system are inspired by OpenClaw
+(https://github.com/openclaw/openclaw).
+Copyright 2025 Peter Steinberger.
+Licensed under the MIT License.
