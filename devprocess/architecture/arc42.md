@@ -1,7 +1,7 @@
 # arc42 — Obsidian Agent Architecture
 
-**Version:** 3.0 (pre-release)
-**Stand:** 2026-02-24
+**Version:** 3.1
+**Stand:** 2026-02-25
 **Status:** Aktuell — alle Features implementiert, Dokumentation vollstaendig
 
 ---
@@ -134,7 +134,7 @@ Obsidian Agent ist ein Obsidian-Plugin, das einen vollständigen KI-Agenten dire
 | `AttachmentHandler` | Datei-Anhänge als Kontext in der Chat-Eingabe |
 | `ApproveEditModal` | Line-by-line Diff-View vor Edit-Approval |
 | `HistoryPanel` | Sliding overlay mit gruppierten Gesprächen, Suche, Restore |
-| `AgentSettingsTab` | Settings-Router (16 Tabs, inkl. Memory) |
+| `AgentSettingsTab` | Settings-Router (19 Tabs, inkl. Memory, Language, Log) |
 
 ### 5.2 Ebene 2: Core Engine
 
@@ -169,24 +169,25 @@ AgentTask.run()
   └── Context Condensing (wenn threshold erreicht)
 ```
 
-### 5.3 Ebene 2: Tool Registry (34 Tools)
+### 5.3 Ebene 2: Tool Registry (37 Tools, 7 Gruppen)
 
 ```
 ToolRegistry
-  ├── read group:     read_file, list_files, search_files
-  ├── vault group:    get_vault_stats, get_frontmatter, update_frontmatter,
-  │                   search_by_tag, get_linked_notes, open_note,
-  │                   get_daily_note, semantic_search, query_base
-  ├── edit group:     write_file, edit_file, append_to_file, create_folder,
-  │                   delete_file, move_file, generate_canvas,
-  │                   create_base, update_base
-  ├── web group:      web_fetch, web_search
-  ├── agent group:    ask_followup_question, attempt_completion,
-  │                   switch_mode, update_todo_list, new_task
-  ├── skill group:    execute_command, enable_plugin, resolve_capability_gap
-  ├── plugin-api:     call_plugin_api, execute_recipe
-  ├── settings:       update_settings, configure_model
-  └── mcp group:      use_mcp_tool
+  ├── read group (3):  read_file, list_files, search_files
+  ├── vault group (8): get_frontmatter, search_by_tag, get_vault_stats,
+  │                    get_linked_notes, get_daily_note, open_note,
+  │                    semantic_search, query_base
+  ├── edit group (11): write_file, edit_file, append_to_file, create_folder,
+  │                    delete_file, move_file, update_frontmatter,
+  │                    generate_canvas, create_excalidraw,
+  │                    create_base, update_base
+  ├── web group (2):   web_fetch, web_search
+  ├── agent group (7): ask_followup_question, attempt_completion,
+  │                    update_todo_list, new_task, switch_mode,
+  │                    update_settings, configure_model
+  ├── skill group (5): execute_command, execute_recipe, call_plugin_api,
+  │                    resolve_capability_gap, enable_plugin
+  └── mcp group (1):   use_mcp_tool
 ```
 
 Tool-Beschreibungen kommen aus `toolMetadata.ts` (Single Source of Truth fuer Prompt und UI). Feature-Spec: `FEATURE-tool-metadata-registry.md`. ADR: [ADR-008](ADR-008-modular-prompt-sections.md).
@@ -563,6 +564,9 @@ Siehe einzelne ADRs in `devprocess/architecture/`:
 | [ADR-013](ADR-013-memory-architecture.md) | 3-Tier Memory Architecture |
 | [ADR-014](ADR-014-vault-dna-plugin-discovery.md) | VaultDNA — Automatische Plugin-Erkennung als Skills |
 | [ADR-015](ADR-015-hybrid-search-rrf.md) | Hybrid Search mit Semantic + BM25 + RRF Fusion |
+| [ADR-016](ADR-016-rich-tool-descriptions.md) | Rich Tool Descriptions (example, whenToUse, commonMistakes) |
+| [ADR-017](ADR-017-procedural-recipes.md) | Procedural Skill Recipes (keyword-first Matching, Budget) |
+| [ADR-018](ADR-018-episodic-task-memory.md) | Episodic Task Memory (Aufzeichnung, Auto-Promotion) |
 
 ---
 

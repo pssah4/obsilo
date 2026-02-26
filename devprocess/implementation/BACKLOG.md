@@ -103,6 +103,7 @@
 | `[x]` | delete_file | `src/core/tools/vault/DeleteFileTool.ts` |
 | `[x]` | move_file | `src/core/tools/vault/MoveFileTool.ts` |
 | `[x]` | generate_canvas | `src/core/tools/vault/GenerateCanvasTool.ts` |
+| `[x]` | create_excalidraw | `src/core/tools/vault/CreateExcalidrawTool.ts` |
 | `[x]` | create_base | `src/core/tools/vault/CreateBaseTool.ts` |
 | `[x]` | update_base | `src/core/tools/vault/UpdateBaseTool.ts` |
 
@@ -221,14 +222,14 @@
 
 ## Tool-Zaehlung
 
-**36 Tools implementiert** (inkl. skill group):
+**37 Tools implementiert** (7 Tool-Gruppen):
 - read (3): read_file, list_files, search_files
-- vault (9): get_vault_stats, get_frontmatter, update_frontmatter, search_by_tag, get_linked_notes, open_note, get_daily_note, semantic_search, query_base
-- edit (9): write_file, edit_file, append_to_file, create_folder, delete_file, move_file, generate_canvas, create_base, update_base
+- vault (8): get_frontmatter, search_by_tag, get_vault_stats, get_linked_notes, get_daily_note, open_note, semantic_search, query_base
+- edit (11): write_file, edit_file, append_to_file, create_folder, delete_file, move_file, update_frontmatter, generate_canvas, create_excalidraw, create_base, update_base
 - web (2): web_fetch, web_search
-- agent (9): ask_followup_question, attempt_completion, switch_mode, update_todo_list, new_task, call_plugin_api, execute_recipe, update_settings, configure_model
+- agent (7): ask_followup_question, attempt_completion, update_todo_list, new_task, switch_mode, update_settings, configure_model
 - mcp (1): use_mcp_tool
-- skill (3): execute_command, resolve_capability_gap, enable_plugin
+- skill (5): execute_command, execute_recipe, call_plugin_api, resolve_capability_gap, enable_plugin
 
 ---
 
@@ -238,7 +239,7 @@
 
 Alle implementierten Features haben eine `FEATURE-*.md` Spec.
 
-### Architecture (15 ADRs + arc42)
+### Architecture (18 ADRs + arc42)
 
 | ADR | Entscheidung |
 |-----|-------------|
@@ -257,6 +258,9 @@ Alle implementierten Features haben eine `FEATURE-*.md` Spec.
 | ADR-013 | 3-Tier Memory Architecture |
 | ADR-014 | VaultDNA Plugin Discovery |
 | ADR-015 | Hybrid Search (Semantic + BM25 + RRF) |
+| ADR-016 | Rich Tool Descriptions |
+| ADR-017 | Procedural Skill Recipes |
+| ADR-018 | Episodic Task Memory |
 
 ### Technische Dokumentation (10 Dateien in `devprocess/implementation/`)
 

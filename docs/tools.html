@@ -80,7 +80,7 @@
       </div>
 
       <h1 data-i18n="pages.tools.title">Tools Reference</h1>
-      <p data-i18n="pages.tools.subtitle">Complete reference for all 30+ tools available to Obsilo Agent. Tools are grouped by category, which maps to the tool group permission system.</p>
+      <p data-i18n="pages.tools.subtitle">Complete reference for all 37 tools available to Obsilo Agent. Tools are grouped by category, which maps to the tool group permission system.</p>
 
       <!-- READ -->
       <h2 id="read" data-i18n="pages.tools.read">Read Tools</h2>
@@ -230,6 +230,11 @@
           <div class="tool-name">move_file</div>
           <div class="tool-desc" data-i18n="pages.tools.moveFile.desc">Move or rename a file or folder. Updates wikilinks automatically via Obsidian's link resolver.</div>
         </div>
+        <div class="tool-card">
+          <span class="tool-group-badge badge-edit">edit</span>
+          <div class="tool-name">create_excalidraw</div>
+          <div class="tool-desc">Create an Excalidraw drawing (.excalidraw.md) with specified elements. Requires the Excalidraw plugin to be installed.</div>
+        </div>
       </div>
 
       <h3 data-i18n-html="pages.tools.editFile.paramsHeading">Parameters: edit_file</h3>
@@ -324,6 +329,16 @@
           <div class="tool-name">new_task</div>
           <div class="tool-desc">Spawn a sub-agent in a fresh context. Available in Agent mode only. Pass all necessary context in the message — the sub-agent cannot see this conversation.</div>
         </div>
+        <div class="tool-card">
+          <span class="tool-group-badge badge-agent">agent</span>
+          <div class="tool-name">update_settings</div>
+          <div class="tool-desc">Modify plugin settings or apply a preset (permissive, balanced, restrictive). Used during onboarding and for runtime configuration changes.</div>
+        </div>
+        <div class="tool-card">
+          <span class="tool-group-badge badge-agent">agent</span>
+          <div class="tool-name">configure_model</div>
+          <div class="tool-desc">Add, select, or test an AI model configuration. Used during onboarding to set up the user's first model connection.</div>
+        </div>
       </div>
 
       <h3>Parameters: new_task</h3>
@@ -334,6 +349,38 @@
           <tr><td><code>message</code></td><td>string</td><td>yes</td><td>Full task description with all necessary context</td></tr>
         </tbody>
       </table>
+
+      <!-- SKILL -->
+      <h2 id="skill">Plugin Skill Tools</h2>
+      <p>These tools interact with installed Obsidian plugins via VaultDNA. In the <code>skill</code> tool group.</p>
+
+      <div class="tool-grid">
+        <div class="tool-card">
+          <span class="tool-group-badge badge-agent">skill</span>
+          <div class="tool-name">execute_command</div>
+          <div class="tool-desc">Execute an Obsidian command by its command ID. Covers core commands and commands from installed community plugins.</div>
+        </div>
+        <div class="tool-card">
+          <span class="tool-group-badge badge-agent">skill</span>
+          <div class="tool-name">call_plugin_api</div>
+          <div class="tool-desc">Call a method on an installed plugin's API. Protected by an allowlist — only safe methods can be invoked without override.</div>
+        </div>
+        <div class="tool-card">
+          <span class="tool-group-badge badge-agent">skill</span>
+          <div class="tool-name">execute_recipe</div>
+          <div class="tool-desc">Run a predefined multi-step recipe (e.g., Pandoc export, Dataview query). Recipes combine multiple plugin commands into a single action.</div>
+        </div>
+        <div class="tool-card">
+          <span class="tool-group-badge badge-agent">skill</span>
+          <div class="tool-name">resolve_capability_gap</div>
+          <div class="tool-desc">When the agent needs a capability not available, this tool suggests and can install a community plugin to fill the gap.</div>
+        </div>
+        <div class="tool-card">
+          <span class="tool-group-badge badge-agent">skill</span>
+          <div class="tool-name">enable_plugin</div>
+          <div class="tool-desc">Enable or disable an installed Obsidian plugin. Used by the agent to activate plugins it needs for a task.</div>
+        </div>
+      </div>
 
       <!-- MCP -->
       <h2 id="mcp">MCP Tool</h2>

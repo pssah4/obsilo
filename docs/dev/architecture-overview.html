@@ -111,15 +111,15 @@
      IgnoreService  |  CheckpointService      Anthropic   OpenAI   Ollama ...
               ApprovalSystem
                     |
-            ToolRegistry (36 tools)
+            ToolRegistry (37 tools, 7 groups)
                     |
     +-------+-------+-------+-------+-------+
     | read  | vault | edit  | web   | agent |
-    | (3)   | (7)   | (9)   | (2)   | (5)   |
+    | (3)   | (8)   | (11)  | (2)   | (7)   |
     +-------+-------+-------+-------+-------+
-    | skill | plugin| settings| mcp |
-    | (3)   | (2)   | (2)     | (1)  |
-    +-------+-------+---------+------+</div>
+    | skill | mcp   |
+    | (5)   | (1)   |
+    +-------+-------+</div>
 
       <h2 id="quality-goals">Quality Goals</h2>
       <table>
@@ -145,6 +145,7 @@
         <li><strong>3-tier memory architecture</strong> &mdash; Chat history &rarr; session extraction &rarr; long-term memory promotion via LLM pipeline. <em>Why: Balances detail (chat) with efficiency (promoted facts) across time.</em></li>
         <li><strong>VaultDNA plugin discovery</strong> &mdash; Runtime reflection scans installed plugins, generates skill files automatically. <em>Why: Plugin ecosystem is Obsidian's strength; VaultDNA bridges it to the agent.</em></li>
         <li><strong>Hybrid search with RRF</strong> &mdash; Semantic + BM25/TF-IDF combined via Reciprocal Rank Fusion (k=60). <em>Why: Semantic handles conceptual queries; BM25 handles exact matches; RRF combines both.</em></li>
+        <li><strong>Agent Skill Mastery (3 layers)</strong> &mdash; Rich tool descriptions with examples, procedural recipes with keyword-first matching, and episodic task memory with auto-promotion. <em>Why: The agent improves over time by learning from successful task executions.</em></li>
       </ol>
 
       <h2 id="building-blocks">Building Blocks</h2>
@@ -156,7 +157,7 @@
           <tr><td><code>AgentTask</code></td><td>src/core/AgentTask.ts</td><td>Main agent loop, iteration management, streaming</td></tr>
           <tr><td><code>ToolExecutionPipeline</code></td><td>src/core/tool-execution/ToolExecutionPipeline.ts</td><td>6-step governance for every tool call</td></tr>
           <tr><td><code>SystemPrompt</code></td><td>src/core/systemPrompt.ts</td><td>Assembles 16 modular prompt sections</td></tr>
-          <tr><td><code>ToolRegistry</code></td><td>src/core/tools/ToolRegistry.ts</td><td>Central Map&lt;name, BaseTool&gt; with 36 tools</td></tr>
+          <tr><td><code>ToolRegistry</code></td><td>src/core/tools/ToolRegistry.ts</td><td>Central Map&lt;name, BaseTool&gt; with 37 tools in 7 groups</td></tr>
           <tr><td><code>ModeService</code></td><td>src/core/modes/ModeService.ts</td><td>Mode resolution, tool group filtering</td></tr>
         </tbody>
       </table>
