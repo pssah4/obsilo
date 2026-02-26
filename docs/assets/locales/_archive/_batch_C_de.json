@@ -52,7 +52,7 @@
   "pages.semanticSearch.basicSearch": "Einfache Suche",
   "pages.semanticSearch.basicSearch.text": "\"Finde meine Notizen über Besprechungsplanung und Agendaerstellung\"",
   "pages.semanticSearch.build": "Schritt 3: Index aufbauen",
-  "pages.semanticSearch.build.list": "<li><strong>Obsidian-Sync (Standard):</strong> <code>.obsidian/plugins/obsidian-agent/semantic-index/</code></li> <li><strong>Nur lokal:</strong> <code>.obsidian-agent/semantic-index/</code></li>",
+  "pages.semanticSearch.build.list": "<li><strong>Obsidian-Sync (Standard):</strong> <code>.obsidian/plugins/obsilo-agent/semantic-index/</code></li> <li><strong>Nur lokal:</strong> <code>.obsidian-agent/semantic-index/</code></li>",
   "pages.semanticSearch.build.text": "Klicken Sie auf Index aufbauen unter Einstellungen → Semantischer Index. Der erste Aufbau dauert bei einem großen Vault einige Minuten. Der Fortschritt wird im Einstellungsbereich angezeigt.",
   "pages.semanticSearch.build.text2": "Der Index wird gespeichert unter:",
   "pages.semanticSearch.build.text3": "Nachfolgende Neuaufbauten erfolgen inkrementell — nur seit dem letzten Aufbau geänderte Dateien werden neu indiziert.",

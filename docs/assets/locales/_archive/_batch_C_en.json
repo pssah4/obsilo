@@ -52,7 +52,7 @@
   "pages.semanticSearch.basicSearch": "Basic Search",
   "pages.semanticSearch.basicSearch.text": "\"Find my notes about meeting planning and agenda creation\"",
   "pages.semanticSearch.build": "Step 3: Build the Index",
-  "pages.semanticSearch.build.list": "<li><strong>Obsidian sync (default):</strong> <code>.obsidian/plugins/obsidian-agent/semantic-index/</code></li> <li><strong>Local only:</strong> <code>.obsidian-agent/semantic-index/</code></li>",
+  "pages.semanticSearch.build.list": "<li><strong>Obsidian sync (default):</strong> <code>.obsidian/plugins/obsilo-agent/semantic-index/</code></li> <li><strong>Local only:</strong> <code>.obsidian-agent/semantic-index/</code></li>",
   "pages.semanticSearch.build.text": "Click Build Index in Settings → Semantic Index. The first build takes a few minutes for a large vault. Progress is shown in the settings panel.",
   "pages.semanticSearch.build.text2": "The index is stored at:",
   "pages.semanticSearch.build.text3": "Subsequent rebuilds are incremental — only files changed since the last build are re-indexed.",

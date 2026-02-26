@@ -16,7 +16,7 @@ if you want to view the source, please visit the github repository of this plugi
 const prod = (process.argv[2] === "production");
 
 // Path to the Obsidian vault plugin folder (auto-deploy on build)
-const VAULT_PLUGIN_DIR = "/Users/sebastianhanke/Obsidian/NexusOS/.obsidian/plugins/obsidian-agent";
+const VAULT_PLUGIN_DIR = "/Users/sebastianhanke/Obsidian/NexusOS/.obsidian/plugins/obsilo-agent";
 
 const context = await esbuild.context({
     banner: {

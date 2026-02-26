@@ -52,7 +52,7 @@
   "pages.semanticSearch.basicSearch": "基本搜尋",
   "pages.semanticSearch.basicSearch.text": "「尋找我關於會議規劃和議程建立的筆記」",
   "pages.semanticSearch.build": "步驟 3：建立索引",
-  "pages.semanticSearch.build.list": "<li><strong>Obsidian 同步（預設）：</strong> <code>.obsidian/plugins/obsidian-agent/semantic-index/</code></li> <li><strong>僅限本機：</strong> <code>.obsidian-agent/semantic-index/</code></li>",
+  "pages.semanticSearch.build.list": "<li><strong>Obsidian 同步（預設）：</strong> <code>.obsidian/plugins/obsilo-agent/semantic-index/</code></li> <li><strong>僅限本機：</strong> <code>.obsidian-agent/semantic-index/</code></li>",
   "pages.semanticSearch.build.text": "在設定 → 語義索引中點擊「建立索引」。大型 vault 的首次建立需要幾分鐘。進度會顯示在設定面板中。",
   "pages.semanticSearch.build.text2": "索引儲存位置：",
   "pages.semanticSearch.build.text3": "後續重建為增量式 — 僅重新索引自上次建立以來變更的檔案。",

@@ -101,7 +101,7 @@
   "pages.settingsRef.interfaceTab": "界面",
   "pages.settingsRef.interfaceTab.table": "<thead><tr><th>设置</th><th>默认值</th><th>描述</th></tr></thead> <tbody> <tr><td>侧边栏位置</td><td>right</td><td>\"left\" 或 \"right\"——Obsilo 面板显示在哪一侧。</td></tr> <tr><td>按 Enter 发送</td><td>开启</td><td>开启时，Enter 发送消息，Shift+Enter 换行。关闭时，Ctrl/Cmd+Enter 发送。</td></tr> <tr><td>自动添加当前文件上下文</td><td>开启</td><td>自动将当前打开的笔记作为上下文包含在每条消息中。</td></tr> <tr><td>显示欢迎消息</td><td>开启</td><td>侧边栏首次打开时显示欢迎消息。</td></tr> <tr><td>在上下文中包含当前时间</td><td>开启</td><td>将当前日期和时间注入系统提示中。</td></tr> </tbody>",
   "pages.settingsRef.logsTab": "日志",
-  "pages.settingsRef.logsTab.text": "查看操作审计记录。日志是位于 <code>.obsidian/plugins/obsidian-agent/logs/YYYY-MM-DD.jsonl</code> 的 JSONL 文件。选择日期查看当天的日志。保留 30 天。",
+  "pages.settingsRef.logsTab.text": "查看操作审计记录。日志是位于 <code>.obsidian/plugins/obsilo-agent/logs/YYYY-MM-DD.jsonl</code> 的 JSONL 文件。选择日期查看当天的日志。保留 30 天。",
   "pages.settingsRef.loopTab": "循环",
   "pages.settingsRef.loopTab.table": "<thead><tr><th>设置</th><th>默认值</th><th>描述</th></tr></thead> <tbody> <tr><td>连续错误限制</td><td>3</td><td>智能体连续出现 N 次工具错误后停止。0 = 禁用。</td></tr> <tr><td>速率限制（毫秒）</td><td>0</td><td>API 迭代之间的最小毫秒数。0 = 无限制。用于避免速率限制错误。</td></tr> <tr><td>上下文压缩</td><td>关闭</td><td>当预估 token 数超过阈值时自动总结对话。</td></tr> <tr><td>压缩阈值</td><td>80%</td><td>触发压缩的模型上下文窗口百分比（50–95）。</td></tr> <tr><td>强化引导频率</td><td>0</td><td>每 N 次迭代注入一次模式角色提醒，以保持智能体专注于任务。0 = 禁用。</td></tr> </tbody>",
   "pages.settingsRef.mcpTab": "MCP",

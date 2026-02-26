@@ -12,7 +12,7 @@ interface BackupCategory {
     /**
      * 'global'  = ~/.obsidian-agent/ (via GlobalFileService)
      * 'vault'   = vault root (via vault.adapter) — per-vault data only
-     * 'plugin'  = .obsidian/plugins/obsidian-agent/ (via vault.adapter) — legacy, kept for vault-local
+     * 'plugin'  = .obsidian/plugins/obsilo-agent/ (via vault.adapter) — legacy, kept for vault-local
      */
     root: 'global' | 'vault' | 'plugin';
     /** Directory relative to root (or null for settings/vault-dna which are handled specially) */

@@ -6,7 +6,7 @@
  *
  * Two sources:
  *   - Static: TypeScript constants bundled with the plugin (staticRecipes.ts)
- *   - Learned: JSON files in .obsidian/plugins/obsidian-agent/recipes/ (Phase 3)
+ *   - Learned: JSON files in .obsidian/plugins/obsilo-agent/recipes/ (Phase 3)
  */
 
 export interface ProceduralRecipe {

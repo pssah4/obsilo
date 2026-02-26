@@ -52,7 +52,7 @@
   "pages.semanticSearch.basicSearch": "Zakladni vyhledavani",
   "pages.semanticSearch.basicSearch.text": "\"Najdi me poznamky o planovani schuzek a tvorbe programu\"",
   "pages.semanticSearch.build": "Krok 3: Sestavte index",
-  "pages.semanticSearch.build.list": "<li><strong>Synchronizace Obsidian (vychozi):</strong> <code>.obsidian/plugins/obsidian-agent/semantic-index/</code></li> <li><strong>Pouze lokalni:</strong> <code>.obsidian-agent/semantic-index/</code></li>",
+  "pages.semanticSearch.build.list": "<li><strong>Synchronizace Obsidian (vychozi):</strong> <code>.obsidian/plugins/obsilo-agent/semantic-index/</code></li> <li><strong>Pouze lokalni:</strong> <code>.obsidian-agent/semantic-index/</code></li>",
   "pages.semanticSearch.build.text": "Kliknete na Sestavit index v Nastaveni → Semanticky index. Prvni sestaveni trva u velkeho vault nekolik minut. Prubeh se zobrazuje v panelu nastaveni.",
   "pages.semanticSearch.build.text2": "Index je ulozen v:",
   "pages.semanticSearch.build.text3": "Nasledna prestaveni jsou inkrementalni — preindexuji se pouze soubory zmenene od posledniho sestaveni.",

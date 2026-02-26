@@ -47,7 +47,7 @@ jobs:
             1. Install BRAT from Community Plugins
             2. BRAT → Add Beta Plugin → `https://github.com/pssah4/obsilo`
 
-            Or install manually: download `main.js`, `manifest.json`, `styles.css` and place them in `.obsidian/plugins/obsidian-agent/`.
+            Or install manually: download `main.js`, `manifest.json`, `styles.css` and place them in `.obsidian/plugins/obsilo-agent/`.
           files: |
             main.js
             manifest.json

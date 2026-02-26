@@ -52,7 +52,7 @@
   "pages.semanticSearch.basicSearch": "การค้นหาพื้นฐาน",
   "pages.semanticSearch.basicSearch.text": "\"ค้นหาโน้ตของฉันเกี่ยวกับการวางแผนประชุมและการสร้างวาระการประชุม\"",
   "pages.semanticSearch.build": "ขั้นตอนที่ 3: Build ดัชนี",
-  "pages.semanticSearch.build.list": "<li><strong>Obsidian sync (ค่าเริ่มต้น):</strong> <code>.obsidian/plugins/obsidian-agent/semantic-index/</code></li> <li><strong>ในเครื่องเท่านั้น:</strong> <code>.obsidian-agent/semantic-index/</code></li>",
+  "pages.semanticSearch.build.list": "<li><strong>Obsidian sync (ค่าเริ่มต้น):</strong> <code>.obsidian/plugins/obsilo-agent/semantic-index/</code></li> <li><strong>ในเครื่องเท่านั้น:</strong> <code>.obsidian-agent/semantic-index/</code></li>",
   "pages.semanticSearch.build.text": "คลิก Build Index ใน การตั้งค่า → Semantic Index การ build ครั้งแรกใช้เวลาไม่กี่นาทีสำหรับ vault ขนาดใหญ่ ความคืบหน้าจะแสดงในแผงการตั้งค่า",
   "pages.semanticSearch.build.text2": "ดัชนีจะถูกเก็บที่:",
   "pages.semanticSearch.build.text3": "การ rebuild ครั้งถัดไปเป็นแบบเพิ่มเติม เฉพาะไฟล์ที่เปลี่ยนแปลงตั้งแต่การ build ครั้งล่าสุดเท่านั้นที่จะถูกสร้างดัชนีใหม่",

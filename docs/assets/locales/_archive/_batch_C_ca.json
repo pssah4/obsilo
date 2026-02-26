@@ -52,7 +52,7 @@
   "pages.semanticSearch.basicSearch": "Cerca bàsica",
   "pages.semanticSearch.basicSearch.text": "\"Troba les meves notes sobre planificació de reunions i creació d'agendes\"",
   "pages.semanticSearch.build": "Pas 3: Construir l'índex",
-  "pages.semanticSearch.build.list": "<li><strong>Sincronització d'Obsidian (per defecte):</strong> <code>.obsidian/plugins/obsidian-agent/semantic-index/</code></li> <li><strong>Només local:</strong> <code>.obsidian-agent/semantic-index/</code></li>",
+  "pages.semanticSearch.build.list": "<li><strong>Sincronització d'Obsidian (per defecte):</strong> <code>.obsidian/plugins/obsilo-agent/semantic-index/</code></li> <li><strong>Només local:</strong> <code>.obsidian-agent/semantic-index/</code></li>",
   "pages.semanticSearch.build.text": "Feu clic a Construir índex a Configuració → Índex semàntic. La primera construcció pot trigar uns minuts per a un vault gran. El progrés es mostra al panell de configuració.",
   "pages.semanticSearch.build.text2": "L'índex s'emmagatzema a:",
   "pages.semanticSearch.build.text3": "Les reconstruccions posteriors són incrementals — només es reindexen els fitxers modificats des de l'última construcció.",

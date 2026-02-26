@@ -52,7 +52,7 @@
   "pages.semanticSearch.basicSearch": "Temel Arama",
   "pages.semanticSearch.basicSearch.text": "\"Toplantı planlama ve gündem oluşturma hakkındaki notlarımı bul\"",
   "pages.semanticSearch.build": "Adım 3: Dizini Oluşturun",
-  "pages.semanticSearch.build.list": "<li><strong>Obsidian senkronizasyonu (varsayılan):</strong> <code>.obsidian/plugins/obsidian-agent/semantic-index/</code></li> <li><strong>Yalnızca yerel:</strong> <code>.obsidian-agent/semantic-index/</code></li>",
+  "pages.semanticSearch.build.list": "<li><strong>Obsidian senkronizasyonu (varsayılan):</strong> <code>.obsidian/plugins/obsilo-agent/semantic-index/</code></li> <li><strong>Yalnızca yerel:</strong> <code>.obsidian-agent/semantic-index/</code></li>",
   "pages.semanticSearch.build.text": "Ayarlar → Anlamsal Dizin bölümünde Dizin Oluştur'a tıklayın. İlk oluşturma büyük bir vault için birkaç dakika sürer. İlerleme ayarlar panelinde gösterilir.",
   "pages.semanticSearch.build.text2": "Dizin şurada saklanır:",
   "pages.semanticSearch.build.text3": "Sonraki yeniden oluşturmalar artımlıdır — yalnızca son oluşturmadan bu yana değişen dosyalar yeniden dizinlenir.",

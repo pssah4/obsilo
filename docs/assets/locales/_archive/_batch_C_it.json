@@ -52,7 +52,7 @@
   "pages.semanticSearch.basicSearch": "Ricerca di base",
   "pages.semanticSearch.basicSearch.text": "\"Trovare le mie note sulla pianificazione delle riunioni e la creazione dell'ordine del giorno\"",
   "pages.semanticSearch.build": "Passo 3: Costruire l'indice",
-  "pages.semanticSearch.build.list": "<li><strong>Sincronizzazione Obsidian (predefinito):</strong> <code>.obsidian/plugins/obsidian-agent/semantic-index/</code></li> <li><strong>Solo locale:</strong> <code>.obsidian-agent/semantic-index/</code></li>",
+  "pages.semanticSearch.build.list": "<li><strong>Sincronizzazione Obsidian (predefinito):</strong> <code>.obsidian/plugins/obsilo-agent/semantic-index/</code></li> <li><strong>Solo locale:</strong> <code>.obsidian-agent/semantic-index/</code></li>",
   "pages.semanticSearch.build.text": "Fare clic su Costruisci indice in Impostazioni → Indice semantico. La prima costruzione richiede alcuni minuti per un vault di grandi dimensioni. L'avanzamento viene mostrato nel pannello delle impostazioni.",
   "pages.semanticSearch.build.text2": "L'indice viene memorizzato in:",
   "pages.semanticSearch.build.text3": "Le ricostruzioni successive sono incrementali — vengono reindicizzati solo i file modificati dall'ultima costruzione.",

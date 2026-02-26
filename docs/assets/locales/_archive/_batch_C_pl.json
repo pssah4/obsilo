@@ -52,7 +52,7 @@
   "pages.semanticSearch.basicSearch": "Wyszukiwanie podstawowe",
   "pages.semanticSearch.basicSearch.text": "\"Znajdz moje notatki o planowaniu spotkan i tworzeniu agendy\"",
   "pages.semanticSearch.build": "Krok 3: Zbuduj indeks",
-  "pages.semanticSearch.build.list": "<li><strong>Synchronizacja Obsidian (domyslnie):</strong> <code>.obsidian/plugins/obsidian-agent/semantic-index/</code></li> <li><strong>Tylko lokalnie:</strong> <code>.obsidian-agent/semantic-index/</code></li>",
+  "pages.semanticSearch.build.list": "<li><strong>Synchronizacja Obsidian (domyslnie):</strong> <code>.obsidian/plugins/obsilo-agent/semantic-index/</code></li> <li><strong>Tylko lokalnie:</strong> <code>.obsidian-agent/semantic-index/</code></li>",
   "pages.semanticSearch.build.text": "Kliknij Zbuduj indeks w Ustawienia → Indeks semantyczny. Pierwsza budowa zajmuje kilka minut dla duzego vault. Postep jest wyswietlany w panelu ustawien.",
   "pages.semanticSearch.build.text2": "Indeks jest przechowywany pod adresem:",
   "pages.semanticSearch.build.text3": "Kolejne przebudowy sa przyrostowe — ponownie indeksowane sa tylko pliki zmienione od ostatniej budowy.",

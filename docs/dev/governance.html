@@ -187,7 +187,7 @@ templates/**</code></pre>
       <p><code>GitCheckpointService</code> uses <code>isomorphic-git</code> to maintain a shadow git repository. Before every write operation, a snapshot is created. Users can restore to any checkpoint from the UI.</p>
       <ul>
         <li><strong>Pure-JS</strong> &mdash; no system git required</li>
-        <li><strong>Shadow repo</strong> &mdash; <code>.obsidian/plugins/obsidian-agent/checkpoints/</code></li>
+        <li><strong>Shadow repo</strong> &mdash; <code>.obsidian/plugins/obsilo-agent/checkpoints/</code></li>
         <li><strong>Auto-snapshot</strong> &mdash; before every write operation</li>
       </ul>
 
@@ -241,7 +241,7 @@ templates/**</code></pre>
       </ul>
 
       <h3>File Rotation</h3>
-      <p>Logs are stored as daily files at <code>.obsidian/plugins/obsidian-agent/logs/YYYY-MM-DD.jsonl</code>. Files older than 30 days are automatically deleted on plugin startup. Each line in the JSONL file is a self-contained JSON object, making the logs easy to parse and filter with standard tooling.</p>
+      <p>Logs are stored as daily files at <code>.obsidian/plugins/obsilo-agent/logs/YYYY-MM-DD.jsonl</code>. Files older than 30 days are automatically deleted on plugin startup. Each line in the JSONL file is a self-contained JSON object, making the logs easy to parse and filter with standard tooling.</p>
 
       <h2 id="consecutive-mistake-limit">Consecutive Mistake Limit</h2>
       <p>A safety valve that halts runaway agent loops. An internal counter tracks consecutive tool errors (any tool execution that returns <code>success: false</code>). The counter resets to zero on every successful tool call.</p>

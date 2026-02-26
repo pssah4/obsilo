@@ -101,7 +101,7 @@
   "pages.settingsRef.interfaceTab": "介面",
   "pages.settingsRef.interfaceTab.table": "<thead><tr><th>設定項目</th><th>預設值</th><th>說明</th></tr></thead> <tbody> <tr><td>側邊欄位置</td><td>right</td><td>\"left\" 或 \"right\"——Obsilo 面板出現在哪一側。</td></tr> <tr><td>按 Enter 發送</td><td>開啟</td><td>開啟時，Enter 發送訊息，Shift+Enter 插入換行。關閉時，Ctrl/Cmd+Enter 發送。</td></tr> <tr><td>自動新增當前檔案上下文</td><td>開啟</td><td>自動將目前開啟的筆記作為上下文包含在每則訊息中。</td></tr> <tr><td>顯示歡迎訊息</td><td>開啟</td><td>在側邊欄首次開啟時顯示歡迎訊息。</td></tr> <tr><td>在上下文中包含當前時間</td><td>開啟</td><td>將今天的日期和時間注入系統提示中。</td></tr> </tbody>",
   "pages.settingsRef.logsTab": "日誌",
-  "pages.settingsRef.logsTab.text": "檢視操作稽核軌跡。日誌為 JSONL 檔案，位於 <code>.obsidian/plugins/obsidian-agent/logs/YYYY-MM-DD.jsonl</code>。選擇日期以查看當天的日誌。保留 30 天。",
+  "pages.settingsRef.logsTab.text": "檢視操作稽核軌跡。日誌為 JSONL 檔案，位於 <code>.obsidian/plugins/obsilo-agent/logs/YYYY-MM-DD.jsonl</code>。選擇日期以查看當天的日誌。保留 30 天。",
   "pages.settingsRef.loopTab": "迴圈",
   "pages.settingsRef.loopTab.table": "<thead><tr><th>設定項目</th><th>預設值</th><th>說明</th></tr></thead> <tbody> <tr><td>連續錯誤限制</td><td>3</td><td>在 N 次連續工具錯誤後停止代理。0 = 停用。</td></tr> <tr><td>速率限制（毫秒）</td><td>0</td><td>API 迭代之間的最短毫秒數。0 = 無限制。用於避免速率限制錯誤。</td></tr> <tr><td>上下文壓縮</td><td>關閉</td><td>當估計的 token 數超過閾值時自動摘要對話。</td></tr> <tr><td>壓縮閾值</td><td>80%</td><td>觸發壓縮的模型上下文窗口百分比（50-95）。</td></tr> <tr><td>強力導航頻率</td><td>0</td><td>每 N 次迭代注入模式角色提醒，以保持代理專注於任務。0 = 停用。</td></tr> </tbody>",
   "pages.settingsRef.mcpTab": "MCP",
