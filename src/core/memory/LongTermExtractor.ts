@@ -9,7 +9,6 @@
  * Called by ExtractionQueue when processing a 'long-term' type item.
  */
 
-import type { Vault } from 'obsidian';
 import type { CustomModel } from '../../types/settings';
 import { buildApiHandlerForModel } from '../../api/index';
 import type { MemoryService } from './MemoryService';
@@ -105,7 +104,6 @@ interface ExtractionResult {
 
 export class LongTermExtractor {
     constructor(
-        private vault: Vault,
         private memoryService: MemoryService,
         private getMemoryModel: () => CustomModel | null,
     ) {}

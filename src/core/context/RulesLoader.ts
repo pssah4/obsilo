@@ -1,22 +1,22 @@
 /**
  * RulesLoader - Load user-defined rules into the system prompt (Sprint 3.2)
  *
- * Rules are Markdown/text files stored in {vault}/.obsidian-agent/rules/
+ * Rules are Markdown/text files stored in ~/.obsidian-agent/rules/ (global).
  * Each rule file can be toggled on/off in Settings → Agent Behaviour → Rules.
  * Enabled rules are injected as a RULES section at the bottom of the system prompt.
  *
  * Inspired by Kilo Code's src/core/context/instructions/ pattern.
  */
 
-import type { Vault } from 'obsidian';
+import type { FileAdapter } from '../storage/types';
 
 export class RulesLoader {
-    private readonly vault: Vault;
+    private readonly fs: FileAdapter;
     readonly rulesDir: string;
 
-    constructor(vault: Vault) {
-        this.vault = vault;
-        this.rulesDir = '.obsidian-agent/rules';
+    constructor(fs: FileAdapter) {
+        this.fs = fs;
+        this.rulesDir = 'rules';
     }
 
     /**
@@ -24,9 +24,9 @@ export class RulesLoader {
      */
     async initialize(): Promise<void> {
         try {
-            const exists = await this.vault.adapter.exists(this.rulesDir);
+            const exists = await this.fs.exists(this.rulesDir);
             if (!exists) {
-                await this.vault.adapter.mkdir(this.rulesDir);
+                await this.fs.mkdir(this.rulesDir);
             }
         } catch {
             // Non-fatal — will create on first write
@@ -35,13 +35,13 @@ export class RulesLoader {
 
     /**
      * Discover all rule files in the rules directory.
-     * Returns full vault-relative paths (e.g. ".obsidian-agent/rules/my-rule.md").
+     * Returns paths relative to the FileAdapter root (e.g. "rules/my-rule.md").
      */
     async discoverRules(): Promise<string[]> {
         try {
-            const exists = await this.vault.adapter.exists(this.rulesDir);
+            const exists = await this.fs.exists(this.rulesDir);
             if (!exists) return [];
-            const listed = await this.vault.adapter.list(this.rulesDir);
+            const listed = await this.fs.list(this.rulesDir);
             return listed.files
                 .filter((f) => f.endsWith('.md') || f.endsWith('.txt'))
                 .sort();
@@ -61,7 +61,7 @@ export class RulesLoader {
         for (const rPath of paths) {
             if (toggles[rPath] === false) continue;
             try {
-                const content = await this.vault.adapter.read(rPath);
+                const content = await this.fs.read(rPath);
                 if (content.trim()) {
                     // M-3: Limit per-file size to prevent injection of huge system-prompt payloads
                     const limited = content.length > 50_000 ? content.slice(0, 50_000) : content;
@@ -81,7 +81,7 @@ export class RulesLoader {
         await this.initialize();
         const safeName = name.replace(/[^a-zA-Z0-9\-_ ]/g, '').trim() || 'rule';
         const rPath = `${this.rulesDir}/${safeName}.md`;
-        await this.vault.adapter.write(rPath, content);
+        await this.fs.write(rPath, content);
         return rPath;
     }
 
@@ -89,7 +89,21 @@ export class RulesLoader {
      * Delete a rule file.
      */
     async deleteRule(rPath: string): Promise<void> {
-        await this.vault.adapter.remove(rPath);
+        await this.fs.remove(rPath);
+    }
+
+    /**
+     * Read a rule file's content (for UI editing).
+     */
+    async readFile(rPath: string): Promise<string> {
+        return this.fs.read(rPath);
+    }
+
+    /**
+     * Write a rule file's content (for UI editing).
+     */
+    async writeFile(rPath: string, content: string): Promise<void> {
+        await this.fs.write(rPath, content);
     }
 
     /**

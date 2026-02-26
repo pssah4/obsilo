@@ -12,6 +12,9 @@ import { BaseTool } from '../BaseTool';
 import type { ToolDefinition, ToolExecutionContext } from '../types';
 import type ObsidianAgentPlugin from '../../../main';
 
+/** Maximum characters to return. ~5000 tokens at 4 chars/token. */
+const MAX_CONTENT_CHARS = 20_000;
+
 interface ReadFileInput {
     path: string;
 }
@@ -86,6 +89,12 @@ export class ReadFileTool extends BaseTool<'read_file'> {
                 extension = dotIdx > 0 ? filename.substring(dotIdx + 1) : '';
             }
 
+            // Truncate very large files to prevent context explosion
+            const originalLength = content.length;
+            if (content.length > MAX_CONTENT_CHARS) {
+                content = content.slice(0, MAX_CONTENT_CHARS);
+            }
+
             // Return formatted content
             const result = this.formatContent(content, {
                 path: filePath,
@@ -93,7 +102,13 @@ export class ReadFileTool extends BaseTool<'read_file'> {
                 extension,
             });
 
-            callbacks.pushToolResult(result);
+            if (originalLength > MAX_CONTENT_CHARS) {
+                callbacks.pushToolResult(
+                    result + `\n[Truncated: showing ${MAX_CONTENT_CHARS} of ${originalLength} chars. Use search_files for specific content.]`,
+                );
+            } else {
+                callbacks.pushToolResult(result);
+            }
             callbacks.log(`Successfully read file: ${path} (${content.length} chars)`);
         } catch (error) {
             callbacks.pushToolResult(this.formatError(error));

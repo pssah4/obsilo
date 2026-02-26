@@ -50,6 +50,8 @@ export interface AgentTaskCallbacks {
     onContextCondensed?: () => void;
     /** Called when a checkpoint is saved before a write tool */
     onCheckpoint?: (checkpoint: import('./checkpoints/GitCheckpointService').CheckpointInfo) => void;
+    /** Called just before onComplete with tool execution data for episodic memory (ADR-018) */
+    onEpisodeData?: (data: { toolSequence: string[], toolLedger: string }) => void;
     /** Called when an unrecoverable error occurs */
     onError: (error: Error) => void;
 }
@@ -134,6 +136,8 @@ export class AgentTask {
         memoryContext?: string,
         /** Compact plugin skills list from VaultDNA (PAS-1) */
         pluginSkillsSection?: string,
+        /** Pre-matched procedural recipes for the current user message (ADR-017) */
+        recipesSection?: string,
     ): Promise<void> {
         // Resolve mode to ModeConfig
         let activeMode: ModeConfig = this.resolveMode(initialMode);
@@ -250,7 +254,7 @@ export class AgentTask {
         const rebuildPromptCache = () => {
             const allModes = this.modeService?.getAllModes();
             const webEnabled = this.modeService?.isWebEnabled() ?? false;
-            cachedSystemPrompt = buildSystemPromptForMode(activeMode, allModes, globalCustomInstructions, includeTime, rulesContent, skillsSection, mcpClient, allowedMcpServers, memoryContext, pluginSkillsSection, this.depth > 0, webEnabled);
+            cachedSystemPrompt = buildSystemPromptForMode(activeMode, allModes, globalCustomInstructions, includeTime, rulesContent, skillsSection, mcpClient, allowedMcpServers, memoryContext, pluginSkillsSection, this.depth > 0, webEnabled, recipesSection);
             cachedTools = this.modeService
                 ? this.modeService.getToolDefinitions(activeMode)
                 : this.toolRegistry.getToolDefinitions();
@@ -299,6 +303,16 @@ export class AgentTask {
                     history.push({
                         role: 'user',
                         content: `[Power Steering Reminder]\n\nYou are operating in **${activeMode.name}** mode.\n\n${activeMode.roleDefinition}\n\nContinue the task.`,
+                    });
+                }
+
+                // Soft limit: nudge the agent to wrap up at 60% of max iterations
+                const SOFT_LIMIT = Math.floor(MAX_ITERATIONS * 0.6);
+                if (iteration === SOFT_LIMIT) {
+                    history.push({
+                        role: 'user',
+                        content: '[System] You have used ' + iteration + ' of ' + MAX_ITERATIONS +
+                            ' iterations. Wrap up now: deliver your final answer or call attempt_completion.',
                     });
                 }
 
@@ -363,7 +377,7 @@ export class AgentTask {
                         const contextWindow = this.getModelContextWindow();
                         const threshold = Math.floor(contextWindow * (this.condensingThreshold / 100));
                         if (estimatedTokens > threshold) {
-                            await this.condenseHistory(history, systemPrompt, abortSignal);
+                            await this.condenseHistory(history, systemPrompt, abortSignal, repetitionDetector.getLedger());
                             this.taskCallbacks.onContextCondensed?.();
                         }
                     }
@@ -386,13 +400,10 @@ export class AgentTask {
                 // Helper: run a single tool through the pipeline and return its result.
                 // Does NOT call onToolResult — caller is responsible for ordering.
                 const runTool = async (toolUse: ContentBlock & { type: 'tool_use' }) => {
-                    // Detect repetitive tool loops before execution
-                    if (repetitionDetector.check(toolUse.name, toolUse.input as Record<string, unknown>)) {
-                        const errorContent =
-                            `<error>Tool loop detected: "${toolUse.name}" was called with identical input ` +
-                            `${3} times in a row. Try a different approach or use attempt_completion.</error>`;
-                        signalCompletion('aborted: tool repetition loop');
-                        return { content: errorContent, is_error: true as const };
+                    // Detect repetitive tool loops before execution (recoverable — no signalCompletion)
+                    const repCheck = repetitionDetector.check(toolUse.name, toolUse.input as Record<string, unknown>);
+                    if (repCheck.blocked) {
+                        return { content: `<error>${repCheck.reason}</error>`, is_error: true as const };
                     }
                     const toolCallbacks: ToolCallbacks = {
                         pushToolResult: () => {},
@@ -407,7 +418,7 @@ export class AgentTask {
                         name: toolUse.name as any,
                         input: toolUse.input,
                     };
-                    return pipeline.executeTool(toolCall, toolCallbacks, {
+                    const result = await pipeline.executeTool(toolCall, toolCallbacks, {
                         askQuestion,
                         signalCompletion,
                         switchMode,
@@ -418,6 +429,16 @@ export class AgentTask {
                         onCheckpoint: this.taskCallbacks.onCheckpoint,
                         invalidateToolCache,
                     });
+                    // Record successful calls in the ledger (for condensing preservation)
+                    if (!result.is_error) {
+                        repetitionDetector.record(
+                            toolUse.name,
+                            toolUse.input as Record<string, unknown>,
+                            result.content.slice(0, 200),
+                            iteration,
+                        );
+                    }
+                    return result;
                 };
 
                 const allParallelSafe = validToolUses.length > 1
@@ -490,7 +511,7 @@ export class AgentTask {
                     const contextWindow = this.getModelContextWindow();
                     const threshold = Math.floor(contextWindow * (this.condensingThreshold / 100));
                     if (estimatedTokens > threshold) {
-                        await this.condenseHistory(history, systemPrompt, abortSignal);
+                        await this.condenseHistory(history, systemPrompt, abortSignal, repetitionDetector.getLedger());
                         this.taskCallbacks.onContextCondensed?.();
                     }
                 }
@@ -512,10 +533,49 @@ export class AgentTask {
                 }
             }
 
+            // Hard limit recovery: if the loop exhausted iterations while the agent
+            // was still working (last message is a tool_result), give it one final
+            // text-only API call to deliver a response instead of silently stopping.
+            if (completionResult === null && !abortSignal?.aborted) {
+                const lastMsg = history[history.length - 1];
+                const wasWorking = lastMsg?.role === 'user'
+                    && Array.isArray(lastMsg.content)
+                    && (lastMsg.content as any[]).some((b: any) => b.type === 'tool_result');
+                if (wasWorking) {
+                    history.push({
+                        role: 'user',
+                        content: '[System] Iteration limit reached. Deliver your final answer NOW. Do NOT call any tools.',
+                    });
+                    try {
+                        for await (const chunk of this.api.createMessage(cachedSystemPrompt, history, [], abortSignal)) {
+                            if (chunk.type === 'text') {
+                                hasStreamedText = true;
+                                this.taskCallbacks.onText(chunk.text);
+                            } else if (chunk.type === 'usage') {
+                                totalInputTokens += chunk.inputTokens;
+                                totalOutputTokens += chunk.outputTokens;
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('[AgentTask] Hard limit recovery call failed (non-fatal):', e);
+                    }
+                }
+            }
+
             // Feature 6: Report total token usage before completing
             if (totalInputTokens > 0 || totalOutputTokens > 0) {
                 this.taskCallbacks.onUsage?.(totalInputTokens, totalOutputTokens);
             }
+
+            // Episodic memory: provide tool execution data for recording (ADR-018)
+            const toolSeq = repetitionDetector.getToolSequence();
+            if (toolSeq.length > 0) {
+                this.taskCallbacks.onEpisodeData?.({
+                    toolSequence: toolSeq,
+                    toolLedger: repetitionDetector.getLedger(),
+                });
+            }
+
             this.taskCallbacks.onComplete();
         } catch (error) {
             // AbortError is expected when user cancels — not a real error.
@@ -604,6 +664,7 @@ export class AgentTask {
         history: MessageParam[],
         systemPrompt: string,
         abortSignal?: AbortSignal,
+        toolCallLedger?: string,
     ): Promise<void> {
         // Need at least first + 4 tail + some middle to condense
         if (history.length < 7) return;
@@ -620,7 +681,11 @@ export class AgentTask {
                 '- Key decisions made\n' +
                 '- Files read, created, or modified (include exact paths)\n' +
                 '- Important findings, code snippets, or facts discovered\n' +
+                '- ALL tool calls that were executed and their outcomes\n' +
+                '- Search queries performed and their result summaries\n' +
                 '- Errors encountered and how they were resolved\n\n' +
+                (toolCallLedger ? toolCallLedger + '\n\n' : '') +
+                'IMPORTANT: After condensing, the agent MUST NOT repeat tool calls listed above.\n\n' +
                 'Output only the summary — no preamble or meta-commentary.',
         };
 

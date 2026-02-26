@@ -56,9 +56,7 @@ export class SkillsTab {
                 const safeName = skillName.replace(/[^a-zA-Z0-9\-_ ]/g, '').trim();
                 const dir = `${skillsManager.skillsDir}/${safeName}`;
                 try {
-                    const exists = await this.app.vault.adapter.exists(dir);
-                    if (!exists) await this.app.vault.adapter.mkdir(dir);
-                    await this.app.vault.adapter.write(`${dir}/SKILL.md`, content);
+                    await skillsManager.createSkill(dir, content);
                     await refreshList();
                 } catch {
                     new Notice(t('settings.skills.importFailed'));
@@ -121,9 +119,9 @@ export class SkillsTab {
                 });
                 setIcon(editBtn, 'pencil');
                 editBtn.addEventListener('click', async () => {
-                    const content = await this.app.vault.adapter.read(skill.path);
+                    const content = await skillsManager.readFile(skill.path);
                     new ContentEditorModal(this.app, t('settings.skills.editSkill', { name: skill.name }), content, async (newContent) => {
-                        await this.app.vault.adapter.write(skill.path, newContent);
+                        await skillsManager.writeFile(skill.path, newContent);
                     }).open();
                 });
 
@@ -132,7 +130,7 @@ export class SkillsTab {
                 });
                 setIcon(exportSkillBtn, 'download');
                 exportSkillBtn.addEventListener('click', async () => {
-                    const content = await this.app.vault.adapter.read(skill.path);
+                    const content = await skillsManager.readFile(skill.path);
                     const blob = new Blob([content], { type: 'text/markdown' });
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
@@ -148,7 +146,7 @@ export class SkillsTab {
                 setIcon(delBtn, 'trash-2');
                 delBtn.addEventListener('click', async () => {
                     try {
-                        await this.app.vault.adapter.remove(skill.path);
+                        await skillsManager.deleteSkill(skill.path);
                         this.plugin.settings.manualSkillToggles ??= {};
                         delete this.plugin.settings.manualSkillToggles[skill.path];
                         await this.plugin.saveSettings();
@@ -184,13 +182,11 @@ export class SkillsTab {
             const skillPath = `${dir}/SKILL.md`;
             const template = `---\nname: ${safeName}\ndescription: Describe when this skill applies\nkeywords: []\n---\n\n# ${safeName}\n\n<!-- Describe what this skill does and when to use it. The agent reads this file when the skill is relevant. -->\n\n`;
             try {
-                const exists = await this.app.vault.adapter.exists(dir);
-                if (!exists) await this.app.vault.adapter.mkdir(dir);
-                await this.app.vault.adapter.write(skillPath, template);
+                await skillsManager.createSkill(dir, template);
                 nameInput.value = '';
                 await refreshList();
                 new ContentEditorModal(this.app, t('settings.skills.editSkill', { name: safeName }), template, async (content) => {
-                    await this.app.vault.adapter.write(skillPath, content);
+                    await skillsManager.writeFile(skillPath, content);
                 }).open();
             } catch {
                 new Notice(t('settings.skills.createFailed'));

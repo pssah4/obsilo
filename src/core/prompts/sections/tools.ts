@@ -15,6 +15,7 @@ export function getToolsSection(
     mcpClient?: McpClient,
     allowedMcpServers?: string[],
     webEnabled?: boolean,
+    includeExamples = true,
 ): string {
     const parts: string[] = [
         '====', '', 'TOOLS', '',
@@ -30,7 +31,7 @@ export function getToolsSection(
         parts.push('**Web:** Disabled. When the user asks for internet search, the ONLY reason is webTools.enabled=false. Ask the user for permission first: "Web search is currently disabled. Shall I enable it?" If they agree, call update_settings(action:"set", path:"webTools.enabled", value:true), then use web_search. Do NOT enable without asking. Do NOT mention API keys or providers — that is handled at runtime. Do NOT fall back to vault search.\n');
     }
     if (nonMcpGroups.length > 0) {
-        parts.push(buildToolPromptSection(nonMcpGroups));
+        parts.push(buildToolPromptSection(nonMcpGroups, includeExamples));
     }
 
     // MCP tools: dynamic listing from connected servers when available

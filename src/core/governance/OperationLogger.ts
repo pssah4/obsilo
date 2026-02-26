@@ -8,7 +8,7 @@
  * Storage: .obsidian/plugins/obsidian-agent/logs/YYYY-MM-DD.jsonl
  */
 
-import type { Vault } from 'obsidian';
+import type { FileAdapter } from '../storage/types';
 
 export interface LogEntry {
     timestamp: string;
@@ -23,15 +23,15 @@ export interface LogEntry {
 }
 
 export class OperationLogger {
-    private vault: Vault;
+    private fs: FileAdapter;
     private logDir: string;
     private readonly MAX_LOG_DAYS = 30;
     private readonly MAX_RESULT_LEN = 2000;
 
 
-    constructor(vault: Vault, pluginDir: string) {
-        this.vault = vault;
-        this.logDir = `${pluginDir}/logs`;
+    constructor(fs: FileAdapter) {
+        this.fs = fs;
+        this.logDir = 'logs';
     }
 
     /**
@@ -39,9 +39,9 @@ export class OperationLogger {
      */
     async initialize(): Promise<void> {
         try {
-            const exists = await this.vault.adapter.exists(this.logDir);
+            const exists = await this.fs.exists(this.logDir);
             if (!exists) {
-                await this.vault.adapter.mkdir(this.logDir);
+                await this.fs.mkdir(this.logDir);
             }
         } catch (e) {
             console.warn('[OperationLogger] Failed to create log directory:', e);
@@ -104,15 +104,15 @@ export class OperationLogger {
             };
             const line = JSON.stringify(sanitized) + '\n';
 
-            const exists = await this.vault.adapter.exists(logPath);
+            const exists = await this.fs.exists(logPath);
             if (!exists) {
                 // New day file: create it and rotate old logs asynchronously
-                await this.vault.adapter.write(logPath, line);
+                await this.fs.write(logPath, line);
                 this.rotateLogs().catch((e) =>
                     console.warn('[OperationLogger] Rotation error:', e)
                 );
             } else {
-                await this.vault.adapter.append(logPath, line);
+                await this.fs.append(logPath, line);
             }
         } catch (e) {
             // Logging must never break agent execution
@@ -126,9 +126,9 @@ export class OperationLogger {
     async readLog(date: string): Promise<LogEntry[]> {
         const logPath = `${this.logDir}/${date}.jsonl`;
         try {
-            const exists = await this.vault.adapter.exists(logPath);
+            const exists = await this.fs.exists(logPath);
             if (!exists) return [];
-            const content = await this.vault.adapter.read(logPath);
+            const content = await this.fs.read(logPath);
             return content
                 .split('\n')
                 .filter((line) => line.trim().length > 0)
@@ -144,7 +144,7 @@ export class OperationLogger {
      */
     async getLogDates(): Promise<string[]> {
         try {
-            const listed = await this.vault.adapter.list(this.logDir);
+            const listed = await this.fs.list(this.logDir);
             return listed.files
                 .map((f) => f.replace(`${this.logDir}/`, '').replace('.jsonl', ''))
                 .filter((name) => /^\d{4}-\d{2}-\d{2}$/.test(name))
@@ -161,9 +161,9 @@ export class OperationLogger {
     async readRawLog(date: string): Promise<string | null> {
         const logPath = `${this.logDir}/${date}.jsonl`;
         try {
-            const exists = await this.vault.adapter.exists(logPath);
+            const exists = await this.fs.exists(logPath);
             if (!exists) return null;
-            return await this.vault.adapter.read(logPath);
+            return await this.fs.read(logPath);
         } catch {
             return null;
         }
@@ -176,7 +176,7 @@ export class OperationLogger {
         const dates = await this.getLogDates();
         for (const date of dates) {
             try {
-                await this.vault.adapter.remove(`${this.logDir}/${date}.jsonl`);
+                await this.fs.remove(`${this.logDir}/${date}.jsonl`);
             } catch {
                 // Ignore individual delete failures
             }
@@ -198,7 +198,7 @@ export class OperationLogger {
         const toDelete = dates.slice(this.MAX_LOG_DAYS);
         for (const date of toDelete) {
             try {
-                await this.vault.adapter.remove(`${this.logDir}/${date}.jsonl`);
+                await this.fs.remove(`${this.logDir}/${date}.jsonl`);
                 console.log(`[OperationLogger] Rotated old log: ${date}`);
             } catch {
                 // Ignore

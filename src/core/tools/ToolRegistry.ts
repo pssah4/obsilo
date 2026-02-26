@@ -34,6 +34,8 @@ import { GetDailyNoteTool } from './vault/GetDailyNoteTool';
 import { SemanticSearchTool } from './vault/SemanticSearchTool';
 // Import tools — vault: canvas (Phase C3)
 import { GenerateCanvasTool } from './vault/GenerateCanvasTool';
+// Import tools — vault: excalidraw
+import { CreateExcalidrawTool } from './vault/CreateExcalidrawTool';
 // Import tools — vault: bases (Phase C4)
 import { CreateBaseTool } from './vault/CreateBaseTool';
 import { UpdateBaseTool } from './vault/UpdateBaseTool';
@@ -101,6 +103,8 @@ export class ToolRegistry {
         this.register(new SemanticSearchTool(this.plugin));
         // Vault: canvas (Phase C3)
         this.register(new GenerateCanvasTool(this.plugin));
+        // Vault: excalidraw
+        this.register(new CreateExcalidrawTool(this.plugin));
         // Vault: bases (Phase C4)
         this.register(new CreateBaseTool(this.plugin));
         this.register(new UpdateBaseTool(this.plugin));

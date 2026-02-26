@@ -39,20 +39,20 @@
 
 <div class="docs-layout">
   <aside class="docs-sidebar">
-    <div class="sidebar-section"><div class="sidebar-section-title">Architecture</div><nav class="sidebar-nav"><a href="index.html">Overview</a></nav></div>
-    <div class="sidebar-section"><div class="sidebar-section-title">Core Architecture</div><nav class="sidebar-nav"><a href="architecture-overview.html">Architecture Overview</a><a href="agent-loop.html">Agent Loop</a><a href="system-prompt.html" class="active">System Prompt</a></nav></div>
-    <div class="sidebar-section"><div class="sidebar-section-title">Tool System</div><nav class="sidebar-nav"><a href="tool-system.html">Tool Execution Pipeline</a><a href="governance.html">Governance &amp; Safety</a></nav></div>
-    <div class="sidebar-section"><div class="sidebar-section-title">Knowledge &amp; Memory</div><nav class="sidebar-nav"><a href="semantic-search.html">Semantic Search Pipeline</a><a href="memory-system.html">Memory Architecture</a></nav></div>
-    <div class="sidebar-section"><div class="sidebar-section-title">Extensions</div><nav class="sidebar-nav"><a href="mode-system.html">Mode System</a><a href="mcp-client.html">MCP Client</a><a href="api-providers.html">API Providers</a><a href="vault-dna.html">VaultDNA</a></nav></div>
-    <div class="sidebar-section"><div class="sidebar-section-title">UI</div><nav class="sidebar-nav"><a href="ui-architecture.html">UI Architecture</a></nav></div>
+    <div class="sidebar-section"><div class="sidebar-section-title" data-i18n="dev_sidebar.title">Architecture</div><nav class="sidebar-nav"><a href="index.html" data-i18n="dev_sidebar.hub">Overview</a></nav></div>
+    <div class="sidebar-section"><div class="sidebar-section-title" data-i18n="dev_sidebar.coreArch">Core Architecture</div><nav class="sidebar-nav"><a href="architecture-overview.html" data-i18n="dev_sidebar.archOverview">Architecture Overview</a><a href="agent-loop.html" data-i18n="dev_sidebar.agentLoop">Agent Loop</a><a href="system-prompt.html" class="active" data-i18n="dev_sidebar.systemPrompt">System Prompt</a></nav></div>
+    <div class="sidebar-section"><div class="sidebar-section-title" data-i18n="dev_sidebar.toolSystem">Tool System</div><nav class="sidebar-nav"><a href="tool-system.html" data-i18n="dev_sidebar.toolPipeline">Tool Execution Pipeline</a><a href="governance.html" data-i18n="dev_sidebar.governance">Governance &amp; Safety</a></nav></div>
+    <div class="sidebar-section"><div class="sidebar-section-title" data-i18n="dev_sidebar.knowledgeMemory">Knowledge &amp; Memory</div><nav class="sidebar-nav"><a href="semantic-search.html" data-i18n="dev_sidebar.semanticSearch">Semantic Search Pipeline</a><a href="memory-system.html" data-i18n="dev_sidebar.memorySystem">Memory Architecture</a></nav></div>
+    <div class="sidebar-section"><div class="sidebar-section-title" data-i18n="dev_sidebar.extensions">Extensions</div><nav class="sidebar-nav"><a href="mode-system.html" data-i18n="dev_sidebar.modeSystem">Mode System</a><a href="mcp-client.html" data-i18n="dev_sidebar.mcpClient">MCP Client</a><a href="api-providers.html" data-i18n="dev_sidebar.apiProviders">API Providers</a><a href="vault-dna.html" data-i18n="dev_sidebar.vaultDna">VaultDNA</a></nav></div>
+    <div class="sidebar-section"><div class="sidebar-section-title" data-i18n="dev_sidebar.ui">UI</div><nav class="sidebar-nav"><a href="ui-architecture.html" data-i18n="dev_sidebar.uiArch">UI Architecture</a></nav></div>
   </aside>
 
   <main class="docs-main">
     <article class="docs-content">
       <div class="breadcrumb">
-        <a href="../index.html">Home</a><span class="breadcrumb-sep">&rsaquo;</span>
-        <a href="index.html">Architecture</a><span class="breadcrumb-sep">&rsaquo;</span>
-        <span>System Prompt</span>
+        <a href="../index.html" data-i18n="breadcrumb.home">Home</a><span class="breadcrumb-sep">&rsaquo;</span>
+        <a href="index.html" data-i18n="dev_hub.breadcrumb">Architecture</a><span class="breadcrumb-sep">&rsaquo;</span>
+        <span data-i18n="dev_sidebar.systemPrompt">System Prompt</span>
       </div>
 
       <h1>System Prompt Architecture</h1>
@@ -120,7 +120,7 @@
 
       <p>The set of tools included is determined at prompt assembly time by <code>ModeService.getEffectiveToolNames()</code>. This method resolves the active mode's <code>toolGroups</code> array (e.g., <code>["edit", "web", "agent"]</code>) into a flat list of individual tool names using <code>expandToolGroups()</code>, then filters the ToolRegistry to only include matching tools. Custom modes can also specify <code>customTools</code> to add or remove individual tools beyond their group defaults.</p>
 
-      <p>With all 36+ tools enabled (as in Agent mode), this section alone can consume <strong>8,000-12,000 tokens</strong>. Read-only modes like Ask mode include only the <code>read</code> and <code>agent</code> groups, reducing this significantly.</p>
+      <p>With all 37 tools enabled (as in Agent mode), this section alone can consume <strong>8,000-12,000 tokens</strong>. Read-only modes like Ask mode include only the <code>read</code> and <code>agent</code> groups, reducing this significantly.</p>
 
       <h3 id="section-pluginskills">6. pluginSkills</h3>
       <p>Compact listing of VaultDNA-discovered plugin skills. One line per plugin with available commands and API methods.</p>

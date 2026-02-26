@@ -1,7 +1,7 @@
 # Obsidian Agent — Backlog
 
 > Status: `[x]` fertig · `[~]` in Arbeit · `[ ]` offen · `[-]` zurückgestellt
-> Letzte Aktualisierung: 2026-02-25 (Localization i18n implementiert)
+> Letzte Aktualisierung: 2026-02-26 (Global Storage Architecture komplett)
 
 ---
 
@@ -44,6 +44,7 @@
 | `[x]` | Anthropic provider | `src/api/providers/anthropic.ts` |
 | `[x]` | OpenAI-compatible provider | `src/api/providers/openai.ts` |
 | `[x]` | Custom models + per-model temperature | `src/types/settings.ts` |
+| `[~]` | Safe Storage (Electron safeStorage, OS Keychain encryption for API keys) | `src/core/security/SafeStorageService.ts` |
 
 ### Core: MCP
 | Status | Feature | Datei |
@@ -103,6 +104,7 @@
 | `[x]` | delete_file | `src/core/tools/vault/DeleteFileTool.ts` |
 | `[x]` | move_file | `src/core/tools/vault/MoveFileTool.ts` |
 | `[x]` | generate_canvas | `src/core/tools/vault/GenerateCanvasTool.ts` |
+| `[x]` | create_excalidraw | `src/core/tools/vault/CreateExcalidrawTool.ts` |
 | `[x]` | create_base | `src/core/tools/vault/CreateBaseTool.ts` |
 | `[x]` | update_base | `src/core/tools/vault/UpdateBaseTool.ts` |
 
@@ -187,6 +189,37 @@
 | `[x]` | Settings-Tabs Migration (17 Tabs + constants.ts) | alle Settings-Tab-Dateien |
 | `[x]` | Chat-UI & Modals Migration | `AgentSidebarView.ts`, alle Modals |
 
+### Agent Skill Mastery
+| Status | Feature | Datei |
+|--------|---------|-------|
+| `[x]` | Rich Tool Descriptions (example, whenToUse, commonMistakes) | `src/core/tools/toolMetadata.ts` |
+| `[x]` | Procedural Recipes (static + learned, keyword + semantic matching) | `src/core/mastery/` |
+| `[x]` | Recipe Prompt Section (injection between skills and rules) | `RecipeMatchingService.buildPromptSection()` |
+| `[x]` | Episodic Task Memory (recording, Vectra indexing) | `src/core/mastery/EpisodicExtractor.ts` |
+| `[x]` | Recipe Promotion (auto-promote 3+ success patterns) | `src/core/mastery/RecipePromotionService.ts` |
+| `[x]` | Mastery Settings (toggle, budget, recipe toggles) | `src/types/settings.ts` |
+
+### Global Storage Architecture (ADR-020)
+| Status | Feature | Datei |
+|--------|---------|-------|
+| `[x]` | FileAdapter Interface | `src/core/storage/types.ts` |
+| `[x]` | GlobalFileService (Node.js fs at ~/.obsidian-agent/) | `src/core/storage/GlobalFileService.ts` |
+| `[x]` | SyncBridge (bidirectional sync for Obsidian Sync) | `src/core/storage/SyncBridge.ts` |
+| `[x]` | GlobalSettingsService (cross-vault settings) | `src/core/storage/GlobalSettingsService.ts` |
+| `[x]` | GlobalMigrationService (one-time per-vault migration) | `src/core/storage/GlobalMigrationService.ts` |
+| `[x]` | 10 Services refactored to FileAdapter | RulesLoader, WorkflowLoader, SkillsManager, MemoryService, ExtractionQueue, ConversationStore, OperationLogger, RecipeStore, EpisodicExtractor, RecipePromotionService |
+| `[x]` | GlobalModeStore refactored to GlobalFileService | `src/core/modes/GlobalModeStore.ts` |
+| `[x]` | BackupTab updated for global categories | `src/ui/settings/BackupTab.ts` |
+| `[x]` | Settings dual-write (data.json + global settings.json) | `src/main.ts` |
+
+### Agentic Loop Refactoring (completed)
+| Status | Feature | Datei |
+|--------|---------|-------|
+| `[x]` | ReadFile Content Truncation (20K chars max) | `src/core/tools/vault/ReadFileTool.ts` |
+| `[x]` | ToolRepetitionDetector Rewrite (fuzzy dedup, ledger, recoverable errors) | `src/core/tool-execution/ToolRepetitionDetector.ts` |
+| `[x]` | Pipeline Result Cache (per-task, write-invalidation) | `src/core/tool-execution/ToolExecutionPipeline.ts` |
+| `[x]` | Soft/Hard Limit + Condensing Ledger | `src/core/AgentTask.ts` |
+
 ---
 
 ## Geplant / Backlog
@@ -203,14 +236,14 @@
 
 ## Tool-Zaehlung
 
-**36 Tools implementiert** (inkl. skill group):
+**37 Tools implementiert** (7 Tool-Gruppen):
 - read (3): read_file, list_files, search_files
-- vault (9): get_vault_stats, get_frontmatter, update_frontmatter, search_by_tag, get_linked_notes, open_note, get_daily_note, semantic_search, query_base
-- edit (9): write_file, edit_file, append_to_file, create_folder, delete_file, move_file, generate_canvas, create_base, update_base
+- vault (8): get_frontmatter, search_by_tag, get_vault_stats, get_linked_notes, get_daily_note, open_note, semantic_search, query_base
+- edit (11): write_file, edit_file, append_to_file, create_folder, delete_file, move_file, update_frontmatter, generate_canvas, create_excalidraw, create_base, update_base
 - web (2): web_fetch, web_search
-- agent (9): ask_followup_question, attempt_completion, switch_mode, update_todo_list, new_task, call_plugin_api, execute_recipe, update_settings, configure_model
+- agent (7): ask_followup_question, attempt_completion, update_todo_list, new_task, switch_mode, update_settings, configure_model
 - mcp (1): use_mcp_tool
-- skill (3): execute_command, resolve_capability_gap, enable_plugin
+- skill (5): execute_command, execute_recipe, call_plugin_api, resolve_capability_gap, enable_plugin
 
 ---
 
@@ -220,7 +253,7 @@
 
 Alle implementierten Features haben eine `FEATURE-*.md` Spec.
 
-### Architecture (15 ADRs + arc42)
+### Architecture (18 ADRs + arc42)
 
 | ADR | Entscheidung |
 |-----|-------------|
@@ -239,6 +272,9 @@ Alle implementierten Features haben eine `FEATURE-*.md` Spec.
 | ADR-013 | 3-Tier Memory Architecture |
 | ADR-014 | VaultDNA Plugin Discovery |
 | ADR-015 | Hybrid Search (Semantic + BM25 + RRF) |
+| ADR-016 | Rich Tool Descriptions |
+| ADR-017 | Procedural Skill Recipes |
+| ADR-018 | Episodic Task Memory |
 
 ### Technische Dokumentation (10 Dateien in `devprocess/implementation/`)
 

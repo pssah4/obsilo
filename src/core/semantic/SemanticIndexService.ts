@@ -704,6 +704,58 @@ export class SemanticIndexService {
         }
     }
 
+    /**
+     * Index a task episode for episodic memory retrieval (ADR-018).
+     * Follows the same pattern as indexSessionSummary with source='episode'.
+     */
+    async indexEpisode(episodeId: string, content: string): Promise<void> {
+        if (!await this.index.isIndexCreated().catch(() => false)) return;
+        try {
+            const chunks = this.splitIntoChunks(content, this.chunkSize);
+            if (chunks.length === 0) return;
+
+            const vectors = await this.embedBatch(chunks);
+            await this.index.beginUpdate();
+            for (let ci = 0; ci < chunks.length; ci++) {
+                await this.index.insertItem({
+                    vector: vectors[ci],
+                    metadata: {
+                        path: `episode:${episodeId}`,
+                        chunk: chunks[ci],
+                        chunkIndex: ci,
+                        source: 'episode',
+                    },
+                });
+            }
+            await this.index.endUpdate();
+        } catch (e) {
+            console.warn(`[SemanticIndex] Failed to index episode ${episodeId}:`, e);
+        }
+    }
+
+    /**
+     * Search only task episodes in the index (ADR-018).
+     * Returns top-K results filtered to source='episode' items.
+     */
+    async searchEpisodes(query: string, topK = 3): Promise<SemanticResult[]> {
+        if (!await this.index.isIndexCreated().catch(() => false)) return [];
+        try {
+            const [vector] = await this.embedBatch([query]);
+            const results = await this.index.queryItems(vector, query, topK * 5);
+            return results
+                .filter((r: any) => r.item.metadata?.source === 'episode')
+                .slice(0, topK)
+                .map((r: any) => ({
+                    path: r.item.metadata?.path as string ?? '',
+                    excerpt: r.item.metadata?.chunk as string ?? '',
+                    score: r.score,
+                }));
+        } catch (e) {
+            console.warn('[SemanticIndex] Episode search failed:', e);
+            return [];
+        }
+    }
+
     /** Delete the on-disk index and reset state. */
     async deleteIndex(): Promise<void> {
         try {

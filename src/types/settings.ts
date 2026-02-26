@@ -50,6 +50,7 @@ export const BUILT_IN_MODELS: CustomModel[] = [
         displayName: 'Claude Sonnet 4.5',
         enabled: false,
         isBuiltIn: true,
+        maxTokens: 16384,
     },
     {
         name: 'claude-opus-4-6',
@@ -57,6 +58,7 @@ export const BUILT_IN_MODELS: CustomModel[] = [
         displayName: 'Claude Opus 4.6',
         enabled: false,
         isBuiltIn: true,
+        maxTokens: 16384,
     },
     {
         name: 'claude-haiku-4-5-20251001',
@@ -64,6 +66,7 @@ export const BUILT_IN_MODELS: CustomModel[] = [
         displayName: 'Claude Haiku 4.5',
         enabled: false,
         isBuiltIn: true,
+        maxTokens: 8192,
     },
     // OpenAI
     {
@@ -72,6 +75,7 @@ export const BUILT_IN_MODELS: CustomModel[] = [
         displayName: 'GPT-4o',
         enabled: false,
         isBuiltIn: true,
+        maxTokens: 16384,
     },
     {
         name: 'gpt-4o-mini',
@@ -79,6 +83,7 @@ export const BUILT_IN_MODELS: CustomModel[] = [
         displayName: 'GPT-4o mini',
         enabled: false,
         isBuiltIn: true,
+        maxTokens: 16384,
     },
     {
         name: 'gpt-4.1',
@@ -86,6 +91,7 @@ export const BUILT_IN_MODELS: CustomModel[] = [
         displayName: 'GPT-4.1',
         enabled: false,
         isBuiltIn: true,
+        maxTokens: 16384,
     },
     // Ollama (local)
     {
@@ -111,6 +117,7 @@ export const BUILT_IN_MODELS: CustomModel[] = [
         displayName: 'Claude 3.5 Sonnet',
         enabled: false,
         isBuiltIn: true,
+        maxTokens: 8192,
     },
     {
         name: 'openai/gpt-4o',
@@ -118,6 +125,7 @@ export const BUILT_IN_MODELS: CustomModel[] = [
         displayName: 'GPT-4o',
         enabled: false,
         isBuiltIn: true,
+        maxTokens: 16384,
     },
     {
         name: 'meta-llama/llama-3.2-3b-instruct:free',
@@ -477,11 +485,20 @@ export interface ObsidianAgentSettings {
     // Recipes (PAS-1.5)
     recipes: RecipeSettings;
 
+    // Agent Skill Mastery (ADR-016/017/018)
+    mastery: MasterySettings;
+
     // Onboarding
     onboarding: OnboardingSettings;
 
     // Language (i18n)
     language: import('../i18n/types').Language;
+
+    // Security
+    /** Whether API keys in data.json are encrypted via Electron safeStorage (ADR-019) */
+    _encrypted?: boolean;
+    /** Whether data has been migrated to global storage (~/.obsidian-agent/) — ADR-020 */
+    _globalStorageMigrated?: boolean;
 
     // Advanced
     debugMode: boolean;
@@ -530,6 +547,21 @@ export interface OnboardingSettings {
     skippedSteps: OnboardingStep[];
     /** ISO timestamp when setup was started */
     startedAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// Mastery Settings (ADR-016/017/018 — Agent Skill Mastery)
+// ---------------------------------------------------------------------------
+
+export interface MasterySettings {
+    /** Master toggle for the procedural recipe system */
+    enabled: boolean;
+    /** Maximum chars for recipe section in system prompt (default: 2000) */
+    recipeBudget: number;
+    /** Enable learned recipes from episodic memory (Phase 3) */
+    learnedRecipesEnabled: boolean;
+    /** Per-recipe toggle: maps recipe id -> boolean. Missing = enabled by default. */
+    recipeToggles: Record<string, boolean>;
 }
 
 // ---------------------------------------------------------------------------
@@ -652,6 +684,12 @@ export const DEFAULT_SETTINGS: ObsidianAgentSettings = {
         enabled: true,
         recipeToggles: {},
         customRecipes: [],
+    },
+    mastery: {
+        enabled: true,
+        recipeBudget: 2000,
+        learnedRecipesEnabled: false,
+        recipeToggles: {},
     },
     onboarding: {
         completed: false,
