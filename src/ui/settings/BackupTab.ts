@@ -229,18 +229,11 @@ export class BackupTab {
                 return `1 file, ${this.formatSize(content.length)}`;
             }
 
-            if (cat.root === 'global' && cat.dir) {
-                const exists = await this.globalFs.exists(cat.dir);
-                if (!exists) return '0 files';
-                const { count, size } = await this.countAndSizeGlobal(cat.dir, cat.recursive);
-                return `${count} file${count !== 1 ? 's' : ''}, ${this.formatSize(size)}`;
-            }
-
-            // vault-local categories
+            const adapter = this.adapterFor(cat);
             const dir = cat.dir!;
-            const exists = await this.app.vault.adapter.exists(dir);
+            const exists = await adapter.exists(dir);
             if (!exists) return '0 files';
-            const { count, size } = await this.countAndSize(dir, cat.recursive);
+            const { count, size } = await this.countAndSizeFromAdapter(adapter, dir, cat.recursive);
             return `${count} file${count !== 1 ? 's' : ''}, ${this.formatSize(size)}`;
         } catch {
             return '0 files';
@@ -280,23 +273,11 @@ export class BackupTab {
                             content: await this.app.vault.adapter.read(path),
                         };
                     }
-                } else if (cat.root === 'global' && cat.dir) {
-                    const exists = await this.globalFs.exists(cat.dir);
-                    if (exists) {
-                        const collected = cat.recursive
-                            ? await this.collectFilesGlobalRecursive(cat.dir, cat.dir)
-                            : await this.collectFilesGlobal(cat.dir, cat.dir);
-                        for (const [path, content] of Object.entries(collected)) {
-                            files[path] = { content };
-                        }
-                    }
                 } else if (cat.dir) {
-                    // vault-local categories
-                    const exists = await this.app.vault.adapter.exists(cat.dir);
+                    const adapter = this.adapterFor(cat);
+                    const exists = await adapter.exists(cat.dir);
                     if (exists) {
-                        const collected = cat.recursive
-                            ? await this.collectFilesRecursive(cat.dir, cat.dir)
-                            : await this.collectFiles(cat.dir, cat.dir);
+                        const collected = await this.collectFilesFromAdapter(adapter, cat.dir, cat.dir, cat.recursive);
                         for (const [path, content] of Object.entries(collected)) {
                             files[path] = { content };
                         }
@@ -488,11 +469,8 @@ export class BackupTab {
                         flat[path] = entry.content;
                     }
 
-                    if (catDef.root === 'global') {
-                        totalFiles += await this.restoreFilesGlobal(flat, catDef.dir);
-                    } else {
-                        totalFiles += await this.restoreFiles(flat, catDef.dir);
-                    }
+                    const adapter = this.adapterFor(catDef);
+                    totalFiles += await this.restoreFilesToAdapter(adapter, flat, catDef.dir);
                 }
             }
 
@@ -508,160 +486,83 @@ export class BackupTab {
         }
     }
 
-    // ── File helpers (vault.adapter — for vault-local categories) ────────────
+    // ── Generic file helpers (work with any FileAdapter-compatible adapter) ──
 
-    private async collectFiles(dir: string, baseDir: string): Promise<Record<string, string>> {
+    private adapterFor(cat: BackupCategory): { list(p: string): Promise<{files: string[], folders: string[]}>; read(p: string): Promise<string>; write(p: string, d: string): Promise<void>; exists(p: string): Promise<boolean>; mkdir(p: string): Promise<void> } {
+        return cat.root === 'global' ? this.globalFs : this.app.vault.adapter;
+    }
+
+    private async collectFilesFromAdapter(
+        adapter: { list(p: string): Promise<{files: string[], folders: string[]}>; read(p: string): Promise<string> },
+        dir: string, baseDir: string, recursive: boolean,
+    ): Promise<Record<string, string>> {
         const result: Record<string, string> = {};
         try {
-            const listed = await this.app.vault.adapter.list(dir);
+            const listed = await adapter.list(dir);
             for (const filePath of listed.files) {
                 try {
-                    const content = await this.app.vault.adapter.read(filePath);
+                    const content = await adapter.read(filePath);
                     const relative = filePath.startsWith(baseDir)
                         ? filePath.slice(baseDir.length + 1)
                         : filePath;
                     result[relative] = content;
                 } catch { /* skip unreadable files */ }
             }
-        } catch { /* directory doesn't exist */ }
-        return result;
-    }
-
-    private async collectFilesRecursive(dir: string, baseDir: string): Promise<Record<string, string>> {
-        const result: Record<string, string> = {};
-        try {
-            const listed = await this.app.vault.adapter.list(dir);
-            for (const filePath of listed.files) {
-                try {
-                    const content = await this.app.vault.adapter.read(filePath);
-                    const relative = filePath.startsWith(baseDir)
-                        ? filePath.slice(baseDir.length + 1)
-                        : filePath;
-                    result[relative] = content;
-                } catch { /* skip */ }
-            }
-            for (const subDir of listed.folders) {
-                const subFiles = await this.collectFilesRecursive(subDir, baseDir);
-                Object.assign(result, subFiles);
+            if (recursive) {
+                for (const subDir of listed.folders) {
+                    const subFiles = await this.collectFilesFromAdapter(adapter, subDir, baseDir, true);
+                    Object.assign(result, subFiles);
+                }
             }
         } catch { /* directory doesn't exist */ }
         return result;
     }
 
-    private async restoreFiles(files: Record<string, string>, baseDir: string): Promise<number> {
+    private async restoreFilesToAdapter(
+        adapter: { write(p: string, d: string): Promise<void>; exists(p: string): Promise<boolean>; mkdir(p: string): Promise<void> },
+        files: Record<string, string>, baseDir: string,
+    ): Promise<number> {
         let count = 0;
         const createdDirs = new Set<string>();
-
         for (const [relativePath, content] of Object.entries(files)) {
             const fullPath = `${baseDir}/${relativePath}`;
             const dirPath = fullPath.includes('/')
                 ? fullPath.split('/').slice(0, -1).join('/')
                 : null;
             if (dirPath && !createdDirs.has(dirPath)) {
-                const exists = await this.app.vault.adapter.exists(dirPath);
-                if (!exists) await this.app.vault.adapter.mkdir(dirPath);
+                const exists = await adapter.exists(dirPath);
+                if (!exists) await adapter.mkdir(dirPath);
                 createdDirs.add(dirPath);
             }
-            await this.app.vault.adapter.write(fullPath, content);
+            await adapter.write(fullPath, content);
             count++;
         }
         return count;
     }
 
-    private async countAndSize(dir: string, recursive: boolean): Promise<{ count: number; size: number }> {
+    private async countAndSizeFromAdapter(
+        adapter: { list(p: string): Promise<{files: string[], folders: string[]}>; read(p: string): Promise<string> },
+        dir: string, recursive: boolean,
+    ): Promise<{ count: number; size: number }> {
         let count = 0;
         let size = 0;
         try {
-            const listed = await this.app.vault.adapter.list(dir);
+            const listed = await adapter.list(dir);
             for (const filePath of listed.files) {
                 try {
-                    const content = await this.app.vault.adapter.read(filePath);
+                    const content = await adapter.read(filePath);
                     count++;
                     size += content.length;
                 } catch { /* skip */ }
             }
             if (recursive) {
                 for (const subDir of listed.folders) {
-                    const sub = await this.countAndSize(subDir, true);
+                    const sub = await this.countAndSizeFromAdapter(adapter, subDir, true);
                     count += sub.count;
                     size += sub.size;
                 }
             }
         } catch { /* directory doesn't exist */ }
-        return { count, size };
-    }
-
-    // ── File helpers (GlobalFileService — for global categories) ─────────────
-
-    private async collectFilesGlobal(dir: string, baseDir: string): Promise<Record<string, string>> {
-        const result: Record<string, string> = {};
-        try {
-            const listed = await this.globalFs.list(dir);
-            for (const filePath of listed.files) {
-                try {
-                    const content = await this.globalFs.read(filePath);
-                    const relative = filePath.startsWith(baseDir)
-                        ? filePath.slice(baseDir.length + 1)
-                        : filePath;
-                    result[relative] = content;
-                } catch { /* skip */ }
-            }
-        } catch { /* skip */ }
-        return result;
-    }
-
-    private async collectFilesGlobalRecursive(dir: string, baseDir: string): Promise<Record<string, string>> {
-        const result: Record<string, string> = {};
-        try {
-            const listed = await this.globalFs.list(dir);
-            for (const filePath of listed.files) {
-                try {
-                    const content = await this.globalFs.read(filePath);
-                    const relative = filePath.startsWith(baseDir)
-                        ? filePath.slice(baseDir.length + 1)
-                        : filePath;
-                    result[relative] = content;
-                } catch { /* skip */ }
-            }
-            for (const subDir of listed.folders) {
-                const subFiles = await this.collectFilesGlobalRecursive(subDir, baseDir);
-                Object.assign(result, subFiles);
-            }
-        } catch { /* skip */ }
-        return result;
-    }
-
-    private async restoreFilesGlobal(files: Record<string, string>, baseDir: string): Promise<number> {
-        let count = 0;
-        for (const [relativePath, content] of Object.entries(files)) {
-            const fullPath = `${baseDir}/${relativePath}`;
-            // GlobalFileService.write() auto-creates parent directories
-            await this.globalFs.write(fullPath, content);
-            count++;
-        }
-        return count;
-    }
-
-    private async countAndSizeGlobal(dir: string, recursive: boolean): Promise<{ count: number; size: number }> {
-        let count = 0;
-        let size = 0;
-        try {
-            const listed = await this.globalFs.list(dir);
-            for (const filePath of listed.files) {
-                try {
-                    const content = await this.globalFs.read(filePath);
-                    count++;
-                    size += content.length;
-                } catch { /* skip */ }
-            }
-            if (recursive) {
-                for (const subDir of listed.folders) {
-                    const sub = await this.countAndSizeGlobal(subDir, true);
-                    count += sub.count;
-                    size += sub.size;
-                }
-            }
-        } catch { /* skip */ }
         return { count, size };
     }
 
