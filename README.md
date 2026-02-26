@@ -35,6 +35,9 @@ Two built-in modes — **Ask** (read-only knowledge assistant) and **Agent** (fu
 ### Multi-Agent Workflows
 Spawn sub-agents with `new_task` for complex parallel or sequential workflows — Orchestrator-Worker, Prompt Chaining, Evaluator-Optimizer, and Routing patterns built in.
 
+### Plugin Skills
+Obsilo automatically scans your installed Obsidian plugins and generates skill files that teach the agent how to use them. The agent learns each plugin's commands, settings, and file formats — so it can create Excalidraw drawings, build Kanban boards, populate Dataview tables, or use any other plugin on your behalf.
+
 ### Context Injection
 - **Rules** (`.obsidian-agent/rules/`): permanent instructions injected into every system prompt
 - **Skills** (`.obsidian-agent/skills/`): keyword-matched mini-instructions auto-injected per message
@@ -53,8 +56,6 @@ Anthropic, OpenAI, Ollama, LM Studio, OpenRouter, Azure OpenAI — or any OpenAI
 ### MCP Integration
 Connect MCP servers via stdio, SSE, or streamable-HTTP. Tools are dynamically discovered and exposed to the agent. Per-mode whitelisting available.
 
-### Plugin Skills
-Obsilo automatically scans your installed Obsidian plugins and generates skill files that teach the agent how to use them. The agent learns each plugin's commands, settings, and file formats — so it can create Excalidraw drawings, build Kanban boards, populate Dataview tables, or use any other plugin on your behalf.
 
 ---
 
