@@ -30,7 +30,6 @@ jspm_packages/
 .eslintcache
 
 # Output
-main.js
 *.js.map
 
 # Obsidian workspace files
