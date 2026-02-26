@@ -3,7 +3,7 @@
   "name": "Obsilo Agent",
   "version": "1.1.0",
   "minAppVersion": "1.4.0",
-  "description": "Transform your Obsidian vault with an AI agent that reads, writes, searches, and connects notes using 30+ tools, semantic search, and full safety controls.",
+  "description": "Transform your Vault with an AI agent that reads, writes, searches, and connects notes using 30+ tools, semantic search, and full safety controls.",
   "author": "Sebastian Hanke",
   "authorUrl": "https://github.com/pssah4/obsilo",
   "isDesktopOnly": true
