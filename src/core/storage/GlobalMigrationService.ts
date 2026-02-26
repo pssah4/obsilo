@@ -82,6 +82,10 @@ export class GlobalMigrationService {
         }
 
         console.log(`[GlobalMigration] Migration complete: ${migratedCount} files copied`);
+
+        // Clean up old vault files after successful migration
+        await this.cleanupOldVaultFiles();
+
         return true;
     }
 
@@ -160,5 +164,67 @@ export class GlobalMigrationService {
         const content = await this.vault.adapter.read(vaultPath);
         await this.globalFs.write(globalPath, content);
         return true;
+    }
+
+    /**
+     * Remove old vault files after successful migration so no ghost data remains.
+     * Errors are non-fatal — logged and skipped.
+     */
+    private async cleanupOldVaultFiles(): Promise<void> {
+        console.log('[GlobalMigration] Cleaning up old vault files...');
+
+        // Clean plugin-dir categories (memory, history, logs, etc.)
+        for (const dir of MIGRATE_DIRS) {
+            await this.removeVaultDirectory(`${this.pluginDir}/${dir}`);
+        }
+
+        // Clean vault-root .obsidian-agent/ categories (rules, workflows, skills)
+        for (const dir of MIGRATE_VAULT_ROOT_DIRS) {
+            await this.removeVaultDirectory(`.obsidian-agent/${dir}`);
+        }
+
+        // Clean individual files
+        for (const file of MIGRATE_FILES) {
+            const vaultPath = `${this.pluginDir}/${file}`;
+            try {
+                if (await this.vault.adapter.exists(vaultPath)) {
+                    await this.vault.adapter.remove(vaultPath);
+                }
+            } catch (e) {
+                console.warn(`[GlobalMigration] Failed to remove ${vaultPath}:`, e);
+            }
+        }
+
+        console.log('[GlobalMigration] Old vault files cleaned up');
+    }
+
+    /**
+     * Recursively remove all files in a vault directory, then remove the empty directory.
+     */
+    private async removeVaultDirectory(dir: string): Promise<void> {
+        try {
+            if (!(await this.vault.adapter.exists(dir))) return;
+
+            const listing = await this.vault.adapter.list(dir);
+
+            // Remove files
+            for (const filePath of listing.files) {
+                try {
+                    await this.vault.adapter.remove(filePath);
+                } catch (e) {
+                    console.warn(`[GlobalMigration] Failed to remove file ${filePath}:`, e);
+                }
+            }
+
+            // Recurse into subdirectories
+            for (const subDir of listing.folders) {
+                await this.removeVaultDirectory(subDir);
+            }
+
+            // Remove the now-empty directory
+            await this.vault.adapter.rmdir(dir, false);
+        } catch (e) {
+            console.warn(`[GlobalMigration] Failed to clean up directory ${dir}:`, e);
+        }
     }
 }
