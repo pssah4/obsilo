@@ -10,7 +10,7 @@
  * ADR-018: Episodic Task Memory
  */
 
-import type { Vault } from 'obsidian';
+import type { FileAdapter } from '../storage/types';
 import type { SemanticIndexService } from '../semantic/SemanticIndexService';
 
 export interface TaskEpisode {
@@ -28,18 +28,17 @@ export interface TaskEpisode {
 const MAX_EPISODES = 500;
 
 export class EpisodicExtractor {
-    private vault: Vault;
+    private fs: FileAdapter;
     private episodesDir: string;
     private getSemanticIndex: () => SemanticIndexService | null;
     private episodeCount = 0;
 
     constructor(
-        vault: Vault,
-        pluginDir: string,
+        fs: FileAdapter,
         getSemanticIndex: () => SemanticIndexService | null,
     ) {
-        this.vault = vault;
-        this.episodesDir = `${pluginDir}/episodes`;
+        this.fs = fs;
+        this.episodesDir = 'episodes';
         this.getSemanticIndex = getSemanticIndex;
     }
 
@@ -48,12 +47,12 @@ export class EpisodicExtractor {
      */
     async initialize(): Promise<void> {
         try {
-            const exists = await this.vault.adapter.exists(this.episodesDir);
+            const exists = await this.fs.exists(this.episodesDir);
             if (!exists) {
-                await this.vault.adapter.mkdir(this.episodesDir);
+                await this.fs.mkdir(this.episodesDir);
                 return;
             }
-            const listing = await this.vault.adapter.list(this.episodesDir);
+            const listing = await this.fs.list(this.episodesDir);
             this.episodeCount = listing.files.filter((f: string) => f.endsWith('.json')).length;
         } catch (e) {
             console.warn('[EpisodicExtractor] Init failed (non-fatal):', e);
@@ -95,7 +94,7 @@ export class EpisodicExtractor {
 
             // Persist to disk
             const filePath = `${this.episodesDir}/${episode.id}.json`;
-            await this.vault.adapter.write(filePath, JSON.stringify(episode, null, 2));
+            await this.fs.write(filePath, JSON.stringify(episode, null, 2));
             this.episodeCount++;
 
             // Index in semantic search (source='episode')
@@ -129,9 +128,9 @@ export class EpisodicExtractor {
                 const episodeId = result.path.replace('episode:', '');
                 try {
                     const filePath = `${this.episodesDir}/${episodeId}.json`;
-                    const exists = await this.vault.adapter.exists(filePath);
+                    const exists = await this.fs.exists(filePath);
                     if (!exists) continue;
-                    const raw = await this.vault.adapter.read(filePath);
+                    const raw = await this.fs.read(filePath);
                     episodes.push(JSON.parse(raw) as TaskEpisode);
                 } catch {
                     // Episode file missing or corrupt — skip
@@ -150,13 +149,13 @@ export class EpisodicExtractor {
      */
     private async evictOldest(): Promise<void> {
         try {
-            const listing = await this.vault.adapter.list(this.episodesDir);
+            const listing = await this.fs.list(this.episodesDir);
             const jsonFiles = listing.files
                 .filter((f: string) => f.endsWith('.json'))
                 .sort(); // Lexicographic = chronological (ep-{timestamp} prefix)
 
             if (jsonFiles.length > 0) {
-                await this.vault.adapter.remove(jsonFiles[0]);
+                await this.fs.remove(jsonFiles[0]);
                 this.episodeCount--;
             }
         } catch (e) {

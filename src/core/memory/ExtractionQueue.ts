@@ -8,7 +8,7 @@
  * with a configurable delay between items.
  */
 
-import type { Vault } from 'obsidian';
+import type { FileAdapter } from '../storage/types';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -36,8 +36,8 @@ export class ExtractionQueue {
     /** Delay between processing items (ms). */
     private delayMs = 2000;
 
-    constructor(private vault: Vault, pluginDir: string) {
-        this.filePath = `${pluginDir}/pending-extractions.json`;
+    constructor(private fs: FileAdapter) {
+        this.filePath = 'pending-extractions.json';
     }
 
     // -----------------------------------------------------------------------
@@ -82,7 +82,7 @@ export class ExtractionQueue {
 
     async load(): Promise<void> {
         try {
-            const raw = await this.vault.adapter.read(this.filePath);
+            const raw = await this.fs.read(this.filePath);
             const parsed = JSON.parse(raw);
             this.items = Array.isArray(parsed) ? parsed : [];
         } catch {
@@ -91,7 +91,7 @@ export class ExtractionQueue {
     }
 
     async save(): Promise<void> {
-        await this.vault.adapter.write(this.filePath, JSON.stringify(this.items, null, 2));
+        await this.fs.write(this.filePath, JSON.stringify(this.items, null, 2));
     }
 
     // -----------------------------------------------------------------------

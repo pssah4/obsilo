@@ -1,7 +1,7 @@
 # Obsidian Agent — Backlog
 
 > Status: `[x]` fertig · `[~]` in Arbeit · `[ ]` offen · `[-]` zurückgestellt
-> Letzte Aktualisierung: 2026-02-25 (Agent Skill Mastery komplett)
+> Letzte Aktualisierung: 2026-02-26 (Global Storage Architecture komplett)
 
 ---
 
@@ -198,6 +198,19 @@
 | `[x]` | Episodic Task Memory (recording, Vectra indexing) | `src/core/mastery/EpisodicExtractor.ts` |
 | `[x]` | Recipe Promotion (auto-promote 3+ success patterns) | `src/core/mastery/RecipePromotionService.ts` |
 | `[x]` | Mastery Settings (toggle, budget, recipe toggles) | `src/types/settings.ts` |
+
+### Global Storage Architecture (ADR-020)
+| Status | Feature | Datei |
+|--------|---------|-------|
+| `[x]` | FileAdapter Interface | `src/core/storage/types.ts` |
+| `[x]` | GlobalFileService (Node.js fs at ~/.obsidian-agent/) | `src/core/storage/GlobalFileService.ts` |
+| `[x]` | SyncBridge (bidirectional sync for Obsidian Sync) | `src/core/storage/SyncBridge.ts` |
+| `[x]` | GlobalSettingsService (cross-vault settings) | `src/core/storage/GlobalSettingsService.ts` |
+| `[x]` | GlobalMigrationService (one-time per-vault migration) | `src/core/storage/GlobalMigrationService.ts` |
+| `[x]` | 10 Services refactored to FileAdapter | RulesLoader, WorkflowLoader, SkillsManager, MemoryService, ExtractionQueue, ConversationStore, OperationLogger, RecipeStore, EpisodicExtractor, RecipePromotionService |
+| `[x]` | GlobalModeStore refactored to GlobalFileService | `src/core/modes/GlobalModeStore.ts` |
+| `[x]` | BackupTab updated for global categories | `src/ui/settings/BackupTab.ts` |
+| `[x]` | Settings dual-write (data.json + global settings.json) | `src/main.ts` |
 
 ### Agentic Loop Refactoring (completed)
 | Status | Feature | Datei |

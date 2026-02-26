@@ -8,7 +8,6 @@
  * Called by ExtractionQueue when processing a 'session' type item.
  */
 
-import type { Vault } from 'obsidian';
 import type { CustomModel } from '../../types/settings';
 import { buildApiHandlerForModel } from '../../api/index';
 import type { MemoryService } from './MemoryService';
@@ -74,7 +73,6 @@ date: {DATE}
 
 export class SessionExtractor {
     constructor(
-        private vault: Vault,
         private memoryService: MemoryService,
         private getMemoryModel: () => CustomModel | null,
         private getAutoUpdateLongTerm: () => boolean,

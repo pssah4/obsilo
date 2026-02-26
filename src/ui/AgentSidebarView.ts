@@ -1729,7 +1729,7 @@ export class AgentSidebarView extends ItemView {
                     const stats = await this.plugin.memoryService.getStats();
                     if (stats.sessionCount > 0) {
                         const retriever = new MemoryRetriever(
-                            this.plugin.app.vault,
+                            this.plugin.globalFs,
                             this.plugin.memoryService,
                             () => this.plugin.semanticIndex,
                         );

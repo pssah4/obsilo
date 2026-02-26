@@ -6,19 +6,19 @@
  * in .obsidian/plugins/obsidian-agent/recipes/.
  */
 
-import type { Vault } from 'obsidian';
+import type { FileAdapter } from '../storage/types';
 import type { ProceduralRecipe } from './types';
 import { STATIC_RECIPES, SCHEMA_VERSION } from './staticRecipes';
 
 export class RecipeStore {
     private staticRecipes: ProceduralRecipe[];
     private learnedRecipes: ProceduralRecipe[] = [];
-    private vault: Vault;
+    private fs: FileAdapter;
     private recipesDir: string;
 
-    constructor(vault: Vault, pluginDir: string) {
-        this.vault = vault;
-        this.recipesDir = `${pluginDir}/recipes`;
+    constructor(fs: FileAdapter) {
+        this.fs = fs;
+        this.recipesDir = 'recipes';
         this.staticRecipes = STATIC_RECIPES;
     }
 
@@ -27,16 +27,16 @@ export class RecipeStore {
      */
     async initialize(): Promise<void> {
         try {
-            const exists = await this.vault.adapter.exists(this.recipesDir);
+            const exists = await this.fs.exists(this.recipesDir);
             if (!exists) return;
 
-            const files = await this.vault.adapter.list(this.recipesDir);
+            const files = await this.fs.list(this.recipesDir);
             const jsonFiles = files.files.filter((f: string) => f.endsWith('.json'));
 
             this.learnedRecipes = [];
             for (const file of jsonFiles) {
                 try {
-                    const raw = await this.vault.adapter.read(file);
+                    const raw = await this.fs.read(file);
                     const recipe = JSON.parse(raw) as ProceduralRecipe;
                     if (recipe.schemaVersion === SCHEMA_VERSION && recipe.source === 'learned') {
                         this.learnedRecipes.push(recipe);
@@ -74,13 +74,13 @@ export class RecipeStore {
         recipe.source = 'learned';
         recipe.schemaVersion = SCHEMA_VERSION;
 
-        const exists = await this.vault.adapter.exists(this.recipesDir);
+        const exists = await this.fs.exists(this.recipesDir);
         if (!exists) {
-            await this.vault.adapter.mkdir(this.recipesDir);
+            await this.fs.mkdir(this.recipesDir);
         }
 
         const filePath = `${this.recipesDir}/${recipe.id}.json`;
-        await this.vault.adapter.write(filePath, JSON.stringify(recipe, null, 2));
+        await this.fs.write(filePath, JSON.stringify(recipe, null, 2));
 
         // Update in-memory
         const idx = this.learnedRecipes.findIndex((r) => r.id === recipe.id);
@@ -100,9 +100,9 @@ export class RecipeStore {
             this.learnedRecipes.splice(idx, 1);
         }
         const filePath = `${this.recipesDir}/${id}.json`;
-        const exists = await this.vault.adapter.exists(filePath);
+        const exists = await this.fs.exists(filePath);
         if (exists) {
-            await this.vault.adapter.remove(filePath);
+            await this.fs.remove(filePath);
         }
     }
 

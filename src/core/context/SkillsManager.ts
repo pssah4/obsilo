@@ -1,8 +1,8 @@
 /**
- * SkillsManager - Discover and match skills from vault (Sprint 3.4)
+ * SkillsManager - Discover and match skills from global storage (Sprint 3.4)
  *
  * Skills are stored as Markdown files at:
- *   {vault}/.obsidian-agent/skills/{name}/SKILL.md
+ *   ~/.obsidian-agent/skills/{name}/SKILL.md
  *
  * SKILL.md frontmatter (required):
  *   name: string        — short identifier (lowercase, hyphens)
@@ -17,10 +17,10 @@
  * Inspired by Kilo Code's src/services/skills/SkillsManager.ts (simplified).
  */
 
-import type { Vault } from 'obsidian';
+import type { FileAdapter } from '../storage/types';
 
 export interface SkillMeta {
-    /** Vault-relative path to the SKILL.md file */
+    /** Path relative to FileAdapter root (e.g. "skills/my-skill/SKILL.md") */
     path: string;
     /** Short name (from frontmatter or directory name) */
     name: string;
@@ -29,19 +29,19 @@ export interface SkillMeta {
 }
 
 export class SkillsManager {
-    private readonly vault: Vault;
+    private readonly fs: FileAdapter;
     readonly skillsDir: string;
 
-    constructor(vault: Vault) {
-        this.vault = vault;
-        this.skillsDir = '.obsidian-agent/skills';
+    constructor(fs: FileAdapter) {
+        this.fs = fs;
+        this.skillsDir = 'skills';
     }
 
     async initialize(): Promise<void> {
         try {
-            const exists = await this.vault.adapter.exists(this.skillsDir);
+            const exists = await this.fs.exists(this.skillsDir);
             if (!exists) {
-                await this.vault.adapter.mkdir(this.skillsDir);
+                await this.fs.mkdir(this.skillsDir);
             }
         } catch {
             // Non-fatal
@@ -53,16 +53,16 @@ export class SkillsManager {
      */
     async discoverSkills(): Promise<SkillMeta[]> {
         try {
-            const exists = await this.vault.adapter.exists(this.skillsDir);
+            const exists = await this.fs.exists(this.skillsDir);
             if (!exists) return [];
-            const listed = await this.vault.adapter.list(this.skillsDir);
+            const listed = await this.fs.list(this.skillsDir);
             const skills: SkillMeta[] = [];
             for (const folder of listed.folders) {
                 const skillPath = `${folder}/SKILL.md`;
-                const fileExists = await this.vault.adapter.exists(skillPath);
+                const fileExists = await this.fs.exists(skillPath);
                 if (!fileExists) continue;
                 try {
-                    const content = await this.vault.adapter.read(skillPath);
+                    const content = await this.fs.read(skillPath);
                     const meta = this.parseFrontmatter(content, folder, skillPath);
                     if (meta) skills.push(meta);
                 } catch {
@@ -102,7 +102,7 @@ export class SkillsManager {
             // Read the full SKILL.md content and inline it — no agent read_file needed
             let fullContent = '';
             try {
-                const raw = await this.vault.adapter.read(s.path);
+                const raw = await this.fs.read(s.path);
                 // Strip frontmatter, keep only the body
                 fullContent = raw.replace(/^---\n[\s\S]*?\n---\n?/, '').trim();
                 // Cap at 4000 chars to avoid bloating the system prompt
@@ -120,6 +120,42 @@ export class SkillsManager {
         }
         lines.push('</available_skills>');
         return lines.join('\n');
+    }
+
+    /**
+     * Read a skill file's content (for UI editing).
+     */
+    async readFile(path: string): Promise<string> {
+        return this.fs.read(path);
+    }
+
+    /**
+     * Write a skill file's content (for UI editing).
+     */
+    async writeFile(path: string, content: string): Promise<void> {
+        await this.fs.write(path, content);
+    }
+
+    /**
+     * Create a skill directory and file.
+     */
+    async createSkill(dirPath: string, content: string): Promise<void> {
+        await this.fs.mkdir(dirPath);
+        await this.fs.write(`${dirPath}/SKILL.md`, content);
+    }
+
+    /**
+     * Delete a skill file.
+     */
+    async deleteSkill(path: string): Promise<void> {
+        await this.fs.remove(path);
+    }
+
+    /**
+     * Check if a path exists in global storage.
+     */
+    async fileExists(path: string): Promise<boolean> {
+        return this.fs.exists(path);
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────

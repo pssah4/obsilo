@@ -70,9 +70,9 @@ export class RulesTab {
                 setIcon(editBtn, 'pencil');
                 editBtn.setAttribute('aria-label', t('settings.rules.edit'));
                 editBtn.addEventListener('click', async () => {
-                    const content = await this.app.vault.adapter.read(rPath);
+                    const content = await rulesLoader.readFile(rPath);
                     new ContentEditorModal(this.app, t('settings.rules.editRule', { name: RulesLoader.displayName(rPath) }), content, async (newContent) => {
-                        await this.app.vault.adapter.write(rPath, newContent);
+                        await rulesLoader.writeFile(rPath, newContent);
                     }).open();
                 });
 
@@ -80,7 +80,7 @@ export class RulesTab {
                 setIcon(exportBtn, 'download');
                 exportBtn.setAttribute('aria-label', t('settings.rules.export'));
                 exportBtn.addEventListener('click', async () => {
-                    const content = await this.app.vault.adapter.read(rPath);
+                    const content = await rulesLoader.readFile(rPath);
                     const blob = new Blob([content], { type: 'text/markdown' });
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
@@ -125,7 +125,7 @@ export class RulesTab {
             nameInput.value = '';
             await refreshList();
             new ContentEditorModal(this.app, t('settings.rules.editRule', { name }), template, async (content) => {
-                await this.app.vault.adapter.write(rPath, content);
+                await rulesLoader.writeFile(rPath, content);
             }).open();
         });
 

@@ -497,6 +497,8 @@ export interface ObsidianAgentSettings {
     // Security
     /** Whether API keys in data.json are encrypted via Electron safeStorage (ADR-019) */
     _encrypted?: boolean;
+    /** Whether data has been migrated to global storage (~/.obsidian-agent/) — ADR-020 */
+    _globalStorageMigrated?: boolean;
 
     // Advanced
     debugMode: boolean;

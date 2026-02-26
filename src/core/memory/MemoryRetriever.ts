@@ -13,7 +13,7 @@
  * Budget: 4000 chars total (shared between sessions and episodes).
  */
 
-import type { Vault } from 'obsidian';
+import type { FileAdapter } from '../storage/types';
 import type { SemanticIndexService } from '../semantic/SemanticIndexService';
 import type { MemoryService } from './MemoryService';
 
@@ -23,7 +23,7 @@ import type { MemoryService } from './MemoryService';
 
 export class MemoryRetriever {
     constructor(
-        private vault: Vault,
+        private fs: FileAdapter,
         private memoryService: MemoryService,
         private getSemanticIndex: () => SemanticIndexService | null,
     ) {}
@@ -118,7 +118,7 @@ export class MemoryRetriever {
     private async getRecentSessions(topK: number): Promise<Array<{ id: string; excerpt: string }>> {
         const sessionsDir = this.memoryService.getMemoryDir() + '/sessions';
         try {
-            const listed = await this.vault.adapter.list(sessionsDir);
+            const listed = await this.fs.list(sessionsDir);
             const mdFiles = listed.files.filter((f) => f.endsWith('.md'));
 
             if (mdFiles.length === 0) return [];
@@ -127,7 +127,7 @@ export class MemoryRetriever {
             const withStats = await Promise.all(
                 mdFiles.map(async (filePath) => {
                     try {
-                        const stat = await this.vault.adapter.stat(filePath);
+                        const stat = await this.fs.stat(filePath);
                         return { filePath, mtime: stat?.mtime ?? 0 };
                     } catch {
                         return { filePath, mtime: 0 };
@@ -139,7 +139,7 @@ export class MemoryRetriever {
             const results: Array<{ id: string; excerpt: string }> = [];
             for (const { filePath } of withStats.slice(0, topK)) {
                 try {
-                    const content = await this.vault.adapter.read(filePath);
+                    const content = await this.fs.read(filePath);
                     const id = filePath.split('/').pop()?.replace('.md', '') ?? '';
                     results.push({ id, excerpt: content.trim() });
                 } catch { /* skip */ }

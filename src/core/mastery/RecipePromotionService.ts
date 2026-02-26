@@ -9,7 +9,7 @@
  * ADR-018: Episodic Task Memory — Promotion zu Rezepten
  */
 
-import type { Vault } from 'obsidian';
+import type { FileAdapter } from '../storage/types';
 import type { RecipeStore } from './RecipeStore';
 import type { TaskEpisode } from './EpisodicExtractor';
 import type { ProceduralRecipe } from './types';
@@ -27,27 +27,26 @@ interface PatternEntry {
 }
 
 export class RecipePromotionService {
-    private vault: Vault;
+    private fs: FileAdapter;
     private store: RecipeStore;
     private getApi: () => ApiHandler | null;
     private patternsDir: string;
 
     constructor(
-        vault: Vault,
-        pluginDir: string,
+        fs: FileAdapter,
         store: RecipeStore,
         getApi: () => ApiHandler | null,
     ) {
-        this.vault = vault;
+        this.fs = fs;
         this.store = store;
         this.getApi = getApi;
-        this.patternsDir = `${pluginDir}/patterns`;
+        this.patternsDir = 'patterns';
     }
 
     async initialize(): Promise<void> {
-        const exists = await this.vault.adapter.exists(this.patternsDir);
+        const exists = await this.fs.exists(this.patternsDir);
         if (!exists) {
-            await this.vault.adapter.mkdir(this.patternsDir);
+            await this.fs.mkdir(this.patternsDir);
         }
     }
 
@@ -164,9 +163,9 @@ Generate a JSON object with:
     private async loadPattern(key: string, toolSequence: string[]): Promise<PatternEntry> {
         const filePath = `${this.patternsDir}/${key}.json`;
         try {
-            const exists = await this.vault.adapter.exists(filePath);
+            const exists = await this.fs.exists(filePath);
             if (exists) {
-                const raw = await this.vault.adapter.read(filePath);
+                const raw = await this.fs.read(filePath);
                 return JSON.parse(raw) as PatternEntry;
             }
         } catch { /* fall through to create new */ }
@@ -181,14 +180,14 @@ Generate a JSON object with:
 
     private async savePattern(pattern: PatternEntry): Promise<void> {
         const filePath = `${this.patternsDir}/${pattern.patternKey}.json`;
-        await this.vault.adapter.write(filePath, JSON.stringify(pattern, null, 2));
+        await this.fs.write(filePath, JSON.stringify(pattern, null, 2));
     }
 
     private async deletePattern(key: string): Promise<void> {
         const filePath = `${this.patternsDir}/${key}.json`;
         try {
-            const exists = await this.vault.adapter.exists(filePath);
-            if (exists) await this.vault.adapter.remove(filePath);
+            const exists = await this.fs.exists(filePath);
+            if (exists) await this.fs.remove(filePath);
         } catch { /* non-fatal */ }
     }
 }

@@ -1,7 +1,7 @@
 /**
  * WorkflowLoader - Load and process slash-command workflows (Sprint 3.3)
  *
- * Workflows are Markdown/text files stored in {vault}/.obsidian-agent/workflows/
+ * Workflows are Markdown/text files stored in ~/.obsidian-agent/workflows/ (global).
  * They are invoked by the user typing /workflow-name at the start of a message.
  * When a workflow is matched, its content is prepended to the message as
  * explicit instructions before sending to the LLM.
@@ -9,10 +9,10 @@
  * Inspired by Kilo Code's slash-commands pattern.
  */
 
-import type { Vault } from 'obsidian';
+import type { FileAdapter } from '../storage/types';
 
 export interface WorkflowMeta {
-    /** Vault-relative path: ".obsidian-agent/workflows/my-workflow.md" */
+    /** Path relative to FileAdapter root: "workflows/my-workflow.md" */
     path: string;
     /** Slug used as slash command: "my-workflow" */
     slug: string;
@@ -21,19 +21,19 @@ export interface WorkflowMeta {
 }
 
 export class WorkflowLoader {
-    private readonly vault: Vault;
+    private readonly fs: FileAdapter;
     readonly workflowsDir: string;
 
-    constructor(vault: Vault) {
-        this.vault = vault;
-        this.workflowsDir = '.obsidian-agent/workflows';
+    constructor(fs: FileAdapter) {
+        this.fs = fs;
+        this.workflowsDir = 'workflows';
     }
 
     async initialize(): Promise<void> {
         try {
-            const exists = await this.vault.adapter.exists(this.workflowsDir);
+            const exists = await this.fs.exists(this.workflowsDir);
             if (!exists) {
-                await this.vault.adapter.mkdir(this.workflowsDir);
+                await this.fs.mkdir(this.workflowsDir);
             }
         } catch {
             // Non-fatal
@@ -45,9 +45,9 @@ export class WorkflowLoader {
      */
     async discoverWorkflows(): Promise<WorkflowMeta[]> {
         try {
-            const exists = await this.vault.adapter.exists(this.workflowsDir);
+            const exists = await this.fs.exists(this.workflowsDir);
             if (!exists) return [];
-            const listed = await this.vault.adapter.list(this.workflowsDir);
+            const listed = await this.fs.list(this.workflowsDir);
             return listed.files
                 .filter((f) => f.endsWith('.md') || f.endsWith('.txt'))
                 .sort()
@@ -87,7 +87,7 @@ export class WorkflowLoader {
         if (toggles[match.path] === false) return text;
 
         try {
-            const content = await this.vault.adapter.read(match.path);
+            const content = await this.fs.read(match.path);
             const instructions = `<explicit_instructions type="${slug}">\n${content.trim()}\n</explicit_instructions>`;
             return rest ? `${instructions}\n\n${rest}` : instructions;
         } catch {
@@ -99,7 +99,7 @@ export class WorkflowLoader {
      * Load a single workflow file's content.
      */
     async loadWorkflow(wPath: string): Promise<string> {
-        return this.vault.adapter.read(wPath);
+        return this.fs.read(wPath);
     }
 
     /**
@@ -109,7 +109,7 @@ export class WorkflowLoader {
         await this.initialize();
         const safeName = name.replace(/[^a-zA-Z0-9\-_ ]/g, '').trim() || 'workflow';
         const wPath = `${this.workflowsDir}/${safeName}.md`;
-        await this.vault.adapter.write(wPath, content);
+        await this.fs.write(wPath, content);
         return wPath;
     }
 
@@ -117,7 +117,21 @@ export class WorkflowLoader {
      * Delete a workflow file.
      */
     async deleteWorkflow(wPath: string): Promise<void> {
-        await this.vault.adapter.remove(wPath);
+        await this.fs.remove(wPath);
+    }
+
+    /**
+     * Read a workflow file's content (for UI editing).
+     */
+    async readFile(wPath: string): Promise<string> {
+        return this.fs.read(wPath);
+    }
+
+    /**
+     * Write a workflow file's content (for UI editing).
+     */
+    async writeFile(wPath: string, content: string): Promise<void> {
+        await this.fs.write(wPath, content);
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────

@@ -2,28 +2,34 @@
  * GlobalModeStore
  *
  * Persists modes that should be available across ALL Obsidian vaults.
- * Storage: ~/.obsidian-agent/modes.json (outside any vault).
- * Uses Node.js fs/os/path available in Obsidian's Electron runtime.
+ * Storage: ~/.obsidian-agent/modes.json (via GlobalFileService).
  */
 
 import type { ModeConfig } from '../../types/settings';
+import { GlobalFileService } from '../storage/GlobalFileService';
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const fsModule = require('fs') as typeof import('fs');
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const osModule = require('os') as typeof import('os');
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const pathModule = require('path') as typeof import('path');
+const MODES_FILE = 'modes.json';
 
-const GLOBAL_DIR = pathModule.join(osModule.homedir(), '.obsidian-agent');
-const GLOBAL_MODES_FILE = pathModule.join(GLOBAL_DIR, 'modes.json');
+/** Shared GlobalFileService instance (lazy-initialized). */
+let _globalFs: GlobalFileService | null = null;
+function getFs(): GlobalFileService {
+    if (!_globalFs) _globalFs = new GlobalFileService();
+    return _globalFs;
+}
+
+/** Allow injecting a GlobalFileService (e.g. from plugin onload). */
+export function setGlobalModeStoreFs(fs: GlobalFileService): void {
+    _globalFs = fs;
+}
 
 export const GlobalModeStore = {
     /** Read all global modes. Returns [] if file is missing or unparseable. */
     async loadModes(): Promise<ModeConfig[]> {
         try {
-            await fsModule.promises.mkdir(GLOBAL_DIR, { recursive: true });
-            const raw = await fsModule.promises.readFile(GLOBAL_MODES_FILE, 'utf-8');
+            const fs = getFs();
+            const exists = await fs.exists(MODES_FILE);
+            if (!exists) return [];
+            const raw = await fs.read(MODES_FILE);
             // M-1: Validate size before parsing — reject absurdly large files
             if (raw.length > 500_000) return [];
             let parsed: unknown;
@@ -48,15 +54,14 @@ export const GlobalModeStore = {
 
     /** Overwrite the full list of global modes. */
     async saveModes(modes: ModeConfig[]): Promise<void> {
-        await fsModule.promises.mkdir(GLOBAL_DIR, { recursive: true });
-        await fsModule.promises.writeFile(
-            GLOBAL_MODES_FILE,
+        const fs = getFs();
+        await fs.write(
+            MODES_FILE,
             JSON.stringify(
                 modes.map((m) => ({ ...m, source: 'global' as const })),
                 null,
                 2,
             ),
-            'utf-8',
         );
     },
 

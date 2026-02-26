@@ -1,6 +1,7 @@
 import { App, Notice } from 'obsidian';
 import type ObsidianAgentPlugin from '../../main';
 import { DEFAULT_SETTINGS } from '../../types/settings';
+import type { GlobalFileService } from '../../core/storage/GlobalFileService';
 import { t } from '../../i18n';
 
 // ── Backup category definitions ──────────────────────────────────────────────
@@ -8,9 +9,13 @@ import { t } from '../../i18n';
 interface BackupCategory {
     id: string;
     label: string;
-    /** 'plugin' = .obsidian/plugins/obsidian-agent/, 'vault' = .obsidian-agent/ */
-    root: 'plugin' | 'vault';
-    /** Directory relative to root (or null for settings which is handled specially) */
+    /**
+     * 'global'  = ~/.obsidian-agent/ (via GlobalFileService)
+     * 'vault'   = vault root (via vault.adapter) — per-vault data only
+     * 'plugin'  = .obsidian/plugins/obsidian-agent/ (via vault.adapter) — legacy, kept for vault-local
+     */
+    root: 'global' | 'vault' | 'plugin';
+    /** Directory relative to root (or null for settings/vault-dna which are handled specially) */
     dir: string | null;
     recursive: boolean;
     description: string;
@@ -19,7 +24,8 @@ interface BackupCategory {
 /** Category IDs (stable, used for toggles and manifest keys) */
 const CATEGORY_IDS = [
     'settings', 'memory', 'history', 'workflows', 'rules',
-    'skills', 'plugin-skills', 'vault-dna', 'semantic-index', 'logs',
+    'skills', 'recipes', 'episodes', 'patterns', 'logs',
+    'plugin-skills', 'vault-dna', 'semantic-index',
 ] as const;
 
 /** Build categories with translated labels (called at render time so t() picks up the active locale) */
@@ -28,7 +34,7 @@ function getCategories(): BackupCategory[] {
         {
             id: 'settings',
             label: t('settings.backup.catSettings'),
-            root: 'plugin',
+            root: 'global',
             dir: null,
             recursive: false,
             description: t('settings.backup.catSettingsDesc'),
@@ -36,7 +42,7 @@ function getCategories(): BackupCategory[] {
         {
             id: 'memory',
             label: t('settings.backup.catMemory'),
-            root: 'plugin',
+            root: 'global',
             dir: 'memory',
             recursive: true,
             description: t('settings.backup.catMemoryDesc'),
@@ -44,7 +50,7 @@ function getCategories(): BackupCategory[] {
         {
             id: 'history',
             label: t('settings.backup.catHistory'),
-            root: 'plugin',
+            root: 'global',
             dir: 'history',
             recursive: false,
             description: t('settings.backup.catHistoryDesc'),
@@ -52,26 +58,58 @@ function getCategories(): BackupCategory[] {
         {
             id: 'workflows',
             label: t('settings.backup.catWorkflows'),
-            root: 'vault',
-            dir: '.obsidian-agent/workflows',
+            root: 'global',
+            dir: 'workflows',
             recursive: false,
             description: t('settings.backup.catWorkflowsDesc'),
         },
         {
             id: 'rules',
             label: t('settings.backup.catRules'),
-            root: 'vault',
-            dir: '.obsidian-agent/rules',
+            root: 'global',
+            dir: 'rules',
             recursive: false,
             description: t('settings.backup.catRulesDesc'),
         },
         {
             id: 'skills',
             label: t('settings.backup.catSkills'),
-            root: 'vault',
-            dir: '.obsidian-agent/skills',
+            root: 'global',
+            dir: 'skills',
             recursive: true,
             description: t('settings.backup.catSkillsDesc'),
+        },
+        {
+            id: 'recipes',
+            label: t('settings.backup.catRecipes') ?? 'Recipes',
+            root: 'global',
+            dir: 'recipes',
+            recursive: false,
+            description: t('settings.backup.catRecipesDesc') ?? 'Learned procedural recipes',
+        },
+        {
+            id: 'episodes',
+            label: t('settings.backup.catEpisodes') ?? 'Episodes',
+            root: 'global',
+            dir: 'episodes',
+            recursive: false,
+            description: t('settings.backup.catEpisodesDesc') ?? 'Task episode records',
+        },
+        {
+            id: 'patterns',
+            label: t('settings.backup.catPatterns') ?? 'Patterns',
+            root: 'global',
+            dir: 'patterns',
+            recursive: false,
+            description: t('settings.backup.catPatternsDesc') ?? 'Recipe promotion patterns',
+        },
+        {
+            id: 'logs',
+            label: t('settings.backup.catLogs'),
+            root: 'global',
+            dir: 'logs',
+            recursive: false,
+            description: t('settings.backup.catLogsDesc'),
         },
         {
             id: 'plugin-skills',
@@ -97,14 +135,6 @@ function getCategories(): BackupCategory[] {
             recursive: false,
             description: t('settings.backup.catSemanticIndexDesc'),
         },
-        {
-            id: 'logs',
-            label: t('settings.backup.catLogs'),
-            root: 'plugin',
-            dir: 'logs',
-            recursive: false,
-            description: t('settings.backup.catLogsDesc'),
-        },
     ];
 }
 
@@ -117,11 +147,9 @@ interface BackupManifest {
     categories: Record<string, { files: Record<string, { content: string }> }>;
 }
 
-const BACKUP_VERSION = 1;
+const BACKUP_VERSION = 2;
 
 // Module-level state that survives tab rerenders (new BackupTab instances).
-// The settings tab creates a fresh BackupTab on every display() call,
-// so instance state would be lost on rerender.
 let _pendingImport: BackupManifest | null = null;
 let _importToggles: Record<string, boolean> = {};
 const _exportToggles: Record<string, boolean> = (() => {
@@ -139,6 +167,10 @@ export class BackupTab {
         private rerender: () => void,
     ) {}
 
+    private get globalFs(): GlobalFileService {
+        return this.plugin.globalFs;
+    }
+
     build(containerEl: HTMLElement): void {
         containerEl.createEl('p', {
             cls: 'agent-settings-desc',
@@ -155,7 +187,6 @@ export class BackupTab {
         const section = container.createDiv('agent-backup-section');
         section.createEl('h4', { text: t('settings.backup.headingExport') });
 
-        // Category checkboxes with live stats
         const list = section.createDiv('agent-backup-category-list');
         for (const cat of getCategories()) {
             const row = list.createDiv('agent-backup-category-row');
@@ -171,7 +202,6 @@ export class BackupTab {
             textWrap.createSpan({ text: cat.label, cls: 'agent-backup-label-name' });
             textWrap.createSpan({ text: ` -- ${cat.description}`, cls: 'agent-backup-label-desc' });
 
-            // Load stats asynchronously
             this.loadCategoryStats(cat).then((info) => {
                 textWrap.createSpan({
                     text: ` (${info})`,
@@ -198,7 +228,16 @@ export class BackupTab {
                 const content = await this.app.vault.adapter.read(path);
                 return `1 file, ${this.formatSize(content.length)}`;
             }
-            const dir = this.resolveDir(cat);
+
+            if (cat.root === 'global' && cat.dir) {
+                const exists = await this.globalFs.exists(cat.dir);
+                if (!exists) return '0 files';
+                const { count, size } = await this.countAndSizeGlobal(cat.dir, cat.recursive);
+                return `${count} file${count !== 1 ? 's' : ''}, ${this.formatSize(size)}`;
+            }
+
+            // vault-local categories
+            const dir = cat.dir!;
             const exists = await this.app.vault.adapter.exists(dir);
             if (!exists) return '0 files';
             const { count, size } = await this.countAndSize(dir, cat.recursive);
@@ -241,13 +280,23 @@ export class BackupTab {
                             content: await this.app.vault.adapter.read(path),
                         };
                     }
-                } else {
-                    const dir = this.resolveDir(cat);
-                    const exists = await this.app.vault.adapter.exists(dir);
+                } else if (cat.root === 'global' && cat.dir) {
+                    const exists = await this.globalFs.exists(cat.dir);
                     if (exists) {
                         const collected = cat.recursive
-                            ? await this.collectFilesRecursive(dir, dir)
-                            : await this.collectFiles(dir, dir);
+                            ? await this.collectFilesGlobalRecursive(cat.dir, cat.dir)
+                            : await this.collectFilesGlobal(cat.dir, cat.dir);
+                        for (const [path, content] of Object.entries(collected)) {
+                            files[path] = { content };
+                        }
+                    }
+                } else if (cat.dir) {
+                    // vault-local categories
+                    const exists = await this.app.vault.adapter.exists(cat.dir);
+                    if (exists) {
+                        const collected = cat.recursive
+                            ? await this.collectFilesRecursive(cat.dir, cat.dir)
+                            : await this.collectFiles(cat.dir, cat.dir);
                         for (const [path, content] of Object.entries(collected)) {
                             files[path] = { content };
                         }
@@ -284,12 +333,10 @@ export class BackupTab {
         section.createEl('h4', { text: t('settings.backup.headingImport') });
 
         if (!_pendingImport) {
-            // Initial state: just the file picker button
             const btnRow = section.createDiv('agent-backup-row');
             const importBtn = btnRow.createEl('button', { text: t('settings.backup.selectFile') });
             importBtn.addEventListener('click', () => this.pickImportFile());
         } else {
-            // Confirmation state: show found categories
             this.buildImportConfirmation(section);
         }
     }
@@ -305,12 +352,10 @@ export class BackupTab {
                 const text = await file.text();
                 const parsed = JSON.parse(text) as BackupManifest;
 
-                // Validate format
                 if (parsed.format !== 'obsilo-backup' || typeof parsed.version !== 'number') {
                     // Fallback: try legacy settings-only format
                     if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed) &&
                         ('activeModels' in parsed || 'customModes' in parsed || 'autoApproval' in parsed)) {
-                        // Legacy settings file — wrap in manifest
                         _pendingImport = {
                             format: 'obsilo-backup',
                             version: 1,
@@ -331,7 +376,6 @@ export class BackupTab {
                     _pendingImport = parsed;
                 }
 
-                // Enable all found categories by default
                 _importToggles = {};
                 for (const catId of Object.keys(_pendingImport!.categories)) {
                     _importToggles[catId] = true;
@@ -437,15 +481,18 @@ export class BackupTab {
                     }
                 } else {
                     const catDef = getCategories().find((c) => c.id === catId);
-                    if (!catDef) continue;
+                    if (!catDef || !catDef.dir) continue;
 
-                    const baseDir = this.resolveDir(catDef);
-                    // Extract content strings from manifest format
                     const flat: Record<string, string> = {};
                     for (const [path, entry] of Object.entries(catData.files)) {
                         flat[path] = entry.content;
                     }
-                    totalFiles += await this.restoreFiles(flat, baseDir);
+
+                    if (catDef.root === 'global') {
+                        totalFiles += await this.restoreFilesGlobal(flat, catDef.dir);
+                    } else {
+                        totalFiles += await this.restoreFiles(flat, catDef.dir);
+                    }
                 }
             }
 
@@ -461,14 +508,7 @@ export class BackupTab {
         }
     }
 
-    // ── File helpers ─────────────────────────────────────────────────────────
-
-    private resolveDir(cat: BackupCategory): string {
-        if (cat.root === 'plugin') {
-            return `.obsidian/plugins/${this.plugin.manifest.id}/${cat.dir}`;
-        }
-        return cat.dir!;
-    }
+    // ── File helpers (vault.adapter — for vault-local categories) ────────────
 
     private async collectFiles(dir: string, baseDir: string): Promise<Record<string, string>> {
         const result: Record<string, string> = {};
@@ -514,19 +554,14 @@ export class BackupTab {
 
         for (const [relativePath, content] of Object.entries(files)) {
             const fullPath = `${baseDir}/${relativePath}`;
-
-            // Ensure parent directory exists
             const dirPath = fullPath.includes('/')
                 ? fullPath.split('/').slice(0, -1).join('/')
                 : null;
             if (dirPath && !createdDirs.has(dirPath)) {
                 const exists = await this.app.vault.adapter.exists(dirPath);
-                if (!exists) {
-                    await this.app.vault.adapter.mkdir(dirPath);
-                }
+                if (!exists) await this.app.vault.adapter.mkdir(dirPath);
                 createdDirs.add(dirPath);
             }
-
             await this.app.vault.adapter.write(fullPath, content);
             count++;
         }
@@ -555,6 +590,82 @@ export class BackupTab {
         } catch { /* directory doesn't exist */ }
         return { count, size };
     }
+
+    // ── File helpers (GlobalFileService — for global categories) ─────────────
+
+    private async collectFilesGlobal(dir: string, baseDir: string): Promise<Record<string, string>> {
+        const result: Record<string, string> = {};
+        try {
+            const listed = await this.globalFs.list(dir);
+            for (const filePath of listed.files) {
+                try {
+                    const content = await this.globalFs.read(filePath);
+                    const relative = filePath.startsWith(baseDir)
+                        ? filePath.slice(baseDir.length + 1)
+                        : filePath;
+                    result[relative] = content;
+                } catch { /* skip */ }
+            }
+        } catch { /* skip */ }
+        return result;
+    }
+
+    private async collectFilesGlobalRecursive(dir: string, baseDir: string): Promise<Record<string, string>> {
+        const result: Record<string, string> = {};
+        try {
+            const listed = await this.globalFs.list(dir);
+            for (const filePath of listed.files) {
+                try {
+                    const content = await this.globalFs.read(filePath);
+                    const relative = filePath.startsWith(baseDir)
+                        ? filePath.slice(baseDir.length + 1)
+                        : filePath;
+                    result[relative] = content;
+                } catch { /* skip */ }
+            }
+            for (const subDir of listed.folders) {
+                const subFiles = await this.collectFilesGlobalRecursive(subDir, baseDir);
+                Object.assign(result, subFiles);
+            }
+        } catch { /* skip */ }
+        return result;
+    }
+
+    private async restoreFilesGlobal(files: Record<string, string>, baseDir: string): Promise<number> {
+        let count = 0;
+        for (const [relativePath, content] of Object.entries(files)) {
+            const fullPath = `${baseDir}/${relativePath}`;
+            // GlobalFileService.write() auto-creates parent directories
+            await this.globalFs.write(fullPath, content);
+            count++;
+        }
+        return count;
+    }
+
+    private async countAndSizeGlobal(dir: string, recursive: boolean): Promise<{ count: number; size: number }> {
+        let count = 0;
+        let size = 0;
+        try {
+            const listed = await this.globalFs.list(dir);
+            for (const filePath of listed.files) {
+                try {
+                    const content = await this.globalFs.read(filePath);
+                    count++;
+                    size += content.length;
+                } catch { /* skip */ }
+            }
+            if (recursive) {
+                for (const subDir of listed.folders) {
+                    const sub = await this.countAndSizeGlobal(subDir, true);
+                    count += sub.count;
+                    size += sub.size;
+                }
+            }
+        } catch { /* skip */ }
+        return { count, size };
+    }
+
+    // ── Formatting ───────────────────────────────────────────────────────────
 
     private formatSize(bytes: number): string {
         if (bytes < 1024) return `${bytes} B`;
