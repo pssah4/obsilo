@@ -2,15 +2,15 @@
  * ConversationStore
  *
  * Persistence layer for chat conversations.
- * Stores conversations as JSON files in the plugin directory with an in-memory index
+ * Stores conversations as JSON files in global storage with an in-memory index
  * for fast listing (no disk I/O for list operations).
  *
- * Storage: .obsidian/plugins/obsidian-agent/history/
+ * Storage: ~/.obsidian-agent/history/
  *   - index.json         — conversation metadata index
  *   - {id}.json          — individual conversation data
  */
 
-import type { Vault } from 'obsidian';
+import type { FileAdapter } from '../../core/storage/types';
 import type { MessageParam } from '../../api/types';
 
 // ---------------------------------------------------------------------------
@@ -66,9 +66,9 @@ export class ConversationStore {
     private indexPath: string;
     private index: ConversationIndex = { version: 1, conversations: [] };
 
-    constructor(private vault: Vault, pluginDir: string) {
-        this.dir = `${pluginDir}/history`;
-        this.indexPath = `${this.dir}/index.json`;
+    constructor(private fs: FileAdapter) {
+        this.dir = 'history';
+        this.indexPath = 'history/index.json';
     }
 
     // -----------------------------------------------------------------------
@@ -114,7 +114,7 @@ export class ConversationStore {
 
         const data: ConversationData = { meta, messages, uiMessages };
         const filePath = `${this.dir}/${id}.json`;
-        await this.vault.adapter.write(filePath, JSON.stringify(data));
+        await this.fs.write(filePath, JSON.stringify(data));
         await this.saveIndex();
     }
 
@@ -130,7 +130,7 @@ export class ConversationStore {
     async load(id: string): Promise<ConversationData | null> {
         const filePath = `${this.dir}/${id}.json`;
         try {
-            const raw = await this.vault.adapter.read(filePath);
+            const raw = await this.fs.read(filePath);
             return JSON.parse(raw) as ConversationData;
         } catch {
             return null;
@@ -148,7 +148,7 @@ export class ConversationStore {
         await this.saveIndex();
         const filePath = `${this.dir}/${id}.json`;
         try {
-            await this.vault.adapter.remove(filePath);
+            await this.fs.remove(filePath);
         } catch { /* non-fatal */ }
     }
 
@@ -156,7 +156,7 @@ export class ConversationStore {
     async deleteAll(): Promise<void> {
         for (const c of this.index.conversations) {
             try {
-                await this.vault.adapter.remove(`${this.dir}/${c.id}.json`);
+                await this.fs.remove(`${this.dir}/${c.id}.json`);
             } catch { /* non-fatal */ }
         }
         this.index.conversations = [];
@@ -177,15 +177,15 @@ export class ConversationStore {
     }
 
     private async ensureDir(): Promise<void> {
-        const exists = await this.vault.adapter.exists(this.dir);
+        const exists = await this.fs.exists(this.dir);
         if (!exists) {
-            await this.vault.adapter.mkdir(this.dir);
+            await this.fs.mkdir(this.dir);
         }
     }
 
     private async loadIndex(): Promise<void> {
         try {
-            const raw = await this.vault.adapter.read(this.indexPath);
+            const raw = await this.fs.read(this.indexPath);
             this.index = JSON.parse(raw) as ConversationIndex;
         } catch {
             // No index yet — start fresh
@@ -194,6 +194,6 @@ export class ConversationStore {
     }
 
     private async saveIndex(): Promise<void> {
-        await this.vault.adapter.write(this.indexPath, JSON.stringify(this.index, null, 2));
+        await this.fs.write(this.indexPath, JSON.stringify(this.index, null, 2));
     }
 }

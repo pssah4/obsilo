@@ -24,15 +24,6 @@
   function getInitialLang() {
     var stored = localStorage.getItem(STORAGE_KEY);
     if (stored && LANGS[stored]) return stored;
-    var nav = (navigator.language || navigator.userLanguage || '').toLowerCase();
-    if (LANGS[nav]) return nav;
-    var short = nav.slice(0, 2);
-    if (LANGS[short]) return short;
-    // Check region variants (e.g. zh-cn -> zh-CN)
-    var langs = getAvailableLangs();
-    for (var i = 0; i < langs.length; i++) {
-      if (langs[i].toLowerCase() === nav) return langs[i];
-    }
     return DEFAULT_LANG;
   }
 

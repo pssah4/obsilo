@@ -8,6 +8,10 @@ import { ToolRegistry } from './core/tools/ToolRegistry';
 import { ToolExecutionPipeline } from './core/tool-execution/ToolExecutionPipeline';
 import { IgnoreService } from './core/governance/IgnoreService';
 import { OperationLogger } from './core/governance/OperationLogger';
+import { GlobalFileService } from './core/storage/GlobalFileService';
+import { GlobalSettingsService } from './core/storage/GlobalSettingsService';
+import { GlobalMigrationService } from './core/storage/GlobalMigrationService';
+import { SyncBridge } from './core/storage/SyncBridge';
 import { RulesLoader } from './core/context/RulesLoader';
 import { WorkflowLoader } from './core/context/WorkflowLoader';
 import { SkillsManager } from './core/context/SkillsManager';
@@ -29,6 +33,12 @@ import type { ToolUse, ToolCallbacks } from './core/tools/types';
 import { BUILT_IN_MODES } from './core/modes/builtinModes';
 import { mergeDefaultPrompts } from './core/prompts/defaultPrompts';
 import { initI18n } from './i18n';
+import { SafeStorageService } from './core/security/SafeStorageService';
+import { setGlobalModeStoreFs } from './core/modes/GlobalModeStore';
+import { RecipeStore } from './core/mastery/RecipeStore';
+import { RecipeMatchingService } from './core/mastery/RecipeMatchingService';
+import { EpisodicExtractor } from './core/mastery/EpisodicExtractor';
+import { RecipePromotionService } from './core/mastery/RecipePromotionService';
 
 /**
  * Obsidian Agent Plugin
@@ -68,6 +78,14 @@ export default class ObsidianAgentPlugin extends Plugin {
     skillRegistry: SkillRegistry | null = null;
     capabilityGapResolver: CapabilityGapResolver | null = null;
     settingsTab: AgentSettingsTab | null = null;
+    recipeStore: RecipeStore | null = null;
+    recipeMatchingService: RecipeMatchingService | null = null;
+    episodicExtractor: EpisodicExtractor | null = null;
+    recipePromotionService: RecipePromotionService | null = null;
+    safeStorage: SafeStorageService;
+    globalFs: GlobalFileService;
+    globalSettingsService: GlobalSettingsService | null = null;
+    syncBridge: SyncBridge | null = null;
 
     /**
      * Plugin initialization
@@ -83,28 +101,48 @@ export default class ObsidianAgentPlugin extends Plugin {
     async onload() {
         console.log('Loading Obsilo Agent plugin');
 
+        // 0. Initialize SafeStorageService (must happen before loadSettings)
+        this.safeStorage = new SafeStorageService();
 
-        // 1. Load settings
+        // 0b. Global file service — shared storage at ~/.obsidian-agent/ (ADR-020)
+        this.globalFs = new GlobalFileService();
+        this.globalSettingsService = new GlobalSettingsService(this.globalFs, this.safeStorage);
+        // Share the GlobalFileService with GlobalModeStore (consolidates all global I/O)
+        setGlobalModeStoreFs(this.globalFs);
+
+        // 1. Load settings (merges global + vault-local)
         await this.loadSettings();
 
         // 1b. Initialize i18n with user's language preference
         await initI18n(this.settings.language);
 
         // 2. Initialize core services
+        const pluginDir = `.obsidian/plugins/${this.manifest.id}`;
+        this.syncBridge = new SyncBridge(this.globalFs, this.app.vault, pluginDir);
+
+        // Pull latest data from vault plugin dir (arriving via Obsidian Sync)
+        await this.syncBridge.pullFromVault().catch((e) =>
+            console.warn('[Plugin] SyncBridge pull failed (non-fatal):', e)
+        );
+        // Also pull from legacy vault-root location (.obsidian-agent/)
+        await this.syncBridge.pullFromLegacyVaultRoot().catch((e) =>
+            console.warn('[Plugin] SyncBridge legacy pull failed (non-fatal):', e)
+        );
+
         // Governance: ignore/protected path rules
         this.ignoreService = new IgnoreService(this.app.vault);
         await this.ignoreService.load();
 
-        // Rules loader (Sprint 3.2)
-        this.rulesLoader = new RulesLoader(this.app.vault);
+        // Rules loader (Sprint 3.2) — now uses global storage
+        this.rulesLoader = new RulesLoader(this.globalFs);
         await this.rulesLoader.initialize();
 
-        // Workflow loader (Sprint 3.3)
-        this.workflowLoader = new WorkflowLoader(this.app.vault);
+        // Workflow loader (Sprint 3.3) — now uses global storage
+        this.workflowLoader = new WorkflowLoader(this.globalFs);
         await this.workflowLoader.initialize();
 
-        // Skills manager (Sprint 3.4)
-        this.skillsManager = new SkillsManager(this.app.vault);
+        // Skills manager (Sprint 3.4) — now uses global storage
+        this.skillsManager = new SkillsManager(this.globalFs);
         await this.skillsManager.initialize();
 
         // VaultDNA: auto-discover plugins as skills (PAS-1)
@@ -128,8 +166,7 @@ export default class ObsidianAgentPlugin extends Plugin {
         }
 
         // Governance: persistent operation log + checkpoints
-        const pluginDir = `.obsidian/plugins/${this.manifest.id}`;
-        this.operationLogger = new OperationLogger(this.app.vault, pluginDir);
+        this.operationLogger = new OperationLogger(this.globalFs);
         await this.operationLogger.initialize();
 
         // Checkpoints (isomorphic-git shadow repo)
@@ -158,8 +195,7 @@ export default class ObsidianAgentPlugin extends Plugin {
 
         // Semantic index (Phase C2) — lazy build, only when enabled
         if (this.settings.enableSemanticIndex) {
-            const pluginDirSI = `.obsidian/plugins/${this.manifest.id}`;
-            this.semanticIndex = new SemanticIndexService(this.app.vault, pluginDirSI, {
+            this.semanticIndex = new SemanticIndexService(this.app.vault, pluginDir, {
                 batchSize: this.settings.semanticBatchSize,
                 embeddingBatchSize: 16,  // texts per API call — batch for performance
                 excludedFolders: this.settings.semanticExcludedFolders,
@@ -206,6 +242,36 @@ export default class ObsidianAgentPlugin extends Plugin {
             }));
         }
 
+        // Agent Skill Mastery — Procedural Recipes (ADR-017)
+        if (this.settings.mastery.enabled) {
+            this.recipeStore = new RecipeStore(this.globalFs);
+            await this.recipeStore.initialize().catch((e) =>
+                console.warn('[Plugin] RecipeStore init failed (non-fatal):', e)
+            );
+            this.recipeMatchingService = new RecipeMatchingService(this.recipeStore);
+
+            // Episodic memory + recipe promotion (ADR-018)
+            this.episodicExtractor = new EpisodicExtractor(
+                this.globalFs,
+                () => this.semanticIndex,
+            );
+            await this.episodicExtractor.initialize().catch((e) =>
+                console.warn('[Plugin] EpisodicExtractor init failed (non-fatal):', e)
+            );
+            this.recipePromotionService = new RecipePromotionService(
+                this.globalFs,
+                this.recipeStore,
+                () => {
+                    const model = this.getMemoryModel();
+                    if (!model) return null;
+                    return buildApiHandler(modelToLLMProvider(model));
+                },
+            );
+            await this.recipePromotionService.initialize().catch((e) =>
+                console.warn('[Plugin] RecipePromotionService init failed (non-fatal):', e)
+            );
+        }
+
         // Chat history service (legacy — only when folder is configured)
         if (this.settings.chatHistoryFolder) {
             this.chatHistoryService = new ChatHistoryService(this.app.vault, this.settings.chatHistoryFolder);
@@ -213,7 +279,7 @@ export default class ObsidianAgentPlugin extends Plugin {
 
         // Conversation store (new persistent history)
         if (this.settings.enableChatHistory) {
-            this.conversationStore = new ConversationStore(this.app.vault, pluginDir);
+            this.conversationStore = new ConversationStore(this.globalFs);
             await this.conversationStore.initialize().catch((e) =>
                 console.warn('[Plugin] ConversationStore init failed (non-fatal):', e)
             );
@@ -221,18 +287,17 @@ export default class ObsidianAgentPlugin extends Plugin {
 
         // Memory service + extraction queue
         if (this.settings.memory.enabled) {
-            this.memoryService = new MemoryService(this.app.vault, pluginDir);
+            this.memoryService = new MemoryService(this.globalFs);
             await this.memoryService.initialize().catch((e) =>
                 console.warn('[Plugin] MemoryService init failed (non-fatal):', e)
             );
-            this.extractionQueue = new ExtractionQueue(this.app.vault, pluginDir);
+            this.extractionQueue = new ExtractionQueue(this.globalFs);
             await this.extractionQueue.load().catch((e) =>
                 console.warn('[Plugin] ExtractionQueue load failed (non-fatal):', e)
             );
 
             // Wire SessionExtractor as the queue processor
             const sessionExtractor = new SessionExtractor(
-                this.app.vault,
                 this.memoryService,
                 () => this.getMemoryModel(),
                 () => this.settings.memory.autoUpdateLongTerm,
@@ -240,7 +305,6 @@ export default class ObsidianAgentPlugin extends Plugin {
                 () => this.semanticIndex,
             );
             const longTermExtractor = new LongTermExtractor(
-                this.app.vault,
                 this.memoryService,
                 () => this.getMemoryModel(),
             );
@@ -308,13 +372,10 @@ export default class ObsidianAgentPlugin extends Plugin {
             if (tab) this.openSettingsAt(tab, sub);
         });
 
-        // 7. Initialize MCP connections
-        // TODO: Phase 6 - Uncomment when MCP is implemented
-        // await this.mcpHub.initialize();
-
-        // 8. Start semantic indexing (background)
-        // TODO: Phase 7 - Uncomment when semantic index is implemented
-        // this.semanticIndex.startIndexing();
+        // Push global data to vault plugin dir so Obsidian Sync can pick it up (ADR-020)
+        this.syncBridge?.pushToVault().catch((e) =>
+            console.warn('[Plugin] Initial SyncBridge push failed (non-fatal):', e)
+        );
 
         console.log('Obsilo Agent plugin loaded successfully');
     }
@@ -324,6 +385,10 @@ export default class ObsidianAgentPlugin extends Plugin {
      */
     async onunload() {
         console.log('Unloading Obsilo Agent plugin');
+        // Push global data back to vault plugin dir for Obsidian Sync (ADR-020)
+        await this.syncBridge?.pushToVault().catch((e) =>
+            console.warn('[Plugin] SyncBridge push failed (non-fatal):', e)
+        );
         this.vaultDNAScanner?.destroy();
         for (const timer of this.autoIndexDebounceTimers.values()) clearTimeout(timer);
         this.autoIndexDebounceTimers.clear();
@@ -337,8 +402,38 @@ export default class ObsidianAgentPlugin extends Plugin {
     async loadSettings() {
         const saved = (await this.loadData()) ?? {};
         this.settings = Object.assign({}, DEFAULT_SETTINGS, saved);
+
+        // One-time migration: copy per-vault data to global storage (ADR-020)
+        if (!saved._globalStorageMigrated && this.globalFs) {
+            const pluginDir = `.obsidian/plugins/${this.manifest.id}`;
+            const migration = new GlobalMigrationService(this.globalFs, this.app.vault, pluginDir);
+            const didMigrate = await migration.migrateIfNeeded(saved._globalStorageMigrated).catch((e) => {
+                console.warn('[Plugin] Global storage migration failed (non-fatal):', e);
+                return false;
+            });
+            if (didMigrate) {
+                this.settings._globalStorageMigrated = true;
+                await this.saveData({ ...saved, _globalStorageMigrated: true });
+                // Write global settings.json immediately after migration
+                if (this.globalSettingsService) {
+                    await this.globalSettingsService.saveGlobal(this.settings);
+                }
+            }
+        }
+
+        // Merge global settings (cross-vault) — global keys override vault-local data.json
+        if (this.globalSettingsService) {
+            const globalSettings = await this.globalSettingsService.loadGlobal();
+            if (Object.keys(globalSettings).length > 0) {
+                this.settings = this.globalSettingsService.mergeIntoVault(this.settings, globalSettings);
+            }
+        }
+
         this.settings.activeModels = this.settings.activeModels ?? [];
         this.settings.webTools = this.settings.webTools ?? DEFAULT_SETTINGS.webTools;
+
+        // Decrypt API keys if they were stored encrypted (ADR-019)
+        this.decryptSettings(this.settings);
         // Migrate old mode slugs to new built-in mode slugs (Phase 3.1)
         const OLD_MODE_MAP: Record<string, string> = { librarian: 'ask', writer: 'agent', orchestrator: 'agent', researcher: 'ask', curator: 'agent', architect: 'agent' };
         if (OLD_MODE_MAP[this.settings.currentMode]) {
@@ -404,10 +499,18 @@ export default class ObsidianAgentPlugin extends Plugin {
         this.settings.vaultDNA.skillToggles = this.settings.vaultDNA.skillToggles ?? dnaDefaults.skillToggles;
         this.settings.vaultDNA.lastScanAt = this.settings.vaultDNA.lastScanAt ?? dnaDefaults.lastScanAt;
 
+        // Deep-merge Mastery settings (ADR-016/017/018)
+        const masteryDefaults = DEFAULT_SETTINGS.mastery;
+        this.settings.mastery = this.settings.mastery ?? masteryDefaults;
+        this.settings.mastery.enabled = this.settings.mastery.enabled ?? masteryDefaults.enabled;
+        this.settings.mastery.recipeBudget = this.settings.mastery.recipeBudget ?? masteryDefaults.recipeBudget;
+        this.settings.mastery.learnedRecipesEnabled = this.settings.mastery.learnedRecipesEnabled ?? masteryDefaults.learnedRecipesEnabled;
+        this.settings.mastery.recipeToggles = this.settings.mastery.recipeToggles ?? masteryDefaults.recipeToggles;
+
         // Enable recipes for existing users — 6 other security layers remain active.
         if (this.settings.recipes && !this.settings.recipes.enabled) {
             this.settings.recipes.enabled = true;
-            this.saveData(this.settings);
+            this.saveData(this.encryptSettingsForSave(this.settings));
         }
 
         // Migrate auto-approval: ensure newer keys have sensible defaults
@@ -424,14 +527,26 @@ export default class ObsidianAgentPlugin extends Plugin {
                 ap.pluginApiRead = true;
                 changed = true;
             }
-            if (changed) this.saveData(this.settings);
+            if (changed) this.saveData(this.encryptSettingsForSave(this.settings));
         }
 
         // Migration: remove old hardcoded modeToolOverrides.agent default.
         // Empty object means "use all tools from mode's toolGroups" (new default).
         if (this.settings.modeToolOverrides?.agent && this.settings.modeToolOverrides.agent.length > 20) {
             delete this.settings.modeToolOverrides.agent;
-            this.saveData(this.settings);
+            this.saveData(this.encryptSettingsForSave(this.settings));
+        }
+
+        // One-time migration: encrypt existing plaintext API keys (ADR-019)
+        if (this.safeStorage.isAvailable() && !saved._encrypted) {
+            const hasKeys = (this.settings.activeModels ?? []).some(m => !!m.apiKey) ||
+                (this.settings.embeddingModels ?? []).some(m => !!m.apiKey) ||
+                !!this.settings.webTools?.braveApiKey ||
+                !!this.settings.webTools?.tavilyApiKey;
+            if (hasKeys) {
+                console.log('[Plugin] Migrating API keys to encrypted storage (safeStorage)');
+            }
+            await this.saveData(this.encryptSettingsForSave(this.settings));
         }
     }
 
@@ -463,7 +578,7 @@ export default class ObsidianAgentPlugin extends Plugin {
 
         if (changed) {
             console.log('[Plugin] Synced vault mode overrides with built-in definitions');
-            this.saveData(this.settings);
+            this.saveData(this.encryptSettingsForSave(this.settings));
         }
     }
 
@@ -495,10 +610,73 @@ export default class ObsidianAgentPlugin extends Plugin {
     }
 
     /**
+     * Decrypt all API keys in settings after loading from disk (ADR-019).
+     * Only operates when `_encrypted` is true. Modifies settings in place.
+     */
+    private decryptSettings(settings: ObsidianAgentSettings): void {
+        if (!settings._encrypted) return;
+        for (const model of settings.activeModels ?? []) {
+            if (model.apiKey) model.apiKey = this.safeStorage.decrypt(model.apiKey);
+        }
+        for (const model of settings.embeddingModels ?? []) {
+            if (model.apiKey) model.apiKey = this.safeStorage.decrypt(model.apiKey);
+        }
+        if (settings.webTools) {
+            if (settings.webTools.braveApiKey) {
+                settings.webTools.braveApiKey = this.safeStorage.decrypt(settings.webTools.braveApiKey);
+            }
+            if (settings.webTools.tavilyApiKey) {
+                settings.webTools.tavilyApiKey = this.safeStorage.decrypt(settings.webTools.tavilyApiKey);
+            }
+        }
+    }
+
+    /**
+     * Return a deep copy of settings with all API keys encrypted (ADR-019).
+     * The original settings object is NOT modified (in-memory stays plaintext).
+     * When safeStorage is unavailable, returns unencrypted copy with `_encrypted = false`.
+     */
+    private encryptSettingsForSave(settings: ObsidianAgentSettings): ObsidianAgentSettings {
+        const copy = JSON.parse(JSON.stringify(settings)) as ObsidianAgentSettings;
+        if (!this.safeStorage.isAvailable()) {
+            copy._encrypted = false;
+            return copy;
+        }
+        for (const model of copy.activeModels ?? []) {
+            if (model.apiKey && !this.safeStorage.isEncrypted(model.apiKey)) {
+                model.apiKey = this.safeStorage.encrypt(model.apiKey);
+            }
+        }
+        for (const model of (copy as any).embeddingModels ?? []) {
+            if (model.apiKey && !this.safeStorage.isEncrypted(model.apiKey)) {
+                model.apiKey = this.safeStorage.encrypt(model.apiKey);
+            }
+        }
+        if (copy.webTools) {
+            if (copy.webTools.braveApiKey && !this.safeStorage.isEncrypted(copy.webTools.braveApiKey)) {
+                copy.webTools.braveApiKey = this.safeStorage.encrypt(copy.webTools.braveApiKey);
+            }
+            if (copy.webTools.tavilyApiKey && !this.safeStorage.isEncrypted(copy.webTools.tavilyApiKey)) {
+                copy.webTools.tavilyApiKey = this.safeStorage.encrypt(copy.webTools.tavilyApiKey);
+            }
+        }
+        copy._encrypted = true;
+        return copy;
+    }
+
+    /**
      * Save plugin settings to disk and reinitialize API handler
      */
     async saveSettings() {
-        await this.saveData(this.settings);
+        await this.saveData(this.encryptSettingsForSave(this.settings));
+        // Dual-write: persist global keys to ~/.obsidian-agent/settings.json
+        if (this.globalSettingsService) {
+            await this.globalSettingsService.saveGlobal(this.settings);
+        }
+        // Push global data back to plugin dir for Obsidian Sync
+        this.syncBridge?.pushToVault().catch((e) =>
+            console.warn('[Plugin] SyncBridge push failed (non-fatal):', e)
+        );
         this.initApiHandler();
     }
 

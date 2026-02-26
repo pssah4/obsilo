@@ -71,9 +71,9 @@ export class WorkflowsTab {
                 setIcon(editBtn, 'pencil');
                 editBtn.setAttribute('aria-label', t('settings.workflows.edit'));
                 editBtn.addEventListener('click', async () => {
-                    const content = await this.app.vault.adapter.read(wf.path);
+                    const content = await workflowLoader.readFile(wf.path);
                     new ContentEditorModal(this.app, t('settings.workflows.editWorkflow', { name: wf.displayName }), content, async (newContent) => {
-                        await this.app.vault.adapter.write(wf.path, newContent);
+                        await workflowLoader.writeFile(wf.path, newContent);
                     }).open();
                 });
 
@@ -81,7 +81,7 @@ export class WorkflowsTab {
                 setIcon(exportBtn, 'download');
                 exportBtn.setAttribute('aria-label', t('settings.workflows.export'));
                 exportBtn.addEventListener('click', async () => {
-                    const content = await this.app.vault.adapter.read(wf.path);
+                    const content = await workflowLoader.readFile(wf.path);
                     const blob = new Blob([content], { type: 'text/markdown' });
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
@@ -126,7 +126,7 @@ export class WorkflowsTab {
             nameInput.value = '';
             await refreshList();
             new ContentEditorModal(this.app, t('settings.workflows.editWorkflow', { name }), template, async (content) => {
-                await this.app.vault.adapter.write(wPath, content);
+                await workflowLoader.writeFile(wPath, content);
             }).open();
         });
 

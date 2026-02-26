@@ -1,15 +1,19 @@
 /**
  * MemoryRetriever
  *
- * Cross-session context retrieval via semantic search over session summaries.
- * On new conversation start, searches for relevant past sessions and returns
- * formatted context for injection into the system prompt.
+ * Cross-session context retrieval via semantic search over session summaries
+ * and task episodes (ADR-018).
  *
- * Primary path: semantic search over indexed session summaries.
+ * On new conversation start, searches for relevant past sessions and episodes,
+ * then returns formatted context for injection into the system prompt.
+ *
+ * Primary path: semantic search over indexed session summaries + episodes.
  * Fallback (no semantic index): most recent 3 session summaries by file date.
+ *
+ * Budget: 4000 chars total (shared between sessions and episodes).
  */
 
-import type { Vault } from 'obsidian';
+import type { FileAdapter } from '../storage/types';
 import type { SemanticIndexService } from '../semantic/SemanticIndexService';
 import type { MemoryService } from './MemoryService';
 
@@ -19,7 +23,7 @@ import type { MemoryService } from './MemoryService';
 
 export class MemoryRetriever {
     constructor(
-        private vault: Vault,
+        private fs: FileAdapter,
         private memoryService: MemoryService,
         private getSemanticIndex: () => SemanticIndexService | null,
     ) {}
@@ -54,18 +58,56 @@ export class MemoryRetriever {
             excerpts = await this.getRecentSessions(topK);
         }
 
-        if (excerpts.length === 0) return '';
-
-        // Format as context block
-        const lines = ['<relevant_sessions>'];
-        for (const { id, excerpt } of excerpts) {
-            const truncated = excerpt.length > 600 ? excerpt.slice(0, 600) + '...' : excerpt;
-            lines.push(`<session id="${id}">`);
-            lines.push(truncated);
-            lines.push('</session>');
-            lines.push('');
+        // Episodic memory: search for similar past task episodes (ADR-018)
+        let episodeExcerpts: Array<{ id: string; excerpt: string }> = [];
+        if (semanticIndex?.isIndexed) {
+            try {
+                const episodeResults = await semanticIndex.searchEpisodes(firstMessage, 3);
+                episodeExcerpts = episodeResults.map((r) => ({
+                    id: r.path.replace('episode:', ''),
+                    excerpt: r.excerpt,
+                }));
+            } catch (e) {
+                console.warn('[MemoryRetriever] Episode search failed (non-fatal):', e);
+            }
         }
-        lines.push('</relevant_sessions>');
+
+        if (excerpts.length === 0 && episodeExcerpts.length === 0) return '';
+
+        // Format as context block — shared budget of 4000 chars
+        const BUDGET = 4000;
+        let charCount = 0;
+        const lines: string[] = [];
+
+        // Sessions first (higher priority)
+        if (excerpts.length > 0) {
+            lines.push('<relevant_sessions>');
+            for (const { id, excerpt } of excerpts) {
+                const truncated = excerpt.length > 600 ? excerpt.slice(0, 600) + '...' : excerpt;
+                if (charCount + truncated.length > BUDGET) break;
+                lines.push(`<session id="${id}">`);
+                lines.push(truncated);
+                lines.push('</session>');
+                lines.push('');
+                charCount += truncated.length + 40; // tag overhead
+            }
+            lines.push('</relevant_sessions>');
+        }
+
+        // Episodes (fill remaining budget)
+        if (episodeExcerpts.length > 0 && charCount < BUDGET) {
+            lines.push('<past_task_episodes>');
+            for (const { id, excerpt } of episodeExcerpts) {
+                const truncated = excerpt.length > 400 ? excerpt.slice(0, 400) + '...' : excerpt;
+                if (charCount + truncated.length > BUDGET) break;
+                lines.push(`<episode id="${id}">`);
+                lines.push(truncated);
+                lines.push('</episode>');
+                lines.push('');
+                charCount += truncated.length + 40;
+            }
+            lines.push('</past_task_episodes>');
+        }
 
         return lines.join('\n');
     }
@@ -76,7 +118,7 @@ export class MemoryRetriever {
     private async getRecentSessions(topK: number): Promise<Array<{ id: string; excerpt: string }>> {
         const sessionsDir = this.memoryService.getMemoryDir() + '/sessions';
         try {
-            const listed = await this.vault.adapter.list(sessionsDir);
+            const listed = await this.fs.list(sessionsDir);
             const mdFiles = listed.files.filter((f) => f.endsWith('.md'));
 
             if (mdFiles.length === 0) return [];
@@ -85,7 +127,7 @@ export class MemoryRetriever {
             const withStats = await Promise.all(
                 mdFiles.map(async (filePath) => {
                     try {
-                        const stat = await this.vault.adapter.stat(filePath);
+                        const stat = await this.fs.stat(filePath);
                         return { filePath, mtime: stat?.mtime ?? 0 };
                     } catch {
                         return { filePath, mtime: 0 };
@@ -97,7 +139,7 @@ export class MemoryRetriever {
             const results: Array<{ id: string; excerpt: string }> = [];
             for (const { filePath } of withStats.slice(0, topK)) {
                 try {
-                    const content = await this.vault.adapter.read(filePath);
+                    const content = await this.fs.read(filePath);
                     const id = filePath.split('/').pop()?.replace('.md', '') ?? '';
                     results.push({ id, excerpt: content.trim() });
                 } catch { /* skip */ }

@@ -316,11 +316,20 @@ export function getModelDefaults(modelName: string, provider: ProviderType): Mod
         return {
             temperature: undefined,
             temperatureFixed: false,
-            maxTokens: 8192,
+            maxTokens: 16384,
         };
     }
 
-    // Default for all other models
+    // OpenAI models: support 16384 output tokens
+    if (provider === 'openai') {
+        return {
+            temperature: undefined,
+            temperatureFixed: false,
+            maxTokens: 16384,
+        };
+    }
+
+    // Default for all other models (Ollama, custom, etc.)
     return {
         temperature: undefined,
         temperatureFixed: false,

@@ -91,6 +91,21 @@ export class AgentSettingsTab extends PluginSettingTab {
                 this.display();
             });
         });
+
+        // Buy me a coffee link
+        const coffeeLink = nav.createEl('a', {
+            cls: 'agent-settings-coffee-btn',
+            href: 'https://buymeacoffee.com/sebastianhanke',
+        });
+        coffeeLink.setAttr('target', '_blank');
+        coffeeLink.setAttr('rel', 'noopener noreferrer');
+        coffeeLink.createEl('img', {
+            cls: 'bmc-header-btn',
+            attr: {
+                src: 'https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png',
+                alt: 'Buy Me A Coffee',
+            },
+        });
     }
 
     // ---------------------------------------------------------------------------

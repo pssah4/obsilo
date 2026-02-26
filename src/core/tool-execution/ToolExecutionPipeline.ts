@@ -112,6 +112,16 @@ export class ToolExecutionPipeline {
     private taskId: string;
     private mode: string;
 
+    /** Per-task result cache for read-only tools. Key = tool:sortedJSON(input). */
+    private resultCache = new Map<string, string>();
+
+    /** Tools eligible for result caching (read-only, deterministic within a task). */
+    private static readonly CACHEABLE = new Set([
+        'read_file', 'list_files', 'search_files', 'get_frontmatter',
+        'get_linked_notes', 'search_by_tag', 'get_vault_stats',
+        'semantic_search', 'query_base',
+    ]);
+
     constructor(
         plugin: ObsidianAgentPlugin,
         toolRegistry: ToolRegistry,
@@ -122,6 +132,12 @@ export class ToolExecutionPipeline {
         this.toolRegistry = toolRegistry;
         this.taskId = taskId;
         this.mode = mode;
+    }
+
+    /** Stable cache key: tool name + sorted JSON of input parameters. */
+    private cacheKey(name: string, input: Record<string, any>): string {
+        const sortedKeys = Object.keys(input ?? {}).sort();
+        return `${name}:${JSON.stringify(input, sortedKeys)}`;
     }
 
     /**
@@ -148,6 +164,17 @@ export class ToolExecutionPipeline {
                 return this.errorResult(toolCall.id, validation.reason ?? 'Operation denied');
             }
 
+            // 2b. Result cache: return cached content for identical read-only calls
+            if (ToolExecutionPipeline.CACHEABLE.has(toolCall.name)) {
+                const cKey = this.cacheKey(toolCall.name, toolCall.input);
+                const cached = this.resultCache.get(cKey);
+                if (cached !== undefined) {
+                    callbacks.log(`[Cache HIT] ${toolCall.name}`);
+                    await this.logOperation(toolCall, true, 0, undefined, '[cached]');
+                    return { type: 'tool_result', tool_use_id: toolCall.id, content: cached, is_error: false };
+                }
+            }
+
             // 3. Auto-approve or request approval for write/mcp/mode/subtask operations
             // Web tools are always auto-approved when webTools.enabled is true (the only way they appear).
             const toolGroup = TOOL_GROUPS[toolCall.name];
@@ -155,6 +182,17 @@ export class ToolExecutionPipeline {
                 const approval = await this.checkApproval(toolCall, extensions);
                 if (approval.decision === 'rejected') {
                     return this.errorResult(toolCall.id, 'Operation denied by user');
+                }
+            }
+
+            // 3b. Cache invalidation: write tools invalidate cached reads for affected paths
+            if (tool.isWriteOperation) {
+                const affectedPath: string | undefined = toolCall.input?.path;
+                if (affectedPath) {
+                    const pathJson = JSON.stringify(affectedPath);
+                    for (const [key] of this.resultCache) {
+                        if (key.includes(pathJson)) this.resultCache.delete(key);
+                    }
                 }
             }
 
@@ -204,10 +242,16 @@ export class ToolExecutionPipeline {
 
             await tool.execute(toolCall.input, context);
 
-            // 6. Persistent operation log
+            // 6. Persistent operation log + cache write
             const durationMs = Date.now() - startTime;
             const content = collectedContent.join('\n');
             await this.logOperation(toolCall, !executionHadError, durationMs, undefined, content);
+
+            // Cache successful read-only results for deduplication
+            if (!executionHadError && ToolExecutionPipeline.CACHEABLE.has(toolCall.name)) {
+                this.resultCache.set(this.cacheKey(toolCall.name, toolCall.input), content);
+            }
+
             return {
                 type: 'tool_result',
                 tool_use_id: toolCall.id,

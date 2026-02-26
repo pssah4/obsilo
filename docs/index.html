@@ -73,32 +73,31 @@
   var prompts = [
     {
       segments: [
-        { type: 'text', value: 'Create a Canvas from this Note ' },
+        { type: 'text', value: 'Find all Notes related to ' },
         { type: 'mention', typed: 'Agenti', full: 'AgenticAI', file: 'AgenticAI.md' },
-        { type: 'text', value: ' and show all relations.' }
+        { type: 'text', value: ' and create a Base.' }
       ]
     },
-    'Draw an Excalidraw that visualizes the concept discussed in this meeting notes.',
-    'Create a Base with all Notes related to this topic.',
-    'Build a process chart with Draw.io with the information from this conversation.',
-    'Search the web for latest Python releases and create a summary note.',
+    'Create a Canvas based on this Base that shows the relationships between the Notes.',
+    'Describe the connections between these Notes in the created Canvas and label the arrows.',
+    'Show me all meeting notes from January for meetings with John Doe.',
     {
       segments: [
-        { type: 'slash', typed: 'sum', full: 'summarize', label: 'Summarize' },
-        { type: 'text', value: ' this Meeting ' },
-        { type: 'mention', typed: 'act', full: 'ActiveNote', file: 'ActiveNote.md' }
+        { type: 'text', value: 'Create a summary of this meeting ' },
+        { type: 'mention', typed: 'proce', full: 'process-analysis-sales-dpt', file: 'process-analysis-sales-dpt.md' },
+        { type: 'text', value: ' as a new Meeting Note.' }
       ]
     },
-    'Find all notes related to machine learning and summarize the key concepts.',
-    'Run a Dataview query to list all tasks due this week.',
-    'Create a PDF from this note.',
+    'Create a draw.io diagram that visualizes the process from this meeting as a flowchart.',
     {
       segments: [
-        { type: 'text', value: 'Summarize ' },
-        { type: 'mention', typed: 'Archi', full: 'Architecture Document', file: 'Architecture Document.md' },
-        { type: 'text', value: ' and list open decisions.' }
+        { type: 'text', value: 'Summarize this brainstorming in ' },
+        { type: 'mention', typed: 'produ', full: 'product-launch-ideas', file: 'product-launch-ideas.md' },
+        { type: 'text', value: ' and visualize the ideas in an Excalidraw graphic.' }
       ]
-    }
+    },
+    'Change the tags in the metadata of all Notes from "agenticai" to "Agentic-AI".',
+    'Search the internet for the latest Python release and create a summary note.'
   ];
 
   var el = document.getElementById('typewriter-text');

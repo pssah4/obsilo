@@ -2,7 +2,7 @@
  * MemoryService
  *
  * Read/write memory files and build context for the system prompt.
- * Memory files are Markdown, stored in .obsidian/plugins/obsidian-agent/memory/.
+ * Memory files are Markdown, stored in ~/.obsidian-agent/memory/ (global).
  *
  * Memory types loaded into the system prompt:
  *   - user-profile.md  (~200 tokens)
@@ -13,7 +13,7 @@
  * knowledge.md is on-demand only (via semantic search), NOT in the system prompt.
  */
 
-import type { Vault } from 'obsidian';
+import type { FileAdapter } from '../storage/types';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -96,9 +96,9 @@ export class MemoryService {
     private memoryDir: string;
     private sessionsDir: string;
 
-    constructor(private vault: Vault, pluginDir: string) {
-        this.memoryDir = `${pluginDir}/memory`;
-        this.sessionsDir = `${this.memoryDir}/sessions`;
+    constructor(private fs: FileAdapter) {
+        this.memoryDir = 'memory';
+        this.sessionsDir = 'memory/sessions';
     }
 
     // -----------------------------------------------------------------------
@@ -111,9 +111,9 @@ export class MemoryService {
         // Create template files only if they don't exist
         for (const name of MEMORY_FILES) {
             const path = `${this.memoryDir}/${name}`;
-            const exists = await this.vault.adapter.exists(path);
+            const exists = await this.fs.exists(path);
             if (!exists) {
-                await this.vault.adapter.write(path, TEMPLATES[name] ?? '');
+                await this.fs.write(path, TEMPLATES[name] ?? '');
             }
         }
     }
@@ -136,7 +136,7 @@ export class MemoryService {
     async readFile(name: string): Promise<string> {
         const path = `${this.memoryDir}/${name}`;
         try {
-            return await this.vault.adapter.read(path);
+            return await this.fs.read(path);
         } catch {
             return '';
         }
@@ -144,7 +144,7 @@ export class MemoryService {
 
     async writeFile(name: string, content: string): Promise<void> {
         const path = `${this.memoryDir}/${name}`;
-        await this.vault.adapter.write(path, content);
+        await this.fs.write(path, content);
     }
 
     async appendToFile(name: string, content: string): Promise<void> {
@@ -154,13 +154,13 @@ export class MemoryService {
 
     async writeSessionSummary(conversationId: string, content: string): Promise<void> {
         const path = `${this.sessionsDir}/${conversationId}.md`;
-        await this.vault.adapter.write(path, content);
+        await this.fs.write(path, content);
     }
 
     async readSessionSummary(conversationId: string): Promise<string> {
         const path = `${this.sessionsDir}/${conversationId}.md`;
         try {
-            return await this.vault.adapter.read(path);
+            return await this.fs.read(path);
         } catch {
             return '';
         }
@@ -225,7 +225,7 @@ export class MemoryService {
         for (const name of MEMORY_FILES) {
             const path = `${this.memoryDir}/${name}`;
             try {
-                const stat = await this.vault.adapter.stat(path);
+                const stat = await this.fs.stat(path);
                 if (stat) {
                     fileCount++;
                     const mtime = new Date(stat.mtime).toISOString();
@@ -235,7 +235,7 @@ export class MemoryService {
         }
 
         try {
-            const listed = await this.vault.adapter.list(this.sessionsDir);
+            const listed = await this.fs.list(this.sessionsDir);
             sessionCount = listed.files.filter((f) => f.endsWith('.md')).length;
         } catch { /* skip */ }
 
@@ -246,9 +246,9 @@ export class MemoryService {
     async resetAll(): Promise<void> {
         // Delete session summaries
         try {
-            const listed = await this.vault.adapter.list(this.sessionsDir);
+            const listed = await this.fs.list(this.sessionsDir);
             for (const file of listed.files) {
-                try { await this.vault.adapter.remove(file); } catch { /* skip */ }
+                try { await this.fs.remove(file); } catch { /* skip */ }
             }
         } catch { /* skip */ }
 
@@ -268,9 +268,9 @@ export class MemoryService {
     // -----------------------------------------------------------------------
 
     private async ensureDir(dir: string): Promise<void> {
-        const exists = await this.vault.adapter.exists(dir);
+        const exists = await this.fs.exists(dir);
         if (!exists) {
-            await this.vault.adapter.mkdir(dir);
+            await this.fs.mkdir(dir);
         }
     }
 }

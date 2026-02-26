@@ -25,9 +25,14 @@ export function getToolDecisionGuidelinesSection(): string {
    (d) Check dependencies (e.g. Pandoc) — enable/install what's needed.
    Config paths: Community: .obsidian/plugins/{id}/data.json | Core: .obsidian/{id}.json
    NEVER ask the user to configure via Settings UI. Write data.json yourself.
-1c. NEVER CREATE FAKE OUTPUT — When the user asks to export/convert a file (PDF, DOCX, etc.), use the appropriate export tool. NEVER write content to a .pdf/.docx file yourself. If no native command and no recipe exist, tell the user which tool to install.
-1d. PLUGIN API — When you need structured data from a plugin (Dataview queries, Omnisearch results, MetaEdit properties), use call_plugin_api instead of execute_command. It returns actual data. Check the PLUGIN SKILLS section for available API methods per plugin.
-1e. FILE EXPORT / CONVERSION — Confidence-based routing:
+1c. PLUGIN FILE FORMATS — Use dedicated tools for complex plugin formats:
+   For .excalidraw.md files: ALWAYS use create_excalidraw (never write_file).
+   For .canvas files: ALWAYS use generate_canvas (never write_file).
+   For .base files: ALWAYS use create_base (never write_file).
+   These tools handle the complex format automatically — the LLM should never generate raw plugin JSON/YAML.
+1d. NEVER CREATE FAKE OUTPUT — When the user asks to export/convert a file (PDF, DOCX, etc.), use the appropriate export tool. NEVER write content to a .pdf/.docx file yourself. If no native command and no recipe exist, tell the user which tool to install.
+1e. PLUGIN API — When you need structured data from a plugin (Dataview queries, Omnisearch results, MetaEdit properties), use call_plugin_api instead of execute_command. It returns actual data. Check the PLUGIN SKILLS section for available API methods per plugin.
+1f. FILE EXPORT / CONVERSION — Confidence-based routing:
    TIER 1 (prefer): Native Obsidian commands via execute_command.
      Zero dependencies, always available. Example: workspace:export-pdf.
      Note: May open a system dialog the user must confirm.
@@ -36,7 +41,7 @@ export function getToolDecisionGuidelinesSection(): string {
      Example: pandoc-pdf, pandoc-docx.
    TIER 3: Tell the user what to install.
    Decision: "export as PDF" -> Tier 1. "export with Pandoc" / custom template / DOCX -> Tier 2.
-2. CHECK CONTEXT FIRST. The <vault_context> block shows the vault's top-level structure. Use it before calling list_files or get_vault_stats.
+2. CHECK CONTEXT FIRST. The <vault_context> block shows the vault's top-level structure. Use it before calling list_files or get_vault_stats. The <context> block in the user's message contains the active file path — use it directly when the user references "active file", "{activeFile}", or "die aktive Datei". NEVER ask the user which file they mean when the <context> block is present.
 3. NO REDUNDANT READS. Only call read_file for files whose content is NOT already in the conversation.
 4. BATCH INDEPENDENT CALLS. Call multiple independent tools in one step (parallel execution).
 5. INTENTIONAL TOOL USE. Only call a tool when you genuinely need its result.

@@ -61,6 +61,7 @@ import {
  * @param memoryContext - Pre-built memory context string.
  * @param pluginSkillsSection - Compact plugin skills list from VaultDNA.
  * @param isSubtask - When true, build a leaner prompt for sub-agents (omits response format, skills, custom instructions).
+ * @param recipesSection - Pre-matched procedural recipes for the current user message.
  */
 export function buildSystemPromptForMode(
     mode: ModeConfig,
@@ -75,6 +76,7 @@ export function buildSystemPromptForMode(
     pluginSkillsSection?: string,
     isSubtask = false,
     webEnabled?: boolean,
+    recipesSection?: string,
 ): string {
     const sections: string[] = [
         // 1. Date/time + 2. Vault context (combined at top)
@@ -86,11 +88,15 @@ export function buildSystemPromptForMode(
         // 4. User memory (conditional — omit for subtasks, parent already applied)
         isSubtask ? '' : getMemorySection(memoryContext),
 
-        // 5. Tools (filtered by mode)
-        getToolsSection(mode.toolGroups, mcpClient, allowedMcpServers, webEnabled),
+        // 5. Tools (filtered by mode — subtasks get compact descriptions without examples)
+        getToolsSection(mode.toolGroups, mcpClient, allowedMcpServers, webEnabled, !isSubtask),
 
         // 6. Plugin Skills — right after tools so agent sees plugins before planning
         getPluginSkillsSection(pluginSkillsSection),
+
+        // 6.5. Procedural Recipes — between plugins and rules (ADR-017)
+        // Agent sees tools → plugins → how to combine them → rules
+        (isSubtask || !recipesSection) ? '' : recipesSection,
 
         // 7. Tool rules
         getToolRulesSection(),
