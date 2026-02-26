@@ -5,7 +5,7 @@
  * Format: one JSON object per line, one file per day.
  * Rotation: keeps last 30 days, deletes older files.
  *
- * Storage: .obsidian/plugins/obsidian-agent/logs/YYYY-MM-DD.jsonl
+ * Storage: .obsidian/plugins/obsilo-agent/logs/YYYY-MM-DD.jsonl
  */
 
 import type { FileAdapter } from '../storage/types';

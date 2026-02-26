@@ -2,7 +2,7 @@
  * SyncBridge
  *
  * Bidirectional sync between global storage (~/.obsidian-agent/) and
- * the vault's plugin directory (.obsidian/plugins/obsidian-agent/).
+ * the vault's plugin directory (.obsidian/plugins/obsilo-agent/).
  *
  * Purpose: Services read/write exclusively to global storage (via
  * GlobalFileService). The SyncBridge keeps the plugin directory in sync

@@ -52,7 +52,7 @@
   "pages.semanticSearch.basicSearch": "Basiszoekopdracht",
   "pages.semanticSearch.basicSearch.text": "\"Zoek mijn notities over vergaderplanning en agendaopstelling\"",
   "pages.semanticSearch.build": "Stap 3: De index opbouwen",
-  "pages.semanticSearch.build.list": "<li><strong>Obsidian sync (standaard):</strong> <code>.obsidian/plugins/obsidian-agent/semantic-index/</code></li> <li><strong>Alleen lokaal:</strong> <code>.obsidian-agent/semantic-index/</code></li>",
+  "pages.semanticSearch.build.list": "<li><strong>Obsidian sync (standaard):</strong> <code>.obsidian/plugins/obsilo-agent/semantic-index/</code></li> <li><strong>Alleen lokaal:</strong> <code>.obsidian-agent/semantic-index/</code></li>",
   "pages.semanticSearch.build.text": "Klik op Index opbouwen in Instellingen → Semantische Index. De eerste opbouw duurt een paar minuten voor een grote vault. De voortgang wordt weergegeven in het instellingenpaneel.",
   "pages.semanticSearch.build.text2": "De index wordt opgeslagen op:",
   "pages.semanticSearch.build.text3": "Volgende opbouwen zijn incrementeel — alleen bestanden die sinds de laatste opbouw zijn gewijzigd, worden opnieuw geindexeerd.",

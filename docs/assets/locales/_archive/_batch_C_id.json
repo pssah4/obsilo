@@ -52,7 +52,7 @@
   "pages.semanticSearch.basicSearch": "Pencarian Dasar",
   "pages.semanticSearch.basicSearch.text": "\"Temukan catatan saya tentang perencanaan rapat dan pembuatan agenda\"",
   "pages.semanticSearch.build": "Langkah 3: Bangun Indeks",
-  "pages.semanticSearch.build.list": "<li><strong>Sinkronisasi Obsidian (default):</strong> <code>.obsidian/plugins/obsidian-agent/semantic-index/</code></li> <li><strong>Lokal saja:</strong> <code>.obsidian-agent/semantic-index/</code></li>",
+  "pages.semanticSearch.build.list": "<li><strong>Sinkronisasi Obsidian (default):</strong> <code>.obsidian/plugins/obsilo-agent/semantic-index/</code></li> <li><strong>Lokal saja:</strong> <code>.obsidian-agent/semantic-index/</code></li>",
   "pages.semanticSearch.build.text": "Klik Bangun Indeks di Pengaturan → Indeks Semantik. Build pertama memerlukan beberapa menit untuk vault yang besar. Progres ditampilkan di panel pengaturan.",
   "pages.semanticSearch.build.text2": "Indeks disimpan di:",
   "pages.semanticSearch.build.text3": "Build ulang berikutnya bersifat inkremental — hanya file yang berubah sejak build terakhir yang diindeks ulang.",

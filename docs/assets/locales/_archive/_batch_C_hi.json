@@ -52,7 +52,7 @@
   "pages.semanticSearch.basicSearch": "बुनियादी खोज",
   "pages.semanticSearch.basicSearch.text": "\"मीटिंग प्लानिंग और एजेंडा निर्माण के बारे में मेरे नोट्स खोजें\"",
   "pages.semanticSearch.build": "चरण 3: इंडेक्स बिल्ड करें",
-  "pages.semanticSearch.build.list": "<li><strong>Obsidian sync (डिफ़ॉल्ट):</strong> <code>.obsidian/plugins/obsidian-agent/semantic-index/</code></li> <li><strong>केवल स्थानीय:</strong> <code>.obsidian-agent/semantic-index/</code></li>",
+  "pages.semanticSearch.build.list": "<li><strong>Obsidian sync (डिफ़ॉल्ट):</strong> <code>.obsidian/plugins/obsilo-agent/semantic-index/</code></li> <li><strong>केवल स्थानीय:</strong> <code>.obsidian-agent/semantic-index/</code></li>",
   "pages.semanticSearch.build.text": "Settings → Semantic Index में Build Index क्लिक करें। बड़े vault के लिए पहला बिल्ड कुछ मिनट लेता है। प्रगति सेटिंग्स पैनल में दिखाई जाती है।",
   "pages.semanticSearch.build.text2": "इंडेक्स यहां संग्रहीत होता है:",
   "pages.semanticSearch.build.text3": "बाद के पुनर्निर्माण इंक्रीमेंटल होते हैं — पिछले बिल्ड के बाद से केवल बदली हुई फ़ाइलें पुनः इंडेक्स की जाती हैं।",

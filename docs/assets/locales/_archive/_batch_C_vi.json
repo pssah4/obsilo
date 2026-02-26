@@ -52,7 +52,7 @@
   "pages.semanticSearch.basicSearch": "Tìm kiếm cơ bản",
   "pages.semanticSearch.basicSearch.text": "\"Tìm ghi chú của tôi về lập kế hoạch cuộc họp và tạo chương trình nghị sự\"",
   "pages.semanticSearch.build": "Bước 3: Xây dựng chỉ mục",
-  "pages.semanticSearch.build.list": "<li><strong>Đồng bộ Obsidian (mặc định):</strong> <code>.obsidian/plugins/obsidian-agent/semantic-index/</code></li> <li><strong>Chỉ cục bộ:</strong> <code>.obsidian-agent/semantic-index/</code></li>",
+  "pages.semanticSearch.build.list": "<li><strong>Đồng bộ Obsidian (mặc định):</strong> <code>.obsidian/plugins/obsilo-agent/semantic-index/</code></li> <li><strong>Chỉ cục bộ:</strong> <code>.obsidian-agent/semantic-index/</code></li>",
   "pages.semanticSearch.build.text": "Nhấp Xây dựng chỉ mục trong Cài đặt → Chỉ mục ngữ nghĩa. Lần xây dựng đầu tiên mất vài phút cho vault lớn. Tiến trình được hiển thị trong bảng cài đặt.",
   "pages.semanticSearch.build.text2": "Chỉ mục được lưu tại:",
   "pages.semanticSearch.build.text3": "Các lần xây dựng lại sau đó là tăng dần — chỉ các tệp thay đổi kể từ lần xây dựng trước được lập chỉ mục lại.",

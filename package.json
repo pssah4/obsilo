@@ -1,7 +1,7 @@
 {
-  "name": "obsidian-agent",
+  "name": "obsilo-agent",
   "version": "1.0.0",
-  "description": "Agentic operating layer for Obsidian - Kilo Code for knowledge work",
+  "description": "Transform your Obsidian vault with an AI agent that reads, writes, searches, and connects notes using 30+ tools, semantic search, and full safety controls.",
   "main": "main.js",
   "scripts": {
     "dev": "node esbuild.config.mjs",

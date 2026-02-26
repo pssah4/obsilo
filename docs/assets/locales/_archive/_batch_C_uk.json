@@ -52,7 +52,7 @@
   "pages.semanticSearch.basicSearch": "Базовий пошук",
   "pages.semanticSearch.basicSearch.text": "\"Знайди мої нотатки про планування зустрічей та створення порядку денного\"",
   "pages.semanticSearch.build": "Крок 3: Побудуйте індекс",
-  "pages.semanticSearch.build.list": "<li><strong>Синхронізація Obsidian (за замовчуванням):</strong> <code>.obsidian/plugins/obsidian-agent/semantic-index/</code></li> <li><strong>Тільки локально:</strong> <code>.obsidian-agent/semantic-index/</code></li>",
+  "pages.semanticSearch.build.list": "<li><strong>Синхронізація Obsidian (за замовчуванням):</strong> <code>.obsidian/plugins/obsilo-agent/semantic-index/</code></li> <li><strong>Тільки локально:</strong> <code>.obsidian-agent/semantic-index/</code></li>",
   "pages.semanticSearch.build.text": "Натисніть Побудувати індекс у Налаштування → Семантичний індекс. Перша побудова займає кілька хвилин для великого vault. Прогрес показується на панелі налаштувань.",
   "pages.semanticSearch.build.text2": "Індекс зберігається за шляхом:",
   "pages.semanticSearch.build.text3": "Наступні перебудови є інкрементальними — переіндексуються тільки файли, змінені з моменту останньої побудови.",

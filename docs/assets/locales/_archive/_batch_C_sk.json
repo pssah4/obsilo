@@ -52,7 +52,7 @@
   "pages.semanticSearch.basicSearch": "Základné vyhľadávanie",
   "pages.semanticSearch.basicSearch.text": "\"Nájdi moje poznámky o plánovaní stretnutí a tvorbe agendy\"",
   "pages.semanticSearch.build": "Krok 3: Zostavte index",
-  "pages.semanticSearch.build.list": "<li><strong>Synchronizácia Obsidian (predvolené):</strong> <code>.obsidian/plugins/obsidian-agent/semantic-index/</code></li> <li><strong>Len lokálne:</strong> <code>.obsidian-agent/semantic-index/</code></li>",
+  "pages.semanticSearch.build.list": "<li><strong>Synchronizácia Obsidian (predvolené):</strong> <code>.obsidian/plugins/obsilo-agent/semantic-index/</code></li> <li><strong>Len lokálne:</strong> <code>.obsidian-agent/semantic-index/</code></li>",
   "pages.semanticSearch.build.text": "Kliknite na Zostaviť index v Nastavenia → Sémantický index. Prvé zostavenie trvá niekoľko minút pre veľký vault. Priebeh sa zobrazuje v paneli nastavení.",
   "pages.semanticSearch.build.text2": "Index je uložený na:",
   "pages.semanticSearch.build.text3": "Následné prebudovania sú inkrementálne — preindexujú sa len súbory zmenené od posledného zostavenia.",

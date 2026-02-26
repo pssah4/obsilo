@@ -52,7 +52,7 @@
   "pages.semanticSearch.basicSearch": "Busca Basica",
   "pages.semanticSearch.basicSearch.text": "\"Encontre minhas notas sobre planejamento de reunioes e criacao de pautas\"",
   "pages.semanticSearch.build": "Passo 3: Construir o Indice",
-  "pages.semanticSearch.build.list": "<li><strong>Sincronizacao Obsidian (padrao):</strong> <code>.obsidian/plugins/obsidian-agent/semantic-index/</code></li> <li><strong>Apenas local:</strong> <code>.obsidian-agent/semantic-index/</code></li>",
+  "pages.semanticSearch.build.list": "<li><strong>Sincronizacao Obsidian (padrao):</strong> <code>.obsidian/plugins/obsilo-agent/semantic-index/</code></li> <li><strong>Apenas local:</strong> <code>.obsidian-agent/semantic-index/</code></li>",
   "pages.semanticSearch.build.text": "Clique em Construir Indice em Configuracoes → Indice Semantico. A primeira construcao leva alguns minutos para um vault grande. O progresso e exibido no painel de configuracoes.",
   "pages.semanticSearch.build.text2": "O indice e armazenado em:",
   "pages.semanticSearch.build.text3": "Reconstrucoes subsequentes sao incrementais — apenas arquivos alterados desde a ultima construcao sao reindexados.",

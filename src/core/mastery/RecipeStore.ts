@@ -3,7 +3,7 @@
  *
  * Combines static (bundled) and learned (vault-local) recipes into
  * a single queryable store. Learned recipes are persisted as JSON
- * in .obsidian/plugins/obsidian-agent/recipes/.
+ * in .obsidian/plugins/obsilo-agent/recipes/.
  */
 
 import type { FileAdapter } from '../storage/types';

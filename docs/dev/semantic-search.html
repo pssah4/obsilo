@@ -98,7 +98,7 @@
       <p>Obsilo implements hybrid search combining vector similarity (Vectra HNSW) with keyword matching (BM25/TF-IDF) via Reciprocal Rank Fusion, enhanced by HyDE expansion and wikilink graph augmentation.</p>
 
       <h2 id="vectra-localindex">Vectra LocalIndex</h2>
-      <p>Pure-TypeScript HNSW vector index. Storage: <code>.obsidian/plugins/obsidian-agent/semantic-index/</code>. Requires a configured embedding model (e.g. OpenAI <code>text-embedding-3-small</code> or Ollama <code>nomic-embed-text</code>).</p>
+      <p>Pure-TypeScript HNSW vector index. Storage: <code>.obsidian/plugins/obsilo-agent/semantic-index/</code>. Requires a configured embedding model (e.g. OpenAI <code>text-embedding-3-small</code> or Ollama <code>nomic-embed-text</code>).</p>
 
       <h3>Embedding via API</h3>
       <p>Any OpenAI-compatible embedding endpoint. Requests are batched with a batch size of 16 embeddings per API call. Failures are handled with exponential backoff: 1s, 2s, 4s, 8s delays with a maximum of 4 retries. Each request has a 30-second timeout.</p>

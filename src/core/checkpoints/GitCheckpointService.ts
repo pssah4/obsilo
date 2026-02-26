@@ -2,7 +2,7 @@
  * GitCheckpointService - isomorphic-git based snapshot/restore (Sprint 1.4)
  *
  * Maintains a shadow git repository at:
- *   .obsidian/plugins/obsidian-agent/checkpoints/
+ *   .obsidian/plugins/obsilo-agent/checkpoints/
  *
  * Before each task's first write operation, it commits a snapshot of all
  * tracked files. If the user triggers undo, we restore from the snapshot.

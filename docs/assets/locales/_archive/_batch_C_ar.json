@@ -52,7 +52,7 @@
   "pages.semanticSearch.basicSearch": "البحث الأساسي",
   "pages.semanticSearch.basicSearch.text": "\"ابحث عن ملاحظاتي حول تخطيط الاجتماعات وإعداد جداول الأعمال\"",
   "pages.semanticSearch.build": "الخطوة 3: بناء الفهرس",
-  "pages.semanticSearch.build.list": "<li><strong>مزامنة Obsidian (افتراضي):</strong> <code>.obsidian/plugins/obsidian-agent/semantic-index/</code></li> <li><strong>محلي فقط:</strong> <code>.obsidian-agent/semantic-index/</code></li>",
+  "pages.semanticSearch.build.list": "<li><strong>مزامنة Obsidian (افتراضي):</strong> <code>.obsidian/plugins/obsilo-agent/semantic-index/</code></li> <li><strong>محلي فقط:</strong> <code>.obsidian-agent/semantic-index/</code></li>",
   "pages.semanticSearch.build.text": "انقر على بناء الفهرس في الإعدادات ← الفهرس الدلالي. يستغرق البناء الأول بضع دقائق لمخزن vault كبير. يظهر التقدم في لوحة الإعدادات.",
   "pages.semanticSearch.build.text2": "يتم تخزين الفهرس في:",
   "pages.semanticSearch.build.text3": "عمليات إعادة البناء اللاحقة تزايدية — يتم إعادة فهرسة الملفات المتغيرة منذ آخر بناء فقط.",
