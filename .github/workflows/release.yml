@@ -38,8 +38,8 @@ jobs:
       - name: Create GitHub Release with assets
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ inputs.version }}
-          name: v${{ inputs.version }}
+          tag_name: ${{ inputs.version }}
+          name: ${{ inputs.version }}
           body: |
             ## Obsilo Agent v${{ inputs.version }}
 
