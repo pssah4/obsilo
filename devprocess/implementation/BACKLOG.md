@@ -44,6 +44,7 @@
 | `[x]` | Anthropic provider | `src/api/providers/anthropic.ts` |
 | `[x]` | OpenAI-compatible provider | `src/api/providers/openai.ts` |
 | `[x]` | Custom models + per-model temperature | `src/types/settings.ts` |
+| `[~]` | Safe Storage (Electron safeStorage, OS Keychain encryption for API keys) | `src/core/security/SafeStorageService.ts` |
 
 ### Core: MCP
 | Status | Feature | Datei |

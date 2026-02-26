@@ -29,6 +29,7 @@ import type { ToolUse, ToolCallbacks } from './core/tools/types';
 import { BUILT_IN_MODES } from './core/modes/builtinModes';
 import { mergeDefaultPrompts } from './core/prompts/defaultPrompts';
 import { initI18n } from './i18n';
+import { SafeStorageService } from './core/security/SafeStorageService';
 import { RecipeStore } from './core/mastery/RecipeStore';
 import { RecipeMatchingService } from './core/mastery/RecipeMatchingService';
 import { EpisodicExtractor } from './core/mastery/EpisodicExtractor';
@@ -76,6 +77,7 @@ export default class ObsidianAgentPlugin extends Plugin {
     recipeMatchingService: RecipeMatchingService | null = null;
     episodicExtractor: EpisodicExtractor | null = null;
     recipePromotionService: RecipePromotionService | null = null;
+    safeStorage: SafeStorageService;
 
     /**
      * Plugin initialization
@@ -91,6 +93,8 @@ export default class ObsidianAgentPlugin extends Plugin {
     async onload() {
         console.log('Loading Obsilo Agent plugin');
 
+        // 0. Initialize SafeStorageService (must happen before loadSettings)
+        this.safeStorage = new SafeStorageService();
 
         // 1. Load settings
         await this.loadSettings();
@@ -379,6 +383,9 @@ export default class ObsidianAgentPlugin extends Plugin {
         this.settings = Object.assign({}, DEFAULT_SETTINGS, saved);
         this.settings.activeModels = this.settings.activeModels ?? [];
         this.settings.webTools = this.settings.webTools ?? DEFAULT_SETTINGS.webTools;
+
+        // Decrypt API keys if they were stored encrypted (ADR-019)
+        this.decryptSettings(this.settings);
         // Migrate old mode slugs to new built-in mode slugs (Phase 3.1)
         const OLD_MODE_MAP: Record<string, string> = { librarian: 'ask', writer: 'agent', orchestrator: 'agent', researcher: 'ask', curator: 'agent', architect: 'agent' };
         if (OLD_MODE_MAP[this.settings.currentMode]) {
@@ -455,7 +462,7 @@ export default class ObsidianAgentPlugin extends Plugin {
         // Enable recipes for existing users — 6 other security layers remain active.
         if (this.settings.recipes && !this.settings.recipes.enabled) {
             this.settings.recipes.enabled = true;
-            this.saveData(this.settings);
+            this.saveData(this.encryptSettingsForSave(this.settings));
         }
 
         // Migrate auto-approval: ensure newer keys have sensible defaults
@@ -472,14 +479,26 @@ export default class ObsidianAgentPlugin extends Plugin {
                 ap.pluginApiRead = true;
                 changed = true;
             }
-            if (changed) this.saveData(this.settings);
+            if (changed) this.saveData(this.encryptSettingsForSave(this.settings));
         }
 
         // Migration: remove old hardcoded modeToolOverrides.agent default.
         // Empty object means "use all tools from mode's toolGroups" (new default).
         if (this.settings.modeToolOverrides?.agent && this.settings.modeToolOverrides.agent.length > 20) {
             delete this.settings.modeToolOverrides.agent;
-            this.saveData(this.settings);
+            this.saveData(this.encryptSettingsForSave(this.settings));
+        }
+
+        // One-time migration: encrypt existing plaintext API keys (ADR-019)
+        if (this.safeStorage.isAvailable() && !saved._encrypted) {
+            const hasKeys = (this.settings.activeModels ?? []).some(m => !!m.apiKey) ||
+                (this.settings.embeddingModels ?? []).some(m => !!m.apiKey) ||
+                !!this.settings.webTools?.braveApiKey ||
+                !!this.settings.webTools?.tavilyApiKey;
+            if (hasKeys) {
+                console.log('[Plugin] Migrating API keys to encrypted storage (safeStorage)');
+            }
+            await this.saveData(this.encryptSettingsForSave(this.settings));
         }
     }
 
@@ -511,7 +530,7 @@ export default class ObsidianAgentPlugin extends Plugin {
 
         if (changed) {
             console.log('[Plugin] Synced vault mode overrides with built-in definitions');
-            this.saveData(this.settings);
+            this.saveData(this.encryptSettingsForSave(this.settings));
         }
     }
 
@@ -543,10 +562,65 @@ export default class ObsidianAgentPlugin extends Plugin {
     }
 
     /**
+     * Decrypt all API keys in settings after loading from disk (ADR-019).
+     * Only operates when `_encrypted` is true. Modifies settings in place.
+     */
+    private decryptSettings(settings: ObsidianAgentSettings): void {
+        if (!settings._encrypted) return;
+        for (const model of settings.activeModels ?? []) {
+            if (model.apiKey) model.apiKey = this.safeStorage.decrypt(model.apiKey);
+        }
+        for (const model of settings.embeddingModels ?? []) {
+            if (model.apiKey) model.apiKey = this.safeStorage.decrypt(model.apiKey);
+        }
+        if (settings.webTools) {
+            if (settings.webTools.braveApiKey) {
+                settings.webTools.braveApiKey = this.safeStorage.decrypt(settings.webTools.braveApiKey);
+            }
+            if (settings.webTools.tavilyApiKey) {
+                settings.webTools.tavilyApiKey = this.safeStorage.decrypt(settings.webTools.tavilyApiKey);
+            }
+        }
+    }
+
+    /**
+     * Return a deep copy of settings with all API keys encrypted (ADR-019).
+     * The original settings object is NOT modified (in-memory stays plaintext).
+     * When safeStorage is unavailable, returns unencrypted copy with `_encrypted = false`.
+     */
+    private encryptSettingsForSave(settings: ObsidianAgentSettings): ObsidianAgentSettings {
+        const copy = JSON.parse(JSON.stringify(settings)) as ObsidianAgentSettings;
+        if (!this.safeStorage.isAvailable()) {
+            copy._encrypted = false;
+            return copy;
+        }
+        for (const model of copy.activeModels ?? []) {
+            if (model.apiKey && !this.safeStorage.isEncrypted(model.apiKey)) {
+                model.apiKey = this.safeStorage.encrypt(model.apiKey);
+            }
+        }
+        for (const model of (copy as any).embeddingModels ?? []) {
+            if (model.apiKey && !this.safeStorage.isEncrypted(model.apiKey)) {
+                model.apiKey = this.safeStorage.encrypt(model.apiKey);
+            }
+        }
+        if (copy.webTools) {
+            if (copy.webTools.braveApiKey && !this.safeStorage.isEncrypted(copy.webTools.braveApiKey)) {
+                copy.webTools.braveApiKey = this.safeStorage.encrypt(copy.webTools.braveApiKey);
+            }
+            if (copy.webTools.tavilyApiKey && !this.safeStorage.isEncrypted(copy.webTools.tavilyApiKey)) {
+                copy.webTools.tavilyApiKey = this.safeStorage.encrypt(copy.webTools.tavilyApiKey);
+            }
+        }
+        copy._encrypted = true;
+        return copy;
+    }
+
+    /**
      * Save plugin settings to disk and reinitialize API handler
      */
     async saveSettings() {
-        await this.saveData(this.settings);
+        await this.saveData(this.encryptSettingsForSave(this.settings));
         this.initApiHandler();
     }
 

@@ -494,6 +494,10 @@ export interface ObsidianAgentSettings {
     // Language (i18n)
     language: import('../i18n/types').Language;
 
+    // Security
+    /** Whether API keys in data.json are encrypted via Electron safeStorage (ADR-019) */
+    _encrypted?: boolean;
+
     // Advanced
     debugMode: boolean;
 }
