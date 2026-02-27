@@ -1,4 +1,4 @@
-import { App, Notice, Setting, setIcon, TFolder, AbstractInputSuggest } from 'obsidian';
+import { App, Notice, Setting, setIcon, TFolder, AbstractInputSuggest, ButtonComponent } from 'obsidian';
 import type ObsidianAgentPlugin from '../../main';
 import { ModelConfigModal } from './ModelConfigModal';
 import { addInfoButton } from './utils';
@@ -72,23 +72,21 @@ export class EmbeddingsTab {
         });
 
         if (!activeEmbModel) {
-            const guide = containerEl.createDiv({ cls: 'setting-item-description' });
-            guide.style.marginBottom = '12px';
-            guide.style.padding = '8px 12px';
-            guide.style.borderLeft = '3px solid var(--interactive-accent)';
-            guide.style.background = 'var(--background-secondary)';
-            guide.style.borderRadius = '4px';
-            guide.innerHTML = [
-                `<strong>${t('settings.embeddings.quickSetupTitle')}</strong>`,
-                t('settings.embeddings.quickSetupStep1'),
-                t('settings.embeddings.quickSetupStep2'),
-                t('settings.embeddings.quickSetupStep3'),
-                '',
-                `<strong>${t('settings.embeddings.quickSetupFreeTitle')}</strong> ${t('settings.embeddings.quickSetupFreeDesc')}`,
-            ].join('<br>');
+            const guide = containerEl.createDiv({ cls: 'setting-item-description agent-embed-guide' });
+            guide.createEl('strong', { text: t('settings.embeddings.quickSetupTitle') });
+            guide.createEl('br');
+            guide.appendText(t('settings.embeddings.quickSetupStep1'));
+            guide.createEl('br');
+            guide.appendText(t('settings.embeddings.quickSetupStep2'));
+            guide.createEl('br');
+            guide.appendText(t('settings.embeddings.quickSetupStep3'));
+            guide.createEl('br');
+            guide.createEl('br');
+            guide.createEl('strong', { text: t('settings.embeddings.quickSetupFreeTitle') });
+            guide.appendText(' ' + t('settings.embeddings.quickSetupFreeDesc'));
         }
 
-        const getIdx = () => (this.plugin as any).semanticIndex;
+        const getIdx = (): SemanticIndexService | null => this.plugin.semanticIndex;
         // statusEl is created later inside the "Build index" setting — declared here for scope
         let statusEl: HTMLElement;
 
@@ -102,16 +100,16 @@ export class EmbeddingsTab {
                 await this.plugin.saveSettings();
                 if (v) {
                     const { SemanticIndexService } = await import('../../core/semantic/SemanticIndexService');
-                    const pluginDir = `.obsidian/plugins/${this.plugin.manifest.id}`;
+                    const pluginDir = `${this.plugin.app.vault.configDir}/plugins/${this.plugin.manifest.id}`;
                     const svc = new SemanticIndexService(this.plugin.app.vault, pluginDir);
                     const embModel = this.plugin.getActiveEmbeddingModel();
                     if (embModel) svc.setEmbeddingModel(embModel);
-                    (this.plugin as any).semanticIndex = svc;
+                    this.plugin.semanticIndex = svc;
                     await svc.initialize().catch(console.warn);
                 } else {
                     // Cancel any ongoing build before clearing the reference
-                    (this.plugin as any).semanticIndex?.cancelBuild();
-                    (this.plugin as any).semanticIndex = null;
+                    this.plugin.semanticIndex?.cancelBuild();
+                    this.plugin.semanticIndex = null;
                 }
                 refreshStatus();
             }),
@@ -229,7 +227,7 @@ export class EmbeddingsTab {
                 });
             });
 
-        let cancelBtn: any;
+        let cancelBtn: ButtonComponent;
         new Setting(containerEl)
             .setName(t('settings.embeddings.cancelIndexing'))
             .setDesc(t('settings.embeddings.cancelIndexingDesc'))
@@ -419,7 +417,7 @@ export class EmbeddingsTab {
 
         const provEl = row.createDiv('mc-provider');
         const badge = provEl.createSpan({ cls: 'provider-badge', text: PROVIDER_LABELS[model.provider] ?? model.provider });
-        badge.style.background = PROVIDER_COLORS[model.provider] ?? '#607d8b';
+        badge.style.setProperty('background', PROVIDER_COLORS[model.provider] ?? '#607d8b');
 
         const keyEl = row.createDiv('mc-key');
         const keyIcon = keyEl.createSpan('mc-key-icon');

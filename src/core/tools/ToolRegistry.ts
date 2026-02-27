@@ -65,7 +65,7 @@ import type { McpClient } from '../mcp/McpClient';
 
 export class ToolRegistry {
     private tools: Map<ToolName, BaseTool>;
-    private plugin: ObsidianAgentPlugin;
+    readonly plugin: ObsidianAgentPlugin;
 
     constructor(plugin: ObsidianAgentPlugin, mcpClient?: McpClient) {
         this.plugin = plugin;
@@ -129,7 +129,7 @@ export class ToolRegistry {
         this.register(new UpdateSettingsTool(this.plugin));
         this.register(new ConfigureModelTool(this.plugin));
 
-        console.log(`ToolRegistry: Registered ${this.getToolCount()} tools`);
+        console.debug(`ToolRegistry: Registered ${this.getToolCount()} tools`);
     }
 
     /**

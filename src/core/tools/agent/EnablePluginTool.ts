@@ -44,7 +44,7 @@ export class EnablePluginTool extends BaseTool<'enable_plugin'> {
         };
     }
 
-    async execute(input: Record<string, any>, context: ToolExecutionContext): Promise<void> {
+    async execute(input: Record<string, unknown>, context: ToolExecutionContext): Promise<void> {
         const { callbacks } = context;
         const pluginId = (input.plugin_id as string ?? '').trim();
         const enable = input.enable !== false; // default: true
@@ -55,13 +55,13 @@ export class EnablePluginTool extends BaseTool<'enable_plugin'> {
         }
 
         try {
-            const plugins = (this.app as any).plugins;
+            const plugins = this.app.plugins;
             if (!plugins) {
                 callbacks.pushToolResult(this.formatError(new Error('Plugin system not available')));
                 return;
             }
 
-            const manifests: Record<string, any> = plugins.manifests ?? {};
+            const manifests = plugins.manifests ?? {};
             if (!manifests[pluginId]) {
                 // Suggest similar plugin IDs
                 const similar = Object.keys(manifests)

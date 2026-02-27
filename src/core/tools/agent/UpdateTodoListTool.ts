@@ -54,8 +54,8 @@ export class UpdateTodoListTool extends BaseTool<'update_todo_list'> {
         };
     }
 
-    async execute(input: Record<string, any>, context: ToolExecutionContext): Promise<void> {
-        const { todos } = input as UpdateTodoListInput;
+    async execute(input: Record<string, unknown>, context: ToolExecutionContext): Promise<void> {
+        const { todos } = input as unknown as UpdateTodoListInput;
         const { callbacks } = context;
 
         if (!todos || typeof todos !== 'string') {

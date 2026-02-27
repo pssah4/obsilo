@@ -45,8 +45,8 @@ export class AttemptCompletionTool extends BaseTool<'attempt_completion'> {
         };
     }
 
-    async execute(input: Record<string, any>, context: ToolExecutionContext): Promise<void> {
-        const { result } = input as AttemptCompletionInput;
+    async execute(input: Record<string, unknown>, context: ToolExecutionContext): Promise<void> {
+        const { result } = input as unknown as AttemptCompletionInput;
         const { callbacks } = context;
 
         if (!result) {

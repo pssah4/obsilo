@@ -123,11 +123,11 @@ export class CodeImportModal extends Modal {
 
         // Preview section (hidden until parsed)
         this.previewEl = contentEl.createDiv('cim-preview');
-        this.previewEl.style.display = 'none';
+        this.previewEl.classList.add('agent-u-hidden');
 
         // Warnings section
         this.warningsEl = contentEl.createDiv('cim-warnings');
-        this.warningsEl.style.display = 'none';
+        this.warningsEl.classList.add('agent-u-hidden');
 
         // API Key input
         const akRow = contentEl.createDiv('cim-apikey-row');
@@ -199,11 +199,11 @@ export class CodeImportModal extends Modal {
         this.parsed = null;
         if (this.previewEl) {
             this.previewEl.empty();
-            this.previewEl.style.display = 'none';
+            this.previewEl.classList.add('agent-u-hidden');
         }
         if (this.warningsEl) {
             this.warningsEl.empty();
-            this.warningsEl.style.display = 'none';
+            this.warningsEl.classList.add('agent-u-hidden');
         }
         if (this.importBtn) {
             this.importBtn.disabled = true;
@@ -212,7 +212,7 @@ export class CodeImportModal extends Modal {
         if (this.testBtn) this.testBtn.disabled = true;
         if (this.testResultEl) {
             this.testResultEl.empty();
-            this.testResultEl.style.display = 'none';
+            this.testResultEl.classList.add('agent-u-hidden');
         }
     }
 
@@ -256,7 +256,7 @@ export class CodeImportModal extends Modal {
         this.warningsEl.empty();
 
         const hasAnything = p.provider || p.baseUrl || p.modelNames.length > 0;
-        this.previewEl.style.display = hasAnything ? '' : 'none';
+        this.previewEl.classList.toggle('agent-u-hidden', !hasAnything);
 
         if (!hasAnything) {
             this.updateImportButton();
@@ -275,7 +275,7 @@ export class CodeImportModal extends Modal {
                 cls: 'provider-badge',
                 text: PROVIDER_LABELS[p.provider] ?? p.provider,
             });
-            badge.style.background = PROVIDER_COLORS[p.provider] ?? '#607d8b';
+            badge.style.setProperty('background', PROVIDER_COLORS[p.provider] ?? '#607d8b');
         } else {
             // Manual provider selector fallback
             const sel = header.createEl('select', { cls: 'cim-provider-sel' });
@@ -309,7 +309,7 @@ export class CodeImportModal extends Modal {
 
         // Warnings
         if (p.warnings.length > 0) {
-            this.warningsEl.style.display = '';
+            this.warningsEl.classList.remove('agent-u-hidden');
             for (const w of p.warnings) {
                 const wEl = this.warningsEl.createDiv('cim-warning-item');
                 const wIcon = wEl.createSpan('cim-warning-icon');
@@ -317,7 +317,7 @@ export class CodeImportModal extends Modal {
                 wEl.createSpan({ text: w });
             }
         } else {
-            this.warningsEl.style.display = 'none';
+            this.warningsEl.classList.add('agent-u-hidden');
         }
 
         this.updateImportButton();
@@ -420,7 +420,7 @@ export class CodeImportModal extends Modal {
         this.testBtn.disabled = true;
         this.testBtn.setText(t('modal.codeImport.testingConnection'));
         this.testResultEl.empty();
-        this.testResultEl.style.display = '';
+        this.testResultEl.classList.remove('agent-u-hidden');
         this.testResultEl.className = 'cim-test-result';
 
         try {
@@ -456,12 +456,12 @@ export class CodeImportModal extends Modal {
                     detailEl.setText(detail.length > 200 ? detail.substring(0, 200) + '...' : detail);
                 }
             }
-        } catch (err: any) {
+        } catch (err: unknown) {
             this.testResultEl.empty();
             const resultIcon = this.testResultEl.createSpan('cim-test-icon');
             setIcon(resultIcon, 'x');
             this.testResultEl.addClass('cim-test-fail');
-            this.testResultEl.createSpan({ text: err?.message ?? t('modal.codeImport.testFailed') });
+            this.testResultEl.createSpan({ text: (err as { message?: string })?.message ?? t('modal.codeImport.testFailed') });
         }
 
         this.testBtn.disabled = false;

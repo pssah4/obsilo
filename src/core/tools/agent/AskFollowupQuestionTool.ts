@@ -56,8 +56,8 @@ export class AskFollowupQuestionTool extends BaseTool<'ask_followup_question'> {
         };
     }
 
-    async execute(input: Record<string, any>, context: ToolExecutionContext): Promise<void> {
-        const { question, options, allow_multiple } = input as AskFollowupQuestionInput;
+    async execute(input: Record<string, unknown>, context: ToolExecutionContext): Promise<void> {
+        const { question, options, allow_multiple } = input as unknown as AskFollowupQuestionInput;
         const { callbacks } = context;
 
         if (!question) {

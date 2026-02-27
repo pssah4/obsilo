@@ -53,7 +53,7 @@ export class QueryBaseTool extends BaseTool<'query_base'> {
         };
     }
 
-    async execute(input: Record<string, any>, context: ToolExecutionContext): Promise<void> {
+    async execute(input: Record<string, unknown>, context: ToolExecutionContext): Promise<void> {
         const { callbacks } = context;
         const path: string = (input.path as string ?? '').trim();
         const viewName: string = (input.view_name as string ?? '').trim();
@@ -198,14 +198,14 @@ export class QueryBaseTool extends BaseTool<'query_base'> {
         return order;
     }
 
-    private matchesFilters(file: TFile, fm: Record<string, any>, filters: string[]): boolean {
+    private matchesFilters(file: TFile, fm: Record<string, unknown>, filters: string[]): boolean {
         for (const filter of filters) {
             if (!this.evaluateFilter(file, fm, filter)) return false;
         }
         return true;
     }
 
-    private evaluateFilter(file: TFile, fm: Record<string, any>, filter: string): boolean {
+    private evaluateFilter(file: TFile, fm: Record<string, unknown>, filter: string): boolean {
         const negated = filter.startsWith('!');
         const expr = negated ? filter.slice(1) : filter;
 
@@ -245,7 +245,7 @@ export class QueryBaseTool extends BaseTool<'query_base'> {
         return true; // unknown filter — pass-through
     }
 
-    private propContains(value: any, needle: string): boolean {
+    private propContains(value: unknown, needle: string): boolean {
         if (value === undefined || value === null) return false;
         if (Array.isArray(value)) {
             return value.some((v) => String(v).toLowerCase().includes(needle.toLowerCase()));

@@ -47,8 +47,8 @@ export class GetLinkedNotesTool extends BaseTool<'get_linked_notes'> {
         };
     }
 
-    async execute(input: Record<string, any>, context: ToolExecutionContext): Promise<void> {
-        const { path, direction = 'both' } = input as GetLinkedNotesInput;
+    async execute(input: Record<string, unknown>, context: ToolExecutionContext): Promise<void> {
+        const { path, direction = 'both' } = input as unknown as GetLinkedNotesInput;
         const { callbacks } = context;
 
         try {
@@ -86,7 +86,7 @@ export class GetLinkedNotesTool extends BaseTool<'get_linked_notes'> {
 
             // Backlinks
             if (direction === 'both' || direction === 'backlinks') {
-                const backlinks = (this.app.metadataCache as any).getBacklinksForFile(file);
+                const backlinks = this.app.metadataCache.getBacklinksForFile(file);
                 const backlinkPaths = backlinks ? Object.keys(backlinks.data) : [];
 
                 lines.push(`\nBacklinks (${backlinkPaths.length}):`);

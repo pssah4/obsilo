@@ -46,8 +46,8 @@ export class GetDailyNoteTool extends BaseTool<'get_daily_note'> {
         };
     }
 
-    async execute(input: Record<string, any>, context: ToolExecutionContext): Promise<void> {
-        const { offset = 0, create = false } = input as GetDailyNoteInput;
+    async execute(input: Record<string, unknown>, context: ToolExecutionContext): Promise<void> {
+        const { offset = 0, create = false } = input as unknown as GetDailyNoteInput;
         const { callbacks } = context;
 
         try {
@@ -110,10 +110,10 @@ export class GetDailyNoteTool extends BaseTool<'get_daily_note'> {
 
         // Try to read Daily Notes plugin settings from internal config
         try {
-            const config = (this.app as any).internalPlugins?.plugins?.['daily-notes']?.instance?.options;
+            const config = this.app.internalPlugins?.plugins?.['daily-notes']?.instance?.options;
             if (config) {
-                const folder = (config.folder ?? '').replace(/\/$/, '');
-                const format = (config.format ?? 'YYYY-MM-DD').trim();
+                const folder = ((config.folder as string) ?? '').replace(/\/$/, '');
+                const format = ((config.format as string) ?? 'YYYY-MM-DD').trim();
                 const filename = this.formatDate(date, format);
                 return folder ? `${folder}/${filename}.md` : `${filename}.md`;
             }
@@ -123,10 +123,11 @@ export class GetDailyNoteTool extends BaseTool<'get_daily_note'> {
 
         // Try Periodic Notes plugin
         try {
-            const periodicPlugin = (this.app as any).plugins?.plugins?.['periodic-notes'];
-            if (periodicPlugin?.settings?.daily?.enabled) {
-                const folder = (periodicPlugin.settings.daily.folder ?? '').replace(/\/$/, '');
-                const format = (periodicPlugin.settings.daily.format ?? 'YYYY-MM-DD').trim();
+            const periodicPlugin = this.app.plugins?.plugins?.['periodic-notes'] as Record<string, unknown> | undefined;
+            const periodicSettings = periodicPlugin?.settings as Record<string, Record<string, unknown>> | undefined;
+            if (periodicSettings?.daily?.enabled) {
+                const folder = ((periodicSettings.daily.folder as string) ?? '').replace(/\/$/, '');
+                const format = ((periodicSettings.daily.format as string) ?? 'YYYY-MM-DD').trim();
                 const filename = this.formatDate(date, format);
                 return folder ? `${folder}/${filename}.md` : `${filename}.md`;
             }

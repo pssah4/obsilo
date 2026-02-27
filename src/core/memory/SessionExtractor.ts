@@ -121,7 +121,7 @@ export class SessionExtractor {
         // Save the session summary
         const summary = text.trim();
         await this.memoryService.writeSessionSummary(item.conversationId, summary);
-        console.log(`[SessionExtractor] Saved session summary for ${item.conversationId}`);
+        console.debug(`[SessionExtractor] Saved session summary for ${item.conversationId}`);
 
         // Index in semantic search (if available) for cross-session retrieval
         const semanticIndex = this.getSemanticIndex();

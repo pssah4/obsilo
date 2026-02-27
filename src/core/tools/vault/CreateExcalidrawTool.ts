@@ -269,7 +269,7 @@ export class CreateExcalidrawTool extends BaseTool<'create_excalidraw'> {
         };
     }
 
-    async execute(input: Record<string, any>, context: ToolExecutionContext): Promise<void> {
+    async execute(input: Record<string, unknown>, context: ToolExecutionContext): Promise<void> {
         const { callbacks } = context;
         const outputPath = ((input.output_path as string) ?? '').trim();
         const rawElements = Array.isArray(input.elements) ? input.elements : [];

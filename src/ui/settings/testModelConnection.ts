@@ -5,6 +5,31 @@ import { modelToLLMProvider } from '../../types/settings';
 
 
 // ---------------------------------------------------------------------------
+// Shared types for untyped provider API responses
+// ---------------------------------------------------------------------------
+
+/** Shape of a single entry returned by provider model-list APIs. */
+interface ApiModelEntry {
+    id?: string;
+    model?: string;
+    name?: string;
+    display_name?: string;
+    created?: number;
+    supported_parameters?: string[];
+}
+
+/** Shape of a single Ollama model entry. */
+interface OllamaModelEntry {
+    name: string;
+}
+
+/** Shape of an Azure deployment entry. */
+interface AzureDeploymentEntry {
+    id?: string;
+    model?: string;
+}
+
+// ---------------------------------------------------------------------------
 // Test helper
 // ---------------------------------------------------------------------------
 
@@ -36,13 +61,14 @@ async function testModelConnection(model: CustomModel): Promise<TestResult> {
         } finally {
             clearTimeout(timer);
         }
-    } catch (err: any) {
+    } catch (err: unknown) {
         const isOllama = model.provider === 'ollama';
-        const msg: string = err?.message ?? '';
-        const s: number | undefined = err?.status;
+        const errObj = err as { message?: string; status?: number; statusCode?: number; name?: string };
+        const msg: string = errObj?.message ?? '';
+        const s: number | undefined = errObj?.status;
         const isNetworkError = !s && (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('ECONNREFUSED') || msg.includes('ERR_CONNECTION_REFUSED'));
 
-        if (err?.name === 'AbortError') {
+        if (errObj?.name === 'AbortError') {
             return {
                 ok: false,
                 message: isOllama ? 'Connection timed out (30 s)' : 'Connection timed out (8 s)',
@@ -110,7 +136,7 @@ async function testEmbeddingConnection(model: CustomModel): Promise<TestResult> 
     try {
         let url: string;
         const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-        const body: Record<string, any> = { input: 'test' };
+        const body: Record<string, unknown> = { input: 'test' };
 
         if (model.provider === 'azure') {
             const base = (model.baseUrl ?? '').replace(/\/+$/, '');
@@ -162,8 +188,8 @@ async function testEmbeddingConnection(model: CustomModel): Promise<TestResult> 
             return { ok: false, message: `Bad request (400)`, detail: errText };
         }
         return { ok: false, message: `HTTP ${res.status}`, detail: (() => { try { return JSON.stringify(res.json); } catch { return res.text; } })() };
-    } catch (err: any) {
-        const msg: string = err?.message ?? String(err);
+    } catch (err: unknown) {
+        const msg: string = (err as { message?: string })?.message ?? String(err);
         return { ok: false, message: 'Connection failed', detail: msg };
     }
 }
@@ -194,10 +220,10 @@ async function fetchProviderModels(
         const deplRes = await req(`${endpoint}/openai/deployments?api-version=${ver}`, headers);
         if (deplRes.status === 200) {
             const deplData = deplRes.json;
-            const deployments: any[] = deplData.data ?? deplData.value ?? [];
+            const deployments: AzureDeploymentEntry[] = deplData.data ?? deplData.value ?? [];
             if (deployments.length > 0) {
                 return deployments
-                    .map((d: any) => {
+                    .map((d: AzureDeploymentEntry) => {
                         const id: string = d.id ?? d.model ?? '';
                         const model: string = d.model ?? d.id ?? '';
                         const label = id !== model ? `${id} (${model})` : id;
@@ -213,9 +239,9 @@ async function fetchProviderModels(
         if (modRes.status === 401) throw new Error('Invalid API key (401 Unauthorized)');
         if (modRes.status !== 200) throw new Error(`HTTP ${modRes.status} — Could not list models or deployments`);
         const modData = modRes.json;
-        const models: any[] = modData.data ?? modData.value ?? [];
+        const models: ApiModelEntry[] = modData.data ?? modData.value ?? [];
         return models
-            .map((m: any) => ({ id: (m.id ?? m.model) as string, label: (m.id ?? m.model) as string }))
+            .map((m: ApiModelEntry) => ({ id: (m.id ?? m.model ?? '') as string, label: (m.id ?? m.model ?? '') as string }))
             .filter((m) => m.id)
             .sort((a, b) => a.id.localeCompare(b.id));
     }
@@ -228,10 +254,10 @@ async function fetchProviderModels(
         if (res.status !== 200) throw new Error(`HTTP ${res.status}`);
         const data = res.json;
         const CHAT_RE = /^claude-/;
-        return (data.data ?? [])
-            .filter((m: any) => CHAT_RE.test(m.id))
-            .map((m: any) => ({ id: m.id as string, label: (m.display_name ?? m.id) as string }))
-            .sort((a: any, b: any) => b.id.localeCompare(a.id));
+        return ((data.data ?? []) as ApiModelEntry[])
+            .filter((m) => CHAT_RE.test(m.id ?? ''))
+            .map((m) => ({ id: m.id as string, label: (m.display_name ?? m.id) as string }))
+            .sort((a, b) => b.id.localeCompare(a.id));
     }
 
     if (provider === 'openai') {
@@ -244,10 +270,10 @@ async function fetchProviderModels(
         // Keep only chat-capable models; exclude fine-tunes, TTS, embeddings, DALL-E
         const CHAT_RE = /^(gpt-|o[1-9]|chatgpt-|codex-)/;
         const EXCLUDE_RE = /-(instruct|vision-preview|0314|0301|0613|0914|32k)$|:ft-/;
-        return (data.data ?? [])
-            .filter((m: any) => CHAT_RE.test(m.id) && !EXCLUDE_RE.test(m.id))
-            .map((m: any) => ({ id: m.id as string, label: m.id as string }))
-            .sort((a: any, b: any) => (b.created ?? 0) - (a.created ?? 0));
+        return ((data.data ?? []) as ApiModelEntry[])
+            .filter((m) => CHAT_RE.test(m.id ?? '') && !EXCLUDE_RE.test(m.id ?? ''))
+            .sort((a, b) => (b.created ?? 0) - (a.created ?? 0))
+            .map((m) => ({ id: m.id as string, label: m.id as string }));
     }
 
     if (provider === 'openrouter') {
@@ -256,15 +282,15 @@ async function fetchProviderModels(
         if (res.status !== 200) throw new Error(`HTTP ${res.status}`);
         const data = res.json;
         // Only include models that support tool calling (function calling)
-        return (data.data ?? [])
-            .filter((m: any) => {
+        return ((data.data ?? []) as ApiModelEntry[])
+            .filter((m) => {
                 const caps: string[] = m.supported_parameters ?? [];
                 // If the API doesn't expose capabilities, include all (older API format)
                 if (caps.length === 0) return true;
                 return caps.includes('tools') || caps.includes('tool_choice');
             })
-            .map((m: any) => ({ id: m.id as string, label: (m.name ?? m.id) as string }))
-            .sort((a: any, b: any) => a.id.localeCompare(b.id));
+            .map((m) => ({ id: m.id as string, label: (m.name ?? m.id) as string }))
+            .sort((a, b) => a.id.localeCompare(b.id));
     }
 
     // lmstudio — OpenAI-compatible local server, default port 1234
@@ -273,21 +299,21 @@ async function fetchProviderModels(
         const res = await req(`${root}/v1/models`);
         if (res.status !== 200) throw new Error(`HTTP ${res.status} — Is LM Studio running with "Local Server" enabled?`);
         const data = res.json;
-        return (data.data ?? [])
-            .map((m: any) => ({ id: m.id as string, label: m.id as string }))
-            .sort((a: any, b: any) => a.id.localeCompare(b.id));
+        return ((data.data ?? []) as ApiModelEntry[])
+            .map((m) => ({ id: m.id as string, label: m.id as string }))
+            .sort((a, b) => a.id.localeCompare(b.id));
     }
 
-    // custom — any OpenAI-compatible /v1/models endpoint
+    // custom — OpenAI-compatible /v1/models endpoint
     const root = (baseUrl || 'http://localhost:1234').replace(/\/v1\/?$/, '').replace(/\/+$/, '');
     const headers: Record<string, string> = {};
     if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
     const res = await requestUrl({ url: `${root}/v1/models`, method: 'GET', headers, throw: false });
     if (res.status !== 200) throw new Error(`HTTP ${res.status}`);
     const data = res.json;
-    return (data.data ?? [])
-        .map((m: any) => ({ id: m.id as string, label: m.id as string }))
-        .sort((a: any, b: any) => a.id.localeCompare(b.id));
+    return ((data.data ?? []) as ApiModelEntry[])
+        .map((m) => ({ id: m.id as string, label: m.id as string }))
+        .sort((a, b) => a.id.localeCompare(b.id));
 }
 
 /** Fetch model names installed in a local Ollama instance */
@@ -298,7 +324,7 @@ async function fetchOllamaModels(baseUrl: string): Promise<string[]> {
     const res = await requestUrl({ url, method: 'GET', throw: false });
     if (res.status !== 200) throw new Error(`HTTP ${res.status} — Is Ollama running?`);
     const data = res.json;
-    return ((data.models ?? []) as any[]).map((m) => m.name as string).sort();
+    return ((data.models ?? []) as OllamaModelEntry[]).map((m) => m.name).sort();
 }
 
 /**
@@ -335,7 +361,7 @@ async function fetchEmbeddingModels(
         const res = await req(`${root}/api/tags`);
         if (res.status !== 200) throw new Error(`HTTP ${res.status} — Is Ollama running?`);
         const EMBED_NAMES = /embed|bge|minilm|arctic-embed|e5-|gte-/i;
-        const all: string[] = ((res.json.models ?? []) as any[]).map((m: any) => m.name as string);
+        const all: string[] = ((res.json.models ?? []) as OllamaModelEntry[]).map((m) => m.name);
         const embeds = all.filter((n) => EMBED_NAMES.test(n));
         // If no matches, return all (user might have custom names)
         const list = embeds.length > 0 ? embeds : all;
@@ -346,9 +372,9 @@ async function fetchEmbeddingModels(
         const root = (baseUrl || 'http://localhost:1234').replace(/\/v1\/?$/, '').replace(/\/+$/, '');
         const res = await req(`${root}/v1/models`);
         if (res.status !== 200) throw new Error(`HTTP ${res.status} — Is LM Studio running?`);
-        return (res.json.data ?? [])
-            .map((m: any) => ({ id: m.id as string, label: m.id as string }))
-            .sort((a: any, b: any) => a.id.localeCompare(b.id));
+        return ((res.json.data ?? []) as ApiModelEntry[])
+            .map((m) => ({ id: m.id as string, label: m.id as string }))
+            .sort((a, b) => a.id.localeCompare(b.id));
     }
 
     if (provider === 'openrouter') {
@@ -368,9 +394,9 @@ async function fetchEmbeddingModels(
     const res = await req(`${base}/v1/models`, headers);
     if (res.status !== 200) throw new Error(`HTTP ${res.status}`);
     const EMBED_RE = /embed/i;
-    const all = (res.json.data ?? []).map((m: any) => ({ id: m.id as string, label: m.id as string }));
-    const filtered = all.filter((m: any) => EMBED_RE.test(m.id));
-    return (filtered.length > 0 ? filtered : all).sort((a: any, b: any) => a.id.localeCompare(b.id));
+    const all = ((res.json.data ?? []) as ApiModelEntry[]).map((m) => ({ id: m.id as string, label: m.id as string }));
+    const filtered = all.filter((m) => EMBED_RE.test(m.id));
+    return (filtered.length > 0 ? filtered : all).sort((a, b) => a.id.localeCompare(b.id));
 }
 
 // ---------------------------------------------------------------------------

@@ -95,7 +95,7 @@
       </ul>
 
       <h3 id="openai">OpenAiProvider</h3>
-      <p>Covers 6 OpenAI-compatible provider types with different base URLs and authentication:</p>
+      <p>Covers 7 OpenAI-compatible provider types with different base URLs and authentication:</p>
       <table>
         <thead><tr><th>Provider</th><th>Base URL</th><th>Auth</th></tr></thead>
         <tbody>
@@ -104,6 +104,7 @@
           <tr><td>LM Studio</td><td><code>http://localhost:1234/v1</code></td><td>None</td></tr>
           <tr><td>OpenRouter</td><td><code>https://openrouter.ai/api/v1</code></td><td>Bearer + HTTP-Referer + X-Title</td></tr>
           <tr><td>Azure</td><td>Custom deployment URL</td><td><code>api-key</code> header + <code>api-version</code> query</td></tr>
+          <tr><td>Google Gemini</td><td><code>https://generativelanguage.googleapis.com/v1beta/openai</code></td><td>Bearer token</td></tr>
           <tr><td>Custom</td><td>User-configured URL</td><td>Bearer token</td></tr>
         </tbody>
       </table>

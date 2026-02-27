@@ -54,7 +54,7 @@ export class LoopTab {
             t.setValue(this.plugin.settings.advancedApi.condensingEnabled ?? false).onChange(async (v) => {
                 this.plugin.settings.advancedApi.condensingEnabled = v;
                 await this.plugin.saveSettings();
-                thresholdSetting.settingEl.style.display = v ? '' : 'none';
+                thresholdSetting.settingEl.classList.toggle('agent-u-hidden', !v);
             }),
         );
 
@@ -71,8 +71,8 @@ export class LoopTab {
                         await this.plugin.saveSettings();
                     }),
             );
-        thresholdSetting.settingEl.style.display =
-            (this.plugin.settings.advancedApi.condensingEnabled ?? false) ? '' : 'none';
+        thresholdSetting.settingEl.classList.toggle('agent-u-hidden',
+            !(this.plugin.settings.advancedApi.condensingEnabled ?? false));
 
         containerEl.createEl('h3', { cls: 'agent-settings-section', text: t('settings.loop.headingPowerSteering') });
 

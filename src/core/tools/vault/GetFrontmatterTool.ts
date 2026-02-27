@@ -40,8 +40,8 @@ export class GetFrontmatterTool extends BaseTool<'get_frontmatter'> {
         };
     }
 
-    async execute(input: Record<string, any>, context: ToolExecutionContext): Promise<void> {
-        const { path } = input as GetFrontmatterInput;
+    async execute(input: Record<string, unknown>, context: ToolExecutionContext): Promise<void> {
+        const { path } = input as unknown as GetFrontmatterInput;
         const { callbacks } = context;
 
         try {

@@ -57,8 +57,8 @@ export class UseMcpToolTool extends BaseTool<'use_mcp_tool'> {
         };
     }
 
-    async execute(input: Record<string, any>, context: ToolExecutionContext): Promise<void> {
-        const { server_name, tool_name, arguments: args = {} } = input as UseMcpToolInput;
+    async execute(input: Record<string, unknown>, context: ToolExecutionContext): Promise<void> {
+        const { server_name, tool_name, arguments: args = {} } = input as unknown as UseMcpToolInput;
         const { callbacks } = context;
 
         if (!server_name || !tool_name) {
@@ -69,7 +69,7 @@ export class UseMcpToolTool extends BaseTool<'use_mcp_tool'> {
         }
 
         // Check MCP server whitelist (activeMcpServers in settings)
-        const activeMcpServers: string[] = (this.plugin.settings as any).activeMcpServers ?? [];
+        const activeMcpServers: string[] = this.plugin.settings.activeMcpServers ?? [];
         if (activeMcpServers.length > 0 && !activeMcpServers.includes(server_name)) {
             callbacks.pushToolResult(
                 this.formatError(new Error(

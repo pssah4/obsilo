@@ -40,12 +40,14 @@ export const GlobalModeStore = {
             }
             if (!Array.isArray(parsed)) return [];
             return parsed.filter(
-                (m): m is ModeConfig =>
-                    m !== null &&
-                    typeof m === 'object' &&
-                    typeof (m as any).slug === 'string' &&
-                    typeof (m as any).name === 'string' &&
-                    typeof (m as any).roleDefinition === 'string',
+                (m): m is ModeConfig => {
+                    const obj = m as Record<string, unknown>;
+                    return m !== null &&
+                        typeof m === 'object' &&
+                        typeof obj.slug === 'string' &&
+                        typeof obj.name === 'string' &&
+                        typeof obj.roleDefinition === 'string';
+                },
             );
         } catch {
             return [];

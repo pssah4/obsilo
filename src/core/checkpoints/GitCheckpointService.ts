@@ -14,7 +14,8 @@
  */
 
 import git from 'isomorphic-git';
-import { TFile, type Vault } from 'obsidian';
+import fs from 'fs';
+import { TFile, type App, type FileSystemAdapter, type Vault } from 'obsidian';
 
 export interface CheckpointInfo {
     taskId: string;
@@ -47,7 +48,7 @@ export class GitCheckpointService {
         this.vault = vault;
         this.repoRelPath = `${pluginDir}/checkpoints`;
         // isomorphic-git needs an absolute path
-        const vaultRoot = (vault.adapter as any).basePath as string;
+        const vaultRoot = (vault.adapter as FileSystemAdapter).basePath as string;
         this.repoPath = `${vaultRoot}/${this.repoRelPath}`;
         this.timeoutMs = timeoutSeconds * 1000;
         this.autoCleanup = autoCleanup;
@@ -77,7 +78,7 @@ export class GitCheckpointService {
                     dir: this.repoPath,
                     defaultBranch: 'main',
                 });
-                console.log('[Checkpoints] Shadow repo initialized');
+                console.debug('[Checkpoints] Shadow repo initialized');
             }
             this.initialized = true;
         } catch (e) {
@@ -91,10 +92,10 @@ export class GitCheckpointService {
      * Returns a CheckpointInfo with the commit OID.
      */
     async snapshot(taskId: string, filePaths: string[], toolName?: string): Promise<CheckpointInfo> {
-        console.log(`[Checkpoints] snapshot() called: taskId=${taskId} tool=${toolName} files=${filePaths.join(', ')} initialized=${this.initialized}`);
+        console.debug(`[Checkpoints] snapshot() called: taskId=${taskId} tool=${toolName} files=${filePaths.join(', ')} initialized=${this.initialized}`);
         await this.ensureInit();
         const fs = this.getFs();
-        const vaultRoot = (this.vault.adapter as any).basePath as string;
+        const vaultRoot = (this.vault.adapter as FileSystemAdapter).basePath as string;
 
         const staged: string[] = [];
         const newFiles: string[] = [];
@@ -115,7 +116,7 @@ export class GitCheckpointService {
                     this.vault.adapter.read(vaultRelPath),
                     `Read ${vaultRelPath}`
                 );
-                console.log(`[Checkpoints] ${vaultRelPath}: read ${content.length} chars from vault`);
+                console.debug(`[Checkpoints] ${vaultRelPath}: read ${content.length} chars from vault`);
 
                 // Write into shadow repo at same relative path
                 const destPath = `${this.repoPath}/${repoRelative}`;
@@ -125,7 +126,7 @@ export class GitCheckpointService {
 
                 // Stage file
                 await git.add({ fs, dir: this.repoPath, filepath: repoRelative });
-                console.log(`[Checkpoints] ${vaultRelPath}: staged in shadow repo`);
+                console.debug(`[Checkpoints] ${vaultRelPath}: staged in shadow repo`);
                 staged.push(vaultRelPath);
             } catch (e) {
                 console.warn(`[Checkpoints] Could not snapshot ${vaultRelPath}:`, e);
@@ -151,9 +152,9 @@ export class GitCheckpointService {
                 author: { name: 'obsidian-agent', email: 'agent@obsidian.local' },
                 message: `checkpoint:${taskId}\n\nFiles: ${staged.join(', ')}`,
             });
-            console.log(`[Checkpoints] Committed ${staged.length} file(s): oid=${commitOid}`);
+            console.debug(`[Checkpoints] Committed ${staged.length} file(s): oid=${commitOid}`);
         } else {
-            console.log(`[Checkpoints] No files staged (newFiles=${newFiles.length})`);
+            console.debug(`[Checkpoints] No files staged (newFiles=${newFiles.length})`);
         }
 
         const info: CheckpointInfo = {
@@ -170,7 +171,7 @@ export class GitCheckpointService {
         list.push(info);
         this.taskCheckpoints.set(taskId, list);
 
-        console.log(`[Checkpoints] Snapshot created for task ${taskId}: ${commitOid.substring(0, 8)} (${list.length} checkpoints total)`);
+        console.debug(`[Checkpoints] Snapshot created for task ${taskId}: ${commitOid.substring(0, 8)} (${list.length} checkpoints total)`);
         return info;
     }
 
@@ -178,7 +179,7 @@ export class GitCheckpointService {
      * Restore files from a checkpoint back into the vault.
      */
     async restore(checkpoint: CheckpointInfo): Promise<RestoreResult> {
-        console.log(`[Checkpoints] restore() called: commitOid=${checkpoint.commitOid} files=${checkpoint.filesChanged.join(',')} newFiles=${checkpoint.newFiles?.join(',') ?? 'none'}`);
+        console.debug(`[Checkpoints] restore() called: commitOid=${checkpoint.commitOid} files=${checkpoint.filesChanged.join(',')} newFiles=${checkpoint.newFiles?.join(',') ?? 'none'}`);
         await this.ensureInit();
         if (checkpoint.commitOid === 'empty') {
             return { restored: [], errors: ['No files were snapshotted'] };
@@ -199,17 +200,17 @@ export class GitCheckpointService {
                         filepath: vaultRelPath,
                     });
                     const content = new TextDecoder().decode(blob);
-                    console.log(`[Checkpoints] Restoring ${vaultRelPath}: ${content.length} chars from oid ${checkpoint.commitOid.substring(0, 8)}`);
+                    console.debug(`[Checkpoints] Restoring ${vaultRelPath}: ${content.length} chars from oid ${checkpoint.commitOid.substring(0, 8)}`);
 
                     const existingFile = this.vault.getAbstractFileByPath(vaultRelPath);
                     if (existingFile) {
                             if (existingFile instanceof TFile) {
                             await this.vault.modify(existingFile, content);
-                            console.log(`[Checkpoints] ${vaultRelPath}: restored via vault.modify`);
+                            console.debug(`[Checkpoints] ${vaultRelPath}: restored via vault.modify`);
                         }
                     } else {
                         await this.vault.adapter.write(vaultRelPath, content);
-                        console.log(`[Checkpoints] ${vaultRelPath}: restored via vault.adapter.write (file was deleted)`);
+                        console.debug(`[Checkpoints] ${vaultRelPath}: restored via vault.adapter.write (file was deleted)`);
                     }
                     restored.push(vaultRelPath);
                 } catch (e) {
@@ -236,7 +237,7 @@ export class GitCheckpointService {
             }
         }
 
-        console.log(`[Checkpoints] Restored ${restored.length} files for task ${checkpoint.taskId}`);
+        console.debug(`[Checkpoints] Restored ${restored.length} files for task ${checkpoint.taskId}`);
         return { restored, errors };
     }
 
@@ -355,7 +356,7 @@ export class GitCheckpointService {
                 }
             }
 
-            console.log(`[Checkpoints] Restored ${restored.length} files for task ${taskId}`);
+            console.debug(`[Checkpoints] Restored ${restored.length} files for task ${taskId}`);
             return { restored, errors };
         } catch (e) {
             const msg = e instanceof Error ? e.message : String(e);
@@ -393,7 +394,7 @@ export class GitCheckpointService {
         if (!this.autoCleanup) return;
         // For simplicity: we keep the last 10 commits and prune older ones via gc
         // isomorphic-git doesn't have a built-in GC, so we just log for now
-        console.log(`[Checkpoints] Cleanup for task ${taskId} (repo stays lean via periodic prune)`);
+        console.debug(`[Checkpoints] Cleanup for task ${taskId} (repo stays lean via periodic prune)`);
     }
 
     // -------------------------------------------------------------------------
@@ -406,9 +407,7 @@ export class GitCheckpointService {
 
     /** isomorphic-git fs plugin using Node's built-in fs (available in Electron) */
     private getFs() {
-        // In Obsidian (Electron), we can use require('fs')
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        return require('fs');
+        return fs;
     }
 
     private async withTimeout<T>(promise: Promise<T>, label: string): Promise<T> {

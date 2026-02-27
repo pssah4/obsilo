@@ -4744,3 +4744,21 @@
 .history-row-delete:hover {
     color: var(--text-error);
 }
+
+/* ── Utility classes ──────────────────────────────────────────────────── */
+.agent-u-hidden        { display: none !important; }
+.agent-u-visible       { display: '' !important; }
+.agent-u-visibility-hidden { visibility: hidden !important; }
+.agent-u-height-auto   { height: auto !important; }
+
+/* Copy button spacing (SystemPromptPreviewModal) */
+.agent-u-mb-12 { margin-bottom: 12px; }
+
+/* EmbeddingsTab quick-setup guide */
+.agent-embed-guide {
+    margin-bottom: 12px;
+    padding: 8px 12px;
+    border-left: 3px solid var(--interactive-accent);
+    background: var(--background-secondary);
+    border-radius: 4px;
+}

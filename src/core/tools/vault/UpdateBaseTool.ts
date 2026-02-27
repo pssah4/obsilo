@@ -66,15 +66,15 @@ export class UpdateBaseTool extends BaseTool<'update_base'> {
         };
     }
 
-    async execute(input: Record<string, any>, context: ToolExecutionContext): Promise<void> {
+    async execute(input: Record<string, unknown>, context: ToolExecutionContext): Promise<void> {
         const { callbacks } = context;
-        const path: string = (input.path as string ?? '').trim();
-        const viewName: string = (input.view_name as string ?? '').trim();
-        const filterProp: string = input.filter_property ?? '';
-        const filterValues: string[] = Array.isArray(input.filter_values) ? input.filter_values : [];
-        const columns: string[] = Array.isArray(input.columns) ? input.columns : ['file.name'];
-        const sortProp: string = input.sort_property ?? '';
-        const sortDir: string = input.sort_direction ?? 'ASC';
+        const path = ((input.path as string) ?? '').trim();
+        const viewName = ((input.view_name as string) ?? '').trim();
+        const filterProp = (input.filter_property as string) ?? '';
+        const filterValues: string[] = Array.isArray(input.filter_values) ? input.filter_values as string[] : [];
+        const columns: string[] = Array.isArray(input.columns) ? input.columns as string[] : ['file.name'];
+        const sortProp = (input.sort_property as string) ?? '';
+        const sortDir = (input.sort_direction as string) ?? 'ASC';
         const excludeTemplates: boolean = input.exclude_templates !== false;
 
         if (!path || !viewName) {

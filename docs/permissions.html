@@ -90,6 +90,9 @@
         <li><strong>Audit log</strong> — complete JSONL record of all operations</li>
         <li><strong>Tool repetition detection</strong> — aborts infinite loops</li>
         <li><strong>Rate limiting &amp; error limits</strong> — stop runaway agents</li>
+        <li><strong>SafeStorage</strong> — API keys encrypted via OS keychain (macOS Keychain, Windows Credential Manager, Linux Secret Service)</li>
+        <li><strong>Sub-agent depth guard</strong> — prevents infinite sub-agent spawning (max depth 2)</li>
+        <li><strong>Content truncation</strong> — read_file output capped at 20,000 characters to prevent context overflow</li>
       </ol>
 
       <h2 id="auto-approval" data-i18n="pages.permissions.autoApproval">Auto-Approval Settings</h2>
@@ -205,6 +208,18 @@ Reference/
 
       <h3 data-i18n="pages.permissions.maxIterations">Max Iterations</h3>
       <p data-i18n="pages.permissions.maxIterations.text">The agentic loop has a hard cap of 10 iterations per turn. After 10 tool-use cycles, the loop stops regardless of whether the task is complete. This prevents runaway agents.</p>
+
+      <h3 data-i18n="pages.permissions.depthGuard">Sub-Agent Depth Guard</h3>
+      <p data-i18n="pages.permissions.depthGuard.text">Sub-agents spawned via new_task can themselves spawn further sub-agents. To prevent infinite recursion, the depth is capped at 2 levels. A sub-agent at depth 2 cannot spawn further sub-agents.</p>
+
+      <h3 data-i18n="pages.permissions.powerSteering">Power Steering</h3>
+      <p data-i18n="pages.permissions.powerSteering.text">For long-running tasks, the agent can drift from its assigned role. Power Steering periodically re-injects the mode's role definition as a reminder every N iterations. Configure in Settings → Loop → Power Steering Frequency (0 = disabled).</p>
+
+      <h3 data-i18n="pages.permissions.contextCondensing">Context Condensing</h3>
+      <p data-i18n="pages.permissions.contextCondensing.text">When a conversation approaches the model's context window limit, Obsilo can automatically summarize earlier messages to free up space. This prevents the agent from hitting context limits mid-task. Configure in Settings → Loop → Context Condensing.</p>
+
+      <h3 data-i18n="pages.permissions.contentTruncation">Content Truncation</h3>
+      <p data-i18n-html="pages.permissions.contentTruncation.text">The <code>read_file</code> tool truncates file content at 20,000 characters to prevent a single large file from consuming the entire context window. A truncation notice is appended when content is cut off.</p>
 
       <div class="page-nav">
         <a href="modes.html" class="page-nav-item">

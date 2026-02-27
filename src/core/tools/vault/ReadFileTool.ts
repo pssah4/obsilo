@@ -46,8 +46,8 @@ export class ReadFileTool extends BaseTool<'read_file'> {
         };
     }
 
-    async execute(input: Record<string, any>, context: ToolExecutionContext): Promise<void> {
-        const { path } = input as ReadFileInput;
+    async execute(input: Record<string, unknown>, context: ToolExecutionContext): Promise<void> {
+        const { path } = input as unknown as ReadFileInput;
         const { callbacks } = context;
 
         try {

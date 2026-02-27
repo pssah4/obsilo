@@ -106,10 +106,11 @@
       <p data-i18n="pages.memory.autoTitle.text">After the first assistant response, Obsilo generates a short title (3-8 words) for the conversation using the active model. This title appears in the history panel and helps you find conversations later.</p>
 
       <h2 id="memory-system" data-i18n="pages.memory.memorySystem">Memory System</h2>
-      <p data-i18n="pages.memory.memorySystem.text">The memory system has two layers:</p>
+      <p data-i18n="pages.memory.memorySystem.text">The memory system has three tiers:</p>
       <ul data-i18n-html="pages.memory.memorySystem.list">
+        <li><strong>Chat history</strong> — full conversation logs stored as JSON files for browsing and restore</li>
         <li><strong>Session memory</strong> — a summary of each conversation, stored as a Markdown file</li>
-        <li><strong>Long-term memory</strong> — your profile, active projects, and behavioral patterns, distilled from session summaries</li>
+        <li><strong>Long-term memory</strong> — your profile, agent identity, active projects, behavioral patterns, and task learnings, distilled from session summaries</li>
       </ul>
 
       <h3 id="how-it-works" data-i18n="pages.memory.howItWorks">How It Works</h3>
@@ -131,13 +132,15 @@
       </div>
 
       <h3 id="memory-files" data-i18n="pages.memory.memoryFiles">Memory Files</h3>
-      <p data-i18n-html="pages.memory.memoryFiles.text">Memory is stored as editable Markdown files in <code>.obsidian/plugins/obsilo-agent/memory/</code>:</p>
+      <p data-i18n-html="pages.memory.memoryFiles.text">Memory is stored as editable Markdown files in the global directory <code>~/.obsidian-agent/memory/</code> (shared across all vaults):</p>
       <table data-i18n-html="pages.memory.memoryFiles.table">
         <thead><tr><th>File</th><th>Contains</th><th>Loaded into context</th></tr></thead>
         <tbody>
+          <tr><td><code>soul.md</code></td><td>Agent identity, personality traits, communication values</td><td>Always (system prompt)</td></tr>
           <tr><td><code>user-profile.md</code></td><td>Your name, language, communication style, agent preferences</td><td>Always (system prompt)</td></tr>
           <tr><td><code>projects.md</code></td><td>Active projects, goals, tech stack</td><td>Always (system prompt)</td></tr>
           <tr><td><code>patterns.md</code></td><td>Behavioral patterns, common refinements, workflow habits</td><td>Always (system prompt)</td></tr>
+          <tr><td><code>learnings.md</code></td><td>Task learnings and insights from past interactions</td><td>Always (system prompt)</td></tr>
           <tr><td><code>knowledge.md</code></td><td>Domain expertise, specialized knowledge</td><td>On demand (semantic search)</td></tr>
           <tr><td><code>sessions/*.md</code></td><td>Per-conversation summaries with YAML frontmatter</td><td>On demand (semantic search)</td></tr>
         </tbody>

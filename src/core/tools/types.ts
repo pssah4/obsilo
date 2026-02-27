@@ -64,7 +64,7 @@ export interface ToolUse {
     type: 'tool_use';
     id: string;
     name: ToolName;
-    input: Record<string, any>;
+    input: Record<string, unknown>;
 }
 
 /**
@@ -85,7 +85,7 @@ export interface ToolDefinition {
     description: string;
     input_schema: {
         type: 'object';
-        properties: Record<string, any>;
+        properties: Record<string, unknown>;
         required?: string[];
     };
 }

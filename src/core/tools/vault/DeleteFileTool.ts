@@ -29,9 +29,9 @@ export class DeleteFileTool extends BaseTool<'delete_file'> {
         };
     }
 
-    async execute(input: Record<string, any>, context: ToolExecutionContext): Promise<void> {
+    async execute(input: Record<string, unknown>, context: ToolExecutionContext): Promise<void> {
         const { callbacks } = context;
-        const path: string = input.path ?? '';
+        const path = (input.path as string) ?? '';
 
         if (!path) {
             callbacks.pushToolResult(this.formatError(new Error('path parameter is required')));

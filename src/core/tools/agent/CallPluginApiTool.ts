@@ -43,7 +43,7 @@ function safeReplacer(): (key: string, value: unknown) => unknown {
         if (typeof value === 'bigint') return value.toString();
         if (typeof value === 'object') {
             // DOM node check
-            if (typeof (value as any).nodeType === 'number') return '[DOMNode]';
+            if (typeof (value as Record<string, unknown>).nodeType === 'number') return '[DOMNode]';
             // Circular reference check
             if (seen.has(value as object)) return '[Circular]';
             seen.add(value as object);
@@ -95,7 +95,7 @@ export class CallPluginApiTool extends BaseTool<'call_plugin_api'> {
         };
     }
 
-    async execute(input: Record<string, any>, context: ToolExecutionContext): Promise<void> {
+    async execute(input: Record<string, unknown>, context: ToolExecutionContext): Promise<void> {
         const { callbacks } = context;
         const pluginId = (input.plugin_id as string ?? '').trim();
         const method = (input.method as string ?? '').trim();
@@ -128,7 +128,7 @@ export class CallPluginApiTool extends BaseTool<'call_plugin_api'> {
         }
 
         // 4. Resolve plugin instance and API
-        const plugins = (this.app as any).plugins?.plugins;
+        const plugins = this.app.plugins?.plugins;
         if (!plugins) {
             callbacks.pushToolResult(
                 this.formatError(new Error('Cannot access Obsidian plugin registry')),
@@ -220,10 +220,10 @@ export class CallPluginApiTool extends BaseTool<'call_plugin_api'> {
      */
     private isDynamicallyDiscovered(pluginId: string, method: string): boolean {
         // Check if the plugin has a registered skill with API methods
-        const skillRegistry = (this.plugin as any).skillRegistry;
+        const skillRegistry = this.plugin.skillRegistry;
         if (!skillRegistry) return false;
 
-        const skill = skillRegistry.getSkill?.(pluginId);
+        const skill = skillRegistry.getActivePluginSkills().find((s) => s.id === pluginId);
         if (!skill) return false;
 
         // Skills with discovered API methods have hasApi: true and apiMethods array

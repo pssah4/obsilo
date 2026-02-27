@@ -92,6 +92,7 @@
           <tr><td><strong>OpenRouter</strong></td><td>Gateway</td><td>Yes</td><td>No</td></tr>
           <tr><td><strong>Azure OpenAI</strong></td><td>Cloud (Enterprise)</td><td>Yes</td><td>No</td></tr>
           <tr><td><strong>Ollama</strong></td><td>Local</td><td>No</td><td>Yes</td></tr>
+          <tr><td><strong>Google Gemini</strong></td><td>Cloud</td><td>Yes</td><td>No</td></tr>
           <tr><td><strong>LM Studio</strong></td><td>Local</td><td>No</td><td>Yes</td></tr>
           <tr><td><strong>Custom</strong></td><td>Any OpenAI-compatible</td><td>Optional</td><td>Either</td></tr>
         </tbody>
@@ -117,6 +118,15 @@
           <tr><td><code>gpt-4o</code></td><td>GPT-4o</td><td>General purpose, multimodal</td></tr>
           <tr><td><code>gpt-4o-mini</code></td><td>GPT-4o mini</td><td>Fast, cost-effective tasks</td></tr>
           <tr><td><code>gpt-4.1</code></td><td>GPT-4.1</td><td>Latest GPT-4 generation</td></tr>
+        </tbody>
+      </table>
+
+      <h3 data-i18n="pages.providers.builtInGemini">Google Gemini</h3>
+      <table data-i18n-html="pages.providers.builtInGemini.table">
+        <thead><tr><th>Model ID</th><th>Display Name</th><th>Best for</th></tr></thead>
+        <tbody>
+          <tr><td><code>gemini-2.5-flash</code></td><td>Gemini 2.5 Flash</td><td>Fast, cost-effective, long context</td></tr>
+          <tr><td><code>gemini-2.5-flash-lite</code></td><td>Gemini 2.5 Flash Lite</td><td>Ultra-fast, lightweight tasks</td></tr>
         </tbody>
       </table>
 
@@ -165,6 +175,13 @@
         <li>No base URL needed (uses default OpenAI endpoint)</li>
       </ul>
 
+      <h3 id="gemini" data-i18n="pages.providers.gemini">Google Gemini</h3>
+      <ul data-i18n-html="pages.providers.gemini.list">
+        <li>Get your API key at <a href="https://aistudio.google.com/apikey">aistudio.google.com/apikey</a></li>
+        <li>Gemini models are pre-configured as built-in models using Google's OpenAI-compatible endpoint</li>
+        <li>No base URL configuration needed — just add your API key and enable</li>
+      </ul>
+
       <h3 id="openrouter" data-i18n="pages.providers.openrouter">OpenRouter</h3>
       <ul data-i18n-html="pages.providers.openrouter.list">
         <li>Get your API key at <a href="https://openrouter.ai/keys">openrouter.ai/keys</a></li>
@@ -208,6 +225,11 @@
         <li>Set the <strong>Model ID</strong> to the model name your server expects</li>
         <li>Add an <strong>API Key</strong> if your server requires one</li>
       </ul>
+
+      <div class="callout callout-warning" data-i18n-html="pages.providers.safeStorageCallout">
+        <strong>API Key Security</strong>
+        By default, API keys are stored in Obsidian's plugin settings (plaintext). Enable <strong>SafeStorage</strong> in Settings → Models to encrypt keys via your operating system's keychain (macOS Keychain, Windows Credential Manager, or Linux Secret Service). This is strongly recommended for production use.
+      </div>
 
       <h2 id="model-settings" data-i18n="pages.providers.modelSettings">Per-Model Settings</h2>
       <table data-i18n-html="pages.providers.modelSettings.table">

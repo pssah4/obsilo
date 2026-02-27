@@ -68,8 +68,8 @@ export class EditFileTool extends BaseTool<'edit_file'> {
         };
     }
 
-    async execute(input: Record<string, any>, context: ToolExecutionContext): Promise<void> {
-        const { path, old_str, new_str, expected_replacements = 1 } = input as EditFileInput;
+    async execute(input: Record<string, unknown>, context: ToolExecutionContext): Promise<void> {
+        const { path, old_str, new_str, expected_replacements = 1 } = input as unknown as EditFileInput;
         const { callbacks } = context;
 
         try {

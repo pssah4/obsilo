@@ -144,7 +144,7 @@ Generate a JSON object with:
             };
 
             await this.store.save(recipe);
-            console.log(`[RecipePromotion] Promoted pattern to recipe: ${recipe.name}`);
+            console.debug(`[RecipePromotion] Promoted pattern to recipe: ${recipe.name}`);
 
             // Clean up pattern tracker (no longer needed)
             await this.deletePattern(pattern.patternKey);

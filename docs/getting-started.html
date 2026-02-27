@@ -101,7 +101,7 @@
           <tr><td><strong>Obsidian</strong></td><td>Version 1.4.0 or later</td></tr>
           <tr><td><strong>Platform</strong></td><td>Desktop only (macOS, Windows, Linux). Not available on mobile.</td></tr>
           <tr><td><strong>Node.js</strong></td><td>18 or later (for building from source)</td></tr>
-          <tr><td><strong>API Key</strong></td><td>Anthropic, OpenAI, OpenRouter, or a running Ollama instance</td></tr>
+          <tr><td><strong>API Key</strong></td><td>Anthropic, OpenAI, Google Gemini, OpenRouter, or a running Ollama instance</td></tr>
         </tbody>
       </table>
 
@@ -171,6 +171,7 @@ cp main.js styles.css manifest.json \
         <tbody>
           <tr><td>Anthropic</td><td><a href="https://console.anthropic.com">console.anthropic.com</a></td><td>Claude Sonnet 4.5</td></tr>
           <tr><td>OpenAI</td><td><a href="https://platform.openai.com">platform.openai.com</a></td><td>GPT-4o</td></tr>
+          <tr><td>Google Gemini</td><td><a href="https://aistudio.google.com/apikey">aistudio.google.com</a></td><td>Gemini 2.5 Flash</td></tr>
           <tr><td>OpenRouter</td><td><a href="https://openrouter.ai">openrouter.ai</a></td><td>Llama 3.2 3B (free tier)</td></tr>
           <tr><td>Ollama</td><td>Run locally: <code>ollama serve</code></td><td>llama3.2 or qwen2.5:7b</td></tr>
         </tbody>
@@ -179,7 +180,12 @@ cp main.js styles.css manifest.json \
 
       <div class="callout callout-warning" style="display:flex;align-items:center;gap:0.75rem;" data-i18n-html="pages.gettingStarted.apiKeyWarning">
         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:var(--warning)"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-        <span><strong>API Key Storage</strong> API keys are stored unencrypted in Obsidian. If you use cloud services to sync Obsidian, your API keys will also be synced unencrypted.</span>
+        <span><strong>API Key Storage</strong> By default, API keys are stored in Obsidian's plugin settings. If SafeStorage is enabled (Settings &rarr; Models), keys are encrypted via your operating system's keychain (macOS Keychain, Windows Credential Manager, or Linux Secret Service).</span>
+      </div>
+
+      <div class="callout callout-tip" data-i18n-html="pages.gettingStarted.onboarding.callout">
+        <strong>Onboarding Wizard</strong>
+        On first launch, Obsilo starts a guided onboarding conversation. It asks about your name, preferred language, vault usage, communication style, and preferred permission level. Your answers are used to personalize the agent from the start.
       </div>
 
       <h3 id="open-sidebar" data-i18n="pages.gettingStarted.openSidebar">2. Open the Sidebar</h3>

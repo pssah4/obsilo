@@ -1,7 +1,7 @@
 import { App, Modal, Notice, Setting } from 'obsidian';
 import type ObsidianAgentPlugin from '../../main';
 import type { ModeService } from '../../core/modes/ModeService';
-import type { ModeConfig } from '../../types/settings';
+import type { ModeConfig, ToolGroup } from '../../types/settings';
 import { getModelKey } from '../../types/settings';
 import { BUILT_IN_MODES } from '../../core/modes/builtinModes';
 import { TOOL_GROUP_META } from './constants';
@@ -172,7 +172,7 @@ export class NewModeModal extends Modal {
                 whenToUse: whenToUse.trim() || undefined,
                 roleDefinition: roleDefinition.trim(),
                 customInstructions: customInstructions.trim() || undefined,
-                toolGroups: Array.from(selectedGroups) as any,
+                toolGroups: Array.from(selectedGroups) as ToolGroup[],
                 source: saveLocation,
             };
 

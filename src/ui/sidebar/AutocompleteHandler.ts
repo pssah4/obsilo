@@ -35,7 +35,7 @@ export class AutocompleteHandler {
         if (value.startsWith('/')) {
             const query = value.slice(1).split(' ')[0].toLowerCase();
 
-            const workflowLoader = (this.plugin as any).workflowLoader;
+            const workflowLoader = this.plugin.workflowLoader;
             const workflows: { path: string; slug: string; displayName: string }[] = workflowLoader
                 ? await workflowLoader.discoverWorkflows()
                 : [];

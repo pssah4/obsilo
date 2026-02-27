@@ -48,8 +48,8 @@ export class WriteFileTool extends BaseTool<'write_file'> {
         };
     }
 
-    async execute(input: Record<string, any>, context: ToolExecutionContext): Promise<void> {
-        const { path, content } = input as WriteFileInput;
+    async execute(input: Record<string, unknown>, context: ToolExecutionContext): Promise<void> {
+        const { path, content } = input as unknown as WriteFileInput;
         const { callbacks } = context;
 
         try {
@@ -61,8 +61,9 @@ export class WriteFileTool extends BaseTool<'write_file'> {
                 throw new Error('Content parameter is required');
             }
 
-            // .obsidian/ paths are not in the vault index — use adapter directly
-            if (path.startsWith('.obsidian/') || path.startsWith('.obsidian-agent/')) {
+            // Config-dir paths are not in the vault index — use adapter directly
+            const cfgDir = this.app.vault.configDir;
+            if (path.startsWith(`${cfgDir}/`) || path.startsWith('.obsidian-agent/')) {
                 await this.writeViaAdapter(path, content, callbacks);
                 return;
             }

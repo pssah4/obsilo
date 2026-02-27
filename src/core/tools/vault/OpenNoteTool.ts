@@ -44,8 +44,8 @@ export class OpenNoteTool extends BaseTool<'open_note'> {
         };
     }
 
-    async execute(input: Record<string, any>, context: ToolExecutionContext): Promise<void> {
-        const { path, newLeaf = false } = input as OpenNoteInput;
+    async execute(input: Record<string, unknown>, context: ToolExecutionContext): Promise<void> {
+        const { path, newLeaf = false } = input as unknown as OpenNoteInput;
         const { callbacks } = context;
 
         try {

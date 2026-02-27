@@ -30,7 +30,7 @@ export class SkillsTab {
             text: t('settings.skills.desc'),
         });
 
-        const skillsManager = (this.plugin as any).skillsManager;
+        const skillsManager = this.plugin.skillsManager;
 
         // -- Create new skill --
         const createRow = containerEl.createDiv({ cls: 'agent-rules-create-row' });

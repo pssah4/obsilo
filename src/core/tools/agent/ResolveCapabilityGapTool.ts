@@ -41,7 +41,7 @@ export class ResolveCapabilityGapTool extends BaseTool<'resolve_capability_gap'>
         };
     }
 
-    async execute(input: Record<string, any>, context: ToolExecutionContext): Promise<void> {
+    async execute(input: Record<string, unknown>, context: ToolExecutionContext): Promise<void> {
         const { callbacks } = context;
         const capability = (input.capability as string ?? '').trim();
 
@@ -51,7 +51,7 @@ export class ResolveCapabilityGapTool extends BaseTool<'resolve_capability_gap'>
         }
 
         try {
-            const resolver = (this.plugin as any).capabilityGapResolver;
+            const resolver = this.plugin.capabilityGapResolver;
             if (!resolver) {
                 callbacks.pushToolResult(
                     this.formatSuccess(
@@ -62,7 +62,7 @@ export class ResolveCapabilityGapTool extends BaseTool<'resolve_capability_gap'>
                 return;
             }
 
-            const result = resolver.resolve(capability, input.context);
+            const result = resolver.resolve(capability, input.context as string | undefined);
             callbacks.pushToolResult(this.formatSuccess(result.message));
             callbacks.log(`Capability gap resolved: ${result.found || 'not found'} for "${capability}"`);
         } catch (error) {

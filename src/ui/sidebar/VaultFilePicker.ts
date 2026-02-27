@@ -38,11 +38,11 @@ export class VaultFilePicker {
         const popoverHeight = 320;
         const spaceBelow = window.innerHeight - rect.bottom;
         if (spaceBelow >= popoverHeight || spaceBelow >= 180) {
-            this.containerEl.style.top = `${rect.bottom + 4}px`;
+            this.containerEl.style.setProperty('top', `${rect.bottom + 4}px`);
         } else {
-            this.containerEl.style.bottom = `${window.innerHeight - rect.top + 4}px`;
+            this.containerEl.style.setProperty('bottom', `${window.innerHeight - rect.top + 4}px`);
         }
-        this.containerEl.style.left = `${Math.max(8, rect.left)}px`;
+        this.containerEl.style.setProperty('left', `${Math.max(8, rect.left)}px`);
 
         // ── Search row ───────────────────────────────────────────────
         const searchRow = this.containerEl.createDiv('vfp-search-row');

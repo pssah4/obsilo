@@ -29,7 +29,7 @@ export { ContentEditorModal } from './settings/ContentEditorModal';
 
 // ---------------------------------------------------------------------------
 
-type TabId = 'providers' | 'agent-behaviour' | 'vault' | 'advanced' | 'language';
+export type TabId = 'providers' | 'agent-behaviour' | 'vault' | 'advanced' | 'language';
 
 export class AgentSettingsTab extends PluginSettingTab {
     plugin: ObsidianAgentPlugin;
@@ -201,7 +201,7 @@ export class AgentSettingsTab extends PluginSettingTab {
             (id) => { this.activeAgentSubTab = id; this.display(); });
         const content = container.createDiv({ cls: 'agent-settings-subcontent' });
         const rerender = () => this.display();
-        const ms = (this.plugin as any).modeService;
+        const ms = undefined; // ModeService is instantiated in AgentSidebarView; settings tabs work without it
         if (this.activeAgentSubTab === 'modes')       new ModesTab(this.plugin, this.app, rerender, ms).build(content);
         if (this.activeAgentSubTab === 'permissions') new PermissionsTab(this.plugin, this.app, rerender).build(content);
         if (this.activeAgentSubTab === 'loop')        new LoopTab(this.plugin, this.app, rerender).build(content);

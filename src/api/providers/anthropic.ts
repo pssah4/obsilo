@@ -10,8 +10,20 @@
 
 import Anthropic from '@anthropic-ai/sdk';
 import type { LLMProvider } from '../../types/settings';
-import type { ApiHandler, ApiStream, ApiStreamChunk, MessageParam, ModelInfo } from '../types';
+import type { ApiHandler, ApiStream, ApiStreamChunk, ContentBlock, MessageParam, ModelInfo } from '../types';
 import type { ToolDefinition } from '../../core/tools/types';
+
+/**
+ * Extended thinking types -- not yet in the SDK's public type definitions.
+ * These are runtime-only types for content blocks with type === 'thinking'.
+ */
+interface ThinkingContentBlock {
+    type: 'thinking';
+}
+interface ThinkingDelta {
+    type: 'thinking_delta';
+    thinking: string;
+}
 
 export class AnthropicProvider implements ApiHandler {
     private client: Anthropic;
@@ -95,7 +107,7 @@ export class AnthropicProvider implements ApiHandler {
                         name: event.content_block.name,
                         inputJson: '',
                     });
-                } else if ((event.content_block as any).type === 'thinking') {
+                } else if ((event.content_block as unknown as ThinkingContentBlock).type === 'thinking') {
                     thinkingAccumulator.set(event.index, { text: '' });
                 }
             }
@@ -111,10 +123,11 @@ export class AnthropicProvider implements ApiHandler {
                 }
 
                 // Anthropic extended thinking delta
-                if ((event.delta as any).type === 'thinking_delta') {
+                const delta = event.delta as unknown as ThinkingDelta;
+                if (delta.type === 'thinking_delta') {
                     const thinking = thinkingAccumulator.get(event.index);
                     if (thinking) {
-                        const chunk = (event.delta as any).thinking as string;
+                        const chunk = delta.thinking;
                         thinking.text += chunk;
                         yield { type: 'thinking', text: chunk } satisfies ApiStreamChunk;
                     }
@@ -127,7 +140,7 @@ export class AnthropicProvider implements ApiHandler {
                 // If this was a tool_use block, yield the complete tool call
                 const tool = toolAccumulator.get(event.index);
                 if (tool) {
-                    let parsedInput: Record<string, any> = {};
+                    let parsedInput: Record<string, unknown> = {};
                     try {
                         parsedInput = tool.inputJson ? JSON.parse(tool.inputJson) : {};
                     } catch (e) {
@@ -206,7 +219,7 @@ export class AnthropicProvider implements ApiHandler {
                     };
                 }
 
-                throw new Error(`Unknown content block type: ${(block as any).type}`);
+                throw new Error(`Unknown content block type: ${(block as ContentBlock).type}`);
             });
 
             return { role: msg.role, content } as Anthropic.MessageParam;

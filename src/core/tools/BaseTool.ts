@@ -56,7 +56,7 @@ export abstract class BaseTool<TName extends ToolName = ToolName> {
      * @param context - Execution context
      */
     abstract execute(
-        input: Record<string, any>,
+        input: Record<string, unknown>,
         context: ToolExecutionContext
     ): Promise<void>;
 
@@ -64,7 +64,7 @@ export abstract class BaseTool<TName extends ToolName = ToolName> {
      * Validate the tool input (optional)
      * Override this to add custom validation
      */
-    protected validate(input: Record<string, any>): void {
+    protected validate(input: Record<string, unknown>): void {
         // Default: no validation
         // Subclasses can override to validate input
     }

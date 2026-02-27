@@ -15,7 +15,7 @@ export interface LogEntry {
     taskId: string;
     mode: string;
     tool: string;
-    params: Record<string, any>;
+    params: Record<string, unknown>;
     result?: string;
     success: boolean;
     durationMs: number;
@@ -53,11 +53,11 @@ export class OperationLogger {
      * Prevents sensitive data (file contents, credentials, long strings) from
      * being stored in plain-text JSONL files.
      */
-    private sanitizeParams(tool: string, params: Record<string, any>): Record<string, any> {
+    private sanitizeParams(tool: string, params: Record<string, unknown>): Record<string, unknown> {
         const MAX_VALUE_LEN = 500;
         const SENSITIVE_KEYS = new Set(['password', 'token', 'api_key', 'secret', 'key', 'auth', 'authorization']);
         const CONTENT_KEYS = new Set(['content', 'new_str', 'old_str']); // file content fields
-        const result: Record<string, any> = {};
+        const result: Record<string, unknown> = {};
         for (const [k, v] of Object.entries(params)) {
             const lk = k.toLowerCase();
             if (SENSITIVE_KEYS.has(lk)) {
@@ -199,7 +199,7 @@ export class OperationLogger {
         for (const date of toDelete) {
             try {
                 await this.fs.remove(`${this.logDir}/${date}.jsonl`);
-                console.log(`[OperationLogger] Rotated old log: ${date}`);
+                console.debug(`[OperationLogger] Rotated old log: ${date}`);
             } catch {
                 // Ignore
             }

@@ -15,7 +15,7 @@ import type ObsidianAgentPlugin from '../../../main';
 
 interface UpdateFrontmatterInput {
     path: string;
-    updates: Record<string, any>;
+    updates: Record<string, unknown>;
     remove?: string[];
 }
 
@@ -55,8 +55,8 @@ export class UpdateFrontmatterTool extends BaseTool<'update_frontmatter'> {
         };
     }
 
-    async execute(input: Record<string, any>, context: ToolExecutionContext): Promise<void> {
-        const { path, updates, remove = [] } = input as UpdateFrontmatterInput;
+    async execute(input: Record<string, unknown>, context: ToolExecutionContext): Promise<void> {
+        const { path, updates, remove = [] } = input as unknown as UpdateFrontmatterInput;
         const { callbacks } = context;
 
         try {
@@ -70,7 +70,7 @@ export class UpdateFrontmatterTool extends BaseTool<'update_frontmatter'> {
             const changed: string[] = [];
 
             // processFrontMatter is the canonical Obsidian API for this
-            await this.app.fileManager.processFrontMatter(file, (fm: Record<string, any>) => {
+            await this.app.fileManager.processFrontMatter(file, (fm: Record<string, unknown>) => {
                 for (const [key, value] of Object.entries(updates)) {
                     fm[key] = value;
                     changed.push(`${key}: ${JSON.stringify(value)}`);

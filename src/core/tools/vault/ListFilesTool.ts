@@ -33,10 +33,10 @@ export class ListFilesTool extends BaseTool<'list_files'> {
         };
     }
 
-    async execute(input: Record<string, any>, context: ToolExecutionContext): Promise<void> {
+    async execute(input: Record<string, unknown>, context: ToolExecutionContext): Promise<void> {
         const { callbacks } = context;
-        const rawPath: string = input.path ?? '/';
-        const recursive: boolean = input.recursive ?? false;
+        const rawPath = (input.path as string) ?? '/';
+        const recursive = (input.recursive as boolean) ?? false;
 
         try {
             // Normalize root path

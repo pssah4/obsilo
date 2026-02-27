@@ -1,9 +1,9 @@
-import { Plugin, WorkspaceLeaf, Notice, TFile, addIcon } from 'obsidian';
+import { Plugin, WorkspaceLeaf, Notice, TFile, addIcon, requestUrl } from 'obsidian';
 import { ObsidianAgentSettings, DEFAULT_SETTINGS, getModelKey, modelToLLMProvider } from './types/settings';
 import type { CustomModel, AutoApprovalConfig } from './types/settings';
 import { AgentSidebarView, VIEW_TYPE_AGENT_SIDEBAR } from './ui/AgentSidebarView';
 import { OBSILO_ICON_SVG } from './ui/obsiloIcon';
-import { AgentSettingsTab } from './ui/AgentSettingsTab';
+import { AgentSettingsTab, type TabId } from './ui/AgentSettingsTab';
 import { ToolRegistry } from './core/tools/ToolRegistry';
 import { ToolExecutionPipeline } from './core/tool-execution/ToolExecutionPipeline';
 import { IgnoreService } from './core/governance/IgnoreService';
@@ -99,7 +99,7 @@ export default class ObsidianAgentPlugin extends Plugin {
      * 6. Start semantic indexing
      */
     async onload() {
-        console.log('Loading Obsilo Agent plugin');
+        console.debug('Loading Obsilo Agent plugin');
 
         // 0. Initialize SafeStorageService (must happen before loadSettings)
         this.safeStorage = new SafeStorageService();
@@ -117,7 +117,7 @@ export default class ObsidianAgentPlugin extends Plugin {
         await initI18n(this.settings.language);
 
         // 2. Initialize core services
-        const pluginDir = `.obsidian/plugins/${this.manifest.id}`;
+        const pluginDir = `${this.app.vault.configDir}/plugins/${this.manifest.id}`;
         this.syncBridge = new SyncBridge(this.globalFs, this.app.vault, pluginDir);
 
         // Pull latest data from vault plugin dir (arriving via Obsidian Sync)
@@ -318,7 +318,7 @@ export default class ObsidianAgentPlugin extends Plugin {
 
             // Process any pending extractions from a previous session
             if (!this.extractionQueue.isEmpty()) {
-                console.log(`[Plugin] Processing ${this.extractionQueue.size()} pending extractions from previous session`);
+                console.debug(`[Plugin] Processing ${this.extractionQueue.size()} pending extractions from previous session`);
                 this.extractionQueue.processQueue().catch((e) =>
                     console.warn('[Plugin] Queue processing failed (non-fatal):', e)
                 );
@@ -367,7 +367,7 @@ export default class ObsidianAgentPlugin extends Plugin {
 
         // 6. Register deep-link protocol handler: obsidian://obsilo-settings?tab=advanced&sub=backup
         this.registerObsidianProtocolHandler('obsilo-settings', (params) => {
-            const tab = params.tab as any;
+            const tab = params.tab as string;
             const sub = params.sub;
             if (tab) this.openSettingsAt(tab, sub);
         });
@@ -377,14 +377,14 @@ export default class ObsidianAgentPlugin extends Plugin {
             console.warn('[Plugin] Initial SyncBridge push failed (non-fatal):', e)
         );
 
-        console.log('Obsilo Agent plugin loaded successfully');
+        console.debug('Obsilo Agent plugin loaded successfully');
     }
 
     /**
      * Plugin cleanup
      */
     async onunload() {
-        console.log('Unloading Obsilo Agent plugin');
+        console.debug('Unloading Obsilo Agent plugin');
         // Push global data back to vault plugin dir for Obsidian Sync (ADR-020)
         await this.syncBridge?.pushToVault().catch((e) =>
             console.warn('[Plugin] SyncBridge push failed (non-fatal):', e)
@@ -393,7 +393,7 @@ export default class ObsidianAgentPlugin extends Plugin {
         for (const timer of this.autoIndexDebounceTimers.values()) clearTimeout(timer);
         this.autoIndexDebounceTimers.clear();
         await this.mcpClient?.disconnectAll();
-        console.log('Obsilo Agent plugin unloaded');
+        console.debug('Obsilo Agent plugin unloaded');
     }
 
     /**
@@ -405,7 +405,7 @@ export default class ObsidianAgentPlugin extends Plugin {
 
         // One-time migration: copy per-vault data to global storage (ADR-020)
         if (!saved._globalStorageMigrated && this.globalFs) {
-            const pluginDir = `.obsidian/plugins/${this.manifest.id}`;
+            const pluginDir = `${this.app.vault.configDir}/plugins/${this.manifest.id}`;
             const migration = new GlobalMigrationService(this.globalFs, this.app.vault, pluginDir);
             const didMigrate = await migration.migrateIfNeeded(saved._globalStorageMigrated).catch((e) => {
                 console.warn('[Plugin] Global storage migration failed (non-fatal):', e);
@@ -544,7 +544,7 @@ export default class ObsidianAgentPlugin extends Plugin {
                 !!this.settings.webTools?.braveApiKey ||
                 !!this.settings.webTools?.tavilyApiKey;
             if (hasKeys) {
-                console.log('[Plugin] Migrating API keys to encrypted storage (safeStorage)');
+                console.debug('[Plugin] Migrating API keys to encrypted storage (safeStorage)');
             }
             await this.saveData(this.encryptSettingsForSave(this.settings));
         }
@@ -577,7 +577,7 @@ export default class ObsidianAgentPlugin extends Plugin {
         }
 
         if (changed) {
-            console.log('[Plugin] Synced vault mode overrides with built-in definitions');
+            console.debug('[Plugin] Synced vault mode overrides with built-in definitions');
             this.saveData(this.encryptSettingsForSave(this.settings));
         }
     }
@@ -647,7 +647,7 @@ export default class ObsidianAgentPlugin extends Plugin {
                 model.apiKey = this.safeStorage.encrypt(model.apiKey);
             }
         }
-        for (const model of (copy as any).embeddingModels ?? []) {
+        for (const model of copy.embeddingModels ?? []) {
             if (model.apiKey && !this.safeStorage.isEncrypted(model.apiKey)) {
                 model.apiKey = this.safeStorage.encrypt(model.apiKey);
             }
@@ -697,7 +697,7 @@ export default class ObsidianAgentPlugin extends Plugin {
 
         if (!model) {
             if (this.settings.debugMode) {
-                console.log('[Plugin] No active model configured');
+                console.debug('[Plugin] No active model configured');
             }
             this.apiHandler = null;
             return;
@@ -706,7 +706,7 @@ export default class ObsidianAgentPlugin extends Plugin {
         // Require API key for cloud providers
         if ((model.provider === 'anthropic' || model.provider === 'openai' || model.provider === 'openrouter' || model.provider === 'azure') && !model.apiKey) {
             if (this.settings.debugMode) {
-                console.log('[Plugin] API key not set for active model:', getModelKey(model));
+                console.debug('[Plugin] API key not set for active model:', getModelKey(model));
             }
             this.apiHandler = null;
             return;
@@ -714,7 +714,7 @@ export default class ObsidianAgentPlugin extends Plugin {
 
         try {
             this.apiHandler = buildApiHandler(modelToLLMProvider(model));
-            console.log(`[Plugin] API handler initialized: ${model.displayName ?? model.name} (${model.provider})`);
+            console.debug(`[Plugin] API handler initialized: ${model.displayName ?? model.name} (${model.provider})`);
 
             // Pre-warm the DNS + TLS connection so the FIRST user message isn't delayed
             // by cold-start network setup (~5-18 s on some systems / networks).
@@ -732,7 +732,7 @@ export default class ObsidianAgentPlugin extends Plugin {
             const warmupUrl = CLOUD_BASE_URLS[model.provider];
             if (warmupUrl && !this.warmupFired) {
                 this.warmupFired = true;
-                fetch(warmupUrl, { method: 'HEAD', signal: AbortSignal.timeout(8000) })
+                requestUrl({ url: warmupUrl, method: 'HEAD', throw: false })
                     .catch(() => { /* expected — we only want the TCP/TLS handshake */ });
             }
         } catch (error) {
@@ -753,7 +753,7 @@ export default class ObsidianAgentPlugin extends Plugin {
         if (leaves.length > 0) {
             const existing = leaves[0];
             // If the leaf ended up in the wrong sidebar (e.g. left), migrate it to the right
-            const rightSplit = (workspace as any).rightSplit;
+            const rightSplit = workspace.rightSplit;
             const isInRight = rightSplit && existing.getRoot() === rightSplit;
             if (isInRight) {
                 leaf = existing;
@@ -783,7 +783,7 @@ export default class ObsidianAgentPlugin extends Plugin {
         if (leaf) {
             workspace.revealLeaf(leaf);
 
-            const rightSplit = (workspace as any).rightSplit;
+            const rightSplit = workspace.rightSplit;
             if (rightSplit && typeof rightSplit.setSize === 'function') {
                 const targetWidth = Math.round(window.innerWidth * 0.285);
                 rightSplit.setSize(targetWidth);
@@ -797,7 +797,7 @@ export default class ObsidianAgentPlugin extends Plugin {
      */
     openSettingsAt(tab: string, subTab?: string): void {
         // Open the Obsidian settings modal
-        const setting = (this.app as any).setting;
+        const setting = this.app.setting;
         if (setting) {
             setting.open();
             // Navigate to our plugin's settings tab
@@ -805,7 +805,7 @@ export default class ObsidianAgentPlugin extends Plugin {
             // Then navigate to the specific tab/subtab within our settings
             setTimeout(() => {
                 if (this.settingsTab) {
-                    this.settingsTab.openAt(tab as any, subTab);
+                    this.settingsTab.openAt(tab as TabId, subTab);
                 }
             }, 50);
         }
@@ -833,7 +833,7 @@ export default class ObsidianAgentPlugin extends Plugin {
      */
     async startOnboarding(): Promise<void> {
         // Close the settings modal so the user sees the chat
-        (this.app as any).setting?.close();
+        this.app.setting?.close();
         await this.activateView();
         setTimeout(() => {
             const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_AGENT_SIDEBAR);
@@ -867,7 +867,7 @@ export default class ObsidianAgentPlugin extends Plugin {
      * Test tool execution (Development only)
      */
     async testToolExecution() {
-        console.log('=== Testing Tool Execution ===');
+        console.debug('=== Testing Tool Execution ===');
         new Notice('Testing tool execution...');
 
         // Create a pipeline instance for testing
@@ -883,19 +883,19 @@ export default class ObsidianAgentPlugin extends Plugin {
         const callbacks: ToolCallbacks = {
             pushToolResult: (content: string) => {
                 results.push(content);
-                console.log('Tool result:', content);
+                console.debug('Tool result:', content);
             },
             handleError: async (toolName: string, error: unknown) => {
                 console.error(`Error in ${toolName}:`, error);
             },
             log: (message: string) => {
-                console.log('Tool log:', message);
+                console.debug('Tool log:', message);
             }
         };
 
         try {
             // Test 1: Write then read to test roundtrip
-            console.log('\n--- Test 1: Write test file ---');
+            console.debug('\n--- Test 1: Write test file ---');
             const writeTool: ToolUse = {
                 type: 'tool_use',
                 id: 'test-write-001',
@@ -908,7 +908,7 @@ export default class ObsidianAgentPlugin extends Plugin {
             await pipeline.executeTool(writeTool, callbacks);
 
             // Then read it back
-            console.log('\n--- Test 2: Read back the test file ---');
+            console.debug('\n--- Test 2: Read back the test file ---');
             const readTool: ToolUse = {
                 type: 'tool_use',
                 id: 'test-read-001',
@@ -917,10 +917,10 @@ export default class ObsidianAgentPlugin extends Plugin {
             };
 
             const readResult = await pipeline.executeTool(readTool, callbacks);
-            console.log('Read result (content populated):', readResult.content.substring(0, 100) + '...');
+            console.debug('Read result (content populated):', readResult.content.substring(0, 100) + '...');
 
-            console.log('\n=== Tool Execution Test Complete ===');
-            console.log('Results collected:', results.length);
+            console.debug('\n=== Tool Execution Test Complete ===');
+            console.debug('Results collected:', results.length);
 
             new Notice('Tool execution test complete! Check console and vault.');
         } catch (error) {

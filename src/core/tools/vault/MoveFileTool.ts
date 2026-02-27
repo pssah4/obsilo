@@ -33,10 +33,10 @@ export class MoveFileTool extends BaseTool<'move_file'> {
         };
     }
 
-    async execute(input: Record<string, any>, context: ToolExecutionContext): Promise<void> {
+    async execute(input: Record<string, unknown>, context: ToolExecutionContext): Promise<void> {
         const { callbacks } = context;
-        const source: string = input.source ?? '';
-        const destination: string = input.destination ?? '';
+        const source = (input.source as string) ?? '';
+        const destination = (input.destination as string) ?? '';
 
         if (!source) {
             callbacks.pushToolResult(this.formatError(new Error('source parameter is required')));

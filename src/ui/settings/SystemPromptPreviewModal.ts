@@ -17,7 +17,7 @@ export class SystemPromptPreviewModal extends Modal {
         contentEl.createEl('h2', { text: t('modal.promptPreview.title', { mode: this.modeName }) });
 
         const copyBtn = contentEl.createEl('button', { text: t('modal.promptPreview.copy'), cls: 'mod-cta' });
-        copyBtn.style.marginBottom = '12px';
+        copyBtn.classList.add('agent-u-mb-12');
         copyBtn.addEventListener('click', async () => {
             await navigator.clipboard.writeText(this.prompt);
             copyBtn.setText(t('modal.promptPreview.copied'));

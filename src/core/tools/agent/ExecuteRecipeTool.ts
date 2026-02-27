@@ -14,6 +14,7 @@
  *   7. Audit trail (OperationLogger)
  */
 
+import { spawn } from 'child_process';
 import { BaseTool } from '../BaseTool';
 import type { ToolDefinition, ToolExecutionContext } from '../types';
 import type ObsidianAgentPlugin from '../../../main';
@@ -22,7 +23,6 @@ import { validateRecipeParams } from './recipeValidator';
 
 /** Resolve binary to absolute path via 'which' (macOS/Linux) or 'where' (Windows) */
 async function resolveBinary(name: string): Promise<string | null> {
-    const { spawn } = require('child_process') as typeof import('child_process');
     const cmd = process.platform === 'win32' ? 'where' : 'which';
 
     return new Promise((resolve) => {
@@ -83,7 +83,7 @@ export class ExecuteRecipeTool extends BaseTool<'execute_recipe'> {
         };
     }
 
-    async execute(input: Record<string, any>, context: ToolExecutionContext): Promise<void> {
+    async execute(input: Record<string, unknown>, context: ToolExecutionContext): Promise<void> {
         const { callbacks } = context;
         const recipeId = (input.recipe_id as string ?? '').trim();
         const params = (input.params as Record<string, unknown>) ?? {};
@@ -124,7 +124,7 @@ export class ExecuteRecipeTool extends BaseTool<'execute_recipe'> {
 
         // 4. Get vault root
         const adapter = this.app.vault.adapter;
-        const vaultRoot: string = (adapter as any).basePath ?? (adapter as any).getBasePath?.() ?? '';
+        const vaultRoot: string = (adapter as import('obsidian').FileSystemAdapter).basePath ?? (adapter as import('obsidian').FileSystemAdapter).getBasePath?.() ?? '';
         if (!vaultRoot) {
             callbacks.pushToolResult(
                 this.formatError(new Error('Cannot determine vault root path')),
@@ -212,8 +212,6 @@ export class ExecuteRecipeTool extends BaseTool<'execute_recipe'> {
         vaultRoot: string,
         recipe: { timeout: number; maxOutputSize: number },
     ): Promise<{ exitCode: number; stdout: string; stderr: string }> {
-        const { spawn } = require('child_process') as typeof import('child_process');
-
         return new Promise((resolve, reject) => {
             const child = spawn(binaryPath, args, {
                 cwd: vaultRoot,

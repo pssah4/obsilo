@@ -13,7 +13,7 @@ export class WorkflowsTab {
             text: t('settings.workflows.desc'),
         });
 
-        const workflowLoader = (this.plugin as any).workflowLoader;
+        const workflowLoader = this.plugin.workflowLoader;
 
         // ── Create row ───────────────────────────────────────────────────
         const createRow = containerEl.createDiv({ cls: 'agent-rules-create-row' });

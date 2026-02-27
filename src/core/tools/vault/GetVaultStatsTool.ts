@@ -30,7 +30,7 @@ export class GetVaultStatsTool extends BaseTool<'get_vault_stats'> {
         };
     }
 
-    async execute(_input: Record<string, any>, context: ToolExecutionContext): Promise<void> {
+    async execute(_input: Record<string, unknown>, context: ToolExecutionContext): Promise<void> {
         const { callbacks } = context;
 
         try {

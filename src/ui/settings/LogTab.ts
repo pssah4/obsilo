@@ -5,7 +5,7 @@ import { t } from '../../i18n';
 
 
 export class LogTab {
-    constructor(private plugin: ObsidianAgentPlugin, private _app: any, private rerender: () => void) {}
+    constructor(private plugin: ObsidianAgentPlugin, private _app: unknown, private rerender: () => void) {}
 
     build(containerEl: HTMLElement): void {
         containerEl.createEl('p', {
@@ -22,7 +22,7 @@ export class LogTab {
 
         downloadBtn.disabled = true;
 
-        const logger: OperationLogger | undefined = (this.plugin as any).operationLogger;
+        const logger: OperationLogger | undefined = this.plugin.operationLogger;
         if (logger) {
             logger.getLogDates().then((dates: string[]) => {
                 if (dates.length === 0) {

@@ -99,8 +99,8 @@
       <p data-i18n-html="pages.rulesSkillsWorkflows.rules.text">Rules are Markdown files that are always injected into the agent's system prompt as a <code>RULES</code> section. The agent must follow them in every response.</p>
 
       <h3 id="rules-location" data-i18n="pages.rulesSkillsWorkflows.rulesLocation">Location</h3>
-      <pre><code>&lt;vault&gt;/.obsidian-agent/rules/</code></pre>
-      <p data-i18n-html="pages.rulesSkillsWorkflows.rulesLocation.text">Any <code>.md</code> or <code>.txt</code> file in this folder is treated as a rule file.</p>
+      <pre><code>~/.obsidian-agent/rules/</code></pre>
+      <p data-i18n-html="pages.rulesSkillsWorkflows.rulesLocation.text">Rules are stored globally at <code>~/.obsidian-agent/rules/</code> and shared across all vaults. Any <code>.md</code> or <code>.txt</code> file in this folder is treated as a rule file. A SyncBridge keeps global and vault-local copies in sync for convenience.</p>
 
       <h3 id="rules-example" data-i18n="pages.rulesSkillsWorkflows.rulesExample">Example Rules</h3>
       <p data-i18n-html="pages.rulesSkillsWorkflows.rulesExample.text1">Create <code>.obsidian-agent/rules/formatting.md</code>:</p>
@@ -179,6 +179,13 @@ Create a separate action item note if there are 5+ action items.</code></pre>
 
       <h3 id="forced-skills" data-i18n="pages.rulesSkillsWorkflows.forcedSkills">Forced Skills</h3>
       <p data-i18n-html="pages.rulesSkillsWorkflows.forcedSkills.text">In Settings → Modes → (edit mode) → Forced Skills, you can specify skills that are always injected for a specific mode — regardless of keyword matching. Useful when a mode should always apply a particular style or set of conventions.</p>
+
+      <h3 id="vaultdna-skills" data-i18n="pages.rulesSkillsWorkflows.vaultdnaSkills">Auto-Generated Plugin Skills (VaultDNA)</h3>
+      <p data-i18n-html="pages.rulesSkillsWorkflows.vaultdnaSkills.text">Obsilo includes a <strong>VaultDNA Scanner</strong> that automatically discovers installed Obsidian plugins and generates skill files for them. These auto-generated skills are stored at <code>.obsidian-agent/plugin-skills/</code> and teach the agent how to interact with your installed plugins — their commands, API methods, and typical usage patterns.</p>
+      <p data-i18n="pages.rulesSkillsWorkflows.vaultdnaSkills.text2">The scanner runs automatically when plugins change and classifies each plugin as FULL (3+ commands), PARTIAL (1-2 commands), or NONE (no agentifiable commands). You don't need to configure anything — plugin skills appear automatically.</p>
+
+      <h3 id="recipes" data-i18n="pages.rulesSkillsWorkflows.recipes">Recipes</h3>
+      <p data-i18n-html="pages.rulesSkillsWorkflows.recipes.text">Recipes are predefined multi-step procedures that combine multiple plugin commands into a single action. They are invoked via the <code>execute_recipe</code> tool. Examples include Pandoc export pipelines, Dataview query workflows, or complex plugin integrations. Recipes can be auto-promoted from episodic memory when the agent repeatedly performs the same sequence of steps.</p>
 
       <h3 id="skills-management" data-i18n="pages.rulesSkillsWorkflows.skillsManagement">Managing Skills</h3>
       <p data-i18n-html="pages.rulesSkillsWorkflows.skillsManagement.text">Go to Settings → Agent Behaviour → <strong>Skills</strong> to view, edit, and manage your skills. You can also create skill files directly in your vault.</p>

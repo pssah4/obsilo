@@ -157,13 +157,13 @@ export class LongTermExtractor {
         // Parse the JSON response
         const result = this.parseResponse(text.trim());
         if (!result || result.updates.length === 0) {
-            console.log('[LongTermExtractor] No updates needed for', item.conversationId);
+            console.debug('[LongTermExtractor] No updates needed for', item.conversationId);
             return;
         }
 
         // Apply updates
         await this.applyUpdates(result.updates);
-        console.log(`[LongTermExtractor] Applied ${result.updates.length} updates from ${item.conversationId}`);
+        console.debug(`[LongTermExtractor] Applied ${result.updates.length} updates from ${item.conversationId}`);
     }
 
     /**

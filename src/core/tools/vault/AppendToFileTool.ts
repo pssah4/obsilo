@@ -55,8 +55,8 @@ export class AppendToFileTool extends BaseTool<'append_to_file'> {
         };
     }
 
-    async execute(input: Record<string, any>, context: ToolExecutionContext): Promise<void> {
-        const { path, content, separator = '\n' } = input as AppendToFileInput;
+    async execute(input: Record<string, unknown>, context: ToolExecutionContext): Promise<void> {
+        const { path, content, separator = '\n' } = input as unknown as AppendToFileInput;
         const { callbacks } = context;
 
         try {

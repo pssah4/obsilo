@@ -57,7 +57,7 @@ export class GlobalMigrationService {
     async migrateIfNeeded(migrated: boolean | undefined): Promise<boolean> {
         if (migrated) return false;
 
-        console.log('[GlobalMigration] Starting one-time migration to global storage...');
+        console.debug('[GlobalMigration] Starting one-time migration to global storage...');
         let migratedCount = 0;
 
         // Migrate directories from plugin dir (memory, history, logs, etc.)
@@ -81,7 +81,7 @@ export class GlobalMigrationService {
             if (migrated) migratedCount++;
         }
 
-        console.log(`[GlobalMigration] Migration complete: ${migratedCount} files copied`);
+        console.debug(`[GlobalMigration] Migration complete: ${migratedCount} files copied`);
 
         // Clean up old vault files after successful migration
         await this.cleanupOldVaultFiles();
@@ -171,7 +171,7 @@ export class GlobalMigrationService {
      * Errors are non-fatal — logged and skipped.
      */
     private async cleanupOldVaultFiles(): Promise<void> {
-        console.log('[GlobalMigration] Cleaning up old vault files...');
+        console.debug('[GlobalMigration] Cleaning up old vault files...');
 
         // Clean plugin-dir categories (memory, history, logs, etc.)
         for (const dir of MIGRATE_DIRS) {
@@ -195,7 +195,7 @@ export class GlobalMigrationService {
             }
         }
 
-        console.log('[GlobalMigration] Old vault files cleaned up');
+        console.debug('[GlobalMigration] Old vault files cleaned up');
     }
 
     /**

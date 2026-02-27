@@ -17,9 +17,7 @@
 
 import type { Vault } from 'obsidian';
 import type { GlobalFileService } from './GlobalFileService';
-
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const pathModule = require('path') as typeof import('path');
+import pathModule from 'path';
 
 // ── Sync category mapping ─────────────────────────────────────────────────
 

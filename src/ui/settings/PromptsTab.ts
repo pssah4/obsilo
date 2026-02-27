@@ -70,7 +70,7 @@ export class PromptsTab {
 
         // ── Inline form (edit only — appears when editing a prompt) ─────
         const formEl = containerEl.createDiv({ cls: 'agent-prompt-form' });
-        formEl.style.display = 'none';
+        formEl.classList.add('agent-u-hidden');
 
         const formTitle = formEl.createEl('p', { cls: 'agent-prompt-form-title', text: t('settings.prompts.newPrompt') });
         const formNameInput = formEl.createEl('input', {
@@ -126,12 +126,12 @@ export class PromptsTab {
             slugInput.value = prompt?.slug ?? '';
             contentInput.value = prompt?.content ?? '';
             modeSelect.value = prompt?.mode ?? '';
-            formEl.style.display = '';
+            formEl.classList.remove('agent-u-hidden');
             formNameInput.focus();
         };
 
         cancelBtn.addEventListener('click', () => {
-            formEl.style.display = 'none';
+            formEl.classList.add('agent-u-hidden');
             editingId = null;
         });
 
@@ -150,7 +150,7 @@ export class PromptsTab {
                 prompts.push({ id: `custom-${Date.now()}`, name, slug, content, enabled: true, mode });
             }
             await savePrompts(prompts);
-            formEl.style.display = 'none';
+            formEl.classList.add('agent-u-hidden');
             editingId = null;
             renderList();
         });

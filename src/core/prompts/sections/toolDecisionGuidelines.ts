@@ -5,7 +5,7 @@
  * tool calls and enforces the RAG pattern for vault queries.
  */
 
-export function getToolDecisionGuidelinesSection(): string {
+export function getToolDecisionGuidelinesSection(configDir = '.obsidian'): string {
     return `Tool decision guidelines:
 1. PLUGIN TOOL ROUTING — Use the right tool for each plugin type:
    (a) Plugin wraps an external CLI tool (Pandoc, Mermaid, ffmpeg, LaTeX, PlantUML):
@@ -23,7 +23,7 @@ export function getToolDecisionGuidelinesSection(): string {
    (b) Read data.json — if it doesn't exist, create it. The plugin just uses defaults.
    (c) Write the config with the values needed for the current task.
    (d) Check dependencies (e.g. Pandoc) — enable/install what's needed.
-   Config paths: Community: .obsidian/plugins/{id}/data.json | Core: .obsidian/{id}.json
+   Config paths: Community: ${configDir}/plugins/{id}/data.json | Core: ${configDir}/{id}.json
    NEVER ask the user to configure via Settings UI. Write data.json yourself.
 1c. PLUGIN FILE FORMATS — Use dedicated tools for complex plugin formats:
    For .excalidraw.md files: ALWAYS use create_excalidraw (never write_file).

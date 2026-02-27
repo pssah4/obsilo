@@ -156,8 +156,8 @@ export class AgentSidebarView extends ItemView {
         });
         setIcon(settingsBtn.createSpan('toolbar-icon'), 'settings');
         settingsBtn.addEventListener('click', () => {
-            (this.app as any).setting?.open();
-            (this.app as any).setting?.openTabById('obsidian-agent');
+            this.app.setting?.open();
+            this.app.setting?.openTabById('obsilo-agent');
         });
 
         // History button — opens conversation history panel
@@ -340,7 +340,7 @@ export class AgentSidebarView extends ItemView {
             attr: { 'aria-label': t('ui.sidebar.stop') },
         });
         setIcon(this.stopButton.createSpan('toolbar-icon'), 'square');
-        this.stopButton.style.display = 'none';
+        this.stopButton.classList.add('agent-u-hidden');
         this.stopButton.addEventListener('click', () => this.handleStop());
 
         // Send button
@@ -426,8 +426,8 @@ export class AgentSidebarView extends ItemView {
         if (enabled.length === 0) {
             menu.addItem((item) =>
                 item.setTitle(t('ui.sidebar.noModelsEnabled')).setIcon('settings').onClick(() => {
-                    (this.app as any).setting?.open();
-                    (this.app as any).setting?.openTabById('obsidian-agent');
+                    this.app.setting?.open();
+                    this.app.setting?.openTabById('obsilo-agent');
                 }),
             );
         } else {
@@ -483,7 +483,7 @@ export class AgentSidebarView extends ItemView {
     private updateToolPickerButton(): void {
         if (!this.toolPickerButton) return;
         const isAsk = this.plugin.settings.currentMode === 'ask';
-        this.toolPickerButton.style.display = isAsk ? 'none' : '';
+        this.toolPickerButton.classList.toggle('agent-u-hidden', isAsk);
         this.updateWebToggleButton();
     }
 
@@ -511,7 +511,7 @@ export class AgentSidebarView extends ItemView {
         // Only show when the active mode supports web tools
         const mode = this.modeService.getMode(this.plugin.settings.currentMode);
         const modeHasWeb = mode?.toolGroups?.includes('web') ?? false;
-        this.webToggleButton.style.display = modeHasWeb ? '' : 'none';
+        this.webToggleButton.classList.toggle('agent-u-hidden', !modeHasWeb);
         // Visual state: active (highlighted) or inactive (ghost)
         const isEnabled = this.plugin.settings.webTools?.enabled ?? false;
         this.webToggleButton.classList.toggle('web-toggle-active', isEnabled);
@@ -559,7 +559,7 @@ export class AgentSidebarView extends ItemView {
             const rootFiles: string[] = [];
 
             for (const child of root.children) {
-                if ((child as any).children !== undefined) {
+                if ('children' in child) {
                     // It's a folder — skip hidden/system dirs
                     const name = child.name;
                     if (!name.startsWith('.')) folders.push(name);
@@ -590,7 +590,7 @@ export class AgentSidebarView extends ItemView {
     }
 
     private async buildSkillsSection(userMessage: string, allowedSkillNames?: string[]): Promise<string | undefined> {
-        const skillsManager = (this.plugin as any).skillsManager;
+        const skillsManager = this.plugin.skillsManager;
         if (!skillsManager) return undefined;
 
         // Build effective toggles: combine manual toggles with per-mode allow-list
@@ -614,8 +614,8 @@ export class AgentSidebarView extends ItemView {
 
     private autoResizeTextarea(): void {
         if (!this.textarea) return;
-        this.textarea.style.height = 'auto';
-        this.textarea.style.height = Math.min(this.textarea.scrollHeight, 15 * 24) + 'px';
+        this.textarea.style.setProperty('height', 'auto');
+        this.textarea.style.setProperty('height', Math.min(this.textarea.scrollHeight, 15 * 24) + 'px');
     }
 
     /**
@@ -773,8 +773,8 @@ export class AgentSidebarView extends ItemView {
         });
         settingsBtn.addEventListener('click', () => {
             this.disableOnboardingButtons(btnRow);
-            (this.app as any).setting?.open?.();
-            (this.app as any).setting?.openTabById?.('obsidian-agent');
+            this.app.setting?.open?.();
+            this.app.setting?.openTabById?.('obsilo-agent');
         });
 
         this.chatContainer.scrollTop = this.chatContainer.scrollHeight;
@@ -986,7 +986,7 @@ export class AgentSidebarView extends ItemView {
         // replace with workflow content as explicit instructions (plain string only;
         // attachment blocks are passed through unchanged).
         if (typeof messageToSend === 'string' && text.startsWith('/')) {
-            const workflowLoader = (this.plugin as any).workflowLoader;
+            const workflowLoader = this.plugin.workflowLoader;
             if (workflowLoader) {
                 const processedText = await workflowLoader.processSlashCommand(
                     text,
@@ -1161,7 +1161,7 @@ export class AgentSidebarView extends ItemView {
                     if (!isThinking) {
                         // First thinking chunk — build the collapsible section
                         isThinking = true;
-                        thinkingEl.style.display = '';
+                        thinkingEl.classList.remove('agent-u-hidden');
                         thinkingEl.empty();
                         const header = thinkingEl.createDiv('thinking-header');
                         setIcon(header.createSpan('thinking-spinner'), 'loader');
@@ -1169,7 +1169,7 @@ export class AgentSidebarView extends ItemView {
                         thinkingEl.createDiv('thinking-content');
                         header.addEventListener('click', () => {
                             const body = thinkingEl.querySelector('.thinking-content') as HTMLElement;
-                            if (body) body.style.display = body.style.display === 'none' ? '' : 'none';
+                            if (body) body.classList.toggle('agent-u-hidden');
                         });
                     }
                     const body = thinkingEl.querySelector('.thinking-content') as HTMLElement;
@@ -1187,9 +1187,9 @@ export class AgentSidebarView extends ItemView {
                         if (spinner) setIcon(spinner as HTMLElement, 'chevron-right');
                         if (label) (label as HTMLElement).setText(t('ui.sidebar.reasoningCollapsed'));
                         const body = thinkingEl.querySelector('.thinking-content') as HTMLElement;
-                        if (body) body.style.display = 'none';
+                        if (body) body.classList.add('agent-u-hidden');
                         if (header) (header as HTMLElement).addEventListener('click', () => {
-                            if (body) body.style.display = body.style.display === 'none' ? '' : 'none';
+                            if (body) body.classList.toggle('agent-u-hidden');
                         }, { once: true });
                     }
                     accumulatedText += chunk;
@@ -1214,7 +1214,7 @@ export class AgentSidebarView extends ItemView {
                             // Hide + clear the streaming UI — text will be re-rendered as
                             // Markdown in onQuestion/onComplete. Hide first to avoid the
                             // flash of raw streaming text disappearing.
-                            contentEl.style.visibility = 'hidden';
+                            contentEl.classList.add('agent-u-visibility-hidden');
                             contentEl.empty();
                             streamingPara = null;
                         }
@@ -1387,7 +1387,7 @@ export class AgentSidebarView extends ItemView {
                 onUsage: (inputTokens, outputTokens) => {
                     const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                     footerEl.setText(`${time}  ·  ${inputTokens.toLocaleString()} in · ${outputTokens.toLocaleString()} out`);
-                    footerEl.style.display = '';
+                    footerEl.classList.remove('agent-u-hidden');
                 },
                 onTodoUpdate: (items) => {
                     lastTodoItems = items;
@@ -1398,7 +1398,7 @@ export class AgentSidebarView extends ItemView {
                     if (footerEl) {
                         const badge = footerEl.createSpan('context-condensed-badge');
                         badge.setText(t('ui.sidebar.contextCondensed'));
-                        footerEl.style.display = '';
+                        footerEl.classList.remove('agent-u-hidden');
                     }
                 },
                 onModeSwitch: (newModeSlug) => {
@@ -1428,10 +1428,10 @@ export class AgentSidebarView extends ItemView {
                     // would otherwise stay invisible until the entire task finishes.
                     if (accumulatedText.trim()) {
                         // Hide during re-render to avoid flash of raw → markdown transition
-                        contentEl.style.visibility = 'hidden';
+                        contentEl.classList.add('agent-u-visibility-hidden');
                         contentEl.empty();
                         MarkdownRenderer.render(this.app, accumulatedText, contentEl, '', this);
-                        requestAnimationFrame(() => { contentEl.style.visibility = ''; });
+                        requestAnimationFrame(() => { contentEl.classList.remove('agent-u-visibility-hidden'); });
                     }
                     // Wrap resolve: after the user answers, show their answer as a
                     // chat bubble and create a fresh message element for the next
@@ -1549,7 +1549,7 @@ export class AgentSidebarView extends ItemView {
                     if (renderText) {
                         contentEl.empty();
                         MarkdownRenderer.render(this.app, renderText, contentEl, '', this);
-                        contentEl.style.visibility = '';
+                        contentEl.classList.remove('agent-u-visibility-hidden');
                     } else if (hasTools) {
                         // Tools ran but the model returned no text — show a neutral placeholder
                         // so the user doesn't stare at an empty message bubble.
@@ -1557,10 +1557,10 @@ export class AgentSidebarView extends ItemView {
                         contentEl.createEl('p', { cls: 'message-empty-response', text: t('ui.sidebar.emptyResponse') });
                     }
                     // Show timestamp in footer even without token usage
-                    if (footerEl.style.display === 'none') {
+                    if (footerEl.classList.contains('agent-u-hidden')) {
                         const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                         footerEl.setText(time);
-                        footerEl.style.display = '';
+                        footerEl.classList.remove('agent-u-hidden');
                     }
                     // Make internal links in the response clickable
                     this.wireInternalLinks(contentEl);
@@ -1656,7 +1656,7 @@ export class AgentSidebarView extends ItemView {
         );
 
         // Load enabled rules for this task (Sprint 3.2)
-        const rulesLoader = (this.plugin as any).rulesLoader;
+        const rulesLoader = this.plugin.rulesLoader;
         const rulesContent = rulesLoader
             ? await rulesLoader.loadEnabledRules(this.plugin.settings.rulesToggles ?? {})
             : undefined;
@@ -1673,7 +1673,7 @@ export class AgentSidebarView extends ItemView {
         if (!isOnboarding) {
             const userMessageText = typeof messageToSend === 'string'
                 ? messageToSend
-                : (messageToSend as any[]).find((b: any) => b.type === 'text')?.text ?? '';
+                : ((messageToSend as ContentBlock[]).find((b): b is ContentBlock & { type: 'text'; text: string } => b.type === 'text'))?.text ?? '';
             const modeAllowed = this.plugin.settings.modeSkillAllowList?.[activeMode.slug];
             // empty/undefined = all allowed; non-empty = only those skill names
             const allowedSkillNames = modeAllowed && modeAllowed.length > 0 ? modeAllowed : undefined;
@@ -1683,7 +1683,7 @@ export class AgentSidebarView extends ItemView {
         // Apply forced workflow from tool picker (when message doesn't start with slash command)
         const forcedWorkflowSlug = this.plugin.settings.forcedWorkflow?.[activeMode.slug] ?? '';
         if (typeof messageToSend === 'string' && !text.startsWith('/') && forcedWorkflowSlug) {
-            const workflowLoader = (this.plugin as any).workflowLoader;
+            const workflowLoader = this.plugin.workflowLoader;
             if (workflowLoader) {
                 const processedText = await workflowLoader.processSlashCommand(
                     `/${forcedWorkflowSlug} ${text}`,
@@ -1699,7 +1699,7 @@ export class AgentSidebarView extends ItemView {
 
         // Build plugin skills section from VaultDNA (PAS-1) — skip during onboarding
         const pluginSkillsSection = isOnboarding ? undefined
-            : (this.plugin as any).skillRegistry?.getPluginSkillsPromptSection() as string | undefined;
+            : this.plugin.skillRegistry?.getPluginSkillsPromptSection() as string | undefined;
 
         const allowedMcpServers = this.plugin.settings.modeMcpServers?.[activeMode.slug];
 
@@ -1749,16 +1749,16 @@ export class AgentSidebarView extends ItemView {
         if (this.plugin.settings.mastery.enabled && this.plugin.recipeMatchingService) {
             try {
                 const matches = this.plugin.recipeMatchingService.match(text, activeMode.slug);
-                console.log(`[Mastery] Recipe matching: ${matches.length} match(es) for mode "${activeMode.slug}"`, matches.map(m => `${m.recipe.id} (${m.score.toFixed(2)})`));
+                console.debug(`[Mastery] Recipe matching: ${matches.length} match(es) for mode "${activeMode.slug}"`, matches.map(m => `${m.recipe.id} (${m.score.toFixed(2)})`));
                 if (matches.length > 0) {
                     recipesSection = this.plugin.recipeMatchingService.buildPromptSection(matches);
-                    console.log(`[Mastery] Recipe section injected (${recipesSection.length} chars)`);
+                    console.debug(`[Mastery] Recipe section injected (${recipesSection.length} chars)`);
                 }
             } catch (e) {
                 console.warn('[Mastery] Recipe matching failed (non-fatal):', e);
             }
         } else {
-            console.log(`[Mastery] Skipped: enabled=${this.plugin.settings.mastery.enabled}, service=${!!this.plugin.recipeMatchingService}`);
+            console.debug(`[Mastery] Skipped: enabled=${this.plugin.settings.mastery.enabled}, service=${!!this.plugin.recipeMatchingService}`);
         }
 
         await task.run(
@@ -1792,8 +1792,8 @@ export class AgentSidebarView extends ItemView {
      * Toggle between send and stop button states
      */
     private setRunningState(running: boolean): void {
-        if (this.sendButton) this.sendButton.style.display = running ? 'none' : '';
-        if (this.stopButton) this.stopButton.style.display = running ? '' : 'none';
+        if (this.sendButton) this.sendButton.classList.toggle('agent-u-hidden', running);
+        if (this.stopButton) this.stopButton.classList.toggle('agent-u-hidden', !running);
         if (this.textarea) this.textarea.disabled = running;
         if (this.modelButton) (this.modelButton as HTMLButtonElement).disabled = running;
     }
@@ -1928,7 +1928,7 @@ export class AgentSidebarView extends ItemView {
         const messageEl = this.chatContainer.createDiv('message assistant-message message-streaming');
         // Reasoning/thinking section (hidden until thinking chunks arrive)
         const thinkingEl = messageEl.createDiv('thinking-block');
-        thinkingEl.style.display = 'none';
+        thinkingEl.classList.add('agent-u-hidden');
         // Tool calls area (populated by onToolStart)
         const toolsEl = messageEl.createDiv('message-tools');
         // Text response (streamed directly for Q&A, rendered on complete for agentic)
@@ -1939,7 +1939,7 @@ export class AgentSidebarView extends ItemView {
         loadingEl.createSpan('message-loading-text').setText(t('ui.sidebar.working'));
         // Token usage + timestamp footer
         const footerEl = messageEl.createDiv('message-footer');
-        footerEl.style.display = 'none';
+        footerEl.classList.add('agent-u-hidden');
         this.chatContainer.scrollTo({ top: this.chatContainer.scrollHeight });
         return { messageEl, thinkingEl, toolsEl, contentEl, footerEl };
     }
@@ -1949,7 +1949,7 @@ export class AgentSidebarView extends ItemView {
      */
     private getErrorTitle(error: Error): string {
         const msg = error.message.toLowerCase();
-        const status = (error as any).status ?? (error as any).statusCode;
+        const status = (error as Error & { status?: number; statusCode?: number }).status ?? (error as Error & { statusCode?: number }).statusCode;
         if (status === 401 || msg.includes('api key') || msg.includes('authentication')) {
             return t('ui.error.invalidKey');
         }
@@ -2170,8 +2170,8 @@ export class AgentSidebarView extends ItemView {
         return TOOL_METADATA[toolName]?.label ?? toolName;
     }
 
-    private getToolBriefParam(input: Record<string, any>): string {
-        return input?.path ?? input?.url ?? input?.query ?? input?.question ?? '';
+    private getToolBriefParam(input: Record<string, unknown>): string {
+        return (input?.path ?? input?.url ?? input?.query ?? input?.question ?? '') as string;
     }
 
     /**
@@ -2335,18 +2335,18 @@ export class AgentSidebarView extends ItemView {
             const r = popup.getBoundingClientRect();
             const pad = 8;
             if (r.right > window.innerWidth) {
-                popup.style.left = `${window.innerWidth - r.width - pad}px`;
+                popup.style.setProperty('left', `${window.innerWidth - r.width - pad}px`);
             }
             if (r.left < 0) {
-                popup.style.left = `${pad}px`;
+                popup.style.setProperty('left', `${pad}px`);
             }
             if (r.bottom > window.innerHeight) {
-                popup.style.top = `${window.innerHeight - r.height - pad}px`;
-                popup.style.bottom = '';
+                popup.style.setProperty('top', `${window.innerHeight - r.height - pad}px`);
+                popup.style.setProperty('bottom', '');
             }
             if (r.top < 0) {
-                popup.style.top = `${pad}px`;
-                popup.style.bottom = '';
+                popup.style.setProperty('top', `${pad}px`);
+                popup.style.setProperty('bottom', '');
             }
         });
     }
@@ -2391,8 +2391,8 @@ export class AgentSidebarView extends ItemView {
         }
 
         const rect = anchor.getBoundingClientRect();
-        popup.style.top = `${rect.bottom + 4}px`;
-        popup.style.left = `${Math.max(4, rect.left - 40)}px`;
+        popup.style.setProperty('top', `${rect.bottom + 4}px`);
+        popup.style.setProperty('left', `${Math.max(4, rect.left - 40)}px`);
 
         document.body.appendChild(popup);
         this.clampPopupToViewport(popup);
@@ -2438,8 +2438,8 @@ export class AgentSidebarView extends ItemView {
         }
 
         const rect = anchor.getBoundingClientRect();
-        popup.style.bottom = `${window.innerHeight - rect.top + 4}px`;
-        popup.style.left = `${rect.left}px`;
+        popup.style.setProperty('bottom', `${window.innerHeight - rect.top + 4}px`);
+        popup.style.setProperty('left', `${rect.left}px`);
 
         document.body.appendChild(popup);
         this.clampPopupToViewport(popup);
@@ -2668,7 +2668,7 @@ export class AgentSidebarView extends ItemView {
 
     private async showApprovalCard(
         toolName: string,
-        input: Record<string, any>,
+        input: Record<string, unknown>,
         container?: HTMLElement,
     ): Promise<import('../core/tool-execution/ToolExecutionPipeline').ApprovalResult> {
         // All tools use the same inline approval card during execution.
@@ -2706,7 +2706,7 @@ export class AgentSidebarView extends ItemView {
             enableBtn.addEventListener('click', async () => {
                 this.plugin.settings.autoApproval.enabled = true;
                 const permKey = this.groupToPermKey(group);
-                if (permKey) (this.plugin.settings.autoApproval as any)[permKey] = true;
+                if (permKey) (this.plugin.settings.autoApproval as unknown as Record<string, boolean>)[permKey] = true;
                 await this.plugin.saveSettings();
                 cleanup();
                 resolve({ decision: 'approved' });
@@ -2777,7 +2777,7 @@ export class AgentSidebarView extends ItemView {
             text: t('ui.checkpoint.restore'),
         });
         restoreBtn.addEventListener('click', () => {
-            restoreBtn.style.display = 'none';
+            restoreBtn.classList.add('agent-u-hidden');
 
             const options = marker.createDiv('checkpoint-restore-options');
 
@@ -2793,7 +2793,7 @@ export class AgentSidebarView extends ItemView {
 
             cancelBtn.addEventListener('click', () => {
                 options.remove();
-                restoreBtn.style.display = '';
+                restoreBtn.classList.remove('agent-u-hidden');
             });
 
             keepBtn.addEventListener('click', async () => {
@@ -2820,9 +2820,9 @@ export class AgentSidebarView extends ItemView {
         optionsEl.setText(t('ui.checkpoint.restoring'));
 
         try {
-            console.log('[Checkpoint] Restoring:', JSON.stringify(checkpoint, null, 2));
+            console.debug('[Checkpoint] Restoring:', JSON.stringify(checkpoint, null, 2));
             const result = await this.plugin.checkpointService?.restore(checkpoint);
-            console.log('[Checkpoint] Result:', JSON.stringify(result, null, 2));
+            console.debug('[Checkpoint] Result:', JSON.stringify(result, null, 2));
             if (!result || result.restored.length === 0) {
                 optionsEl.setText(result?.errors?.length ? t('ui.checkpoint.error') : t('ui.checkpoint.nothingToRestore'));
                 return;
@@ -3055,10 +3055,10 @@ export class AgentSidebarView extends ItemView {
         undoBtn.addEventListener('click', async () => {
             (undoBtn as HTMLButtonElement).disabled = true;
             undoBtn.setText(t('ui.undo.restoring'));
-            console.log(`[Undo] Attempting restore for taskId=${taskId} hasService=${!!this.plugin.checkpointService}`);
+            console.debug(`[Undo] Attempting restore for taskId=${taskId} hasService=${!!this.plugin.checkpointService}`);
             try {
                 const result = await this.plugin.checkpointService?.restoreLatestForTask(taskId);
-                console.log('[Undo] Restore result:', result);
+                console.debug('[Undo] Restore result:', result);
                 bar.empty();
                 if (result && result.restored.length > 0) {
                     bar.createSpan('undo-success').setText(

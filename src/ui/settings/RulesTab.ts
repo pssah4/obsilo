@@ -14,7 +14,7 @@ export class RulesTab {
             text: t('settings.rules.desc'),
         });
 
-        const rulesLoader = (this.plugin as any).rulesLoader;
+        const rulesLoader = this.plugin.rulesLoader;
 
         // ── Create row ───────────────────────────────────────────────────
         const createRow = containerEl.createDiv({ cls: 'agent-rules-create-row' });

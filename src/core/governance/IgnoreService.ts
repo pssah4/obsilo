@@ -18,13 +18,8 @@ export class IgnoreService {
     private protectedPatterns: string[] = [];
     private loaded = false;
 
-    /** Paths always blocked regardless of config */
-    private static readonly ALWAYS_BLOCKED: string[] = [
-        '.git/',
-        '.obsidian/workspace',
-        '.obsidian/workspace.json',
-        '.obsidian/cache',
-    ];
+    /** Paths always blocked regardless of config (built from vault.configDir) */
+    private alwaysBlocked: string[];
 
     /** Paths always write-protected regardless of config */
     private static readonly ALWAYS_PROTECTED: string[] = [
@@ -34,6 +29,13 @@ export class IgnoreService {
 
     constructor(vault: Vault) {
         this.vault = vault;
+        const configDir = vault.configDir;
+        this.alwaysBlocked = [
+            '.git/',
+            `${configDir}/workspace`,
+            `${configDir}/workspace.json`,
+            `${configDir}/cache`,
+        ];
     }
 
     /**
@@ -55,7 +57,7 @@ export class IgnoreService {
         const normalPath = this.normalize(path);
 
         // Always-blocked paths
-        for (const blocked of IgnoreService.ALWAYS_BLOCKED) {
+        for (const blocked of this.alwaysBlocked) {
             if (normalPath === blocked || normalPath.startsWith(blocked)) return true;
         }
 

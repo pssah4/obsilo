@@ -95,7 +95,7 @@
       </div>
 
       <h1>Governance &amp; Safety</h1>
-      <p>Obsilo implements defense in depth with four security layers: path-based access control, user approval, git checkpoints, and audit logging.</p>
+      <p>Obsilo implements defense in depth with multiple security layers: path-based access control, user approval, git checkpoints, audit logging, SafeStorage (OS keychain encryption for API keys), sub-agent depth guard, content truncation, and tool repetition detection.</p>
 
       <h2 id="ignore-service">IgnoreService</h2>
       <p>Path-based access control using <code>.obsidian-agentignore</code> and <code>.obsidian-agentprotected</code> files.</p>
@@ -154,8 +154,8 @@ templates/**</code></pre>
         <thead><tr><th>Group</th><th>Controls</th></tr></thead>
         <tbody>
           <tr><td><code>read</code></td><td>Read operations</td></tr>
-          <tr><td><code>noteEdits</code></td><td>apply_diff, insert_content</td></tr>
-          <tr><td><code>vaultChanges</code></td><td>write_to_file, move_file, delete_file, create_directory</td></tr>
+          <tr><td><code>noteEdits</code></td><td>write_file, edit_file, append_to_file, update_frontmatter</td></tr>
+          <tr><td><code>vaultChanges</code></td><td>create_folder, delete_file, move_file</td></tr>
           <tr><td><code>web</code></td><td>web_search, web_fetch</td></tr>
           <tr><td><code>mcp</code></td><td>use_mcp_tool</td></tr>
           <tr><td><code>mode</code></td><td>switch_mode</td></tr>

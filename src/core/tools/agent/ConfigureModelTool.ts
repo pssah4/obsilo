@@ -73,7 +73,7 @@ export class ConfigureModelTool extends BaseTool<'configure_model'> {
         };
     }
 
-    async execute(input: Record<string, any>, context: ToolExecutionContext): Promise<void> {
+    async execute(input: Record<string, unknown>, context: ToolExecutionContext): Promise<void> {
         const { callbacks } = context;
         const action = (input.action as string ?? '').trim();
 
@@ -95,7 +95,7 @@ export class ConfigureModelTool extends BaseTool<'configure_model'> {
         }
     }
 
-    private async handleAdd(input: Record<string, any>, callbacks: import('../types').ToolCallbacks): Promise<void> {
+    private async handleAdd(input: Record<string, unknown>, callbacks: import('../types').ToolCallbacks): Promise<void> {
         const modelName = (input.model_name as string ?? '').trim();
         const apiKey = (input.api_key as string ?? '').trim();
         const provider = (input.provider as ProviderType | undefined);
@@ -162,7 +162,7 @@ export class ConfigureModelTool extends BaseTool<'configure_model'> {
         callbacks.log(`configure_model: added ${key}`);
     }
 
-    private async handleSelect(input: Record<string, any>, callbacks: import('../types').ToolCallbacks): Promise<void> {
+    private async handleSelect(input: Record<string, unknown>, callbacks: import('../types').ToolCallbacks): Promise<void> {
         const modelKey = (input.model_key as string ?? '').trim();
 
         if (!modelKey) {
@@ -205,7 +205,7 @@ export class ConfigureModelTool extends BaseTool<'configure_model'> {
         callbacks.log(`configure_model: selected ${modelKey}`);
     }
 
-    private async handleTest(input: Record<string, any>, callbacks: import('../types').ToolCallbacks): Promise<void> {
+    private async handleTest(input: Record<string, unknown>, callbacks: import('../types').ToolCallbacks): Promise<void> {
         const modelKey = (input.model_key as string ?? '').trim();
 
         if (!modelKey) {

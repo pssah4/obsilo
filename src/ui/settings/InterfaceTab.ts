@@ -91,9 +91,9 @@ export class InterfaceTab {
                         await this.plugin.saveSettings();
                         if (folder) {
                             const { ChatHistoryService } = await import('../../core/ChatHistoryService');
-                            (this.plugin as any).chatHistoryService = new ChatHistoryService(this.plugin.app.vault, folder);
+                            this.plugin.chatHistoryService = new ChatHistoryService(this.plugin.app.vault, folder);
                         } else {
-                            (this.plugin as any).chatHistoryService = null;
+                            this.plugin.chatHistoryService = null;
                         }
                     }),
             );

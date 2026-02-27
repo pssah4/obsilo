@@ -150,8 +150,8 @@ export class McpTab {
 
             const updateSections = () => {
                 const isStdio = typeSelect.value === 'stdio';
-                stdioSection.style.display = isStdio ? '' : 'none';
-                urlSection.style.display = isStdio ? 'none' : '';
+                stdioSection.classList.toggle('agent-u-hidden', !isStdio);
+                urlSection.classList.toggle('agent-u-hidden', isStdio);
             };
             updateSections();
             typeSelect.addEventListener('change', updateSections);

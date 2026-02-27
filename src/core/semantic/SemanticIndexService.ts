@@ -19,7 +19,7 @@
 import { requestUrl } from 'obsidian';
 import type { Vault } from 'obsidian';
 import type { CustomModel } from '../../types/settings';
-import { LocalIndex } from 'vectra';
+import { LocalIndex, type IndexItem, type QueryResult } from 'vectra';
 import * as path from 'path';
 import * as fs from 'fs';
 
@@ -74,6 +74,12 @@ const CHECKPOINT_VERSION = 1;
 const DEFAULT_CHUNK_SIZE = 2000;   // chars — larger chunks → fewer API calls
 const DEFAULT_COMMIT_EVERY = 20;   // files between disk commits
 const DEFAULT_EMBED_BATCH = 16;    // texts per API request
+
+/** Metadata shape stored in the vectra index. */
+type VectraMetadata = Record<string, string | number | boolean>;
+type VectraItem = IndexItem<VectraMetadata>;
+type VectraQueryResult = QueryResult<VectraMetadata>;
+
 // ---------------------------------------------------------------------------
 // SemanticIndexService
 // ---------------------------------------------------------------------------
@@ -121,7 +127,7 @@ export class SemanticIndexService {
         this.indexPdfs = options.indexPdfs ?? false;
         this.chunkSize = options.chunkSize ?? DEFAULT_CHUNK_SIZE;
 
-        const basePath = (vault.adapter as any).getBasePath?.() ?? '';
+        const basePath = (vault.adapter as import('obsidian').FileSystemAdapter).getBasePath?.() ?? '';
         this.indexDir = options.storageLocation === 'local'
             ? path.join(basePath, '.obsidian-agent', 'semantic-index')
             : path.join(basePath, pluginDir, 'semantic-index');
@@ -145,9 +151,9 @@ export class SemanticIndexService {
     get building(): boolean { return this.isBuilding; }
     get lastBuiltAt(): Date | null { return this.builtAt; }
 
-    setEmbeddingModel(model: CustomModel): void {
+    setEmbeddingModel(model: CustomModel | null): void {
         this.embeddingModel = model;
-        console.log(`[SemanticIndex] Using embedding model: ${model.name} (${model.provider})`);
+        if (model) console.debug(`[SemanticIndex] Using embedding model: ${model.name} (${model.provider})`);
     }
 
     /** Stop an in-progress buildIndex(). Partial progress is saved to checkpoint. */
@@ -219,7 +225,7 @@ export class SemanticIndexService {
             const isFullRebuild = force || isModelChange || isChunkSizeChange || existingCheckpoint === null;
 
             if (isChunkSizeChange) {
-                console.log(`[SemanticIndex] Chunk size changed (${existingCheckpoint!.chunkSize} → ${this.chunkSize}) — full rebuild.`);
+                console.debug(`[SemanticIndex] Chunk size changed (${existingCheckpoint!.chunkSize} → ${this.chunkSize}) — full rebuild.`);
             }
 
             if (isFullRebuild) {
@@ -254,7 +260,7 @@ export class SemanticIndexService {
             onProgress?.(indexed, total);
 
             if (toIndex.length === 0) {
-                console.log('[SemanticIndex] Index up to date — nothing to index.');
+                console.debug('[SemanticIndex] Index up to date — nothing to index.');
                 this.builtAt = new Date();
                 const result: BuildResult = { indexed: total, total, errors: 0, cancelled: false, skippedFiles: [], durationMs: Date.now() - startTime };
                 this.lastBuildResult = result;
@@ -289,7 +295,7 @@ export class SemanticIndexService {
 
             for (const file of toIndex) {
                 if (this.cancelled) {
-                    console.log('[SemanticIndex] Build cancelled — saving partial checkpoint.');
+                    console.debug('[SemanticIndex] Build cancelled — saving partial checkpoint.');
                     break;
                 }
 
@@ -357,7 +363,7 @@ export class SemanticIndexService {
             this.docCount = indexed;
 
             if (!this.cancelled) {
-                console.log(`[SemanticIndex] Build complete: ${indexed}/${total} files, ${errors} skipped.`);
+                console.debug(`[SemanticIndex] Build complete: ${indexed}/${total} files, ${errors} skipped.`);
             }
 
             const result: BuildResult = { indexed, total, errors, cancelled: this.cancelled, skippedFiles, durationMs: Date.now() - startTime };
@@ -540,14 +546,14 @@ export class SemanticIndexService {
             const queryTerms = [...new Set(SemanticIndexService.tokenize(query))];
             if (queryTerms.length === 0) return [];
 
-            const allItems: any[] = await this.index.listItemsByMetadata({});
+            const allItems: VectraItem[] = await this.index.listItemsByMetadata({});
             const N = allItems.length;
             if (N === 0) return [];
 
             // 2. Pre-compute IDF: log((N+1) / (df+1)) per query term
             //    IDF naturally downweights frequent words regardless of language.
             const docFreq = new Map<string, number>();
-            const chunkTokensCache: Map<any, Set<string>> = new Map();
+            const chunkTokensCache: Map<VectraItem, Set<string>> = new Map();
             for (const item of allItems) {
                 const chunk: string = (item.metadata?.chunk as string) ?? '';
                 if (!chunk) continue;
@@ -605,7 +611,7 @@ export class SemanticIndexService {
     async getChunksByPath(filePath: string): Promise<string[]> {
         if (!await this.index.isIndexCreated().catch(() => false)) return [];
         try {
-            const items: any[] = await this.index.listItemsByMetadata({ path: filePath });
+            const items: VectraItem[] = await this.index.listItemsByMetadata({ path: filePath });
             items.sort((a, b) => ((a.metadata?.chunkIndex as number) ?? 0) - ((b.metadata?.chunkIndex as number) ?? 0));
             return items.map((item) => (item.metadata?.chunk as string) ?? '').filter(Boolean);
         } catch {
@@ -674,7 +680,7 @@ export class SemanticIndexService {
                 });
             }
             await this.index.endUpdate();
-            console.log(`[SemanticIndex] Indexed session summary: ${sessionId} (${chunks.length} chunks)`);
+            console.debug(`[SemanticIndex] Indexed session summary: ${sessionId} (${chunks.length} chunks)`);
         } catch (e) {
             console.warn(`[SemanticIndex] Failed to index session ${sessionId}:`, e);
         }
@@ -691,11 +697,11 @@ export class SemanticIndexService {
             const [vector] = await this.embedBatch([query]);
             const results = await this.index.queryItems(vector, query, topK * 5);
             return results
-                .filter((r: any) => r.item.metadata?.source === 'session')
+                .filter((r: VectraQueryResult) => r.item.metadata?.source === 'session')
                 .slice(0, topK)
-                .map((r: any) => ({
-                    path: r.item.metadata?.path as string ?? '',
-                    excerpt: r.item.metadata?.chunk as string ?? '',
+                .map((r: VectraQueryResult) => ({
+                    path: (r.item.metadata?.path as string) ?? '',
+                    excerpt: (r.item.metadata?.chunk as string) ?? '',
                     score: r.score,
                 }));
         } catch (e) {
@@ -743,11 +749,11 @@ export class SemanticIndexService {
             const [vector] = await this.embedBatch([query]);
             const results = await this.index.queryItems(vector, query, topK * 5);
             return results
-                .filter((r: any) => r.item.metadata?.source === 'episode')
+                .filter((r: VectraQueryResult) => r.item.metadata?.source === 'episode')
                 .slice(0, topK)
-                .map((r: any) => ({
-                    path: r.item.metadata?.path as string ?? '',
-                    excerpt: r.item.metadata?.chunk as string ?? '',
+                .map((r: VectraQueryResult) => ({
+                    path: (r.item.metadata?.path as string) ?? '',
+                    excerpt: (r.item.metadata?.chunk as string) ?? '',
                     score: r.score,
                 }));
         } catch (e) {
@@ -804,9 +810,10 @@ export class SemanticIndexService {
         for (let attempt = 0; attempt < maxRetries; attempt++) {
             try {
                 return await this.embedBatchViaApi(texts, model);
-            } catch (e: any) {
-                const status = e?.status ?? e?.statusCode;
-                const msg = String(e?.message ?? e ?? '');
+            } catch (e: unknown) {
+                const err = e as Record<string, unknown> | null;
+                const status = err?.status ?? err?.statusCode;
+                const msg = String((err?.message as string) ?? e ?? '');
                 const isRateLimit =
                     status === 429 ||
                     msg.includes('429') ||
@@ -827,7 +834,7 @@ export class SemanticIndexService {
         let url: string;
         const headers: Record<string, string> = { 'Content-Type': 'application/json' };
         // OpenAI-compatible batch: input is an array of strings
-        const body: Record<string, any> = { input: texts };
+        const body: Record<string, unknown> = { input: texts };
 
         if (model.provider === 'azure') {
             const base = (model.baseUrl ?? '').replace(/\/+$/, '');
@@ -907,13 +914,13 @@ export class SemanticIndexService {
             const raw = await fs.promises.readFile(this.checkpointPath(), 'utf8');
             // M-1: Guard against corrupted or maliciously crafted checkpoint files.
             if (raw.length > 50_000_000) return null; // 50 MB sanity limit
-            const cp = JSON.parse(raw) as any;
+            const cp = JSON.parse(raw) as Record<string, unknown>;
             if (cp?.version !== CHECKPOINT_VERSION) return null;
             if (typeof cp.embeddingModel !== 'string') return null;
             if (typeof cp.chunkSize !== 'number') return null;
             if (!cp.files || typeof cp.files !== 'object' || Array.isArray(cp.files)) return null;
             if (typeof cp.docCount !== 'number') return null;
-            return cp as IndexCheckpoint;
+            return cp as unknown as IndexCheckpoint;
         } catch {
             return null;
         }
@@ -962,8 +969,19 @@ export class SemanticIndexService {
 
         try {
             // Dynamically import pdfjs-dist to avoid bundling its worker at startup.
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const pdfjsLib: any = await import('pdfjs-dist');
+            // Dynamic import returns module namespace — typed as Record since pdfjs-dist
+            // doesn't export a single typed module object for dynamic import.
+            const pdfjsLib = await import('pdfjs-dist') as Record<string, unknown> & {
+                GlobalWorkerOptions?: { workerSrc: string };
+                getDocument(params: { data: Uint8Array; useWorkerFetch: boolean }): {
+                    promise: Promise<{
+                        numPages: number;
+                        getPage(num: number): Promise<{
+                            getTextContent(): Promise<{ items: Array<{ str?: string }> }>;
+                        }>;
+                    }>;
+                };
+            };
 
             // Disable the web worker — pdfjs falls back to in-process (fake-worker) mode,
             // which works correctly in Obsidian's Electron renderer without a separate worker URL.
@@ -971,7 +989,7 @@ export class SemanticIndexService {
                 pdfjsLib.GlobalWorkerOptions.workerSrc = '';
             }
 
-            const basePath = (this.vault.adapter as any).getBasePath?.() ?? '';
+            const basePath = (this.vault.adapter as import('obsidian').FileSystemAdapter).getBasePath?.() ?? '';
             const absPath = path.join(basePath, filePath);
             const data = new Uint8Array(await fs.promises.readFile(absPath));
 
@@ -983,15 +1001,15 @@ export class SemanticIndexService {
                 const page = await pdf.getPage(pageNum);
                 const content = await page.getTextContent();
                 const pageText = content.items
-                    .map((item: any) => ('str' in item ? item.str : ''))
+                    .map((item: { str?: string }) => (item.str ?? ''))
                     .join(' ')
                     .replace(/\s+/g, ' ')
                     .trim();
                 if (pageText) parts.push(pageText);
             }
             return parts.join('\n\n');
-        } catch (e: any) {
-            const msg = String(e?.message ?? '');
+        } catch (e: unknown) {
+            const msg = e instanceof Error ? e.message : String(e);
             if (msg.includes('PasswordException') || msg.includes('InvalidPDFException')) {
                 // Expected for encrypted or corrupt PDFs — don't log noise
                 return '';

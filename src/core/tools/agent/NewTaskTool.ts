@@ -58,7 +58,7 @@ export class NewTaskTool extends BaseTool<'new_task'> {
         };
     }
 
-    async execute(input: Record<string, any>, context: ToolExecutionContext): Promise<void> {
+    async execute(input: Record<string, unknown>, context: ToolExecutionContext): Promise<void> {
         const { callbacks } = context;
         const mode: string = (input.mode as string ?? '').trim();
         const message: string = (input.message as string ?? '').trim();

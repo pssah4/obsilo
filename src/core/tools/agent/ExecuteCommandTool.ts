@@ -39,7 +39,7 @@ export class ExecuteCommandTool extends BaseTool<'execute_command'> {
         };
     }
 
-    async execute(input: Record<string, any>, context: ToolExecutionContext): Promise<void> {
+    async execute(input: Record<string, unknown>, context: ToolExecutionContext): Promise<void> {
         const { callbacks } = context;
         const commandId = (input.command_id as string ?? '').trim();
 
@@ -49,7 +49,7 @@ export class ExecuteCommandTool extends BaseTool<'execute_command'> {
         }
 
         try {
-            const commands: Record<string, any> = (this.app as any).commands?.commands ?? {};
+            const commands = this.app.commands?.commands ?? {};
 
             if (!commands[commandId]) {
                 // Suggest similar commands (same plugin prefix)
@@ -66,7 +66,7 @@ export class ExecuteCommandTool extends BaseTool<'execute_command'> {
                 return;
             }
 
-            await (this.app as any).commands.executeCommandById(commandId);
+            this.app.commands.executeCommandById(commandId);
 
             const cmdName = commands[commandId]?.name ?? commandId;
             callbacks.pushToolResult(

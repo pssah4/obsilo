@@ -77,6 +77,7 @@ export function buildSystemPromptForMode(
     isSubtask = false,
     webEnabled?: boolean,
     recipesSection?: string,
+    configDir = '.obsidian',
 ): string {
     const sections: string[] = [
         // 1. Date/time + 2. Vault context (combined at top)
@@ -103,7 +104,7 @@ export function buildSystemPromptForMode(
         '',
 
         // 8. Tool decision guidelines
-        getToolDecisionGuidelinesSection(),
+        getToolDecisionGuidelinesSection(configDir),
         '',
 
         // 9. Objective (task decomposition)

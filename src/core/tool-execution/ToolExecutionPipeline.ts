@@ -93,7 +93,7 @@ export interface ContextExtensions {
      * Request user approval for a tool call.
      * Returns an ApprovalResult with decision and optional edited content.
      */
-    onApprovalRequired?: (toolName: string, input: Record<string, any>) => Promise<ApprovalResult>;
+    onApprovalRequired?: (toolName: string, input: Record<string, unknown>) => Promise<ApprovalResult>;
     /** Publish the current todo list to the UI */
     updateTodos?: (items: import('../tools/agent/UpdateTodoListTool').TodoItem[]) => void;
     /** Switch the active mode (called by switch_mode tool) */
@@ -135,7 +135,7 @@ export class ToolExecutionPipeline {
     }
 
     /** Stable cache key: tool name + sorted JSON of input parameters. */
-    private cacheKey(name: string, input: Record<string, any>): string {
+    private cacheKey(name: string, input: Record<string, unknown>): string {
         const sortedKeys = Object.keys(input ?? {}).sort();
         return `${name}:${JSON.stringify(input, sortedKeys)}`;
     }
@@ -187,7 +187,7 @@ export class ToolExecutionPipeline {
 
             // 3b. Cache invalidation: write tools invalidate cached reads for affected paths
             if (tool.isWriteOperation) {
-                const affectedPath: string | undefined = toolCall.input?.path;
+                const affectedPath = toolCall.input?.path as string | undefined;
                 if (affectedPath) {
                     const pathJson = JSON.stringify(affectedPath);
                     for (const [key] of this.resultCache) {
@@ -199,7 +199,7 @@ export class ToolExecutionPipeline {
             // 4. Checkpoint before each write — snapshot the file BEFORE it is modified.
             //    Every write gets its own checkpoint for granular restore (Kilo Code pattern).
             if (tool.isWriteOperation && (this.plugin.settings.enableCheckpoints ?? true)) {
-                const path: string | undefined = toolCall.input?.path;
+                const path = toolCall.input?.path as string | undefined;
                 if (path) {
                     try {
                         const cp = await this.plugin.checkpointService?.snapshot(
@@ -275,10 +275,10 @@ export class ToolExecutionPipeline {
      * Check ignore/protected rules for file-path tools.
      */
     private validatePaths(toolCall: ToolUse, isWrite: boolean): ValidationResult {
-        const ignoreService: IgnoreService | undefined = (this.plugin as any).ignoreService;
+        const ignoreService: IgnoreService | undefined = this.plugin.ignoreService;
         if (!ignoreService) return { allowed: true };
 
-        const path: string | undefined = toolCall.input?.path;
+        const path = toolCall.input?.path as string | undefined;
         if (!path) return { allowed: true };
 
         if (ignoreService.isIgnored(path)) {
@@ -346,7 +346,7 @@ export class ToolExecutionPipeline {
         errorMessage?: string,
         resultContent?: string,
     ): Promise<void> {
-        const logger: OperationLogger | undefined = (this.plugin as any).operationLogger;
+        const logger: OperationLogger | undefined = this.plugin.operationLogger;
         if (logger) {
             await logger.log({
                 timestamp: new Date().toISOString(),
@@ -362,7 +362,7 @@ export class ToolExecutionPipeline {
         } else {
             // Fallback: console only
             if (this.plugin.settings.debugMode) {
-                console.log(`[Pipeline] ${toolCall.name} — ${success ? 'ok' : 'error'} (${durationMs}ms)`);
+                console.debug(`[Pipeline] ${toolCall.name} — ${success ? 'ok' : 'error'} (${durationMs}ms)`);
             }
         }
     }

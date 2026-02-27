@@ -53,8 +53,8 @@ export class WebFetchTool extends BaseTool<'web_fetch'> {
         };
     }
 
-    async execute(input: Record<string, any>, context: ToolExecutionContext): Promise<void> {
-        const { url, maxLength = 20000, startIndex = 0 } = input as WebFetchInput;
+    async execute(input: Record<string, unknown>, context: ToolExecutionContext): Promise<void> {
+        const { url, maxLength = 20000, startIndex = 0 } = input as unknown as WebFetchInput;
         const { callbacks } = context;
 
         if (!url) {

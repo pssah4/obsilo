@@ -64,7 +64,7 @@ export class HistoryPanel {
     /** Mount the panel inside a parent container. */
     mount(parent: HTMLElement): void {
         this.panelEl = parent.createDiv({ cls: 'history-panel' });
-        this.panelEl.style.display = 'none';
+        this.panelEl.classList.add('agent-u-hidden');
     }
 
     /** Toggle open/close. */
@@ -78,7 +78,7 @@ export class HistoryPanel {
         this.isOpen = true;
         this.filterText = '';
         this.render();
-        this.panelEl.style.display = '';
+        this.panelEl.classList.remove('agent-u-hidden');
         requestAnimationFrame(() => this.panelEl?.addClass('history-panel-open'));
     }
 
@@ -87,7 +87,7 @@ export class HistoryPanel {
         this.isOpen = false;
         this.panelEl.removeClass('history-panel-open');
         setTimeout(() => {
-            if (!this.isOpen && this.panelEl) this.panelEl.style.display = 'none';
+            if (!this.isOpen && this.panelEl) this.panelEl.classList.add('agent-u-hidden');
         }, 200); // match CSS transition
     }
 

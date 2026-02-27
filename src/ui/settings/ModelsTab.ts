@@ -89,7 +89,7 @@ export class ModelsTab {
         // Provider badge
         const provEl = row.createDiv('mc-provider');
         const badge = provEl.createSpan({ cls: 'provider-badge', text: PROVIDER_LABELS[model.provider] ?? model.provider });
-        badge.style.background = PROVIDER_COLORS[model.provider] ?? '#607d8b';
+        badge.style.setProperty('background', PROVIDER_COLORS[model.provider] ?? '#607d8b');
 
         // Key indicator
         const keyEl = row.createDiv('mc-key');

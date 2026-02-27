@@ -1,6 +1,7 @@
 import { setIcon } from 'obsidian';
 import type ObsidianAgentPlugin from '../../main';
 import type { ModeService } from '../../core/modes/ModeService';
+import type { ToolGroup } from '../../types/settings';
 import { TOOL_METADATA, GROUP_META, getToolsForGroup } from '../../core/tools/toolMetadata';
 import { t } from '../../i18n';
 
@@ -48,7 +49,7 @@ export class ToolPickerPopover {
         // ── Data from central tool metadata (single source of truth) ────────
         const GROUP_TOOLS: Record<string, string[]> = {};
         for (const [group] of Object.entries(GROUP_META)) {
-            GROUP_TOOLS[group] = getToolsForGroup(group as any).map(([name]) => name);
+            GROUP_TOOLS[group] = getToolsForGroup(group as ToolGroup).map(([name]) => name);
         }
 
         // Excluded groups: 'web' (dedicated toggle), 'mcp' (own section)
@@ -85,11 +86,11 @@ export class ToolPickerPopover {
             catRow.createSpan('tp-cat-arrow').setText('▸');
             catRow.createSpan({ cls: 'tp-cat-label', text: label });
             const catBody = scrollEl.createDiv('tp-cat-body');
-            catBody.style.display = startOpen ? '' : 'none';
+            catBody.classList.toggle('agent-u-hidden', !startOpen);
             catRow.addEventListener('click', (e) => {
                 if ((e.target as HTMLElement).tagName === 'INPUT') return;
                 const open = catRow.classList.toggle('is-open');
-                catBody.style.display = open ? '' : 'none';
+                catBody.classList.toggle('agent-u-hidden', !open);
             });
             return { catRow, catBody };
         };
@@ -106,11 +107,11 @@ export class ToolPickerPopover {
             const subGroupCb = subRow.createEl('input', { type: 'checkbox' }) as HTMLInputElement;
             subGroupCb.className = 'tp-cat-group-cb';
             const subBody = parent.createDiv('tp-subcat-body');
-            subBody.style.display = 'none';
+            subBody.classList.add('agent-u-hidden');
             subRow.addEventListener('click', (e) => {
                 if ((e.target as HTMLElement).tagName === 'INPUT') return;
                 const open = subRow.classList.toggle('is-open');
-                subBody.style.display = open ? '' : 'none';
+                subBody.classList.toggle('agent-u-hidden', !open);
             });
             return { subRow, subBody, subGroupCb };
         };
@@ -268,33 +269,33 @@ export class ToolPickerPopover {
             const br = anchorBtn.getBoundingClientRect();
             const cr = containerEl.getBoundingClientRect();
             const pad = 8;
-            popover.style.position = 'fixed';
+            popover.style.setProperty('position', 'fixed');
 
             // Constrain width to container
             const popWidth = Math.min(400, cr.width - pad * 2);
-            popover.style.width = `${popWidth}px`;
-            popover.style.minWidth = `${Math.min(320, popWidth)}px`;
-            popover.style.maxWidth = `${popWidth}px`;
+            popover.style.setProperty('width', `${popWidth}px`);
+            popover.style.setProperty('min-width', `${Math.min(320, popWidth)}px`);
+            popover.style.setProperty('max-width', `${popWidth}px`);
 
             // Prefer opening upward; fall back to downward
             const spaceAbove = br.top - cr.top - pad;
             const spaceBelow = cr.bottom - br.bottom - pad;
 
             if (spaceAbove >= spaceBelow) {
-                popover.style.bottom = (window.innerHeight - br.top + 4) + 'px';
-                popover.style.top = '';
-                popover.style.maxHeight = `${Math.max(spaceAbove, 200)}px`;
+                popover.style.setProperty('bottom', (window.innerHeight - br.top + 4) + 'px');
+                popover.style.setProperty('top', '');
+                popover.style.setProperty('max-height', `${Math.max(spaceAbove, 200)}px`);
             } else {
-                popover.style.top = (br.bottom + 4) + 'px';
-                popover.style.bottom = '';
-                popover.style.maxHeight = `${Math.max(spaceBelow, 200)}px`;
+                popover.style.setProperty('top', (br.bottom + 4) + 'px');
+                popover.style.setProperty('bottom', '');
+                popover.style.setProperty('max-height', `${Math.max(spaceBelow, 200)}px`);
             }
 
             // Horizontal: keep inside container
             let left = Math.max(br.left, cr.left + pad);
             if (left + popWidth > cr.right - pad) left = cr.right - pad - popWidth;
             left = Math.max(left, cr.left + pad);
-            popover.style.left = `${left}px`;
+            popover.style.setProperty('left', `${left}px`);
         };
         document.body.appendChild(popover);
         positionPopover();
@@ -312,17 +313,17 @@ export class ToolPickerPopover {
                 const matches = !q
                     || (row.getAttribute('data-label') ?? '').includes(q)
                     || (row.getAttribute('data-desc') ?? '').includes(q);
-                row.style.display = matches ? '' : 'none';
+                row.classList.toggle('agent-u-hidden', !matches);
             }
             if (q) {
                 builtInCatRow.addClass('is-open');
-                builtInCatBody.style.display = '';
+                builtInCatBody.classList.remove('agent-u-hidden');
             }
         });
 
         // ── Async: skills + workflows ─────────────────────────────────────────
         (async () => {
-            const skillsManager = (this.plugin as any).skillsManager;
+            const skillsManager = this.plugin.skillsManager;
             if (skillsManager) {
                 skillsCatBody.empty();
                 try {
@@ -335,10 +336,10 @@ export class ToolPickerPopover {
                         const modeAllowed = this.plugin.settings.modeSkillAllowList?.[slug];
                         // empty/undefined = all allowed
                         const allowedSet = new Set<string>(
-                            modeAllowed && modeAllowed.length > 0 ? modeAllowed : skills.map((s: any) => s.name),
+                            modeAllowed && modeAllowed.length > 0 ? modeAllowed : skills.map((s) => s.name),
                         );
                         skillsCatRow.addClass('is-open');
-                        skillsCatBody.style.display = '';
+                        skillsCatBody.classList.remove('agent-u-hidden');
                         for (const skill of skills) {
                             const cb = makeItemRow(
                                 skillsCatBody, skill.name, skill.description ?? '', 'wand-2',
@@ -350,7 +351,7 @@ export class ToolPickerPopover {
                                 const cur = new Set<string>(
                                     this.plugin.settings.modeSkillAllowList[slug]?.length
                                         ? this.plugin.settings.modeSkillAllowList[slug]
-                                        : skills.map((s: any) => s.name),
+                                        : skills.map((s) => s.name),
                                 );
                                 if (cb.checked) cur.add(skill.name);
                                 else cur.delete(skill.name);
@@ -374,7 +375,7 @@ export class ToolPickerPopover {
                             skillsGroupCb.indeterminate = false;
                             if (!this.plugin.settings.modeSkillAllowList) this.plugin.settings.modeSkillAllowList = {};
                             // all checked → [] (no restriction); none checked → [] (same, no restriction)
-                            const next = skillsGroupCb.checked ? skills.map((s: any) => s.name) : [];
+                            const next = skillsGroupCb.checked ? skills.map((s) => s.name) : [];
                             this.plugin.settings.modeSkillAllowList[slug] =
                                 next.length === skills.length ? [] : next;
                             await this.plugin.saveSettings();
@@ -389,7 +390,7 @@ export class ToolPickerPopover {
                 skillsCatBody.remove();
             }
 
-            const workflowLoader = (this.plugin as any).workflowLoader;
+            const workflowLoader = this.plugin.workflowLoader;
             if (workflowLoader) {
                 wfCatBody.empty();
                 try {
@@ -401,7 +402,7 @@ export class ToolPickerPopover {
                         const wfCbs: HTMLInputElement[] = [];
                         const activeWfSlug = this.plugin.settings.forcedWorkflow?.[slug] ?? '';
                         wfCatRow.addClass('is-open');
-                        wfCatBody.style.display = '';
+                        wfCatBody.classList.remove('agent-u-hidden');
                         for (const wf of workflows) {
                             const cb = makeItemRow(
                                 wfCatBody, wf.displayName, `/${wf.slug}`, 'git-branch',

@@ -172,7 +172,7 @@ export class UpdateSettingsTool extends BaseTool<'update_settings'> {
         };
     }
 
-    async execute(input: Record<string, any>, context: ToolExecutionContext): Promise<void> {
+    async execute(input: Record<string, unknown>, context: ToolExecutionContext): Promise<void> {
         const { callbacks } = context;
         const action = (input.action as string ?? '').trim();
 
@@ -194,7 +194,7 @@ export class UpdateSettingsTool extends BaseTool<'update_settings'> {
         }
     }
 
-    private async handleSet(input: Record<string, any>, callbacks: import('../types').ToolCallbacks, context?: ToolExecutionContext): Promise<void> {
+    private async handleSet(input: Record<string, unknown>, callbacks: import('../types').ToolCallbacks, context?: ToolExecutionContext): Promise<void> {
         const path = (input.path as string ?? '').trim();
         const value = input.value;
 
@@ -218,9 +218,9 @@ export class UpdateSettingsTool extends BaseTool<'update_settings'> {
 
         // Navigate to the nested property and set it
         const parts = path.split('.');
-        let target: any = this.plugin.settings;
+        let target: Record<string, unknown> = this.plugin.settings as unknown as Record<string, unknown>;
         for (let i = 0; i < parts.length - 1; i++) {
-            target = target?.[parts[i]];
+            target = target?.[parts[i]] as Record<string, unknown>;
             if (target === undefined || target === null) {
                 callbacks.pushToolResult(this.formatError(new Error(`Invalid setting path: "${path}"`)));
                 return;
@@ -243,7 +243,7 @@ export class UpdateSettingsTool extends BaseTool<'update_settings'> {
         callbacks.log(`update_settings: ${path} = ${JSON.stringify(value)}`);
     }
 
-    private async handleOpenTab(input: Record<string, any>, callbacks: import('../types').ToolCallbacks): Promise<void> {
+    private async handleOpenTab(input: Record<string, unknown>, callbacks: import('../types').ToolCallbacks): Promise<void> {
         const tab = (input.tab as string ?? '').trim();
         const subTab = (input.sub_tab as string ?? '').trim() || undefined;
 
@@ -258,7 +258,7 @@ export class UpdateSettingsTool extends BaseTool<'update_settings'> {
         callbacks.log(`update_settings: opened tab ${desc}`);
     }
 
-    private async handlePreset(input: Record<string, any>, callbacks: import('../types').ToolCallbacks): Promise<void> {
+    private async handlePreset(input: Record<string, unknown>, callbacks: import('../types').ToolCallbacks): Promise<void> {
         const presetName = (input.preset as string ?? '').trim();
 
         if (!presetName) {

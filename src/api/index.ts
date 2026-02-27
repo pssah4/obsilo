@@ -33,6 +33,6 @@ export function buildApiHandler(config: LLMProvider) {
         case 'custom':
             return new OpenAiProvider(config);
         default:
-            throw new Error(`Unknown provider type: ${(config as any).type}`);
+            throw new Error(`Unknown provider type: ${(config as LLMProvider).type}`);
     }
 }

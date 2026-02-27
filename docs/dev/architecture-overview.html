@@ -98,7 +98,7 @@
       <p>Obsilo is an AI agent built as an Obsidian plugin. It runs entirely in the Electron renderer process, with no backend server, combining an agentic loop with a governed tool execution pipeline and a modular prompt system.</p>
 
       <h2 id="system-context">System Context</h2>
-      <p>Obsilo connects three external boundaries: the Obsidian Vault (local filesystem), LLM API providers (Anthropic, OpenAI, Ollama, etc.), and optionally MCP servers for extended tool access.</p>
+      <p>Obsilo connects three external boundaries: the Obsidian Vault (local filesystem), LLM API providers (Anthropic, OpenAI, Google Gemini, Ollama, Azure, OpenRouter, LM Studio, or custom), and optionally MCP servers for extended tool access.</p>
 
       <div class="arch-diagram">User &lt;--&gt; AgentSidebarView &lt;--&gt; AgentTask (Loop)
                                           |
@@ -179,6 +179,21 @@
           <tr><td><code>IgnoreService</code></td><td>src/core/governance/IgnoreService.ts</td><td>Path-based access control</td></tr>
           <tr><td><code>GitCheckpointService</code></td><td>src/core/checkpoints/GitCheckpointService.ts</td><td>Shadow git repo for undo</td></tr>
           <tr><td><code>OperationLogger</code></td><td>src/core/governance/OperationLogger.ts</td><td>JSONL audit trail</td></tr>
+          <tr><td><code>SafeStorageService</code></td><td>src/core/storage/SafeStorageService.ts</td><td>Electron safeStorage for API key encryption (OS Keychain)</td></tr>
+        </tbody>
+      </table>
+
+      <h3 id="infrastructure-services">Infrastructure Services</h3>
+      <table>
+        <thead><tr><th>Component</th><th>File</th><th>Responsibility</th></tr></thead>
+        <tbody>
+          <tr><td><code>GlobalFileService</code></td><td>src/core/storage/GlobalFileService.ts</td><td>Cross-vault file I/O at ~/.obsidian-agent/</td></tr>
+          <tr><td><code>SyncBridge</code></td><td>src/core/storage/SyncBridge.ts</td><td>Bidirectional sync between global and vault-local files</td></tr>
+          <tr><td><code>OnboardingService</code></td><td>src/core/memory/OnboardingService.ts</td><td>9-step guided first-run onboarding conversation</td></tr>
+          <tr><td><code>VaultDNAScanner</code></td><td>src/core/skills/VaultDNAScanner.ts</td><td>Auto-generates .skill.md files from installed plugins</td></tr>
+          <tr><td><code>RecipeStore</code></td><td>src/core/skills/RecipeStore.ts</td><td>Procedural recipes for multi-step plugin interactions</td></tr>
+          <tr><td><code>EpisodicExtractor</code></td><td>src/core/skills/EpisodicExtractor.ts</td><td>Learns from task executions, auto-promotes patterns to recipes</td></tr>
+          <tr><td><code>I18nService</code></td><td>src/core/i18n/I18nService.ts</td><td>Internationalization (6 languages, 937 keys)</td></tr>
         </tbody>
       </table>
 

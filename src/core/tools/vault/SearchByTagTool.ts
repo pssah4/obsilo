@@ -53,8 +53,8 @@ export class SearchByTagTool extends BaseTool<'search_by_tag'> {
         };
     }
 
-    async execute(input: Record<string, any>, context: ToolExecutionContext): Promise<void> {
-        const { tags, match = 'any', limit = 50 } = input as SearchByTagInput;
+    async execute(input: Record<string, unknown>, context: ToolExecutionContext): Promise<void> {
+        const { tags, match = 'any', limit = 50 } = input as unknown as SearchByTagInput;
         const { callbacks } = context;
 
         try {

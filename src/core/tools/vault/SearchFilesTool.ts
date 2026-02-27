@@ -40,11 +40,11 @@ export class SearchFilesTool extends BaseTool<'search_files'> {
         };
     }
 
-    async execute(input: Record<string, any>, context: ToolExecutionContext): Promise<void> {
+    async execute(input: Record<string, unknown>, context: ToolExecutionContext): Promise<void> {
         const { callbacks } = context;
-        const rawPath: string = input.path ?? '/';
-        const pattern: string = input.pattern ?? '';
-        const filePattern: string | undefined = input.file_pattern;
+        const rawPath = (input.path as string) ?? '/';
+        const pattern = (input.pattern as string) ?? '';
+        const filePattern = input.file_pattern as string | undefined;
 
         if (!pattern) {
             callbacks.pushToolResult(this.formatError(new Error('pattern parameter is required')));

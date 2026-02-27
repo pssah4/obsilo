@@ -30,7 +30,10 @@ export class SafeStorageService {
 
     constructor() {
         try {
-            // eslint-disable-next-line @typescript-eslint/no-var-requires
+            // Dynamic require for Electron — must stay as require() because
+            // 'electron' is only available in the Electron renderer process
+            // and cannot be statically imported in a bundled plugin.
+            // eslint-disable-next-line @typescript-eslint/no-require-imports -- Electron can only be loaded via dynamic require in renderer
             const electron = require('electron');
             // In Obsidian's Electron renderer, safeStorage may be on the
             // module directly or behind the (deprecated) remote bridge.

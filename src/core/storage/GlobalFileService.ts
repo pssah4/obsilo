@@ -10,13 +10,9 @@
  */
 
 import type { FileAdapter } from './types';
-
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const fsModule = require('fs') as typeof import('fs');
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const osModule = require('os') as typeof import('os');
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const pathModule = require('path') as typeof import('path');
+import fsModule from 'fs';
+import osModule from 'os';
+import pathModule from 'path';
 
 const GLOBAL_DIR_NAME = '.obsidian-agent';
 
@@ -81,8 +77,8 @@ export class GlobalFileService implements FileAdapter {
                 }
             }
             return { files: files.sort(), folders: folders.sort() };
-        } catch (err: any) {
-            if (err?.code === 'ENOENT') {
+        } catch (err: unknown) {
+            if ((err as NodeJS.ErrnoException)?.code === 'ENOENT') {
                 return { files: [], folders: [] };
             }
             throw err;

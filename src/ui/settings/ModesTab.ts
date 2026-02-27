@@ -1,6 +1,6 @@
 import { App, Notice, Setting, setIcon } from 'obsidian';
 import type ObsidianAgentPlugin from '../../main';
-import type { ModeConfig } from '../../types/settings';
+import type { ModeConfig, ToolGroup } from '../../types/settings';
 import { getModelKey } from '../../types/settings';
 import { BUILT_IN_MODES, TOOL_GROUP_MAP } from '../../core/modes/builtinModes';
 import { buildSystemPromptForMode } from '../../core/systemPrompt';
@@ -11,9 +11,10 @@ import { SystemPromptPreviewModal } from './SystemPromptPreviewModal';
 import { NewModeModal } from './NewModeModal';
 import { addInfoButton } from './utils';
 import { t } from '../../i18n';
+import type { ModeService } from '../../core/modes/ModeService';
 
 export class ModesTab {
-    constructor(private plugin: ObsidianAgentPlugin, private app: App, private rerender: () => void, private modeService?: any) {}
+    constructor(private plugin: ObsidianAgentPlugin, private app: App, private rerender: () => void, private modeService?: ModeService) {}
 
     build(containerEl: HTMLElement): void {
         // Collect all selectable modes (built-in + custom, not __custom instruction entries).
@@ -22,7 +23,7 @@ export class ModesTab {
         const builtInSlugs = new Set(BUILT_IN_MODES.map((m) => m.slug));
         const getAllModes = (): ModeConfig[] => [
             ...BUILT_IN_MODES,
-            ...((this.plugin as any).modeService?.getGlobalModes?.() ?? []),
+            ...(this.modeService?.getGlobalModes?.() ?? []),
             ...this.plugin.settings.customModes.filter(
                 (m) => m.source === 'vault' && !m.slug.endsWith('__custom') && !builtInSlugs.has(m.slug),
             ),
@@ -41,7 +42,7 @@ export class ModesTab {
             select.empty();
             const groups: { label: string; modes: ModeConfig[] }[] = [
                 { label: t('settings.modes.groupBuiltIn'), modes: BUILT_IN_MODES },
-                { label: t('settings.modes.groupGlobal'), modes: (this.plugin as any).modeService?.getGlobalModes?.() ?? [] },
+                { label: t('settings.modes.groupGlobal'), modes: this.modeService?.getGlobalModes?.() ?? [] },
                 { label: t('settings.modes.groupVault'), modes: this.plugin.settings.customModes.filter((m) => m.source === 'vault' && !m.slug.endsWith('__custom') && !builtInSlugs.has(m.slug)) },
             ];
             for (const group of groups) {
@@ -81,7 +82,7 @@ export class ModesTab {
                 : undefined;
             // Global mode (not a built-in, not in customModes)
             const globalMode: ModeConfig | undefined = !builtIn && !vaultCustom
-                ? ((this.plugin as any).modeService?.getGlobalModes?.() ?? []).find(
+                ? (this.modeService?.getGlobalModes?.() ?? []).find(
                       (m: ModeConfig) => m.slug === slug,
                   )
                 : undefined;
@@ -116,7 +117,7 @@ export class ModesTab {
             const saveMode = async () => {
                 if (isGlobal) {
                     await GlobalModeStore.updateMode(globalMode!);
-                    await (this.plugin as any).modeService?.reloadGlobalModes?.();
+                    await this.modeService?.reloadGlobalModes?.();
                 } else {
                     await this.plugin.saveSettings();
                 }
@@ -232,7 +233,7 @@ export class ModesTab {
                     this.plugin.settings.modeToolOverrides?.[slug];
 
                 for (const [group, meta] of Object.entries(TOOL_GROUP_META)) {
-                    const isGroupEnabled = mode.toolGroups.includes(group as any);
+                    const isGroupEnabled = mode.toolGroups.includes(group as ToolGroup);
 
                     // --- Group accordion ---
                     const details = toolsBody.createEl('details', { cls: 'modes-tool-group-accordion' });
@@ -247,13 +248,13 @@ export class ModesTab {
                     groupCb.addEventListener('change', async () => {
                         const editable = getOrCreateEditable();
                         if (groupCb.checked) {
-                            if (!editable.toolGroups.includes(group as any)) editable.toolGroups.push(group as any);
+                            if (!editable.toolGroups.includes(group as ToolGroup)) editable.toolGroups.push(group as ToolGroup);
                             details.open = true;
                         } else {
                             editable.toolGroups = editable.toolGroups.filter((g) => g !== group);
                             details.open = false;
                         }
-                        (mode as any).toolGroups = [...editable.toolGroups];
+                        mode.toolGroups = [...editable.toolGroups];
                         await saveMode();
                         // Recount active tools badge
                         badgeEl.setText(getCountBadge(group, groupCb.checked));
@@ -295,13 +296,13 @@ export class ModesTab {
                             const allGroupTools = meta.tools;
                             // Start from current override or all tools in all groups
                             let allActiveTools: string[] = this.plugin.settings.modeToolOverrides?.[slug]
-                                ?? (this.plugin as any).modeService?.getToolNames(mode) ?? [];
+                                ?? this.modeService?.getToolNames(mode) ?? [];
                             if (toolCb.checked) {
                                 if (!allActiveTools.includes(toolName)) allActiveTools = [...allActiveTools, toolName];
                             } else {
                                 allActiveTools = allActiveTools.filter((tn) => tn !== toolName);
                             }
-                            await (this.plugin as any).modeService?.setModeToolOverride(slug, allActiveTools);
+                            await this.modeService?.setModeToolOverride(slug, allActiveTools);
                             badgeEl.setText(getCountBadge(group, isGroupEnabled));
                         });
                     }
@@ -360,7 +361,7 @@ export class ModesTab {
             }
 
             // ── Allowed Skills ────────────────────────────────────────────────
-            const skillsManager = (this.plugin as any).skillsManager;
+            const skillsManager = this.plugin.skillsManager;
             if (skillsManager) {
                 const skillsWrap = formArea.createDiv('modes-field');
                 const skillsHeaderRow = skillsWrap.createDiv('modes-tools-header');
@@ -466,7 +467,7 @@ export class ModesTab {
             roleTextarea.addEventListener('input', async () => {
                 const editable = getOrCreateEditable();
                 editable.roleDefinition = roleTextarea.value;
-                (mode as any).roleDefinition = editable.roleDefinition;
+                mode.roleDefinition = editable.roleDefinition;
                 await saveMode();
             });
 
@@ -519,7 +520,7 @@ export class ModesTab {
             previewBtn.addEventListener('click', () => {
                 const allModes = [
                     ...BUILT_IN_MODES,
-                    ...((this.plugin as any).modeService?.getGlobalModes?.() ?? []),
+                    ...(this.modeService?.getGlobalModes?.() ?? []),
                     ...this.plugin.settings.customModes.filter((m) => m.source === 'vault' && !m.slug.endsWith('__custom')),
                 ];
                 const prompt = buildSystemPromptForMode(
@@ -534,7 +535,7 @@ export class ModesTab {
             const exportBtn = bottomBar.createEl('button', { text: t('settings.modes.export'), cls: 'modes-export-btn' });
             exportBtn.addEventListener('click', () => {
                 const exportData: Partial<ModeConfig> = { ...mode };
-                delete (exportData as any).source;
+                delete (exportData as Partial<ModeConfig>).source;
                 const json = JSON.stringify(exportData, null, 2);
                 const blob = new Blob([json], { type: 'application/json' });
                 const url = URL.createObjectURL(blob);
@@ -580,7 +581,7 @@ export class ModesTab {
                 deleteBtn.addEventListener('click', async () => {
                     if (isGlobal) {
                         await GlobalModeStore.removeMode(slug);
-                        await (this.plugin as any).modeService?.reloadGlobalModes?.();
+                        await this.modeService?.reloadGlobalModes?.();
                     } else {
                         this.plugin.settings.customModes = this.plugin.settings.customModes.filter(
                             (m) => m.slug !== slug,
@@ -607,7 +608,7 @@ export class ModesTab {
 
         // New Mode
         newBtn.addEventListener('click', () => {
-            new NewModeModal(this.app, this.plugin, () => this.rerender(), (this.plugin as any).modeService).open();
+            new NewModeModal(this.app, this.plugin, () => this.rerender(), this.modeService).open();
         });
 
         // Import
@@ -625,20 +626,21 @@ export class ModesTab {
                         new Notice(t('settings.modes.fileTooLarge'));
                         return;
                     }
-                    let parsed: any;
+                    let raw: unknown;
                     try {
-                        parsed = JSON.parse(text);
+                        raw = JSON.parse(text);
                     } catch {
                         new Notice(t('settings.modes.invalidJson'));
                         return;
                     }
-                    if (!parsed || typeof parsed !== 'object' ||
-                        typeof parsed.slug !== 'string' ||
-                        typeof parsed.name !== 'string' ||
-                        typeof parsed.roleDefinition !== 'string') {
+                    if (!raw || typeof raw !== 'object' ||
+                        typeof (raw as Record<string, unknown>).slug !== 'string' ||
+                        typeof (raw as Record<string, unknown>).name !== 'string' ||
+                        typeof (raw as Record<string, unknown>).roleDefinition !== 'string') {
                         new Notice(t('settings.modes.invalidMode'));
                         return;
                     }
+                    const parsed = raw as ModeConfig;
                     parsed.source = 'vault';
                     const allSlugs = [
                         ...BUILT_IN_MODES.map((m) => m.slug),

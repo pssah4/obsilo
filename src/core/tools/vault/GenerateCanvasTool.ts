@@ -95,12 +95,12 @@ export class GenerateCanvasTool extends BaseTool<'generate_canvas'> {
         };
     }
 
-    async execute(input: Record<string, any>, context: ToolExecutionContext): Promise<void> {
+    async execute(input: Record<string, unknown>, context: ToolExecutionContext): Promise<void> {
         const { callbacks } = context;
-        const outputPath: string = (input.output_path as string ?? '').trim();
-        const mode: string = input.mode ?? 'folder';
-        const source: string = (input.source as string ?? '').trim();
-        const explicitFiles: string[] = Array.isArray(input.files) ? input.files : [];
+        const outputPath = ((input.output_path as string) ?? '').trim();
+        const mode = (input.mode as string) ?? 'folder';
+        const source = ((input.source as string) ?? '').trim();
+        const explicitFiles: string[] = Array.isArray(input.files) ? input.files as string[] : [];
         const maxNotes: number = Math.min(Number(input.max_notes) || 50, 200);
         const drawEdges: boolean = input.draw_edges !== false;
 
@@ -170,7 +170,7 @@ export class GenerateCanvasTool extends BaseTool<'generate_canvas'> {
                     }
                 }
                 // Backlinks to the source note
-                const backlinks = (this.app.metadataCache as any).getBacklinksForFile?.(centerFile);
+                const backlinks = this.app.metadataCache.getBacklinksForFile?.(centerFile);
                 if (backlinks?.data) {
                     for (const [path] of Object.entries(backlinks.data)) {
                         const f = this.app.vault.getFileByPath(path as string);

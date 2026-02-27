@@ -51,16 +51,16 @@ export class SemanticSearchTool extends BaseTool<'semantic_search'> {
         };
     }
 
-    async execute(input: Record<string, any>, context: ToolExecutionContext): Promise<void> {
+    async execute(input: Record<string, unknown>, context: ToolExecutionContext): Promise<void> {
         const { callbacks } = context;
-        const query: string = input.query ?? '';
+        const query = (input.query as string) ?? '';
         const topK: number = Math.min(Number(input.top_k) || 8, 20);
-        const folderFilter: string | undefined = input.folder?.trim() || undefined;
+        const folderFilter: string | undefined = ((input.folder as string) ?? '').trim() || undefined;
         const tagsFilter: string[] | undefined = Array.isArray(input.tags) && input.tags.length > 0
-            ? input.tags.map((t: string) => t.replace(/^#/, '').toLowerCase())
+            ? (input.tags as string[]).map((t: string) => t.replace(/^#/, '').toLowerCase())
             : undefined;
         const sinceFilter: number | undefined = input.since
-            ? new Date(input.since).getTime()
+            ? new Date(input.since as string).getTime()
             : undefined;
         const hasFilter = !!(folderFilter || tagsFilter || sinceFilter);
         // Request more candidates when filters are active so we still return topK after filtering
@@ -72,7 +72,7 @@ export class SemanticSearchTool extends BaseTool<'semantic_search'> {
             return;
         }
 
-        const semanticIndex = (this.plugin as any).semanticIndex;
+        const semanticIndex = this.plugin.semanticIndex;
         if (!semanticIndex) {
             callbacks.pushToolResult(
                 'Semantic Index is not enabled. Enable it in Settings → Semantic Index and click "Build Index".'
@@ -93,8 +93,8 @@ export class SemanticSearchTool extends BaseTool<'semantic_search'> {
             // the query. We embed that hypothetical text instead of the raw query,
             // which gives the embedding model a much richer signal to match against.
             let hydeText: string | undefined;
-            const hydeEnabled = (this.plugin as any).settings?.hydeEnabled === true;
-            const apiHandler = (this.plugin as any).apiHandler;
+            const hydeEnabled = (this.plugin.settings as unknown as Record<string, unknown>)?.hydeEnabled === true;
+            const apiHandler = this.plugin.apiHandler;
             if (hydeEnabled && apiHandler) {
                 try {
                     const hydePrompt = `Write a 2-3 sentence Obsidian note excerpt that would directly answer this question: "${query}". Write only the note content itself, no meta-commentary.`;
@@ -124,13 +124,13 @@ export class SemanticSearchTool extends BaseTool<'semantic_search'> {
             type HybridEntry = { path: string; excerpt: string; score: number; method: 'semantic' | 'keyword' | 'hybrid' };
             const fused = new Map<string, HybridEntry>();
 
-            semanticResults.forEach((r: any, i: number) => {
+            semanticResults.forEach((r, i) => {
                 // Keep first (best-ranked) occurrence per file — don't overwrite with worse rank
                 if (!fused.has(r.path)) {
                     fused.set(r.path, { path: r.path, excerpt: r.excerpt, score: 1 / (RRF_K + i + 1), method: 'semantic' });
                 }
             });
-            keywordResults.forEach((r: any, i: number) => {
+            keywordResults.forEach((r, i) => {
                 const rrf = 1 / (RRF_K + i + 1);
                 const existing = fused.get(r.path);
                 if (existing) {
@@ -156,7 +156,7 @@ export class SemanticSearchTool extends BaseTool<'semantic_search'> {
                     const cache = this.plugin.app.metadataCache.getFileCache(vaultFile);
                     const raw = cache?.frontmatter?.tags ?? [];
                     const fileTags: string[] = (Array.isArray(raw) ? raw : [raw])
-                        .map((t: any) => String(t).replace(/^#/, '').toLowerCase());
+                        .map((t: unknown) => String(t).replace(/^#/, '').toLowerCase());
                     return tagsFilter.some((t) => fileTags.includes(t));
                 });
             }
@@ -216,7 +216,7 @@ export class SemanticSearchTool extends BaseTool<'semantic_search'> {
             // chunk and append it as "Linked context". This surfaces notes that
             // are intentionally connected but may not have matched semantically.
             const WIKILINK_RE = /\[\[([^\]|#\n]+?)(?:[|#][^\]]*?)?\]\]/g;
-            const topKPaths = new Set<string>(results.map((r: any) => r.path));
+            const topKPaths = new Set<string>(results.map((r) => r.path));
             const shownLinked = new Set<string>();
             const linkedLines: string[] = [];
 

@@ -92,6 +92,7 @@
           <tr><td>Active Models list</td><td>List of all configured models. Each entry shows provider, name, and enabled status.</td></tr>
           <tr><td>Add Custom Model</td><td>Add a new model with any provider type. Set name, provider, API key, base URL, temperature, max tokens.</td></tr>
           <tr><td>Global Custom Instructions</td><td>Text appended to the system prompt for ALL modes. Use for universal formatting rules, language preferences, etc.</td></tr>
+          <tr><td>SafeStorage</td><td>Toggle: encrypt API keys via OS keychain (macOS Keychain, Windows Credential Manager, Linux Secret Service) instead of storing in plaintext.</td></tr>
           <tr><td>Default Model</td><td>The model selected by default in new chats. Set by enabling and selecting a model.</td></tr>
         </tbody>
       </table>
@@ -193,6 +194,30 @@
           <tr><td>Content</td><td>Prompt template text. Supports {{userInput}} and {{activeFile}} variables.</td></tr>
           <tr><td>Enabled</td><td>Toggle: shown in autocomplete and functional when enabled.</td></tr>
           <tr><td>Mode Restriction</td><td>Optional: only show this prompt in a specific mode.</td></tr>
+        </tbody>
+      </table>
+
+      <h3 id="memory-tab" data-i18n="pages.settingsRef.memoryTab">Memory</h3>
+      <table data-i18n-html="pages.settingsRef.memoryTab.table">
+        <thead><tr><th>Setting</th><th>Default</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>Enable Memory</td><td>On</td><td>Master toggle for the memory system.</td></tr>
+          <tr><td>Auto-extract sessions</td><td>On</td><td>Automatically create session summaries when conversations end.</td></tr>
+          <tr><td>Auto-update long-term</td><td>On</td><td>Promote new facts from sessions to long-term memory files.</td></tr>
+          <tr><td>Memory model</td><td>(none)</td><td>Dropdown to pick the model for extraction. Choose a small, fast model (e.g., Haiku).</td></tr>
+          <tr><td>Extraction threshold</td><td>6</td><td>Minimum message count before a conversation triggers extraction (slider: 2-20).</td></tr>
+          <tr><td>View memory files</td><td>-</td><td>Opens the memory directory (~/.obsidian-agent/memory/).</td></tr>
+          <tr><td>Re-run Onboarding</td><td>-</td><td>Reset the onboarding flag and start a fresh onboarding conversation.</td></tr>
+          <tr><td>Reset all memory</td><td>-</td><td>Deletes all memory files (with confirmation).</td></tr>
+        </tbody>
+      </table>
+
+      <h3 id="vaultdna-tab" data-i18n="pages.settingsRef.vaultdnaTab">VaultDNA</h3>
+      <table data-i18n-html="pages.settingsRef.vaultdnaTab.table">
+        <thead><tr><th>Setting</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>Plugin Skills list</td><td>Auto-generated skill files from installed Obsidian plugins. Shows plugin name, classification (FULL/PARTIAL/NONE), and available commands.</td></tr>
+          <tr><td>Rescan Plugins</td><td>Manually trigger a VaultDNA scan to discover new or changed plugins.</td></tr>
         </tbody>
       </table>
 

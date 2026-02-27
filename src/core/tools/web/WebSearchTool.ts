@@ -52,8 +52,8 @@ export class WebSearchTool extends BaseTool<'web_search'> {
         };
     }
 
-    async execute(input: Record<string, any>, context: ToolExecutionContext): Promise<void> {
-        const { query, numResults = 5 } = input as WebSearchInput;
+    async execute(input: Record<string, unknown>, context: ToolExecutionContext): Promise<void> {
+        const { query, numResults = 5 } = input as unknown as WebSearchInput;
         const { callbacks } = context;
 
         if (!query) {
@@ -164,13 +164,14 @@ export class WebSearchTool extends BaseTool<'web_search'> {
             throw new Error(`Brave API error: HTTP ${response.status}`);
         }
 
-        const data = response.json as any;
-        const webResults = data?.web?.results ?? [];
+        const data = response.json as Record<string, unknown>;
+        const web = data?.web as Record<string, unknown> | undefined;
+        const webResults = (web?.results ?? []) as Array<Record<string, unknown>>;
 
-        return webResults.map((r: any) => ({
-            title: r.title ?? '',
-            url: r.url ?? '',
-            snippet: r.description ?? '',
+        return webResults.map((r) => ({
+            title: (r.title as string) ?? '',
+            url: (r.url as string) ?? '',
+            snippet: (r.description as string) ?? '',
         }));
     }
 
@@ -217,13 +218,13 @@ export class WebSearchTool extends BaseTool<'web_search'> {
             throw new Error(`Tavily API error: HTTP ${response.status}`);
         }
 
-        const data = response.json as any;
-        const tavilyResults = data?.results ?? [];
+        const data = response.json as Record<string, unknown>;
+        const tavilyResults = (data?.results ?? []) as Array<Record<string, unknown>>;
 
-        return tavilyResults.map((r: any) => ({
-            title: r.title ?? '',
-            url: r.url ?? '',
-            snippet: r.content ?? '',
+        return tavilyResults.map((r) => ({
+            title: (r.title as string) ?? '',
+            url: (r.url as string) ?? '',
+            snippet: (r.content as string) ?? '',
         }));
     }
 }

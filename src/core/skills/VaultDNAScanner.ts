@@ -85,12 +85,12 @@ export class VaultDNAScanner {
             if (newClass === 'NONE') continue;
 
             // Plugin now has commands — promote it
-            console.log(`[VaultDNA] Reclassified ${entry.id}: NONE -> ${newClass}`);
+            console.debug(`[VaultDNA] Reclassified ${entry.id}: NONE -> ${newClass}`);
             entry.classification = newClass;
             entry.skillFile = `${entry.id}.skill.md`;
             delete entry.reason;
 
-            const manifests: Record<string, any> = (this.app as any).plugins?.manifests ?? {};
+            const manifests = this.app.plugins?.manifests ?? {};
             const manifest = manifests[entry.id];
             const newSkill: PluginSkillMeta = {
                 id: entry.id,
@@ -108,7 +108,7 @@ export class VaultDNAScanner {
 
         if (changed) {
             await this.vault.adapter.write(this.dnaPath, JSON.stringify(this.vaultDNA, null, 2));
-            console.log(`[VaultDNA] Reclassification complete: ${this.pluginSkills.length} total skills`);
+            console.debug(`[VaultDNA] Reclassification complete: ${this.pluginSkills.length} total skills`);
         }
     }
 
@@ -156,7 +156,7 @@ export class VaultDNAScanner {
 
         this.pluginSkills = skills;
 
-        console.log(`[VaultDNA] Scanned ${plugins.length} plugins (${skills.length} with skills)`);
+        console.debug(`[VaultDNA] Scanned ${plugins.length} plugins (${skills.length} with skills)`);
         return this.vaultDNA;
     }
 
@@ -164,7 +164,7 @@ export class VaultDNAScanner {
 
     private scanCorePlugins(): Array<{ dna: VaultDNAEntry; skill?: PluginSkillMeta }> {
         const results: Array<{ dna: VaultDNAEntry; skill?: PluginSkillMeta }> = [];
-        const internalPlugins = (this.app as any).internalPlugins?.plugins;
+        const internalPlugins = this.app.internalPlugins?.plugins;
         if (!internalPlugins) return results;
 
         for (const def of CORE_PLUGIN_DEFS) {
@@ -204,8 +204,8 @@ export class VaultDNAScanner {
 
     private scanCommunityPlugins(): Array<{ dna: VaultDNAEntry; skill?: PluginSkillMeta }> {
         const results: Array<{ dna: VaultDNAEntry; skill?: PluginSkillMeta }> = [];
-        const manifests: Record<string, any> = (this.app as any).plugins?.manifests ?? {};
-        const enabledPlugins: Set<string> = (this.app as any).plugins?.enabledPlugins ?? new Set();
+        const manifests = this.app.plugins?.manifests ?? {};
+        const enabledPlugins: Set<string> = this.app.plugins?.enabledPlugins ?? new Set();
 
         for (const [id, manifest] of Object.entries(manifests)) {
             // Skip our own plugin
@@ -296,7 +296,7 @@ export class VaultDNAScanner {
     }
 
     private getPluginCommands(pluginId: string): { id: string; name: string }[] {
-        const allCommands: Record<string, any> = (this.app as any).commands?.commands ?? {};
+        const allCommands = this.app.commands?.commands ?? {};
         const result: { id: string; name: string }[] = [];
 
         for (const [cmdId, cmd] of Object.entries(allCommands)) {
@@ -326,7 +326,7 @@ export class VaultDNAScanner {
      */
     private discoverPluginApi(pluginId: string): string[] | null {
         try {
-            const plugins = (this.app as any).plugins?.plugins;
+            const plugins = this.app.plugins?.plugins;
             if (!plugins) return null;
 
             const instance = plugins[pluginId];
@@ -349,7 +349,7 @@ export class VaultDNAScanner {
 
             if (methods.length === 0) return null;
 
-            console.log(`[VaultDNA] API discovered for ${pluginId}: ${methods.length} methods (${methods.slice(0, 5).join(', ')}${methods.length > 5 ? '...' : ''})`);
+            console.debug(`[VaultDNA] API discovered for ${pluginId}: ${methods.length} methods (${methods.slice(0, 5).join(', ')}${methods.length > 5 ? '...' : ''})`);
             return methods;
         } catch (e) {
             console.warn(`[VaultDNA] API discovery failed for ${pluginId}:`, e);
@@ -404,8 +404,8 @@ export class VaultDNAScanner {
     ): Promise<Record<string, unknown> | null> {
         try {
             const settingsPath = source === 'core'
-                ? `.obsidian/${pluginId}.json`
-                : `.obsidian/plugins/${pluginId}/data.json`;
+                ? `${this.vault.configDir}/${pluginId}.json`
+                : `${this.vault.configDir}/plugins/${pluginId}/data.json`;
 
             const exists = await this.vault.adapter.exists(settingsPath);
             if (!exists) return null;
@@ -631,8 +631,8 @@ export class VaultDNAScanner {
 
         // Configuration File section
         const configPath = skill.source === 'core'
-            ? `.obsidian/${skill.id}.json`
-            : `.obsidian/plugins/${skill.id}/data.json`;
+            ? `${this.vault.configDir}/${skill.id}.json`
+            : `${this.vault.configDir}/plugins/${skill.id}/data.json`;
         lines.push('');
         lines.push('## Configuration File');
         lines.push('');
@@ -717,7 +717,7 @@ export class VaultDNAScanner {
         }
 
         // Configuration File section
-        const configPath = `.obsidian/${skillId}.json`;
+        const configPath = `${this.vault.configDir}/${skillId}.json`;
         parts.push('');
         parts.push('## Configuration File');
         parts.push('');
@@ -764,7 +764,7 @@ export class VaultDNAScanner {
     private async writeCorePluginReadmes(): Promise<void> {
         for (const def of CORE_PLUGIN_DEFS) {
             const readmePath = `${this.skillsDir}/${def.id}.readme.md`;
-            const configPath = `.obsidian/${def.id}.json`;
+            const configPath = `${this.vault.configDir}/${def.id}.json`;
 
             const lines: string[] = [
                 `# ${def.name}`,
@@ -802,7 +802,7 @@ export class VaultDNAScanner {
     // ── Continuous Sync (Polling) ────────────────────────────────────────
 
     startSync(): void {
-        const enabledPlugins = (this.app as any).plugins?.enabledPlugins;
+        const enabledPlugins = this.app.plugins?.enabledPlugins;
         this.lastKnownEnabledSet = new Set(enabledPlugins ?? []);
         this.pollIntervalId = setInterval(() => this.checkForChanges(), 5000);
     }
@@ -815,12 +815,12 @@ export class VaultDNAScanner {
     }
 
     private async checkForChanges(): Promise<void> {
-        const currentEnabled = new Set<string>((this.app as any).plugins?.enabledPlugins ?? []);
+        const currentEnabled = new Set<string>(this.app.plugins?.enabledPlugins ?? []);
 
         // Find newly enabled plugins
         for (const id of currentEnabled) {
             if (!this.lastKnownEnabledSet.has(id) && id !== 'obsidian-agent') {
-                console.log(`[VaultDNA] Plugin enabled: ${id}`);
+                console.debug(`[VaultDNA] Plugin enabled: ${id}`);
                 await this.handlePluginEnabled(id);
             }
         }
@@ -828,7 +828,7 @@ export class VaultDNAScanner {
         // Find newly disabled plugins
         for (const id of this.lastKnownEnabledSet) {
             if (!currentEnabled.has(id) && id !== 'obsidian-agent') {
-                console.log(`[VaultDNA] Plugin disabled: ${id}`);
+                console.debug(`[VaultDNA] Plugin disabled: ${id}`);
                 await this.handlePluginDisabled(id);
             }
         }
@@ -870,7 +870,7 @@ export class VaultDNAScanner {
             await this.writeSkillFile(this.pluginSkills[skillIdx]);
         } else if (classification !== 'NONE' || (apiMethods && apiMethods.length > 0)) {
             // Was NONE during initial scan — promote to skill now that commands or API exist
-            const manifests: Record<string, any> = (this.app as any).plugins?.manifests ?? {};
+            const manifests = this.app.plugins?.manifests ?? {};
             const manifest = manifests[pluginId];
             const effectiveClass = classification !== 'NONE' ? classification : 'PARTIAL';
             const newSkill: PluginSkillMeta = {
@@ -962,7 +962,7 @@ export class VaultDNAScanner {
                 for (const entry of entries) {
                     if (entry.id && entry.repo) map.set(entry.id, entry.repo);
                 }
-                console.log(`[VaultDNA] Loaded plugin registry: ${map.size} entries`);
+                console.debug(`[VaultDNA] Loaded plugin registry: ${map.size} entries`);
             }
         } catch (e) {
             console.warn('[VaultDNA] Failed to fetch plugin registry:', e);
@@ -993,7 +993,7 @@ export class VaultDNAScanner {
             await new Promise<void>((r) => setTimeout(r, 1000));
         }
 
-        console.log(`[VaultDNA] README fetch complete: ${fetched} new/updated, ${skipped} skipped (not in registry)`);
+        console.debug(`[VaultDNA] README fetch complete: ${fetched} new/updated, ${skipped} skipped (not in registry)`);
     }
 
     async fetchPluginReadme(pluginId: string, repo: string, force = false): Promise<boolean> {
@@ -1023,7 +1023,7 @@ export class VaultDNAScanner {
                     ? response.text.slice(0, VaultDNAScanner.README_MAX_LEN) + '\n\n...[truncated]'
                     : response.text;
                 await this.vault.adapter.write(readmePath, readme);
-                console.log(`[VaultDNA] Fetched README: ${pluginId}`);
+                console.debug(`[VaultDNA] Fetched README: ${pluginId}`);
                 return true;
             }
             console.warn(`[VaultDNA] README not found for ${pluginId} (${response.status})`);

@@ -58,8 +58,8 @@ export class SwitchModeTool extends BaseTool<'switch_mode'> {
         };
     }
 
-    async execute(input: Record<string, any>, context: ToolExecutionContext): Promise<void> {
-        const { mode_slug, reason } = input as SwitchModeInput;
+    async execute(input: Record<string, unknown>, context: ToolExecutionContext): Promise<void> {
+        const { mode_slug, reason } = input as unknown as SwitchModeInput;
         const { callbacks } = context;
 
         if (!mode_slug) {
