@@ -70,7 +70,6 @@ import type { ConsoleRingBuffer } from '../observability/ConsoleRingBuffer';
 import { ManageSkillTool } from './agent/ManageSkillTool';
 import type { SelfAuthoredSkillLoader } from '../skills/SelfAuthoredSkillLoader';
 // Self-Development (Phase 3)
-import { CreateDynamicToolTool } from './agent/CreateDynamicToolTool';
 import { EvaluateExpressionTool } from './agent/EvaluateExpressionTool';
 import type { SandboxExecutor } from '../sandbox/SandboxExecutor';
 import type { EsbuildWasmManager } from '../sandbox/EsbuildWasmManager';
@@ -177,17 +176,14 @@ export class ToolRegistry {
         if (mcpClient) {
             this.register(new ManageMcpServerTool(this.plugin, mcpClient));
         }
-        // Self-Development (Phase 2)
+        // Self-Development (Phase 2+3: unified skills with optional code modules)
         if (skillLoader) {
-            this.register(new ManageSkillTool(this.plugin, skillLoader));
+            this.register(new ManageSkillTool(
+                this.plugin, skillLoader, esbuildManager, sandboxExecutor, this,
+            ));
         }
-        // Self-Development (Phase 3)
+        // Self-Development (Phase 3: expression evaluation)
         if (sandboxExecutor && esbuildManager) {
-            if (dynamicToolLoader) {
-                this.register(new CreateDynamicToolTool(
-                    this.plugin, sandboxExecutor, esbuildManager, dynamicToolLoader, this,
-                ));
-            }
             this.register(new EvaluateExpressionTool(this.plugin, sandboxExecutor, esbuildManager));
         }
         // Self-Development (Phase 4)

@@ -17,6 +17,12 @@ export class SkillsTab {
         // -- Separator --
         containerEl.createEl('hr');
 
+        // -- Self-Authored Skills (agent-created, with optional code modules) --
+        this.buildSelfAuthoredSkillsSection(containerEl);
+
+        // -- Separator --
+        containerEl.createEl('hr');
+
         // -- Obsidian Plugin Skills (PAS-1) --
         this.buildPluginSkillsSection(containerEl);
     }
@@ -194,6 +200,80 @@ export class SkillsTab {
         });
 
         refreshList();
+    }
+
+    // -- Self-Authored Skills (agent-created) --
+
+    private buildSelfAuthoredSkillsSection(containerEl: HTMLElement): void {
+        const loader = this.plugin.selfAuthoredSkillLoader;
+        containerEl.createEl('h3', { text: 'Agent-Created Skills' });
+
+        if (!loader) {
+            containerEl.createEl('p', {
+                cls: 'agent-settings-desc',
+                text: 'Self-authored skill loader not available.',
+            });
+            return;
+        }
+
+        const skills = loader.getAllSkills();
+        if (skills.length === 0) {
+            containerEl.createEl('p', {
+                cls: 'agent-empty-state',
+                text: 'No agent-created skills yet. The agent can create skills via the manage_skill tool.',
+            });
+            return;
+        }
+
+        containerEl.createEl('p', {
+            cls: 'agent-settings-desc',
+            text: `${skills.length} skill(s) created by the agent. Skills with code modules register custom tools.`,
+        });
+
+        const table = containerEl.createEl('table', { cls: 'agent-skill-table' });
+        const thead = table.createEl('thead');
+        const hr = thead.createEl('tr');
+        hr.createEl('th', { text: '', cls: 'agent-skill-th-status' });
+        hr.createEl('th', { text: 'Skill' });
+        hr.createEl('th', { text: 'Source', cls: 'agent-skill-th-cmds' });
+        hr.createEl('th', { text: 'Code', cls: 'agent-skill-th-cmds' });
+
+        const tbody = table.createEl('tbody');
+
+        for (const skill of skills) {
+            const tr = tbody.createEl('tr');
+
+            // Status dot
+            const statusTd = tr.createEl('td', { cls: 'agent-skill-status-cell' });
+            const dot = statusTd.createSpan({ cls: 'agent-skill-dot agent-skill-dot-on' });
+            dot.setAttribute('aria-label', 'Active');
+
+            // Name + description + trigger
+            const nameTd = tr.createEl('td', { cls: 'agent-skill-name-cell' });
+            nameTd.createDiv({ text: skill.name, cls: 'agent-skill-name' });
+            if (skill.description) {
+                nameTd.createDiv({ text: skill.description, cls: 'agent-skill-desc' });
+            }
+            nameTd.createDiv({
+                text: `trigger: ${skill.triggerSource}`,
+                cls: 'agent-skill-desc',
+            });
+
+            // Source
+            tr.createEl('td', { text: skill.source, cls: 'agent-skill-cmd-cell' });
+
+            // Code modules
+            const codeTd = tr.createEl('td', { cls: 'agent-skill-cmd-cell' });
+            if (skill.codeModules.length > 0) {
+                const toolNames = skill.codeModuleInfos.map(m => m.name);
+                codeTd.createDiv({
+                    text: toolNames.join(', '),
+                    cls: 'agent-skill-desc',
+                });
+            } else {
+                codeTd.setText('-');
+            }
+        }
     }
 
     // -- Obsidian Plugin Skills (PAS-1) --

@@ -78,8 +78,7 @@ Target files:
   Format: "- Error: <description> → Fix: <resolution>"
 - custom-tools.md: Register of custom tools and skills created by the agent.
   Update custom-tools.md when the session reveals:
-  - A new skill was created (manage_skill)
-  - A new dynamic tool was created (create_dynamic_tool)
+  - A new skill was created (manage_skill), optionally with code modules
   Format: "- <name> (<type>): <description>"
 
 Rules:

@@ -210,17 +210,15 @@ export default class ObsidianAgentPlugin extends Plugin {
             );
         }
 
-        // Self-Authored Skills (Phase 2)
-        this.selfAuthoredSkillLoader = new SelfAuthoredSkillLoader(this);
-        await this.selfAuthoredSkillLoader.loadAll().catch((e) =>
-            console.warn('[Plugin] SelfAuthoredSkillLoader init failed (non-fatal):', e)
-        );
-        this.selfAuthoredSkillLoader.setupWatcher();
-
         // Sandbox + Dynamic Modules (Phase 3) — lazy initialization
         this.sandboxExecutor = new SandboxExecutor(this);
         this.esbuildWasmManager = new EsbuildWasmManager(this);
         this.dynamicToolLoader = new DynamicToolLoader(this);
+
+        // Self-Authored Skills (Phase 2+3: unified skills with optional code modules)
+        this.selfAuthoredSkillLoader = new SelfAuthoredSkillLoader(
+            this, this.esbuildWasmManager, this.sandboxExecutor,
+        );
 
         // Core Self-Modification (Phase 4) — load embedded source if available
         this.embeddedSourceManager = new EmbeddedSourceManager();
@@ -235,11 +233,29 @@ export default class ObsidianAgentPlugin extends Plugin {
             this.embeddedSourceManager, this.pluginBuilder, this.pluginReloader,
         );
 
-        // Load persisted dynamic tools
-        if (this.dynamicToolLoader && this.sandboxExecutor) {
-            this.dynamicToolLoader.loadAll(this.toolRegistry, this.sandboxExecutor).catch((e) =>
-                console.warn('[Plugin] DynamicToolLoader init failed (non-fatal):', e)
-            );
+        // Late-bind ToolRegistry to SelfAuthoredSkillLoader (circular dependency)
+        this.selfAuthoredSkillLoader.setDependencies(
+            this.esbuildWasmManager, this.sandboxExecutor, this.toolRegistry,
+        );
+
+        // Load skills (includes cached code module tools)
+        await this.selfAuthoredSkillLoader.loadAll().catch((e) =>
+            console.warn('[Plugin] SelfAuthoredSkillLoader init failed (non-fatal):', e)
+        );
+        this.selfAuthoredSkillLoader.setupWatcher();
+
+        // Migrate legacy dynamic tools to unified skills
+        if (this.dynamicToolLoader && this.selfAuthoredSkillLoader) {
+            const migrated = await this.dynamicToolLoader.migrateToSkills(this.selfAuthoredSkillLoader).catch((e) => {
+                console.warn('[Plugin] Dynamic tool migration failed (non-fatal):', e);
+                return 0;
+            });
+            if (migrated > 0) {
+                // Reload skills to pick up migrated tools
+                await this.selfAuthoredSkillLoader.loadAll().catch((e) =>
+                    console.warn('[Plugin] SelfAuthoredSkillLoader reload after migration failed (non-fatal):', e)
+                );
+            }
         }
 
         // Semantic index (Phase C2) — lazy build, only when enabled

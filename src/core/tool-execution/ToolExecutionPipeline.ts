@@ -79,10 +79,8 @@ const TOOL_GROUPS: Record<string, ToolGroup> = {
     // Self-Development (Phase 1)
     read_agent_logs: 'agent',
     manage_mcp_server: 'agent',
-    // Self-Development (Phase 2)
+    // Self-Development (Phase 2+3)
     manage_skill: 'agent',
-    // Self-Development (Phase 3)
-    create_dynamic_tool: 'agent',
     evaluate_expression: 'agent',
     // Self-Development (Phase 4)
     manage_source: 'agent',

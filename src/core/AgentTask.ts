@@ -141,6 +141,8 @@ export class AgentTask {
         pluginSkillsSection?: string,
         /** Pre-matched procedural recipes for the current user message (ADR-017) */
         recipesSection?: string,
+        /** Self-authored skill metadata from SelfAuthoredSkillLoader */
+        selfAuthoredSkillsSection?: string,
     ): Promise<void> {
         // Resolve mode to ModeConfig
         let activeMode: ModeConfig = this.resolveMode(initialMode);
@@ -245,6 +247,8 @@ export class AgentTask {
                 allowedMcpServers,
                 undefined,          // no per-subtask memory context
                 pluginSkillsSection,
+                undefined,          // no recipes for subtasks
+                selfAuthoredSkillsSection,
             );
             return childText;
         };
@@ -259,7 +263,7 @@ export class AgentTask {
         const rebuildPromptCache = () => {
             const allModes = this.modeService?.getAllModes();
             const webEnabled = this.modeService?.isWebEnabled() ?? false;
-            cachedSystemPrompt = buildSystemPromptForMode(activeMode, allModes, globalCustomInstructions, includeTime, rulesContent, skillsSection, mcpClient, allowedMcpServers, memoryContext, pluginSkillsSection, this.depth > 0, webEnabled, recipesSection);
+            cachedSystemPrompt = buildSystemPromptForMode(activeMode, allModes, globalCustomInstructions, includeTime, rulesContent, skillsSection, mcpClient, allowedMcpServers, memoryContext, pluginSkillsSection, this.depth > 0, webEnabled, recipesSection, undefined, selfAuthoredSkillsSection);
             cachedTools = this.modeService
                 ? this.modeService.getToolDefinitions(activeMode)
                 : this.toolRegistry.getToolDefinitions();

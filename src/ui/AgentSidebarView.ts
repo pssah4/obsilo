@@ -1765,6 +1765,9 @@ export class AgentSidebarView extends ItemView {
             console.debug(`[Mastery] Skipped: enabled=${this.plugin.settings.mastery.enabled}, service=${!!this.plugin.recipeMatchingService}`);
         }
 
+        // Self-authored skills metadata for system prompt (Pipeline fix)
+        const selfAuthoredSkillsSection = this.plugin.selfAuthoredSkillLoader?.getMetadataSummary() || undefined;
+
         await task.run(
             messageToSend,
             taskId,
@@ -1780,6 +1783,7 @@ export class AgentSidebarView extends ItemView {
             memoryContext,
             pluginSkillsSection || undefined,
             recipesSection,
+            selfAuthoredSkillsSection,
         );
     }
 

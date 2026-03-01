@@ -7,6 +7,10 @@
  * Dynamic tools are stored as JSON records in:
  *   <configDir>/plugins/<pluginId>/dynamic-tools/<name>.json
  *
+ * MIGRATION: This class now includes migrateToSkills() which converts
+ * legacy dynamic tool JSON records into unified skill folders (SKILL.md +
+ * code/ + code-compiled/). After migration, the JSON files are deleted.
+ *
  * Part of Self-Development Phase 3: Sandbox + Dynamic Modules.
  */
 
@@ -16,6 +20,7 @@ import type { ToolRegistry } from '../ToolRegistry';
 import type { SandboxExecutor } from '../../sandbox/SandboxExecutor';
 import { DynamicToolFactory } from './DynamicToolFactory';
 import type { DynamicToolRecord } from './types';
+import type { SelfAuthoredSkillLoader } from '../../skills/SelfAuthoredSkillLoader';
 
 // ---------------------------------------------------------------------------
 // DynamicToolLoader
@@ -30,6 +35,8 @@ export class DynamicToolLoader {
 
     /**
      * Load all persisted dynamic tools and register them.
+     * This is kept as a fallback during migration. Once all tools are
+     * migrated to skills, this method is no longer needed.
      */
     async loadAll(
         registry: ToolRegistry,
@@ -63,6 +70,115 @@ export class DynamicToolLoader {
             console.debug(`[DynamicToolLoader] Loaded ${loaded} dynamic tool(s)`);
         }
         return loaded;
+    }
+
+    /**
+     * Migrate all dynamic tool JSON records to unified skill folders.
+     * Creates:
+     *   skills/{tool-name}/SKILL.md
+     *   skills/{tool-name}/code/{tool-name}.ts
+     *   skills/{tool-name}/code-compiled/{tool-name}.js
+     *
+     * After successful migration, the JSON file is deleted.
+     *
+     * @returns Number of tools successfully migrated
+     */
+    async migrateToSkills(skillLoader: SelfAuthoredSkillLoader): Promise<number> {
+        const folder = this.plugin.app.vault.getAbstractFileByPath(this.toolsDir);
+        if (!(folder instanceof TFolder)) return 0;
+
+        const jsonFiles = folder.children.filter(
+            (c): c is TFile => c instanceof TFile && c.extension === 'json'
+        );
+
+        if (jsonFiles.length === 0) return 0;
+
+        let migrated = 0;
+        const skillsDir = skillLoader.getSkillsDir();
+
+        for (const jsonFile of jsonFiles) {
+            try {
+                const content = await this.plugin.app.vault.read(jsonFile);
+                const record = JSON.parse(content) as DynamicToolRecord;
+                const toolName = record.definition.name;
+                const fileName = toolName.replace(/^custom_/, '').replace(/_/g, '-');
+                const slug = fileName;
+
+                // Check if skill already exists (skip if so)
+                const skillDir = `${skillsDir}/${slug}`;
+                const skillFilePath = `${skillDir}/SKILL.md`;
+                const existing = this.plugin.app.vault.getAbstractFileByPath(skillFilePath);
+                if (existing instanceof TFile) {
+                    console.debug(`[DynamicToolLoader] Skill "${toolName}" already exists, skipping migration`);
+                    continue;
+                }
+
+                // Create skill directory structure
+                await this.ensureFolder(skillDir);
+                await this.ensureFolder(`${skillDir}/code`);
+                await this.ensureFolder(`${skillDir}/code-compiled`);
+
+                // Build SKILL.md
+                const schemaStr = JSON.stringify(record.definition.input_schema, null, 4);
+                const depsStr = record.definition.dependencies?.length
+                    ? JSON.stringify(record.definition.dependencies)
+                    : '[]';
+
+                const skillMd = `---
+name: ${toolName}
+description: ${record.definition.description}
+trigger: "${toolName.replace(/^custom_/, '').replace(/_/g, '|')}"
+source: learned
+requiredTools: [${toolName}]
+codeModules: [${fileName}]
+createdAt: ${record.createdAt}
+successCount: 0
+---
+Migrated from dynamic tool. This skill provides the ${toolName} tool.
+
+1. Use ${toolName} with the appropriate input.
+`;
+                await this.plugin.app.vault.create(skillFilePath, skillMd);
+
+                // Write TypeScript source
+                const tsSource = record.sourceTs.includes('export const definition')
+                    ? record.sourceTs
+                    : `export const definition = {
+    name: '${toolName}',
+    description: '${record.definition.description.replace(/'/g, "\\'")}',
+    input_schema: ${schemaStr},
+    isWriteOperation: ${record.definition.isWriteOperation ?? false},
+    dependencies: ${depsStr},
+};
+
+${record.sourceTs}
+`;
+                await this.plugin.app.vault.create(
+                    `${skillDir}/code/${fileName}.ts`,
+                    tsSource,
+                );
+
+                // Write compiled JS cache
+                await this.plugin.app.vault.create(
+                    `${skillDir}/code-compiled/${fileName}.js`,
+                    record.compiledJs,
+                );
+
+                // Delete the JSON file
+                await this.plugin.app.fileManager.trashFile(jsonFile);
+
+                migrated++;
+                console.debug(`[DynamicToolLoader] Migrated "${toolName}" to skill at ${skillDir}`);
+            } catch (e) {
+                console.warn(`[DynamicToolLoader] Failed to migrate ${jsonFile.path}:`, e);
+            }
+        }
+
+        if (migrated > 0) {
+            console.debug(`[DynamicToolLoader] Migrated ${migrated} dynamic tool(s) to skills`);
+        }
+
+        return migrated;
     }
 
     /**
@@ -111,9 +227,13 @@ export class DynamicToolLoader {
     }
 
     private async ensureDir(): Promise<void> {
-        const folder = this.plugin.app.vault.getAbstractFileByPath(this.toolsDir);
+        await this.ensureFolder(this.toolsDir);
+    }
+
+    private async ensureFolder(path: string): Promise<void> {
+        const folder = this.plugin.app.vault.getAbstractFileByPath(path);
         if (!(folder instanceof TFolder)) {
-            await this.plugin.app.vault.createFolder(this.toolsDir);
+            await this.plugin.app.vault.createFolder(path);
         }
     }
 }
