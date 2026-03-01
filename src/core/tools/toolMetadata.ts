@@ -300,6 +300,35 @@ export const TOOL_METADATA: Record<string, ToolMeta> = {
         commonMistakes: 'Delegating simple 1-4 step tasks — do those yourself with your own tools.',
     },
 
+    evaluate_expression: {
+        group: 'agent', label: 'Evaluate', icon: 'code-2',
+        signature: 'evaluate_expression(expression, context?, dependencies?)',
+        description: 'Execute TypeScript/JS in the sandboxed iframe. Provides ctx.vault (read/write/binary) and ctx.requestUrl. Use for computations, data transforms, and binary file generation. Specify dependencies for npm packages.',
+        example: 'evaluate_expression("import PptxGenJS from \'pptxgenjs\'; const pptx = new PptxGenJS(); pptx.addSlide().addText(\'Hello\'); const buf = await pptx.write({outputType:\'arraybuffer\'}); await ctx.vault.writeBinary(\'out.pptx\', buf); return \'Done\'", undefined, ["pptxgenjs"])',
+        whenToUse: 'For one-off computations or binary file generation. For REUSABLE capabilities, create a skill with code_modules instead. NEVER write Python scripts or suggest manual execution.',
+        commonMistakes: 'Writing Python scripts instead of using this tool. Forgetting dependencies param when importing npm packages.',
+    },
+    manage_skill: {
+        group: 'agent', label: 'Manage Skill', icon: 'bookmark-plus',
+        signature: 'manage_skill(action, name, description?, trigger?, body?, code_modules?)',
+        description: 'Create, update, delete, list, or read self-authored skills. Skills persist across sessions. Can include code_modules (TypeScript compiled to sandbox tools with "custom_" prefix, npm dependencies supported).',
+        whenToUse: 'After solving a novel problem: save the solution as a reusable skill with a trigger pattern. Use code_modules for NEW computational capabilities.',
+        commonMistakes: 'Not creating a skill after solving a new type of problem. Always persist reusable solutions for instant future use.',
+    },
+    manage_mcp_server: {
+        group: 'agent', label: 'Manage MCP', icon: 'plug-2',
+        signature: 'manage_mcp_server(action, name?, config?)',
+        description: 'Add, remove, update, list, or test MCP servers. Supported transports: SSE, streamable-http (no stdio).',
+        whenToUse: 'When external tool servers could help beyond built-in tools.',
+        commonMistakes: 'Using stdio transport — only SSE and streamable-http are supported in the Electron sandbox.',
+    },
+    manage_source: {
+        group: 'agent', label: 'Manage Source', icon: 'file-code',
+        signature: 'manage_source(action, name?, content?)',
+        description: 'Manage context sources — persistent text blocks injected into every conversation.',
+        whenToUse: 'When the user wants to always include certain context (project rules, style guides).',
+    },
+
     // ── MCP ───────────────────────────────────────────────────────────────
     use_mcp_tool: {
         group: 'mcp', label: 'MCP Tool', icon: 'plug-2',

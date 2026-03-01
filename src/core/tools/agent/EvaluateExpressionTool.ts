@@ -22,6 +22,7 @@ import { AstValidator } from '../../sandbox/AstValidator';
 interface EvaluateExpressionInput {
     expression: string;
     context?: Record<string, unknown>;
+    dependencies?: string[];
 }
 
 // ---------------------------------------------------------------------------
@@ -43,17 +44,22 @@ export class EvaluateExpressionTool extends BaseTool<'evaluate_expression'> {
     getDefinition(): ToolDefinition {
         return {
             name: this.name,
-            description: 'Execute a one-off TypeScript/JavaScript expression in a sandboxed environment. Returns the result. Useful for data transformations, regex testing, math, JSON processing, etc.',
+            description: 'Execute TypeScript/JavaScript in a sandboxed iframe. The sandbox provides ctx.vault (read, readBinary, write, writeBinary, list) and ctx.requestUrl for HTTP. Use for data transforms, computations, AND binary file generation (PPTX, XLSX, images via npm packages). Optionally specify dependencies to import npm packages. NEVER write Python scripts — use this tool instead.',
             input_schema: {
                 type: 'object',
                 properties: {
                     expression: {
                         type: 'string',
-                        description: 'The TypeScript/JavaScript expression or code to evaluate. Must return a value.',
+                        description: 'The TypeScript/JavaScript expression or code to evaluate. Must return a value. Use ctx.vault for file I/O and ctx.requestUrl for HTTP.',
                     },
                     context: {
                         type: 'object',
                         description: 'Optional context variables available as "ctx" inside the expression.',
+                    },
+                    dependencies: {
+                        type: 'array',
+                        items: { type: 'string' },
+                        description: 'Optional npm package names to bundle (e.g. ["pptxgenjs", "xlsx"]). When provided, packages are fetched from CDN and bundled with esbuild.',
                     },
                 },
                 required: ['expression'],
@@ -85,7 +91,9 @@ export function execute(input: Record<string, unknown>, ctx: { vault: unknown; r
 }
 `;
 
-            const compiledJs = await this.esbuildManager.transform(wrappedSource);
+            const compiledJs = (params.dependencies?.length)
+                ? await this.esbuildManager.build(wrappedSource, params.dependencies)
+                : await this.esbuildManager.transform(wrappedSource);
             const result = await this.sandboxExecutor.execute(compiledJs, {
                 context: params.context ?? {},
             });

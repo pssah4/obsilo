@@ -80,7 +80,7 @@
       </div>
 
       <h1 data-i18n="pages.tools.title">Tools Reference</h1>
-      <p data-i18n="pages.tools.subtitle">Complete reference for all 37 tools available to Obsilo Agent. Tools are grouped by category, which maps to the tool group permission system.</p>
+      <p data-i18n="pages.tools.subtitle">Complete reference for all 42 tools available to Obsilo Agent. Tools are grouped by category, which maps to the tool group permission system.</p>
 
       <!-- READ -->
       <h2 id="read" data-i18n="pages.tools.read">Read Tools</h2>
@@ -338,6 +338,31 @@
           <span class="tool-group-badge badge-agent">agent</span>
           <div class="tool-name">configure_model</div>
           <div class="tool-desc">Add, select, or test an AI model configuration. Used during onboarding to set up the user's first model connection.</div>
+        </div>
+        <div class="tool-card">
+          <span class="tool-group-badge badge-agent">agent</span>
+          <div class="tool-name">evaluate_expression</div>
+          <div class="tool-desc">Evaluate a TypeScript expression in a sandboxed context. Used for dynamic computations, data transformations, and code generation tasks.</div>
+        </div>
+        <div class="tool-card">
+          <span class="tool-group-badge badge-agent">agent</span>
+          <div class="tool-name">manage_skill</div>
+          <div class="tool-desc">Create, update, or delete self-authored skills. The agent can learn new capabilities by writing reusable skill definitions (Markdown with frontmatter).</div>
+        </div>
+        <div class="tool-card">
+          <span class="tool-group-badge badge-agent">agent</span>
+          <div class="tool-name">manage_mcp_server</div>
+          <div class="tool-desc">Connect, disconnect, or reconfigure MCP servers at runtime. Allows the agent to dynamically extend its tool set by managing external tool servers.</div>
+        </div>
+        <div class="tool-card">
+          <span class="tool-group-badge badge-agent">agent</span>
+          <div class="tool-name">manage_source</div>
+          <div class="tool-desc">Manage source code modules for self-development. Create, update, or delete code files used by dynamic tools and agent extensions.</div>
+        </div>
+        <div class="tool-card">
+          <span class="tool-group-badge badge-agent">agent</span>
+          <div class="tool-name">read_agent_logs</div>
+          <div class="tool-desc">Read the agent's operation audit logs. Useful for debugging, reviewing past tool executions, and understanding agent behavior.</div>
         </div>
       </div>
 

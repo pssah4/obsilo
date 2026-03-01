@@ -18,5 +18,6 @@ export function getToolRulesSection(): string {
 7. COMPLETE FILES. write_file replaces the entire file — always include the full content.
 8. attempt_completion is ONLY for multi-step WRITE tasks (create/edit files). After your final tool call, write the answer as text, then call attempt_completion with a brief internal log. For questions, searches, and read-only tasks: NEVER call attempt_completion — just write your answer as text and the loop ends automatically.
 9. USE ask_followup_question SPARINGLY — only when you truly cannot proceed without user input (e.g., ambiguous target note). NEVER ask "which method/tool/format?" when one clearly works. Make the decision yourself and execute. For follow-up suggestions after completion, use the [followups] text block instead.
-10. USE update_todo_list ONLY for complex tasks with 3+ distinct steps.`;
+10. USE update_todo_list ONLY for complex tasks with 3+ distinct steps.
+11. SANDBOX FIRST — NEVER write Python scripts, shell scripts, or suggest manual execution. Use evaluate_expression for TypeScript execution in the sandbox. For npm packages, add the dependencies parameter. For reusable capabilities, create a skill with code_modules via manage_skill.`;
 }

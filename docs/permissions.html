@@ -207,7 +207,7 @@ Reference/
       <p data-i18n="pages.permissions.errorLimit.text">If the agent encounters N consecutive tool errors (default: 3), it stops and reports the error to the user. Configure in Settings → Loop → Consecutive Mistake Limit (0 = disabled).</p>
 
       <h3 data-i18n="pages.permissions.maxIterations">Max Iterations</h3>
-      <p data-i18n="pages.permissions.maxIterations.text">The agentic loop has a hard cap of 10 iterations per turn. After 10 tool-use cycles, the loop stops regardless of whether the task is complete. This prevents runaway agents.</p>
+      <p data-i18n="pages.permissions.maxIterations.text">The agentic loop has a configurable cap of 25 iterations per turn (default, range 5-50). After reaching the limit, the loop stops regardless of whether the task is complete. At 60% of the limit, a soft warning is injected. Configurable in Settings &rarr; Agent Behaviour &rarr; Loop.</p>
 
       <h3 data-i18n="pages.permissions.depthGuard">Sub-Agent Depth Guard</h3>
       <p data-i18n="pages.permissions.depthGuard.text">Sub-agents spawned via new_task can themselves spawn further sub-agents. To prevent infinite recursion, the depth is capped at 2 levels. A sub-agent at depth 2 cannot spawn further sub-agents.</p>
