@@ -932,8 +932,14 @@ export default class ObsidianAgentPlugin extends Plugin {
 
     /**
      * Test tool execution (Development only)
+     * M-4: Gated behind debugMode — bypasses approval pipeline.
      */
     async testToolExecution() {
+        if (!this.settings.debugMode) {
+            console.warn('[testToolExecution] Blocked — enable debugMode in settings first.');
+            new Notice('Test execution blocked. Enable debug mode in settings first.');
+            return;
+        }
         console.debug('=== Testing Tool Execution ===');
         new Notice('Testing tool execution...');
 

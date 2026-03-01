@@ -281,6 +281,15 @@ export const ja: Translations = {
     'settings.permissions.recipes': 'レシピの実行',
     'settings.permissions.recipesDesc': 'レシピの実行（Pandocエクスポートなど）を自動承認します。デフォルトでオフです。各レシピはシェル展開なしでspawnを介して実行されます。',
 
+    // 高リスク自動承認トグルのセキュリティ警告
+    'settings.permissions.enableAutoApproveWarning': 'セキュリティ: 有効にすると、エージェントは承認済みカテゴリーを確認なしで実行します。これにより人間による監視が減少します。完全に信頼できるカテゴリーのみ有効にしてください。',
+    'settings.permissions.noteEditsWarning': 'エージェントが確認なしでノート内容を変更できます。プロンプトインジェクションによる変更は正規の変更と区別できません。',
+    'settings.permissions.vaultChangesWarning': '構造的な変更（削除、移動）は元に戻すのが困難です。チェックポイントシステムがセーフティネットを提供しますが、手動確認を推奨します。',
+    'settings.permissions.mcpCallsWarning': 'MCPツールは接続されたサーバー上で任意のアクションを実行できます。設定済みのすべてのMCPサーバーを信頼できる場合のみ自動承認してください。',
+    'settings.permissions.pluginApiWritesWarning': 'プラグインAPI書き込みはサードパーティプラグインを通じてデータを変更します。エージェントはそれらのプラグインと同じ権限で動作します。',
+    'settings.permissions.recipesWarning': 'レシピはシステム上でシェルコマンドを実行します。自動承認は実行前の最後の手動チェックを削除します。',
+    'settings.permissions.subtasksWarning': 'サブエージェントは自動承認設定を継承し、個別の確認なしでツールを実行できます。',
+
     // =========================================================================
     // Settings — Loop Tab
     // =========================================================================

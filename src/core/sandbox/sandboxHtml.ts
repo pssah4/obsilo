@@ -5,12 +5,17 @@
  * It has NO access to Node.js, no process, no require, no fetch.
  * The ONLY communication channel is postMessage to the parent.
  *
- * Chromium's iframe sandbox provides OS-level process isolation.
+ * In Electron, iframe sandbox provides V8 origin isolation (not OS-level).
+ * The SandboxBridge in the parent validates all operations and is the
+ * primary security boundary.
  */
 
 export const SANDBOX_HTML = `<!DOCTYPE html>
 <html>
-<head><meta charset="utf-8"></head>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'">
+</head>
 <body>
 <script>
 // === SANDBOX-SEITE: Kein Node.js, kein Parent-Zugriff ===
@@ -42,6 +47,10 @@ var vault = {
 
 // requestUrl (Bridge, URL-Allowlist auf Plugin-Seite)
 var requestUrl = function(url, options) { return bridgeCall('request-url', { url: url, options: options }); };
+
+// Freeze bridge proxies — prevent sandbox code from replacing them
+Object.freeze(vault);
+Object.freeze(requestUrl);
 
 // Message-Handler fuer Bridge-Responses und Execute-Befehle
 window.addEventListener('message', function(event) {

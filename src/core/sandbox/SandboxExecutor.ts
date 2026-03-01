@@ -5,8 +5,10 @@
  * sends code for execution via postMessage, and routes bridge requests
  * (vault access, URL requests) through SandboxBridge.
  *
- * The iframe uses sandbox="allow-scripts" which provides Chromium's
- * OS-level process isolation — the primary security boundary.
+ * The iframe uses sandbox="allow-scripts" which provides V8 origin
+ * isolation (logical boundary, not OS-level in Electron's renderer).
+ * The SandboxBridge validates all cross-boundary operations and is
+ * the primary security boundary. See also: CSP meta tag in sandboxHtml.
  *
  * Part of Self-Development Phase 3: Sandbox + Dynamic Modules.
  */
@@ -150,6 +152,10 @@ export class SandboxExecutor {
     }
 
     private async handleMessage(event: MessageEvent): Promise<void> {
+        // H-2/M-10: Only accept messages from our sandbox iframe — prevents
+        // other plugins in the same Electron renderer from spoofing messages.
+        if (event.source !== this.iframe?.contentWindow) return;
+
         const msg = event.data as SandboxToPluginMessage | undefined;
         if (!msg || !('type' in msg)) return;
 
@@ -197,6 +203,8 @@ export class SandboxExecutor {
             const response: PluginToSandboxMessage = { callId: bridgeMsg.callId, result };
             this.iframe?.contentWindow?.postMessage(response, '*');
         } catch (e) {
+            // M-8: Record error for circuit breaker
+            this.bridge.recordError();
             const errorResponse: PluginToSandboxMessage = {
                 callId: bridgeMsg.callId,
                 error: e instanceof Error ? e.message : String(e),

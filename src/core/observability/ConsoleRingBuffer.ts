@@ -8,6 +8,8 @@
  * Review-Bot: Uses console.debug/warn/error only (no console.log).
  */
 
+import { safeRegex } from '../utils/safeRegex';
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -108,7 +110,7 @@ export class ConsoleRingBuffer {
             results = results.filter(e => e.timestamp >= filter.since!);
         }
         if (filter?.pattern) {
-            const regex = new RegExp(filter.pattern, 'i');
+            const regex = safeRegex(filter.pattern, 'i');
             results = results.filter(e => regex.test(e.message));
         }
         if (filter?.limit && filter.limit > 0) {

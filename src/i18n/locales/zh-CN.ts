@@ -281,6 +281,15 @@ export const zhCN: Translations = {
     'settings.permissions.recipes': '配方执行',
     'settings.permissions.recipesDesc': '自动批准配方执行（Pandoc 导出等）。默认关闭。每个配方通过 spawn 运行，无 shell 展开。',
 
+    // 高风险自动批准开关的安全警告
+    'settings.permissions.enableAutoApproveWarning': '安全提示：启用后，智能体将在无需确认的情况下执行已批准类别的操作。这会减少人工监督。请仅启用您完全信任的类别。',
+    'settings.permissions.noteEditsWarning': '智能体可以在无需确认的情况下修改笔记内容。通过提示注入产生的内容无法与合法更改区分。',
+    'settings.permissions.vaultChangesWarning': '结构性更改（删除、移动）难以撤销。检查点系统提供安全网，但建议进行人工审查。',
+    'settings.permissions.mcpCallsWarning': 'MCP 工具可以在连接的服务器上执行任意操作。仅在您信任所有已配置的 MCP 服务器时才自动批准。',
+    'settings.permissions.pluginApiWritesWarning': '插件 API 写入通过第三方插件修改数据。智能体以与这些插件相同的权限运行。',
+    'settings.permissions.recipesWarning': '配方在您的系统上执行 shell 命令。自动批准将移除执行前的最后一次人工检查。',
+    'settings.permissions.subtasksWarning': '子智能体继承自动批准设置，可以在无需单独确认的情况下执行工具。',
+
     // =========================================================================
     // Settings — Loop Tab
     // =========================================================================

@@ -1,4 +1,4 @@
-import { App, Notice, Setting, setIcon } from 'obsidian';
+import { App, Setting, setIcon } from 'obsidian';
 import type ObsidianAgentPlugin from '../../main';
 import { t } from '../../i18n';
 
@@ -23,6 +23,7 @@ export class PermissionsTab {
                     await this.plugin.saveSettings();
                 }),
             );
+        this.addWarning(containerEl, 'settings.permissions.enableAutoApproveWarning');
 
         new Setting(containerEl)
             .setName(t('settings.permissions.showApprovalBar'))
@@ -55,6 +56,7 @@ export class PermissionsTab {
                     await this.plugin.saveSettings();
                 }),
             );
+        this.addWarning(containerEl, 'settings.permissions.noteEditsWarning');
 
         new Setting(containerEl)
             .setName(t('settings.permissions.vaultChanges'))
@@ -65,6 +67,7 @@ export class PermissionsTab {
                     await this.plugin.saveSettings();
                 }),
             );
+        this.addWarning(containerEl, 'settings.permissions.vaultChangesWarning');
 
         new Setting(containerEl)
             .setName(t('settings.permissions.mcpCalls'))
@@ -75,6 +78,7 @@ export class PermissionsTab {
                     await this.plugin.saveSettings();
                 }),
             );
+        this.addWarning(containerEl, 'settings.permissions.mcpCallsWarning');
 
         new Setting(containerEl)
             .setName(t('settings.permissions.modeSwitching'))
@@ -95,6 +99,7 @@ export class PermissionsTab {
                     await this.plugin.saveSettings();
                 }),
             );
+        this.addWarning(containerEl, 'settings.permissions.subtasksWarning');
 
         new Setting(containerEl)
             .setName(t('settings.permissions.followUp'))
@@ -147,6 +152,7 @@ export class PermissionsTab {
                     await this.plugin.saveSettings();
                 }),
             );
+        this.addWarning(containerEl, 'settings.permissions.pluginApiWritesWarning');
 
         new Setting(containerEl)
             .setName(t('settings.permissions.recipes'))
@@ -157,5 +163,14 @@ export class PermissionsTab {
                     await this.plugin.saveSettings();
                 }),
             );
+        this.addWarning(containerEl, 'settings.permissions.recipesWarning');
+    }
+
+    /** Render a security warning callout below a settings toggle. */
+    private addWarning(containerEl: HTMLElement, key: string): void {
+        const warnEl = containerEl.createDiv('agent-setting-warning');
+        const iconEl = warnEl.createSpan('agent-setting-warning-icon');
+        setIcon(iconEl, 'alert-triangle');
+        warnEl.createSpan({ text: t(key) });
     }
 }

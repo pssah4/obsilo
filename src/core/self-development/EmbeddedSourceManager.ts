@@ -9,6 +9,8 @@
  * as a base64-encoded constant.
  */
 
+import { safeRegex } from '../utils/safeRegex';
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -106,7 +108,7 @@ export class EmbeddedSourceManager {
      * Search for a pattern across all source files.
      */
     searchFiles(pattern: string): { path: string; line: number; text: string }[] {
-        const regex = new RegExp(pattern, 'gi');
+        const regex = safeRegex(pattern, 'gi');
         const results: { path: string; line: number; text: string }[] = [];
 
         for (const [path, content] of this.files) {

@@ -26,7 +26,7 @@ import type { OperationLogger } from '../governance/OperationLogger';
 import { findAllowedMethod } from '../tools/agent/pluginApiAllowlist';
 
 /** Tool group classification for auto-approval checks */
-type ToolGroup = 'read' | 'note-edit' | 'vault-change' | 'web' | 'agent' | 'mode' | 'subtask' | 'mcp' | 'skill' | 'plugin-api' | 'recipe';
+type ToolGroup = 'read' | 'note-edit' | 'vault-change' | 'web' | 'agent' | 'mode' | 'subtask' | 'mcp' | 'skill' | 'plugin-api' | 'recipe' | 'self-modify';
 
 const TOOL_GROUPS: Record<string, ToolGroup> = {
     // Read-only vault tools
@@ -80,10 +80,10 @@ const TOOL_GROUPS: Record<string, ToolGroup> = {
     read_agent_logs: 'agent',
     manage_mcp_server: 'agent',
     // Self-Development (Phase 2+3)
-    manage_skill: 'agent',
     evaluate_expression: 'agent',
-    // Self-Development (Phase 4)
-    manage_source: 'agent',
+    // M-7: Self-modification tools always require human approval
+    manage_skill: 'self-modify',
+    manage_source: 'self-modify',
 };
 
 /** Result of an approval check — may include user-edited content */
@@ -313,6 +313,16 @@ export class ToolExecutionPipeline {
 
         // Agent tools (question, todo, completion, open_note) are always auto-approved
         if (group === 'agent') return { decision: 'auto' };
+
+        // M-7: Self-modification tools (manage_source, manage_skill) ALWAYS require
+        // human approval — no auto-approve bypass possible
+        if (group === 'self-modify') {
+            if (!extensions?.onApprovalRequired) {
+                console.warn(`[Pipeline] Self-modify tool ${toolCall.name} — denying (always requires approval)`);
+                return { decision: 'rejected' };
+            }
+            return await extensions.onApprovalRequired(toolCall.name, toolCall.input);
+        }
 
         // Check if auto-approved by settings
         if (cfg.enabled) {

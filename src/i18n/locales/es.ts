@@ -281,6 +281,15 @@ export const es: Translations = {
     'settings.permissions.recipes': 'Ejecucion de recetas',
     'settings.permissions.recipesDesc': 'Auto-aprobar la ejecucion de recetas (exportaciones de Pandoc, etc.). Desactivado por defecto. Cada receta se ejecuta via spawn sin expansion de shell.',
 
+    // Advertencias de seguridad para toggles de auto-aprobacion de alto riesgo
+    'settings.permissions.enableAutoApproveWarning': 'Seguridad: Cuando esta habilitado, el agente ejecuta categorias aprobadas sin confirmacion. Esto reduce la supervision humana. Solo habilite categorias en las que confie plenamente.',
+    'settings.permissions.noteEditsWarning': 'El agente puede modificar el contenido de las notas sin confirmacion. El contenido generado por inyeccion de prompt no se puede distinguir de cambios legitimos.',
+    'settings.permissions.vaultChangesWarning': 'Los cambios estructurales (eliminacion, movimiento) son dificiles de revertir. El sistema de checkpoints proporciona una red de seguridad, pero se recomienda la revision manual.',
+    'settings.permissions.mcpCallsWarning': 'Las herramientas MCP pueden ejecutar acciones arbitrarias en los servidores conectados. Solo auto-apruebe si confia en todos los servidores MCP configurados.',
+    'settings.permissions.pluginApiWritesWarning': 'Las escrituras de API de plugins modifican datos a traves de plugins de terceros. El agente actua con los mismos permisos que esos plugins.',
+    'settings.permissions.recipesWarning': 'Las recetas ejecutan comandos de shell en su sistema. La auto-aprobacion elimina la ultima verificacion manual antes de la ejecucion.',
+    'settings.permissions.subtasksWarning': 'Los sub-agentes heredan la configuracion de auto-aprobacion y pueden ejecutar herramientas sin confirmacion individual.',
+
     // =========================================================================
     // Settings — Loop Tab
     // =========================================================================

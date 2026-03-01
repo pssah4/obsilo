@@ -281,6 +281,15 @@ export const en: Translations = {
     'settings.permissions.recipes': 'Recipe execution',
     'settings.permissions.recipesDesc': 'Auto-approve recipe execution (Pandoc exports, etc.). Off by default. Each recipe runs via spawn without shell expansion.',
 
+    // Security warnings for high-risk auto-approval toggles
+    'settings.permissions.enableAutoApproveWarning': 'Security: When enabled, the agent executes approved categories without confirmation. This reduces the human-in-the-loop safety net. Only enable categories you fully trust.',
+    'settings.permissions.noteEditsWarning': 'The agent can modify note content without confirmation. Content written by a prompt-injected agent cannot be distinguished from legitimate changes.',
+    'settings.permissions.vaultChangesWarning': 'Structural changes (deletion, moves) are difficult to undo. The checkpoint system provides a safety net, but manual review is recommended.',
+    'settings.permissions.mcpCallsWarning': 'MCP tools can execute arbitrary actions on connected servers. Only auto-approve if you trust all configured MCP servers.',
+    'settings.permissions.pluginApiWritesWarning': 'Plugin API writes modify data through third-party plugins. The agent acts with the same permissions as those plugins.',
+    'settings.permissions.recipesWarning': 'Recipes execute shell commands on your system. Auto-approval removes the last manual check before execution.',
+    'settings.permissions.subtasksWarning': 'Sub-agents inherit auto-approval settings and can execute tools without individual confirmation.',
+
     // =========================================================================
     // Settings — Loop Tab
     // =========================================================================

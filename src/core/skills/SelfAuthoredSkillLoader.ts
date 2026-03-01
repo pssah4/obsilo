@@ -13,6 +13,7 @@
  */
 
 import { TFile, TFolder } from 'obsidian';
+import { safeRegex } from '../utils/safeRegex';
 import type ObsidianAgentPlugin from '../../main';
 import type { EsbuildWasmManager } from '../sandbox/EsbuildWasmManager';
 import type { SandboxExecutor } from '../sandbox/SandboxExecutor';
@@ -627,13 +628,9 @@ export class SelfAuthoredSkillLoader {
 
         let trigger: RegExp;
         let triggerSource: string;
-        try {
-            triggerSource = fm.trigger ?? fm.name.toLowerCase();
-            trigger = new RegExp(triggerSource, 'i');
-        } catch {
-            triggerSource = fm.name.toLowerCase();
-            trigger = new RegExp(triggerSource.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
-        }
+        triggerSource = fm.trigger ?? fm.name.toLowerCase();
+        // M-3: Use safeRegex to prevent ReDoS from malicious trigger patterns
+        trigger = safeRegex(triggerSource, 'i');
 
         return {
             name: fm.name,

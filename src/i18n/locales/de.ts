@@ -281,6 +281,15 @@ export const de: Translations = {
     'settings.permissions.recipes': 'Rezeptausfuehrung',
     'settings.permissions.recipesDesc': 'Rezeptausfuehrung automatisch genehmigen (Pandoc-Exporte usw.). Standardmaessig deaktiviert. Jedes Rezept wird ueber spawn ohne Shell-Expansion ausgefuehrt.',
 
+    // Sicherheitswarnungen fuer risikoreiche Auto-Genehmigungs-Toggles
+    'settings.permissions.enableAutoApproveWarning': 'Sicherheit: Bei Aktivierung fuehrt der Agent genehmigte Kategorien ohne Bestaetigung aus. Dies reduziert die menschliche Kontrolle. Aktivieren Sie nur Kategorien, denen Sie vollstaendig vertrauen.',
+    'settings.permissions.noteEditsWarning': 'Der Agent kann Notizinhalte ohne Bestaetigung aendern. Durch Prompt-Injection erzeugte Inhalte sind nicht von legitimen Aenderungen unterscheidbar.',
+    'settings.permissions.vaultChangesWarning': 'Strukturelle Aenderungen (Loeschen, Verschieben) sind schwer rueckgaengig zu machen. Das Checkpoint-System bietet ein Sicherheitsnetz, manuelle Pruefung wird empfohlen.',
+    'settings.permissions.mcpCallsWarning': 'MCP-Tools koennen beliebige Aktionen auf verbundenen Servern ausfuehren. Nur aktivieren, wenn Sie allen konfigurierten MCP-Servern vertrauen.',
+    'settings.permissions.pluginApiWritesWarning': 'Plugin-API-Schreibzugriffe aendern Daten ueber Drittanbieter-Plugins. Der Agent handelt mit denselben Berechtigungen wie diese Plugins.',
+    'settings.permissions.recipesWarning': 'Rezepte fuehren Shell-Befehle auf Ihrem System aus. Auto-Genehmigung entfernt die letzte manuelle Pruefung vor der Ausfuehrung.',
+    'settings.permissions.subtasksWarning': 'Sub-Agenten uebernehmen die Auto-Genehmigungs-Einstellungen und koennen Tools ohne individuelle Bestaetigung ausfuehren.',
+
     // =========================================================================
     // Settings — Loop Tab
     // =========================================================================

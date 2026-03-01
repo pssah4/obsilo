@@ -70,6 +70,11 @@ export class WebFetchTool extends BaseTool<'web_fetch'> {
         }
 
         // H-3: Block SSRF — deny access to private/internal network addresses.
+        // NOTE (M-5): This check validates the hostname string before DNS resolution.
+        // A DNS rebinding attack could bypass this by resolving to a public IP during
+        // the check and rebinding to 127.0.0.1 during the actual request. Electron's
+        // requestUrl resolves DNS independently. For enterprise deployments, consider
+        // using a DNS-over-HTTPS resolver with pinning, or restrict outbound network.
         try {
             const parsed = new URL(url);
             const host = parsed.hostname.toLowerCase();

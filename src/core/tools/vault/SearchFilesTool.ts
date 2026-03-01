@@ -2,6 +2,7 @@ import { TFile } from 'obsidian';
 import { BaseTool } from '../BaseTool';
 import type { ToolDefinition, ToolExecutionContext } from '../types';
 import type ObsidianAgentPlugin from '../../../main';
+import { safeRegex } from '../../utils/safeRegex';
 
 const MAX_RESULTS = 50;
 const MAX_FILES_TO_SCAN = 500;
@@ -52,26 +53,8 @@ export class SearchFilesTool extends BaseTool<'search_files'> {
         }
 
         try {
-            // Build regex — K-2: guard against ReDoS via overly complex patterns.
-            // Patterns longer than 500 chars or containing catastrophic constructs
-            // (possessive quantifiers, nested quantifiers) are treated as literals.
-            let regex: RegExp;
-            const literalEscape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            // S-02: Extended ReDoS detection — covers catastrophic backtracking patterns
-            const REDOS_PATTERNS = /(\(.*\))[+*]{1,}|(\[.*\])[+*]{2,}|(\w+\|)+\w+[+*]/;
-            const isComplex =
-                pattern.length > 500 ||
-                /(\(\?[=!<]|(\+|\*|\?)(\+|\?)|\{\d{3,}\})/.test(pattern) ||
-                REDOS_PATTERNS.test(pattern);
-            if (isComplex) {
-                regex = new RegExp(literalEscape(pattern), 'i');
-            } else {
-                try {
-                    regex = new RegExp(pattern, 'i');
-                } catch {
-                    regex = new RegExp(literalEscape(pattern), 'i');
-                }
-            }
+            // K-2 / S-02: ReDoS-safe regex via shared utility
+            const regex = safeRegex(pattern, 'i');
 
             const dirPath = rawPath === '/' || rawPath === '' ? '' : rawPath;
 

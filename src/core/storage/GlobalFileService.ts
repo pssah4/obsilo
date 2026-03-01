@@ -27,7 +27,12 @@ export class GlobalFileService implements FileAdapter {
 
     /** Resolve a relative path to an absolute path under the root. */
     resolvePath(relativePath: string): string {
-        return pathModule.join(this.root, relativePath);
+        const resolved = pathModule.join(this.root, relativePath);
+        // H-5: Prevent path traversal — resolved path must stay within root
+        if (!resolved.startsWith(this.root + pathModule.sep) && resolved !== this.root) {
+            throw new Error(`Path traversal blocked: ${relativePath}`);
+        }
+        return resolved;
     }
 
     /** Return the root directory path (~/.obsidian-agent/). */
