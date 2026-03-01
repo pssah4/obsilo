@@ -20,10 +20,19 @@ jobs:
         run: |
           # Internal directories — must not appear in the public repo
           # (docs/ stays — needed for GitHub Pages)
+          # Save release workflow before removing .github
+          cp .github/workflows/release.yml /tmp/release.yml 2>/dev/null || true
+
           for dir in _devprocess .github scripts _global _memory; do
             git rm -rf --cached "$dir" 2>/dev/null || true
             rm -rf "$dir"
           done
+
+          # Restore release workflow for the public repo
+          mkdir -p .github/workflows
+          cp /tmp/release.yml .github/workflows/release.yml 2>/dev/null || true
+          git add .github/workflows/release.yml 2>/dev/null || true
+
           # Internal files
           git rm -f --cached CLAUDE.md 2>/dev/null || true
           rm -f CLAUDE.md
