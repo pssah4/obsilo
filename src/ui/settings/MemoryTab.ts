@@ -135,7 +135,7 @@ export class MemoryTab {
 
             const memService = this.plugin.memoryService;
             if (memService) {
-                memService.getStats().then((stats) => {
+                void memService.getStats().then((stats) => {
                     const desc = [
                         t('settings.memory.statsFiles', { count: stats.fileCount }),
                         t('settings.memory.statsSessions', { count: stats.sessionCount }),

@@ -202,7 +202,7 @@ export class BackupTab {
             textWrap.createSpan({ text: cat.label, cls: 'agent-backup-label-name' });
             textWrap.createSpan({ text: ` -- ${cat.description}`, cls: 'agent-backup-label-desc' });
 
-            this.loadCategoryStats(cat).then((info) => {
+            void this.loadCategoryStats(cat).then((info) => {
                 textWrap.createSpan({
                     text: ` (${info})`,
                     cls: 'agent-backup-label-stats',
@@ -212,7 +212,7 @@ export class BackupTab {
 
         const btnRow = section.createDiv('agent-backup-row');
         const exportBtn = btnRow.createEl('button', { text: t('settings.backup.export'), cls: 'mod-cta' });
-        exportBtn.addEventListener('click', () => this.doExport(exportBtn));
+        exportBtn.addEventListener('click', () => void this.doExport(exportBtn));
     }
 
     private async loadCategoryStats(cat: BackupCategory): Promise<string> {
@@ -326,7 +326,7 @@ export class BackupTab {
         const input = document.createElement('input');
         input.type = 'file';
         input.accept = '.json,application/json';
-        input.addEventListener('change', async () => {
+        input.addEventListener('change', () => { void (async () => {
             const file = input.files?.[0];
             if (!file) return;
             try {
@@ -372,7 +372,7 @@ export class BackupTab {
             } catch (e) {
                 new Notice(t('settings.backup.importFailed', { error: (e as Error).message }));
             }
-        });
+        })(); });
         input.click();
     }
 
@@ -426,7 +426,7 @@ export class BackupTab {
         const btnRow = container.createDiv('agent-backup-row');
 
         const confirmBtn = btnRow.createEl('button', { text: t('settings.backup.confirmImport'), cls: 'mod-cta' });
-        confirmBtn.addEventListener('click', () => this.doImport(confirmBtn));
+        confirmBtn.addEventListener('click', () => void this.doImport(confirmBtn));
 
         const cancelBtn = btnRow.createEl('button', { text: t('settings.backup.cancel') });
         cancelBtn.addEventListener('click', () => {

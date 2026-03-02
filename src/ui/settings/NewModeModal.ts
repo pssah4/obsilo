@@ -151,7 +151,7 @@ export class NewModeModal extends Modal {
         // ── Actions ───────────────────────────────────────────────────────────
         const actions = contentEl.createDiv('new-mode-actions');
         const saveBtn = actions.createEl('button', { text: t('modal.newMode.create'), cls: 'mod-cta' });
-        saveBtn.addEventListener('click', async () => {
+        saveBtn.addEventListener('click', () => { void (async () => {
             if (!name.trim()) { new Notice(t('modal.newMode.nameRequired')); return; }
             if (!roleDefinition.trim()) { new Notice(t('modal.newMode.roleRequired')); return; }
 
@@ -192,7 +192,7 @@ export class NewModeModal extends Modal {
 
             this.onSave();
             this.close();
-        });
+        })(); });
 
         const cancelBtn = actions.createEl('button', { text: t('modal.newMode.cancel') });
         cancelBtn.addEventListener('click', () => this.close());

@@ -103,7 +103,7 @@ export class ModelsTab {
         const toggleInput = toggleLabel.createEl('input', { attr: { type: 'checkbox' } });
         toggleLabel.createSpan({ cls: 'mc-toggle-track' });
         toggleInput.checked = model.enabled;
-        toggleInput.addEventListener('change', async () => {
+        toggleInput.addEventListener('change', () => { void (async () => {
             const idx = this.plugin.settings.activeModels.findIndex((m) => getModelKey(m) === key);
             if (idx !== -1) this.plugin.settings.activeModels[idx].enabled = toggleInput.checked;
 
@@ -123,20 +123,20 @@ export class ModelsTab {
 
             await this.plugin.saveSettings();
             this.rerender();
-        });
+        })(); });
 
         // Default — radio button (single selection)
         const defaultEl = row.createDiv('mc-default');
         const defaultRadio = defaultEl.createEl('input', { attr: { type: 'radio', name: 'active-model' } });
         defaultRadio.checked = isActive;
         defaultRadio.disabled = !model.enabled;
-        defaultRadio.addEventListener('change', async () => {
+        defaultRadio.addEventListener('change', () => { void (async () => {
             if (defaultRadio.checked) {
                 this.plugin.settings.activeModelKey = key;
                 await this.plugin.saveSettings();
                 this.rerender();
             }
-        });
+        })(); });
 
         // Actions
         const actionsEl = row.createDiv('mc-actions');
@@ -158,14 +158,14 @@ export class ModelsTab {
 
         const delBtn = actionsEl.createEl('button', { cls: 'mc-action-btn mc-action-del', attr: { title: t('settings.models.remove') } });
         setIcon(delBtn, 'trash');
-        delBtn.addEventListener('click', async () => {
+        delBtn.addEventListener('click', () => { void (async () => {
             this.plugin.settings.activeModels = this.plugin.settings.activeModels.filter(
                 (m) => getModelKey(m) !== key,
             );
             if (this.plugin.settings.activeModelKey === key) this.plugin.settings.activeModelKey = '';
             await this.plugin.saveSettings();
             this.rerender();
-        });
+        })(); });
     }
 
     // ---------------------------------------------------------------------------

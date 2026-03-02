@@ -62,7 +62,7 @@ export class ChatHistoryModal extends Modal {
         const deleteBtn = actions.createEl('button', { cls: 'chat-history-delete-btn' });
         setIcon(deleteBtn, 'trash-2');
         deleteBtn.setAttribute('aria-label', t('modal.chatHistory.delete'));
-        deleteBtn.addEventListener('click', async () => {
+        deleteBtn.addEventListener('click', () => { void (async () => {
             await this.service.delete(conv.id);
             row.remove();
             const remaining = this.contentEl.querySelectorAll('.chat-history-row');
@@ -73,6 +73,6 @@ export class ChatHistoryModal extends Modal {
                     text: t('modal.chatHistory.emptyAfterDelete'),
                 });
             }
-        });
+        })(); });
     }
 }

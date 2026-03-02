@@ -64,7 +64,7 @@ export interface SystemPromptConfig {
     isSubtask?: boolean;
     webEnabled?: boolean;
     recipesSection?: string;
-    configDir?: string;
+    configDir: string;
     selfAuthoredSkillsSection?: string;
 }
 
@@ -107,7 +107,7 @@ export function buildSystemPromptForMode(
     isSubtask = false,
     webEnabled?: boolean,
     recipesSection?: string,
-    configDir = '.obsidian',
+    configDir?: string,
     selfAuthoredSkillsSection?: string,
 ): string {
     // Normalize: if first arg has 'slug' and 'toolGroups', it's a ModeConfig (legacy call)
@@ -128,7 +128,7 @@ export function buildSystemPromptForMode(
         isSubtask = cfg.isSubtask ?? false;
         webEnabled = cfg.webEnabled;
         recipesSection = cfg.recipesSection;
-        configDir = cfg.configDir ?? '.obsidian';
+        configDir = cfg.configDir;
         selfAuthoredSkillsSection = cfg.selfAuthoredSkillsSection;
     } else {
         // Legacy positional form
@@ -162,7 +162,7 @@ export function buildSystemPromptForMode(
         '',
 
         // 8. Tool decision guidelines
-        getToolDecisionGuidelinesSection(configDir),
+        getToolDecisionGuidelinesSection(configDir!),
         '',
 
         // 9. Objective (task decomposition)
@@ -196,12 +196,3 @@ export function buildSystemPromptForMode(
     return sections.filter(Boolean).join('\n');
 }
 
-/**
- * Legacy builder — accepts a mode slug string.
- * Used as fallback if ModeConfig is not available.
- */
-export function buildSystemPrompt(mode: string): string {
-    const modeConfig = BUILT_IN_MODES.find((m) => m.slug === mode)
-        ?? BUILT_IN_MODES[0];
-    return buildSystemPromptForMode(modeConfig, BUILT_IN_MODES);
-}

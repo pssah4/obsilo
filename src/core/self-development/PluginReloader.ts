@@ -60,7 +60,6 @@ export class PluginReloader {
         const id = this.plugin.manifest.id;
         console.debug(`[PluginReloader] Reloading plugin: ${id}`);
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Obsidian internal API for plugin management
         const plugins = (this.plugin.app as unknown as Record<string, unknown>).plugins as
             { disablePlugin(id: string): Promise<void>; enablePlugin(id: string): Promise<void> } | undefined;
 

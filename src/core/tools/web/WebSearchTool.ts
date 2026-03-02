@@ -99,7 +99,7 @@ export class WebSearchTool extends BaseTool<'web_search'> {
                 results = await this.searchTavily(query, count, webSettings.tavilyApiKey ?? '');
             } else {
                 callbacks.pushToolResult(
-                    this.formatError(new Error(`Unknown provider: ${provider}`))
+                    this.formatError(new Error(`Unknown provider: ${String(provider)}`))
                 );
                 return;
             }

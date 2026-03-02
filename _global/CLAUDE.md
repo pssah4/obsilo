@@ -97,6 +97,9 @@ Schritt 6 passiert unmittelbar -- das Backlog ist immer aktuell.
 
 - Dual-Remote: privat (origin, alle Branches) + public (nur main)
 - Branch-Flow: feature/* -> dev -> main -> public/main
+- **Safe-Merge:** Merges nach dev immer ueber `scripts/merge-to-dev.sh <branch>`
+  - Automatisch: dev -> dev-backup (Snapshot), dann feature -> dev (no-ff)
+  - Rollback: `git checkout dev && git reset --hard dev-backup`
 - Zwei-Stufen-Stripping:
   1. promote-to-test: Dev-Tooling entfernen (.claude, scripts, forked-code)
   2. sync-public CI: Interne Docs entfernen (_devprocess/)

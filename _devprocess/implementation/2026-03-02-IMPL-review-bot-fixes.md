@@ -259,6 +259,10 @@ These fields are intentionally marked `@deprecated` with JSDoc annotations. They
 **6. "Async method 'onClose' has no 'await' expression"**
 
 Same pattern as #1 -- the method overrides a base class lifecycle method that expects a specific return type. The method signature must match the parent class.
+
+**7. "Unnecessary character escape `\[` in character class" (SemanticIndexService.ts:L525)**
+
+The regex `/[\s\-_/,.;:!?()\[\]{}"'` + "`" + `|@#=+*<>~^]+/` uses `\[` and `\]` inside a character class. While some linters flag `\[` as unnecessary, removing the backslash from `]` causes it to close the character class prematurely, turning `+*<>~^]+` into invalid syntax ("Nothing to repeat"). The escaped forms `\[\]` are required here for correctness. Confirmed by runtime crash when the escapes were removed.
 ```
 
 ---
@@ -284,7 +288,7 @@ Same pattern as #1 -- the method overrides a base class lifecycle method that ex
 | `src/core/sandbox/EsbuildWasmManager.ts` | Function Type fix (2) | Null |
 | `src/core/systemPrompt.ts` | Type assertions (3), configDir defaults | Null |
 | `src/core/checkpoints/GitCheckpointService.ts` | Type assertions (2), reject(new Error) | Null |
-| `src/core/semantic/SemanticIndexService.ts` | Type assertion (1), escape fix, unbound method | Null |
+| `src/core/semantic/SemanticIndexService.ts` | Unbound method fix (escape fix revertiert -- Skip #7) | Null |
 | `src/core/tool-execution/ToolExecutionPipeline.ts` | Unbound method fix (2) | Null |
 | `src/api/providers/anthropic.ts` | Unnecessary await entfernen | Null |
 | `src/core/tools/agent/ExecuteRecipeTool.ts` | Empty block fix | Null |
@@ -303,6 +307,7 @@ Same pattern as #1 -- the method overrides a base class lifecycle method that ex
 - `src/core/tools/agent/UpdateSettingsTool.ts` -- async bleibt (Skip #1)
 - `src/types/settings.ts` -- deprecated Felder bleiben (Skip #5)
 - Alle `style.setProperty` Stellen in UI -- bleiben (Skip #3)
+- `src/core/semantic/SemanticIndexService.ts:L525` -- `\[\]` Escapes bleiben (Skip #7, Runtime-Crash bei Entfernung)
 
 ## Verifikation
 

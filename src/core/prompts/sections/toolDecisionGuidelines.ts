@@ -5,7 +5,7 @@
  * tool calls and enforces the RAG pattern for vault queries.
  */
 
-export function getToolDecisionGuidelinesSection(configDir = '.obsidian'): string {
+export function getToolDecisionGuidelinesSection(configDir: string): string {
     return `Tool decision guidelines:
 1. PLUGIN TOOL ROUTING — Use the right tool for each plugin type:
    (a) Plugin wraps an external CLI tool (Pandoc, Mermaid, ffmpeg, LaTeX, PlantUML):

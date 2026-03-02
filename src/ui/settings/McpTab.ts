@@ -62,18 +62,18 @@ export class McpTab {
 
                 if (status === 'connected') {
                     const disconnBtn = actions.createEl('button', { text: t('settings.mcp.disconnect') });
-                    disconnBtn.addEventListener('click', async () => {
+                    disconnBtn.addEventListener('click', () => { void (async () => {
                         await mcpClient?.disconnect(name);
                         renderList();
-                    });
+                    })(); });
                 } else if (status !== 'connecting') {
                     const connBtn = actions.createEl('button', { text: status === 'error' ? t('settings.mcp.retry') : t('settings.mcp.connect') });
-                    connBtn.addEventListener('click', async () => {
+                    connBtn.addEventListener('click', () => { void (async () => {
                         if (mcpClient) {
                             await mcpClient.connect(name, config);
                             renderList();
                         }
-                    });
+                    })(); });
                 }
 
                 const editBtn = actions.createEl('button', { cls: 'agent-rules-edit-btn' });
@@ -84,12 +84,12 @@ export class McpTab {
                 const delBtn = actions.createEl('button', { cls: 'agent-rules-delete-btn' });
                 setIcon(delBtn, 'trash-2');
                 delBtn.setAttribute('aria-label', t('settings.mcp.delete'));
-                delBtn.addEventListener('click', async () => {
+                delBtn.addEventListener('click', () => { void (async () => {
                     if (mcpClient) await mcpClient.disconnect(name);
                     delete this.plugin.settings.mcpServers[name];
                     await this.plugin.saveSettings();
                     renderList();
-                });
+                })(); });
             }
         };
 
@@ -103,11 +103,11 @@ export class McpTab {
             const nameInput = contentEl.createEl('input', {
                 type: 'text', placeholder: t('settings.mcp.namePlaceholder'),
                 cls: 'agent-mcp-modal-input',
-            }) as HTMLInputElement;
+            });
             nameInput.value = editName ?? '';
             if (editName) nameInput.disabled = true;
 
-            const typeSelect = contentEl.createEl('select', { cls: 'agent-mcp-modal-input' }) as HTMLSelectElement;
+            const typeSelect = contentEl.createEl('select', { cls: 'agent-mcp-modal-input' });
             for (const opt of ['sse', 'streamable-http']) {
                 const o = typeSelect.createEl('option', { text: opt, value: opt });
                 if (opt === (editConfig?.type ?? 'sse')) o.selected = true;
@@ -118,11 +118,11 @@ export class McpTab {
             const urlInput = contentEl.createEl('input', {
                 type: 'text', placeholder: t('settings.mcp.urlPlaceholder'),
                 cls: 'agent-mcp-modal-input',
-            }) as HTMLInputElement;
+            });
             urlInput.value = editConfig?.url ?? '';
 
             contentEl.createEl('label', { text: t('settings.mcp.labelHeaders') });
-            const headersInput = contentEl.createEl('textarea', { cls: 'agent-mcp-modal-input' }) as HTMLTextAreaElement;
+            const headersInput = contentEl.createEl('textarea', { cls: 'agent-mcp-modal-input' });
             headersInput.rows = 3;
             headersInput.value = Object.entries(editConfig?.headers ?? {}).map(([k, v]) => `${k}=${v}`).join('\n');
 
@@ -130,12 +130,12 @@ export class McpTab {
             const timeoutInput = contentEl.createEl('input', {
                 type: 'number', placeholder: t('settings.mcp.timeoutPlaceholder'),
                 cls: 'agent-mcp-modal-input',
-            }) as HTMLInputElement;
+            });
             timeoutInput.value = String(editConfig?.timeout ?? 60);
 
             // Save button
             const saveBtn = contentEl.createEl('button', { text: t('settings.mcp.saveConnect'), cls: 'mod-cta agent-mcp-modal-save' });
-            saveBtn.addEventListener('click', async () => {
+            saveBtn.addEventListener('click', () => { void (async () => {
                 const serverName = (editName ?? nameInput.value.trim());
                 if (!serverName) return;
 
@@ -168,7 +168,7 @@ export class McpTab {
 
                 modal.close();
                 renderList();
-            });
+            })(); });
 
             modal.open();
         };

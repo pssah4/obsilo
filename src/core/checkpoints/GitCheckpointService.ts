@@ -97,8 +97,6 @@ export class GitCheckpointService {
         console.debug(`[Checkpoints] snapshot() called: taskId=${taskId} tool=${toolName} files=${filePaths.join(', ')} initialized=${this.initialized}`);
         await this.ensureInit();
         const fs = this.getFs();
-        const vaultRoot = (this.vault.adapter as FileSystemAdapter).basePath as string;
-
         const staged: string[] = [];
         const newFiles: string[] = [];
         for (const vaultRelPath of filePaths) {

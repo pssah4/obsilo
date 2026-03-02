@@ -709,9 +709,9 @@ export class DiffReviewModal extends Modal {
                 const restoreBtn = footer.createEl('button', {
                     cls: 'mod-cta', text: t('modal.diffReview.restoreCheckpoint'),
                 });
-                restoreBtn.addEventListener('click', async () => {
+                restoreBtn.addEventListener('click', () => { void (async () => {
                     restoreBtn.setText(t('modal.diffReview.restoring'));
-                    (restoreBtn as HTMLButtonElement).disabled = true;
+                    restoreBtn.disabled = true;
                     try {
                         await this.options.onRestore!();
                         restoreBtn.setText(t('modal.diffReview.restored'));
@@ -719,7 +719,7 @@ export class DiffReviewModal extends Modal {
                     } catch {
                         restoreBtn.setText(t('modal.diffReview.failed'));
                     }
-                });
+                })(); });
             }
         }
     }

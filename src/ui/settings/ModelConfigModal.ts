@@ -149,7 +149,7 @@ export class ModelConfigModal extends Modal {
         // Fetch button — fetches current model list from the provider's API
         const fetchBtn = suggestControls.createEl('button', { cls: 'mcm-fetch-btn', attr: { title: t('modal.modelConfig.fetchModels') } });
         setIcon(fetchBtn, 'refresh-cw');
-        fetchBtn.addEventListener('click', async () => {
+        fetchBtn.addEventListener('click', () => { void (async () => {
             if (!this.suggestSelEl) return;
             fetchBtn.disabled = true;
             setIcon(fetchBtn, 'loader');
@@ -192,7 +192,7 @@ export class ModelConfigModal extends Modal {
                 fetchBtn.disabled = false;
                 setIcon(fetchBtn, 'refresh-cw');
             }
-        });
+        })(); });
 
         // ── Model ID ─────────────────────────────────────────────────────
         const nameRow = row(t('modal.modelConfig.modelId'), t('modal.modelConfig.modelIdDesc'));
@@ -368,7 +368,7 @@ export class ModelConfigModal extends Modal {
         const bar = el.createDiv('mcm-actions');
 
         this.testBtn = bar.createEl('button', { cls: 'mcm-btn-test', text: t('modal.modelConfig.testConnection') });
-        this.testBtn.addEventListener('click', () => this.runTest());
+        this.testBtn.addEventListener('click', () => void this.runTest());
 
         const saveBtn = bar.createEl('button', { cls: 'mod-cta', text: this.isNew ? t('modal.modelConfig.add') : t('modal.modelConfig.save') });
         saveBtn.addEventListener('click', () => this.save());
@@ -595,7 +595,7 @@ export class ModelConfigModal extends Modal {
         const listEl = container.createDiv('mcm-model-list');
         listEl.classList.add('agent-u-hidden');
 
-        browseBtn.addEventListener('click', async () => {
+        browseBtn.addEventListener('click', () => { void (async () => {
             browseBtn.disabled = true;
             browseLabelEl.setText(t('modal.modelConfig.loadingModels'));
             listEl.empty();
@@ -627,7 +627,7 @@ export class ModelConfigModal extends Modal {
             }
             browseBtn.disabled = false;
             browseLabelEl.setText(t('modal.modelConfig.browseInstalled'));
-        });
+        })(); });
     }
 
     /** Browse models from an OpenAI-compatible local or remote server (LM Studio, Mistral, Groq...) */
@@ -639,7 +639,7 @@ export class ModelConfigModal extends Modal {
         const listEl = container.createDiv('mcm-model-list');
         listEl.classList.add('agent-u-hidden');
 
-        browseBtn.addEventListener('click', async () => {
+        browseBtn.addEventListener('click', () => { void (async () => {
             browseBtn.disabled = true;
             browseLabelEl.setText(t('modal.modelConfig.loadingModels'));
             listEl.empty();
@@ -671,7 +671,7 @@ export class ModelConfigModal extends Modal {
             }
             browseBtn.disabled = false;
             browseLabelEl.setText(t('modal.modelConfig.browseAvailable'));
-        });
+        })(); });
     }
 
     private async runTest(): Promise<void> {

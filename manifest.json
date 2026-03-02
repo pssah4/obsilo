@@ -1,7 +1,7 @@
 {
   "id": "obsilo-agent",
   "name": "Obsilo Agent",
-  "version": "1.1.0",
+  "version": "2.0.1",
   "minAppVersion": "1.4.0",
   "description": "Transform your Vault with an AI agent that reads, writes, searches, and connects notes using 30+ tools, semantic search, and full safety controls.",
   "author": "Sebastian Hanke",

@@ -31,7 +31,7 @@ export class PromptsTab {
         const nameInput = createRow.createEl('input', {
             type: 'text', placeholder: t('settings.prompts.namePlaceholder'),
             cls: 'agent-rules-name-input',
-        }) as HTMLInputElement;
+        });
         const createBtn = createRow.createEl('button', { text: t('settings.prompts.create'), cls: 'mod-cta' });
 
         // Import button
@@ -40,7 +40,7 @@ export class PromptsTab {
             const fileInput = document.createElement('input');
             fileInput.type = 'file';
             fileInput.accept = '.json';
-            fileInput.addEventListener('change', async () => {
+            fileInput.addEventListener('change', () => { void (async () => {
                 const file = fileInput.files?.[0];
                 if (!file) return;
                 try {
@@ -64,7 +64,7 @@ export class PromptsTab {
                 } catch {
                     new Notice(t('settings.prompts.importFailed'));
                 }
-            });
+            })(); });
             fileInput.click();
         });
 
@@ -76,11 +76,11 @@ export class PromptsTab {
         const formNameInput = formEl.createEl('input', {
             type: 'text', placeholder: t('settings.prompts.formName'),
             cls: 'agent-prompt-input',
-        }) as HTMLInputElement;
+        });
         const slugInput = formEl.createEl('input', {
             type: 'text', placeholder: t('settings.prompts.formSlug'),
             cls: 'agent-prompt-input',
-        }) as HTMLInputElement;
+        });
 
         formNameInput.addEventListener('input', () => {
             if (!editingId) {
@@ -94,7 +94,7 @@ export class PromptsTab {
         const contentInput = formEl.createEl('textarea', {
             placeholder: t('settings.prompts.formTemplate'),
             cls: 'agent-prompt-textarea',
-        }) as HTMLTextAreaElement;
+        });
         contentInput.rows = 5;
 
         formEl.createEl('p', {
@@ -105,7 +105,7 @@ export class PromptsTab {
         // Optional mode selector
         const modeRow = formEl.createDiv({ cls: 'agent-prompt-mode-row' });
         modeRow.createEl('label', { text: t('settings.prompts.modeLabel'), cls: 'agent-prompt-mode-label' });
-        const modeSelect = modeRow.createEl('select', { cls: 'agent-prompt-input agent-prompt-mode-select' }) as HTMLSelectElement;
+        const modeSelect = modeRow.createEl('select', { cls: 'agent-prompt-input agent-prompt-mode-select' });
         modeSelect.createEl('option', { value: '', text: t('settings.prompts.modeAll') });
         for (const mode of allModes) {
             modeSelect.createEl('option', { value: mode.slug, text: mode.name });
@@ -135,7 +135,7 @@ export class PromptsTab {
             editingId = null;
         });
 
-        saveBtn.addEventListener('click', async () => {
+        saveBtn.addEventListener('click', () => { void (async () => {
             const name = formNameInput.value.trim();
             const slug = slugInput.value.trim().replace(/[^a-z0-9-]/g, '');
             const content = contentInput.value.trim();
@@ -153,7 +153,7 @@ export class PromptsTab {
             formEl.classList.add('agent-u-hidden');
             editingId = null;
             renderList();
-        });
+        })(); });
 
         createBtn.addEventListener('click', () => {
             const rawName = nameInput.value.trim();
@@ -211,18 +211,18 @@ export class PromptsTab {
                 const delBtn = actions.createEl('button', { cls: 'agent-rules-delete-btn' });
                 setIcon(delBtn, 'trash-2');
                 delBtn.setAttribute('aria-label', t('settings.prompts.delete'));
-                delBtn.addEventListener('click', async () => {
+                delBtn.addEventListener('click', () => { void (async () => {
                     const updated = (this.plugin.settings.customPrompts ?? []).filter((cp) => cp.id !== p.id);
                     await savePrompts(updated);
                     renderList();
-                });
+                })(); });
 
                 // Enable/disable toggle
                 const isActive = p.enabled !== false;
                 const toggleEl = row.createDiv({
                     cls: `checkbox-container agent-rules-toggle${isActive ? ' is-enabled' : ''}`,
                 });
-                toggleEl.addEventListener('click', async () => {
+                toggleEl.addEventListener('click', () => { void (async () => {
                     const prompts = [...(this.plugin.settings.customPrompts ?? [])];
                     const idx = prompts.findIndex((cp) => cp.id === p.id);
                     if (idx !== -1) {
@@ -230,7 +230,7 @@ export class PromptsTab {
                         await savePrompts(prompts);
                         toggleEl.toggleClass('is-enabled', prompts[idx].enabled !== false);
                     }
-                });
+                })(); });
             }
         };
 

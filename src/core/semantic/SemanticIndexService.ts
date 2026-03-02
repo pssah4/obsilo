@@ -524,7 +524,7 @@ export class SemanticIndexService {
             .toLowerCase()
             .split(/[\s\-_/,.;:!?()\[\]{}"'`|@#=+*<>~^]+/)
             .filter((t) => t.length >= 3)
-            .map(SemanticIndexService.stemWord);
+            .map((t) => SemanticIndexService.stemWord(t));
     }
 
     /**

@@ -237,8 +237,8 @@ export class ToolExecutionPipeline {
                     if (content.startsWith('<error>')) executionHadError = true;
                     callbacks.pushToolResult(content);
                 },
-                handleError: callbacks.handleError,
-                log: callbacks.log,
+                handleError: (tool: string, error: unknown) => callbacks.handleError(tool, error),
+                log: (msg: string) => callbacks.log(msg),
             };
 
             const context: ToolExecutionContext = {

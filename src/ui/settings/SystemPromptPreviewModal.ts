@@ -18,11 +18,11 @@ export class SystemPromptPreviewModal extends Modal {
 
         const copyBtn = contentEl.createEl('button', { text: t('modal.promptPreview.copy'), cls: 'mod-cta' });
         copyBtn.classList.add('agent-u-mb-12');
-        copyBtn.addEventListener('click', async () => {
+        copyBtn.addEventListener('click', () => { void (async () => {
             await navigator.clipboard.writeText(this.prompt);
             copyBtn.setText(t('modal.promptPreview.copied'));
             setTimeout(() => copyBtn.setText(t('modal.promptPreview.copy')), 2000);
-        });
+        })(); });
 
         const pre = contentEl.createEl('pre', { cls: 'system-prompt-preview-pre' });
         pre.setText(this.prompt);

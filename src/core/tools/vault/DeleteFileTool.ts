@@ -46,12 +46,9 @@ export class DeleteFileTool extends BaseTool<'delete_file'> {
                 return;
             }
 
-            const isFolder = item instanceof TFolder;
-
-            if (isFolder) {
+            if (item instanceof TFolder) {
                 // Only delete empty folders to avoid data loss
-                const folder = item as TFolder;
-                if (folder.children && folder.children.length > 0) {
+                if (item.children && item.children.length > 0) {
                     callbacks.pushToolResult(
                         this.formatError(
                             new Error(
@@ -66,9 +63,9 @@ export class DeleteFileTool extends BaseTool<'delete_file'> {
             // Use Obsidian's trash (moves to .trash in vault or OS trash)
             await this.app.fileManager.trashFile(item);
 
-            const type = isFolder ? 'Folder' : 'File';
+            const type = item instanceof TFolder ? 'Folder' : 'File';
             callbacks.pushToolResult(this.formatSuccess(`${type} moved to trash: ${path}`));
-            callbacks.log(`Deleted (trashed) ${isFolder ? 'folder' : 'file'}: ${path}`);
+            callbacks.log(`Deleted (trashed) ${type === 'Folder' ? 'folder' : 'file'}: ${path}`);
         } catch (error) {
             callbacks.pushToolResult(this.formatError(error));
             await callbacks.handleError('delete_file', error);

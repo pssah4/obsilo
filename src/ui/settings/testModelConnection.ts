@@ -241,7 +241,7 @@ async function fetchProviderModels(
         const modData = modRes.json;
         const models: ApiModelEntry[] = modData.data ?? modData.value ?? [];
         return models
-            .map((m: ApiModelEntry) => ({ id: (m.id ?? m.model ?? '') as string, label: (m.id ?? m.model ?? '') as string }))
+            .map((m: ApiModelEntry) => ({ id: m.id ?? m.model ?? '', label: m.id ?? m.model ?? '' }))
             .filter((m) => m.id)
             .sort((a, b) => a.id.localeCompare(b.id));
     }

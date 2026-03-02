@@ -299,12 +299,12 @@ export default class ObsidianAgentPlugin extends Plugin {
             this.registerEvent(this.app.vault.on('delete', (file) => {
                 if (!(file instanceof TFile)) return;
                 if (file.extension !== 'md' && !(this.settings.semanticIndexPdfs && file.extension === 'pdf')) return;
-                this.semanticIndex?.removeFile(file.path);
+                void this.semanticIndex?.removeFile(file.path);
             }));
             this.registerEvent(this.app.vault.on('rename', (file, oldPath) => {
                 if (!(file instanceof TFile)) return;
                 if (file.extension !== 'md' && !(this.settings.semanticIndexPdfs && file.extension === 'pdf')) return;
-                this.semanticIndex?.removeFile(oldPath);
+                void this.semanticIndex?.removeFile(oldPath);
                 this.scheduleFileIndex(file.path);
             }));
         }
@@ -406,12 +406,12 @@ export default class ObsidianAgentPlugin extends Plugin {
 
         // Ribbon icon in left activity bar
         this.addRibbonIcon('obsilo-agent', 'Obsilo Agent', () => {
-            this.activateView();
+            void this.activateView();
         });
 
         // Auto-open sidebar when Obsidian starts
         this.app.workspace.onLayoutReady(() => {
-            this.activateView();
+            void this.activateView();
         });
 
         // 4. Register commands
@@ -434,7 +434,7 @@ export default class ObsidianAgentPlugin extends Plugin {
 
         // 6. Register deep-link protocol handler: obsidian://obsilo-settings?tab=advanced&sub=backup
         this.registerObsidianProtocolHandler('obsilo-settings', (params) => {
-            const tab = params.tab as string;
+            const tab = params.tab;
             const sub = params.sub;
             if (tab) this.openSettingsAt(tab, sub);
         });
@@ -587,7 +587,7 @@ export default class ObsidianAgentPlugin extends Plugin {
         // Enable recipes for existing users — 6 other security layers remain active.
         if (this.settings.recipes && !this.settings.recipes.enabled) {
             this.settings.recipes.enabled = true;
-            this.saveData(this.encryptSettingsForSave(this.settings));
+            void this.saveData(this.encryptSettingsForSave(this.settings));
         }
 
         // Migrate auto-approval: ensure newer keys have sensible defaults
@@ -599,14 +599,14 @@ export default class ObsidianAgentPlugin extends Plugin {
                 ap.pluginApiRead = true;
                 changed = true;
             }
-            if (changed) this.saveData(this.encryptSettingsForSave(this.settings));
+            if (changed) void this.saveData(this.encryptSettingsForSave(this.settings));
         }
 
         // Migration: remove old hardcoded modeToolOverrides.agent default.
         // Empty object means "use all tools from mode's toolGroups" (new default).
         if (this.settings.modeToolOverrides?.agent && this.settings.modeToolOverrides.agent.length > 20) {
             delete this.settings.modeToolOverrides.agent;
-            this.saveData(this.encryptSettingsForSave(this.settings));
+            void this.saveData(this.encryptSettingsForSave(this.settings));
         }
 
         // One-time migration: encrypt existing plaintext API keys (ADR-019)
@@ -650,7 +650,7 @@ export default class ObsidianAgentPlugin extends Plugin {
 
         if (changed) {
             console.debug('[Plugin] Synced vault mode overrides with built-in definitions');
-            this.saveData(this.encryptSettingsForSave(this.settings));
+            void this.saveData(this.encryptSettingsForSave(this.settings));
         }
     }
 

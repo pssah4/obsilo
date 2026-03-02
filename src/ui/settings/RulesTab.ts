@@ -30,7 +30,7 @@ export class RulesTab {
             const fileInput = document.createElement('input');
             fileInput.type = 'file';
             fileInput.accept = '.md,.txt';
-            fileInput.addEventListener('change', async () => {
+            fileInput.addEventListener('change', () => { void (async () => {
                 const file = fileInput.files?.[0];
                 if (!file || !rulesLoader) return;
                 const content = await file.text();
@@ -41,7 +41,7 @@ export class RulesTab {
                 } catch {
                     new Notice(t('settings.rules.importFailed'));
                 }
-            });
+            })(); });
             fileInput.click();
         });
 
@@ -69,17 +69,17 @@ export class RulesTab {
                 const editBtn = actions.createEl('button', { cls: 'agent-rules-edit-btn' });
                 setIcon(editBtn, 'pencil');
                 editBtn.setAttribute('aria-label', t('settings.rules.edit'));
-                editBtn.addEventListener('click', async () => {
+                editBtn.addEventListener('click', () => { void (async () => {
                     const content = await rulesLoader.readFile(rPath);
-                    new ContentEditorModal(this.app, t('settings.rules.editRule', { name: RulesLoader.displayName(rPath) }), content, async (newContent) => {
-                        await rulesLoader.writeFile(rPath, newContent);
+                    new ContentEditorModal(this.app, t('settings.rules.editRule', { name: RulesLoader.displayName(rPath) }), content, (newContent) => {
+                        return rulesLoader.writeFile(rPath, newContent);
                     }).open();
-                });
+                })(); });
 
                 const exportBtn = actions.createEl('button', { cls: 'agent-rules-export-btn' });
                 setIcon(exportBtn, 'download');
                 exportBtn.setAttribute('aria-label', t('settings.rules.export'));
-                exportBtn.addEventListener('click', async () => {
+                exportBtn.addEventListener('click', () => { void (async () => {
                     const content = await rulesLoader.readFile(rPath);
                     const blob = new Blob([content], { type: 'text/markdown' });
                     const url = URL.createObjectURL(blob);
@@ -88,18 +88,18 @@ export class RulesTab {
                     a.download = `${RulesLoader.displayName(rPath)}.md`;
                     a.click();
                     URL.revokeObjectURL(url);
-                });
+                })(); });
 
                 const delBtn = actions.createEl('button', { cls: 'agent-rules-delete-btn' });
                 setIcon(delBtn, 'trash-2');
                 delBtn.setAttribute('aria-label', t('settings.rules.delete'));
-                delBtn.addEventListener('click', async () => {
+                delBtn.addEventListener('click', () => { void (async () => {
                     await rulesLoader.deleteRule(rPath);
                     this.plugin.settings.rulesToggles ??= {};
                     delete this.plugin.settings.rulesToggles[rPath];
                     await this.plugin.saveSettings();
                     await refreshList();
-                });
+                })(); });
 
                 // Enable/disable toggle
                 this.plugin.settings.rulesToggles ??= {};
@@ -107,29 +107,29 @@ export class RulesTab {
                 const toggleEl = row.createDiv({
                     cls: `checkbox-container agent-rules-toggle${isActive ? ' is-enabled' : ''}`,
                 });
-                toggleEl.addEventListener('click', async () => {
+                toggleEl.addEventListener('click', () => {
                     this.plugin.settings.rulesToggles ??= {};
                     const current = this.plugin.settings.rulesToggles[rPath] !== false;
                     this.plugin.settings.rulesToggles[rPath] = !current;
-                    await this.plugin.saveSettings();
+                    void this.plugin.saveSettings();
                     toggleEl.toggleClass('is-enabled', !current);
                 });
             }
         };
 
-        createBtn.addEventListener('click', async () => {
+        createBtn.addEventListener('click', () => { void (async () => {
             const name = nameInput.value.trim();
             if (!name || !rulesLoader) return;
             const template = `# ${name}\n\n`;
             const rPath = await rulesLoader.createRule(name, template);
             nameInput.value = '';
             await refreshList();
-            new ContentEditorModal(this.app, t('settings.rules.editRule', { name }), template, async (content) => {
-                await rulesLoader.writeFile(rPath, content);
+            new ContentEditorModal(this.app, t('settings.rules.editRule', { name }), template, (content) => {
+                return rulesLoader.writeFile(rPath, content);
             }).open();
-        });
+        })(); });
 
-        refreshList();
+        void refreshList();
     }
 
 }
