@@ -41,7 +41,7 @@ export class ToolPickerPopover {
         const searchInput = popover.createEl('input', {
             cls: 'tool-picker-search',
             attr: { placeholder: t('ui.toolPicker.filter'), type: 'text', spellcheck: 'false' },
-        }) as HTMLInputElement;
+        });
 
         // ── Scroll container ─────────────────────────────────────────────────
         const scrollEl = popover.createDiv('tool-picker-scroll');
@@ -104,7 +104,7 @@ export class ToolPickerPopover {
             const subIconEl = subRow.createSpan('tp-subcat-icon');
             setIcon(subIconEl, iconName);
             subRow.createSpan({ cls: 'tp-subcat-label', text: label });
-            const subGroupCb = subRow.createEl('input', { type: 'checkbox' }) as HTMLInputElement;
+            const subGroupCb = subRow.createEl('input', { type: 'checkbox' });
             subGroupCb.className = 'tp-cat-group-cb';
             const subBody = parent.createDiv('tp-subcat-body');
             subBody.classList.add('agent-u-hidden');
@@ -125,7 +125,7 @@ export class ToolPickerPopover {
             row.setAttribute('data-label', label.toLowerCase());
             row.setAttribute('data-desc', desc.toLowerCase());
             allItemRows.push(row);
-            const cb = row.createEl('input', { type: 'checkbox' }) as HTMLInputElement;
+            const cb = row.createEl('input', { type: 'checkbox' });
             cb.checked = checked;
             row.createSpan({ cls: 'tp-item-name', text: label });
             if (desc) row.createSpan({ cls: 'tp-item-desc', text: desc });
@@ -134,7 +134,7 @@ export class ToolPickerPopover {
 
         // ── Built-In section ─────────────────────────────────────────────────
         const { catRow: builtInCatRow, catBody: builtInCatBody } = makeTopCat(t('ui.toolPicker.builtIn'));
-        const builtInGroupCb = builtInCatRow.createEl('input', { type: 'checkbox' }) as HTMLInputElement;
+        const builtInGroupCb = builtInCatRow.createEl('input', { type: 'checkbox' });
         builtInGroupCb.className = 'tp-cat-group-cb';
         const allBuiltInTools = mode.toolGroups
             .filter((g) => !EXCLUDED_GROUPS.has(g))
@@ -183,21 +183,21 @@ export class ToolPickerPopover {
                     const someBI = allBuiltInTools.some((t) => toolChecks.get(t)?.checked);
                     builtInGroupCb.checked = !!allBI;
                     builtInGroupCb.indeterminate = !allBI && !!someBI;
-                    applyToolOverride();
+                    void applyToolOverride();
                     updateCount();
                 });
             }
             subGroupCb.addEventListener('change', () => {
                 for (const t of tools) { const cb = toolChecks.get(t); if (cb) cb.checked = subGroupCb.checked; }
                 subGroupCb.indeterminate = false;
-                applyToolOverride();
+                void applyToolOverride();
                 updateCount();
             });
         }
         builtInGroupCb.addEventListener('change', () => {
             for (const t of allBuiltInTools) { const cb = toolChecks.get(t); if (cb) cb.checked = builtInGroupCb.checked; }
             builtInGroupCb.indeterminate = false;
-            applyToolOverride();
+            void applyToolOverride();
             updateCount();
         });
 
@@ -205,7 +205,7 @@ export class ToolPickerPopover {
         if (mode.toolGroups.includes('mcp')) {
             const servers = Object.keys(this.plugin.settings.mcpServers ?? {});
             const { catRow: mcpCatRow, catBody: mcpCatBody } = makeTopCat(t('ui.toolPicker.mcpServers'), servers.length > 0);
-            const mcpGroupCb = mcpCatRow.createEl('input', { type: 'checkbox' }) as HTMLInputElement;
+            const mcpGroupCb = mcpCatRow.createEl('input', { type: 'checkbox' });
             mcpGroupCb.className = 'tp-cat-group-cb';
             const mcpChecks: HTMLInputElement[] = [];
 
@@ -218,7 +218,7 @@ export class ToolPickerPopover {
                         'tp-item-row tp-item-indent-cat',
                     );
                     mcpChecks.push(cb);
-                    cb.addEventListener('change', async () => {
+                    cb.addEventListener('change', () => { void (async () => {
                         const cur: string[] = this.plugin.settings.activeMcpServers ?? [];
                         if (cur.length === 0) {
                             const all = Object.keys(this.plugin.settings.mcpServers ?? {});
@@ -233,7 +233,7 @@ export class ToolPickerPopover {
                         const someCb = mcpChecks.some((c) => c.checked);
                         mcpGroupCb.checked = allCb;
                         mcpGroupCb.indeterminate = !allCb && someCb;
-                    });
+                    })(); });
                 }
                 const allMcp = mcpChecks.every((c) => c.checked);
                 const someMcp = mcpChecks.some((c) => c.checked);
@@ -244,23 +244,23 @@ export class ToolPickerPopover {
                 mcpGroupCb.checked = false;
                 mcpGroupCb.disabled = true;
             }
-            mcpGroupCb.addEventListener('change', async () => {
+            mcpGroupCb.addEventListener('change', () => { void (async () => {
                 for (const cb of mcpChecks) cb.checked = mcpGroupCb.checked;
                 mcpGroupCb.indeterminate = false;
                 this.plugin.settings.activeMcpServers = mcpGroupCb.checked ? [] : [];
                 await this.plugin.saveSettings();
-            });
+            })(); });
         }
 
         // ── Skills section (async) ────────────────────────────────────────────
         const { catRow: skillsCatRow, catBody: skillsCatBody } = makeTopCat(t('ui.toolPicker.skills'), false);
-        const skillsGroupCb = skillsCatRow.createEl('input', { type: 'checkbox' }) as HTMLInputElement;
+        const skillsGroupCb = skillsCatRow.createEl('input', { type: 'checkbox' });
         skillsGroupCb.className = 'tp-cat-group-cb';
         skillsCatBody.createEl('span', { cls: 'tp-empty-hint', text: t('ui.toolPicker.loading') });
 
         // ── Workflows section (async) ─────────────────────────────────────────
         const { catRow: wfCatRow, catBody: wfCatBody } = makeTopCat(t('ui.toolPicker.workflows'), false);
-        const wfGroupCb = wfCatRow.createEl('input', { type: 'checkbox' }) as HTMLInputElement;
+        const wfGroupCb = wfCatRow.createEl('input', { type: 'checkbox' });
         wfGroupCb.className = 'tp-cat-group-cb';
         wfCatBody.createEl('span', { cls: 'tp-empty-hint', text: t('ui.toolPicker.loading') });
 
@@ -322,7 +322,7 @@ export class ToolPickerPopover {
         });
 
         // ── Async: skills + workflows ─────────────────────────────────────────
-        (async () => {
+        void (async () => {
             const skillsManager = this.plugin.skillsManager;
             if (skillsManager) {
                 skillsCatBody.empty();
@@ -346,7 +346,7 @@ export class ToolPickerPopover {
                                 allowedSet.has(skill.name), 'tp-item-row tp-item-indent-cat',
                             );
                             skillCbs.push(cb);
-                            cb.addEventListener('change', async () => {
+                            cb.addEventListener('change', () => { void (async () => {
                                 if (!this.plugin.settings.modeSkillAllowList) this.plugin.settings.modeSkillAllowList = {};
                                 const cur = new Set<string>(
                                     this.plugin.settings.modeSkillAllowList[slug]?.length
@@ -364,13 +364,13 @@ export class ToolPickerPopover {
                                 skillsGroupCb.checked = allSk;
                                 skillsGroupCb.indeterminate = !allSk && someSk;
                                 updateCount();
-                            });
+                            })(); });
                         }
                         const allSk = skillCbs.every((c) => c.checked);
                         const someSk = skillCbs.some((c) => c.checked);
                         skillsGroupCb.checked = allSk;
                         skillsGroupCb.indeterminate = !allSk && someSk;
-                        skillsGroupCb.addEventListener('change', async () => {
+                        skillsGroupCb.addEventListener('change', () => { void (async () => {
                             for (const c of skillCbs) c.checked = skillsGroupCb.checked;
                             skillsGroupCb.indeterminate = false;
                             if (!this.plugin.settings.modeSkillAllowList) this.plugin.settings.modeSkillAllowList = {};
@@ -380,7 +380,7 @@ export class ToolPickerPopover {
                                 next.length === skills.length ? [] : next;
                             await this.plugin.saveSettings();
                             updateCount();
-                        });
+                        })(); });
                     }
                 } catch {
                     skillsCatBody.createEl('span', { cls: 'tp-empty-hint', text: t('ui.toolPicker.errorSkills') });
@@ -409,7 +409,7 @@ export class ToolPickerPopover {
                                 activeWfSlug === wf.slug, 'tp-item-row tp-item-indent-cat',
                             );
                             wfCbs.push(cb);
-                            cb.addEventListener('change', async () => {
+                            cb.addEventListener('change', () => { void (async () => {
                                 if (!this.plugin.settings.forcedWorkflow) this.plugin.settings.forcedWorkflow = {};
                                 if (cb.checked) {
                                     for (const other of wfCbs) { if (other !== cb) other.checked = false; }
@@ -421,10 +421,10 @@ export class ToolPickerPopover {
                                 wfGroupCb.checked = wfCbs.some((c) => c.checked);
                                 wfGroupCb.indeterminate = false;
                                 updateCount();
-                            });
+                            })(); });
                         }
                         wfGroupCb.checked = wfCbs.some((c) => c.checked);
-                        wfGroupCb.addEventListener('change', async () => {
+                        wfGroupCb.addEventListener('change', () => { void (async () => {
                             if (!wfGroupCb.checked) {
                                 for (const c of wfCbs) c.checked = false;
                                 if (!this.plugin.settings.forcedWorkflow) this.plugin.settings.forcedWorkflow = {};
@@ -432,7 +432,7 @@ export class ToolPickerPopover {
                                 await this.plugin.saveSettings();
                             }
                             updateCount();
-                        });
+                        })(); });
                     }
                 } catch {
                     wfCatBody.createEl('span', { cls: 'tp-empty-hint', text: t('ui.toolPicker.errorWorkflows') });

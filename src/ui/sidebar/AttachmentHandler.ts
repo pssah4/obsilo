@@ -32,7 +32,7 @@ export class AttachmentHandler {
         input.accept = 'image/png,image/jpeg,image/gif,image/webp,.txt,.md,.json,.py,.ts,.js,.jsx,.tsx,.css,.html,.xml,.yaml,.yml,.csv,.sh';
         input.addEventListener('change', () => {
             if (input.files) {
-                for (const file of Array.from(input.files)) this.processFile(file);
+                for (const file of Array.from(input.files)) void this.processFile(file);
             }
         });
         input.click();

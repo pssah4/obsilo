@@ -29,7 +29,7 @@ export class WorkflowsTab {
             const fileInput = document.createElement('input');
             fileInput.type = 'file';
             fileInput.accept = '.md,.txt';
-            fileInput.addEventListener('change', async () => {
+            fileInput.addEventListener('change', () => { void (async () => {
                 const file = fileInput.files?.[0];
                 if (!file || !workflowLoader) return;
                 const content = await file.text();
@@ -40,7 +40,7 @@ export class WorkflowsTab {
                 } catch {
                     new Notice(t('settings.workflows.importFailed'));
                 }
-            });
+            })(); });
             fileInput.click();
         });
 
@@ -70,17 +70,17 @@ export class WorkflowsTab {
                 const editBtn = actions.createEl('button', { cls: 'agent-rules-edit-btn' });
                 setIcon(editBtn, 'pencil');
                 editBtn.setAttribute('aria-label', t('settings.workflows.edit'));
-                editBtn.addEventListener('click', async () => {
+                editBtn.addEventListener('click', () => { void (async () => {
                     const content = await workflowLoader.readFile(wf.path);
-                    new ContentEditorModal(this.app, t('settings.workflows.editWorkflow', { name: wf.displayName }), content, async (newContent) => {
-                        await workflowLoader.writeFile(wf.path, newContent);
+                    new ContentEditorModal(this.app, t('settings.workflows.editWorkflow', { name: wf.displayName }), content, (newContent) => {
+                        return workflowLoader.writeFile(wf.path, newContent);
                     }).open();
-                });
+                })(); });
 
                 const exportBtn = actions.createEl('button', { cls: 'agent-rules-export-btn' });
                 setIcon(exportBtn, 'download');
                 exportBtn.setAttribute('aria-label', t('settings.workflows.export'));
-                exportBtn.addEventListener('click', async () => {
+                exportBtn.addEventListener('click', () => { void (async () => {
                     const content = await workflowLoader.readFile(wf.path);
                     const blob = new Blob([content], { type: 'text/markdown' });
                     const url = URL.createObjectURL(blob);
@@ -89,18 +89,18 @@ export class WorkflowsTab {
                     a.download = `${wf.slug}.md`;
                     a.click();
                     URL.revokeObjectURL(url);
-                });
+                })(); });
 
                 const delBtn = actions.createEl('button', { cls: 'agent-rules-delete-btn' });
                 setIcon(delBtn, 'trash-2');
                 delBtn.setAttribute('aria-label', t('settings.workflows.delete'));
-                delBtn.addEventListener('click', async () => {
+                delBtn.addEventListener('click', () => { void (async () => {
                     await workflowLoader.deleteWorkflow(wf.path);
                     this.plugin.settings.workflowToggles ??= {};
                     delete this.plugin.settings.workflowToggles[wf.path];
                     await this.plugin.saveSettings();
                     await refreshList();
-                });
+                })(); });
 
                 // Enable/disable toggle
                 this.plugin.settings.workflowToggles ??= {};
@@ -108,29 +108,29 @@ export class WorkflowsTab {
                 const toggleEl = row.createDiv({
                     cls: `checkbox-container agent-rules-toggle${isActive ? ' is-enabled' : ''}`,
                 });
-                toggleEl.addEventListener('click', async () => {
+                toggleEl.addEventListener('click', () => {
                     this.plugin.settings.workflowToggles ??= {};
                     const current = this.plugin.settings.workflowToggles[wf.path] !== false;
                     this.plugin.settings.workflowToggles[wf.path] = !current;
-                    await this.plugin.saveSettings();
+                    void this.plugin.saveSettings();
                     toggleEl.toggleClass('is-enabled', !current);
                 });
             }
         };
 
-        createBtn.addEventListener('click', async () => {
+        createBtn.addEventListener('click', () => { void (async () => {
             const name = nameInput.value.trim();
             if (!name || !workflowLoader) return;
             const template = `# ${name}\n\n`;
             const wPath = await workflowLoader.createWorkflow(name, template);
             nameInput.value = '';
             await refreshList();
-            new ContentEditorModal(this.app, t('settings.workflows.editWorkflow', { name }), template, async (content) => {
-                await workflowLoader.writeFile(wPath, content);
+            new ContentEditorModal(this.app, t('settings.workflows.editWorkflow', { name }), template, (content) => {
+                return workflowLoader.writeFile(wPath, content);
             }).open();
-        });
+        })(); });
 
-        refreshList();
+        void refreshList();
     }
 
 }

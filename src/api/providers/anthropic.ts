@@ -96,7 +96,7 @@ export class AnthropicProvider implements ApiHandler {
             : (this.config.maxTokens ?? 8192);
 
         // Create streaming request (pass abort signal for cancellation support)
-        const stream = await this.client.messages.stream(
+        const stream = this.client.messages.stream(
             {
                 model: this.config.model,
                 max_tokens: effectiveMaxTokens,

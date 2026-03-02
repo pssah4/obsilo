@@ -2,7 +2,7 @@ import { App, Notice, Setting, setIcon } from 'obsidian';
 import type ObsidianAgentPlugin from '../../main';
 import type { ModeConfig, ToolGroup } from '../../types/settings';
 import { getModelKey } from '../../types/settings';
-import { BUILT_IN_MODES, TOOL_GROUP_MAP } from '../../core/modes/builtinModes';
+import { BUILT_IN_MODES } from '../../core/modes/builtinModes';
 import { buildSystemPromptForMode } from '../../core/systemPrompt';
 import { GlobalModeStore } from '../../core/modes/GlobalModeStore';
 import { TOOL_LABEL_MAP, TOOL_GROUP_META } from './constants';
@@ -105,18 +105,18 @@ export class ModesTab {
                         (m) => m.slug === slug && m.source === 'vault' && !m.slug.endsWith('__custom'),
                     );
                     if (!ov) {
-                        ov = { ...builtIn!, source: 'vault' };
+                        ov = { ...builtIn, source: 'vault' };
                         this.plugin.settings.customModes.push(ov);
                     }
                     return ov;
                 }
-                if (isGlobal) return globalMode!;
-                return vaultCustom!;
+                if (isGlobal && globalMode) return globalMode;
+                return vaultCustom ?? mode;
             };
 
             const saveMode = async () => {
-                if (isGlobal) {
-                    await GlobalModeStore.updateMode(globalMode!);
+                if (isGlobal && globalMode) {
+                    await GlobalModeStore.updateMode(globalMode);
                     await this.modeService?.reloadGlobalModes?.();
                 } else {
                     await this.plugin.saveSettings();
@@ -180,10 +180,10 @@ export class ModesTab {
             const descTextarea = descWrap.createEl('textarea', { cls: 'modes-textarea', attr: { placeholder: t('settings.modes.shortDescPlaceholder') } });
             descTextarea.value = mode.description || '';
             descTextarea.rows = 2;
-            descTextarea.addEventListener('input', async () => {
+            descTextarea.addEventListener('input', () => {
                 const editable = getOrCreateEditable();
                 editable.description = descTextarea.value;
-                await saveMode();
+                void saveMode();
             });
 
             // ── When to Use ───────────────────────────────────────────────────
@@ -199,10 +199,10 @@ export class ModesTab {
             });
             wtuTextarea.value = mode.whenToUse ?? '';
             wtuTextarea.rows = 3;
-            wtuTextarea.addEventListener('input', async () => {
+            wtuTextarea.addEventListener('input', () => {
                 const editable = getOrCreateEditable();
                 editable.whenToUse = wtuTextarea.value;
-                await saveMode();
+                void saveMode();
             });
 
             // ── Available Tools ───────────────────────────────────────────────
@@ -245,7 +245,7 @@ export class ModesTab {
                     const groupCb = summary.createEl('input', { type: 'checkbox' });
                     groupCb.checked = isGroupEnabled;
                     groupCb.addEventListener('click', (e) => e.stopPropagation()); // prevent accordion toggle
-                    groupCb.addEventListener('change', async () => {
+                    groupCb.addEventListener('change', () => {
                         const editable = getOrCreateEditable();
                         if (groupCb.checked) {
                             if (!editable.toolGroups.includes(group as ToolGroup)) editable.toolGroups.push(group as ToolGroup);
@@ -255,7 +255,7 @@ export class ModesTab {
                             details.open = false;
                         }
                         mode.toolGroups = [...editable.toolGroups];
-                        await saveMode();
+                        void saveMode();
                         // Recount active tools badge
                         badgeEl.setText(getCountBadge(group, groupCb.checked));
                     });
@@ -291,7 +291,7 @@ export class ModesTab {
                             labelEl.createSpan({ cls: 'modes-tool-label-desc', text: toolMeta.desc });
                         }
 
-                        toolCb.addEventListener('change', async () => {
+                        toolCb.addEventListener('change', () => {
                             // Compute new override for this mode
                             const allGroupTools = meta.tools;
                             // Start from current override or all tools in all groups
@@ -302,7 +302,7 @@ export class ModesTab {
                             } else {
                                 allActiveTools = allActiveTools.filter((tn) => tn !== toolName);
                             }
-                            await this.modeService?.setModeToolOverride(slug, allActiveTools);
+                            void this.modeService?.setModeToolOverride(slug, allActiveTools);
                             badgeEl.setText(getCountBadge(group, isGroupEnabled));
                         });
                     }
@@ -340,10 +340,10 @@ export class ModesTab {
                 const allowedSet = new Set<string>(modeMcpAllowed && modeMcpAllowed.length > 0 ? modeMcpAllowed : mcpServerNames);
                 for (const serverName of mcpServerNames) {
                     const row = mcpCbList.createDiv('modes-skills-row');
-                    const cb = row.createEl('input', { type: 'checkbox' }) as HTMLInputElement;
+                    const cb = row.createEl('input', { type: 'checkbox' });
                     cb.checked = allowedSet.has(serverName);
                     row.createEl('label', { cls: 'modes-skills-label', text: serverName });
-                    cb.addEventListener('change', async () => {
+                    cb.addEventListener('change', () => { void (async () => {
                         if (!this.plugin.settings.modeMcpServers) this.plugin.settings.modeMcpServers = {};
                         const cur = new Set<string>(
                             this.plugin.settings.modeMcpServers[slug]?.length
@@ -356,7 +356,7 @@ export class ModesTab {
                         const next = [...cur];
                         this.plugin.settings.modeMcpServers[slug] = next.length === mcpServerNames.length ? [] : next;
                         await this.plugin.saveSettings();
-                    });
+                    })(); });
                 }
             }
 
@@ -412,12 +412,12 @@ export class ModesTab {
                     const allowedSet = getSkillAllowedSet();
                     for (const skill of cachedSkills) {
                         const row = skillsBody.createDiv('modes-skills-row');
-                        const cb = row.createEl('input', { type: 'checkbox' }) as HTMLInputElement;
+                        const cb = row.createEl('input', { type: 'checkbox' });
                         cb.checked = allowedSet.has(skill.name);
                         const lbl = row.createEl('label', { cls: 'modes-skills-label' });
                         lbl.createSpan({ text: skill.name });
                         if (skill.description) lbl.createSpan({ cls: 'modes-skills-desc', text: skill.description });
-                        cb.addEventListener('change', async () => {
+                        cb.addEventListener('change', () => {
                             if (!this.plugin.settings.modeSkillAllowList) this.plugin.settings.modeSkillAllowList = {};
                             const cur = new Set<string>(
                                 this.plugin.settings.modeSkillAllowList[slug]?.length
@@ -429,14 +429,14 @@ export class ModesTab {
                             const next = [...cur];
                             this.plugin.settings.modeSkillAllowList[slug] =
                                 next.length === cachedSkills.length ? [] : next;
-                            await this.plugin.saveSettings();
+                            void this.plugin.saveSettings();
                         });
                     }
                 };
 
                 // Show loading, then render read-only once skills are loaded
                 skillsBody.createEl('span', { cls: 'modes-loading-hint', text: t('settings.modes.loading') });
-                (async () => {
+                void (async () => {
                     cachedSkills = await skillsManager.discoverSkills();
                     renderSkillsReadOnly();
                 })();
@@ -464,11 +464,11 @@ export class ModesTab {
             const roleTextarea = roleWrap.createEl('textarea', { cls: 'modes-textarea' });
             roleTextarea.value = mode.roleDefinition || '';
             roleTextarea.rows = 8;
-            roleTextarea.addEventListener('input', async () => {
+            roleTextarea.addEventListener('input', () => {
                 const editable = getOrCreateEditable();
                 editable.roleDefinition = roleTextarea.value;
                 mode.roleDefinition = editable.roleDefinition;
-                await saveMode();
+                void saveMode();
             });
 
             // ── Mode-specific Custom Instructions ─────────────────────────────
@@ -488,7 +488,7 @@ export class ModesTab {
                 ? (vaultOverride?.customInstructions ?? legacyCi?.customInstructions ?? '')
                 : (mode.customInstructions ?? '');
             ciTextarea.rows = 4;
-            ciTextarea.addEventListener('input', async () => {
+            ciTextarea.addEventListener('input', () => {
                 const value = ciTextarea.value.trim();
                 const editable = getOrCreateEditable();
                 editable.customInstructions = value || undefined;
@@ -497,7 +497,7 @@ export class ModesTab {
                     const legacyIdx = this.plugin.settings.customModes.findIndex((m) => m.slug === `${slug}__custom`);
                     if (legacyIdx >= 0) this.plugin.settings.customModes.splice(legacyIdx, 1);
                 }
-                await saveMode();
+                void saveMode();
             });
 
             // ── Bottom action bar ─────────────────────────────────────────────
@@ -508,26 +508,21 @@ export class ModesTab {
                 bottomBar.createEl('span', { cls: 'modes-active-badge', text: t('settings.modes.activeMode') });
             } else {
                 const setBtn = bottomBar.createEl('button', { text: t('settings.modes.setActive'), cls: 'mod-cta' });
-                setBtn.addEventListener('click', async () => {
+                setBtn.addEventListener('click', () => { void (async () => {
                     this.plugin.settings.currentMode = slug;
                     await this.plugin.saveSettings();
                     this.rerender();
-                });
+                })(); });
             }
 
             // Preview System Prompt
             const previewBtn = bottomBar.createEl('button', { text: t('settings.modes.previewPrompt'), cls: 'modes-preview-btn' });
             previewBtn.addEventListener('click', () => {
-                const allModes = [
-                    ...BUILT_IN_MODES,
-                    ...(this.modeService?.getGlobalModes?.() ?? []),
-                    ...this.plugin.settings.customModes.filter((m) => m.source === 'vault' && !m.slug.endsWith('__custom')),
-                ];
-                const prompt = buildSystemPromptForMode(
+                const prompt = buildSystemPromptForMode({
                     mode,
-                    allModes,
-                    this.plugin.settings.globalCustomInstructions || undefined,
-                );
+                    globalCustomInstructions: this.plugin.settings.globalCustomInstructions || undefined,
+                    configDir: this.app.vault.configDir,
+                });
                 new SystemPromptPreviewModal(this.app, mode.name, prompt).open();
             });
 
@@ -535,7 +530,7 @@ export class ModesTab {
             const exportBtn = bottomBar.createEl('button', { text: t('settings.modes.export'), cls: 'modes-export-btn' });
             exportBtn.addEventListener('click', () => {
                 const exportData: Partial<ModeConfig> = { ...mode };
-                delete (exportData as Partial<ModeConfig>).source;
+                delete exportData.source;
                 const json = JSON.stringify(exportData, null, 2);
                 const blob = new Blob([json], { type: 'application/json' });
                 const url = URL.createObjectURL(blob);
@@ -556,7 +551,7 @@ export class ModesTab {
                     cls: 'modes-restore-btn',
                 });
                 if (!hasOverride) restoreBtn.disabled = true;
-                restoreBtn.addEventListener('click', async () => {
+                restoreBtn.addEventListener('click', () => { void (async () => {
                     // Remove vault override + legacy __custom entry (restores role definition,
                     // tool groups, custom instructions, and agent instructions to built-in defaults)
                     this.plugin.settings.customModes = this.plugin.settings.customModes.filter(
@@ -569,7 +564,7 @@ export class ModesTab {
                     await this.plugin.saveSettings();
                     new Notice(t('settings.modes.restored', { name: mode.name }));
                     renderForm(slug);
-                });
+                })(); });
             }
 
             // Delete (non-built-in modes only)
@@ -578,7 +573,7 @@ export class ModesTab {
                     text: t('settings.modes.delete'),
                     cls: 'mod-warning modes-delete-btn',
                 });
-                deleteBtn.addEventListener('click', async () => {
+                deleteBtn.addEventListener('click', () => { void (async () => {
                     if (isGlobal) {
                         await GlobalModeStore.removeMode(slug);
                         await this.modeService?.reloadGlobalModes?.();
@@ -593,7 +588,7 @@ export class ModesTab {
                         await this.plugin.saveSettings();
                     }
                     this.rerender();
-                });
+                })(); });
             }
         };
 
@@ -616,7 +611,7 @@ export class ModesTab {
             const input = document.createElement('input');
             input.type = 'file';
             input.accept = '.json';
-            input.addEventListener('change', async () => {
+            input.addEventListener('change', () => { void (async () => {
                 const file = input.files?.[0];
                 if (!file) return;
                 const text = await file.text();
@@ -656,7 +651,7 @@ export class ModesTab {
                 } catch {
                     new Notice(t('settings.modes.parseFailed'));
                 }
-            });
+            })(); });
             input.click();
         });
 
@@ -673,9 +668,9 @@ export class ModesTab {
         });
         globalTextarea.value = this.plugin.settings.globalCustomInstructions ?? '';
         globalTextarea.rows = 5;
-        globalTextarea.addEventListener('input', async () => {
+        globalTextarea.addEventListener('input', () => {
             this.plugin.settings.globalCustomInstructions = globalTextarea.value;
-            await this.plugin.saveSettings();
+            void this.plugin.saveSettings();
         });
     }
 

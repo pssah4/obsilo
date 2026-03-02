@@ -52,7 +52,7 @@ export class SkillsTab {
             const fileInput = document.createElement('input');
             fileInput.type = 'file';
             fileInput.accept = '.md,.txt';
-            fileInput.addEventListener('change', async () => {
+            fileInput.addEventListener('change', () => { void (async () => {
                 const file = fileInput.files?.[0];
                 if (!file || !skillsManager) return;
                 const content = await file.text();
@@ -67,7 +67,7 @@ export class SkillsTab {
                 } catch {
                     new Notice(t('settings.skills.importFailed'));
                 }
-            });
+            })(); });
             fileInput.click();
         });
 
@@ -124,18 +124,18 @@ export class SkillsTab {
                     cls: 'agent-skill-action-btn', attr: { 'aria-label': t('settings.skills.edit') },
                 });
                 setIcon(editBtn, 'pencil');
-                editBtn.addEventListener('click', async () => {
+                editBtn.addEventListener('click', () => { void (async () => {
                     const content = await skillsManager.readFile(skill.path);
-                    new ContentEditorModal(this.app, t('settings.skills.editSkill', { name: skill.name }), content, async (newContent) => {
-                        await skillsManager.writeFile(skill.path, newContent);
+                    new ContentEditorModal(this.app, t('settings.skills.editSkill', { name: skill.name }), content, (newContent) => {
+                        return skillsManager.writeFile(skill.path, newContent);
                     }).open();
-                });
+                })(); });
 
                 const exportSkillBtn = actionsTd.createEl('button', {
                     cls: 'agent-skill-action-btn', attr: { 'aria-label': t('settings.skills.export') },
                 });
                 setIcon(exportSkillBtn, 'download');
-                exportSkillBtn.addEventListener('click', async () => {
+                exportSkillBtn.addEventListener('click', () => { void (async () => {
                     const content = await skillsManager.readFile(skill.path);
                     const blob = new Blob([content], { type: 'text/markdown' });
                     const url = URL.createObjectURL(blob);
@@ -144,13 +144,13 @@ export class SkillsTab {
                     a.download = `SKILL-${skill.name}.md`;
                     a.click();
                     URL.revokeObjectURL(url);
-                });
+                })(); });
 
                 const delBtn = actionsTd.createEl('button', {
                     cls: 'agent-skill-action-btn', attr: { 'aria-label': t('settings.skills.delete') },
                 });
                 setIcon(delBtn, 'trash-2');
-                delBtn.addEventListener('click', async () => {
+                delBtn.addEventListener('click', () => { void (async () => {
                     try {
                         await skillsManager.deleteSkill(skill.path);
                         this.plugin.settings.manualSkillToggles ??= {};
@@ -160,18 +160,18 @@ export class SkillsTab {
                     } catch {
                         new Notice(t('settings.skills.deleteFailed'));
                     }
-                });
+                })(); });
 
                 // Toggle
                 const toggleTd = tr.createEl('td', { cls: 'agent-skill-toggle-cell' });
                 const toggleContainer = toggleTd.createDiv({
                     cls: `checkbox-container agent-skill-toggle${isActive ? ' is-enabled' : ''}`,
                 });
-                toggleContainer.addEventListener('click', async () => {
+                toggleContainer.addEventListener('click', () => {
                     this.plugin.settings.manualSkillToggles ??= {};
                     const current = this.plugin.settings.manualSkillToggles[skill.path] !== false;
                     this.plugin.settings.manualSkillToggles[skill.path] = !current;
-                    await this.plugin.saveSettings();
+                    void this.plugin.saveSettings();
                     toggleContainer.toggleClass('is-enabled', !current);
                     dot.removeClass(current ? 'agent-skill-dot-on' : 'agent-skill-dot-off');
                     dot.addClass(current ? 'agent-skill-dot-off' : 'agent-skill-dot-on');
@@ -180,7 +180,7 @@ export class SkillsTab {
             }
         };
 
-        createBtn.addEventListener('click', async () => {
+        createBtn.addEventListener('click', () => { void (async () => {
             const name = nameInput.value.trim();
             if (!name || !skillsManager) return;
             const safeName = name.replace(/[^a-zA-Z0-9\-_ ]/g, '').trim();
@@ -191,15 +191,15 @@ export class SkillsTab {
                 await skillsManager.createSkill(dir, template);
                 nameInput.value = '';
                 await refreshList();
-                new ContentEditorModal(this.app, t('settings.skills.editSkill', { name: safeName }), template, async (content) => {
-                    await skillsManager.writeFile(skillPath, content);
+                new ContentEditorModal(this.app, t('settings.skills.editSkill', { name: safeName }), template, (content) => {
+                    return skillsManager.writeFile(skillPath, content);
                 }).open();
             } catch {
                 new Notice(t('settings.skills.createFailed'));
             }
-        });
+        })(); });
 
-        refreshList();
+        void refreshList();
     }
 
     // -- Self-Authored Skills (agent-created) --
@@ -305,7 +305,7 @@ export class SkillsTab {
         // Controls row
         const controlsRow = containerEl.createDiv({ cls: 'agent-skill-controls' });
         const rescanBtn = controlsRow.createEl('button', { text: t('settings.skills.rescan'), cls: 'mod-cta' });
-        rescanBtn.addEventListener('click', async () => {
+        rescanBtn.addEventListener('click', () => { void (async () => {
             rescanBtn.disabled = true;
             rescanBtn.setText(t('settings.skills.scanning'));
             try {
@@ -320,7 +320,7 @@ export class SkillsTab {
                 rescanBtn.disabled = false;
                 rescanBtn.setText(t('settings.skills.rescan'));
             }
-        });
+        })(); });
 
         // Core Skills section (collapsible)
         const coreSkills = allSkills.filter((s) => s.source === 'core');
@@ -400,32 +400,32 @@ export class SkillsTab {
                 cls: 'agent-skill-action-btn', attr: { 'aria-label': t('settings.skills.editFile') },
             });
             setIcon(editSkillBtn, 'pencil');
-            editSkillBtn.addEventListener('click', () => this.openSkillFile(skill));
+            editSkillBtn.addEventListener('click', () => void this.openSkillFile(skill));
 
             // View README (if exists)
             const docsBtn = actionsTd.createEl('button', {
                 cls: 'agent-skill-action-btn', attr: { 'aria-label': t('settings.skills.viewReadme') },
             });
             setIcon(docsBtn, 'book-open');
-            this.checkReadmeExists(skill.id).then((exists) => {
+            void this.checkReadmeExists(skill.id).then((exists) => {
                 if (!exists) {
                     docsBtn.addClass('agent-skill-action-btn-faint');
                     docsBtn.setAttribute('aria-label', t('settings.skills.noReadme'));
                 }
             });
-            docsBtn.addEventListener('click', () => this.openReadmeFile(skill));
+            docsBtn.addEventListener('click', () => void this.openReadmeFile(skill));
 
-            // Toggle — for ALL plugins (controls whether agent may use this skill)
+            // Toggle -- for ALL plugins (controls whether agent may use this skill)
             const toggleTd = tr.createEl('td', { cls: 'agent-skill-toggle-cell' });
             const isActive = this.plugin.settings.vaultDNA.skillToggles[skill.id] !== false;
             const toggleContainer = toggleTd.createDiv({
                 cls: `checkbox-container agent-skill-toggle${isActive ? ' is-enabled' : ''}`,
             });
-            toggleContainer.addEventListener('click', async () => {
+            toggleContainer.addEventListener('click', () => {
                 const current = this.plugin.settings.vaultDNA.skillToggles[skill.id] !== false;
                 this.plugin.settings.vaultDNA.skillToggles[skill.id] = !current;
                 this.plugin.skillRegistry?.updateToggles(this.plugin.settings.vaultDNA.skillToggles);
-                await this.plugin.saveSettings();
+                void this.plugin.saveSettings();
                 toggleContainer.toggleClass('is-enabled', !current);
             });
         }
@@ -435,8 +435,8 @@ export class SkillsTab {
         const path = `${this.skillsDir}/${skill.id}.skill.md`;
         try {
             const content = await this.app.vault.adapter.read(path);
-            new ContentEditorModal(this.app, t('settings.skills.skillDetail', { name: skill.name }), content, async (updated) => {
-                await this.app.vault.adapter.write(path, updated);
+            new ContentEditorModal(this.app, t('settings.skills.skillDetail', { name: skill.name }), content, (updated) => {
+                return this.app.vault.adapter.write(path, updated);
             }).open();
         } catch {
             new Notice(t('settings.skills.fileNotFound', { id: skill.id }));
@@ -447,8 +447,8 @@ export class SkillsTab {
         const path = `${this.skillsDir}/${skill.id}.readme.md`;
         try {
             const content = await this.app.vault.adapter.read(path);
-            new ContentEditorModal(this.app, t('settings.skills.readme', { name: skill.name }), content, async (updated) => {
-                await this.app.vault.adapter.write(path, updated);
+            new ContentEditorModal(this.app, t('settings.skills.readme', { name: skill.name }), content, (updated) => {
+                return this.app.vault.adapter.write(path, updated);
             }).open();
         } catch {
             new Notice(t('settings.skills.noReadmeAvailable', { name: skill.name }));

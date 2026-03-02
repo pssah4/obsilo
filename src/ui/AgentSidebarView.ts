@@ -187,8 +187,8 @@ export class AgentSidebarView extends ItemView {
         if (store) {
             this.historyPanel = new HistoryPanel(
                 store,
-                (id) => this.loadConversation(id),
-                (id) => this.deleteConversation(id),
+                (id) => { void this.loadConversation(id); },
+                (id) => { void this.deleteConversation(id); },
                 this.activeConversationId,
             );
             this.historyPanel.mount(chatWrapper);
@@ -223,7 +223,7 @@ export class AgentSidebarView extends ItemView {
 
         this.textarea.addEventListener('input', () => {
             this.autoResizeTextarea();
-            this.autocomplete.handleInput();
+            void this.autocomplete.handleInput();
         });
 
         this.textarea.addEventListener('keydown', (e: KeyboardEvent) => {
@@ -234,10 +234,10 @@ export class AgentSidebarView extends ItemView {
                 const sendWithEnter = this.plugin.settings.sendWithEnter ?? true;
                 if (sendWithEnter && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
                     e.preventDefault();
-                    this.handleSendMessage();
+                    void this.handleSendMessage();
                 } else if (!sendWithEnter && (e.ctrlKey || e.metaKey)) {
                     e.preventDefault();
-                    this.handleSendMessage();
+                    void this.handleSendMessage();
                 }
             }
         });
@@ -250,7 +250,7 @@ export class AgentSidebarView extends ItemView {
                 if (item.kind === 'file') {
                     e.preventDefault();
                     const file = item.getAsFile();
-                    if (file) this.attachments.processFile(file);
+                    if (file) void this.attachments.processFile(file);
                 }
             }
         });
@@ -266,7 +266,7 @@ export class AgentSidebarView extends ItemView {
             inputWrapper.removeClass('drag-over');
             const files = e.dataTransfer?.files;
             if (files) {
-                for (const file of Array.from(files)) this.attachments.processFile(file);
+                for (const file of Array.from(files)) void this.attachments.processFile(file);
             }
         });
 
@@ -296,7 +296,7 @@ export class AgentSidebarView extends ItemView {
             attr: { 'aria-label': t('ui.sidebar.selectTools') },
         });
         setIcon(this.toolPickerButton.createSpan('toolbar-icon'), 'pocket-knife');
-        this.toolPickerButton.addEventListener('click', (e) => this.toolPicker.show(e, this.toolPickerButton!, this.containerEl as HTMLElement));
+        this.toolPickerButton.addEventListener('click', (e) => this.toolPicker.show(e, this.toolPickerButton!, this.containerEl));
         this.updateToolPickerButton();
 
         // Web search toggle (globe icon) — quick toggle for webTools.enabled
@@ -305,7 +305,7 @@ export class AgentSidebarView extends ItemView {
             attr: { 'aria-label': t('ui.sidebar.toggleWebSearch') },
         });
         setIcon(this.webToggleButton.createSpan('toolbar-icon'), 'globe');
-        this.webToggleButton.addEventListener('click', () => this.toggleWebSearch());
+        this.webToggleButton.addEventListener('click', () => { void this.toggleWebSearch(); });
         this.updateWebToggleButton();
 
         // Attach file button (ghost style)
@@ -349,7 +349,7 @@ export class AgentSidebarView extends ItemView {
             attr: { 'aria-label': t('ui.sidebar.send') },
         });
         setIcon(this.sendButton.createSpan('toolbar-icon'), 'send-horizontal');
-        this.sendButton.addEventListener('click', () => this.handleSendMessage());
+        this.sendButton.addEventListener('click', () => { void this.handleSendMessage(); });
     }
 
     private updateContextBadge(): void {
@@ -608,7 +608,7 @@ export class AgentSidebarView extends ItemView {
 
         // For keyword-matched skills, use getRelevantSkills() which inlines full SKILL.md content.
         // This eliminates the read_file round-trip the agent would otherwise need.
-        const section = await skillsManager.getRelevantSkills(userMessage, toggles) as string;
+        const section = await skillsManager.getRelevantSkills(userMessage, toggles);
         return section || undefined;
     }
 
@@ -638,7 +638,7 @@ export class AgentSidebarView extends ItemView {
 
         const wrapper = this.chatContainer.createDiv('message assistant-message');
         const bubble = wrapper.createDiv('message-bubble');
-        MarkdownRenderer.render(this.app, welcomeText, bubble, '', this);
+        void MarkdownRenderer.render(this.app, welcomeText, bubble, '', this);
 
         const btnRow = bubble.createDiv('setup-welcome-buttons');
 
@@ -706,7 +706,7 @@ export class AgentSidebarView extends ItemView {
 
         const wrapper = this.chatContainer.createDiv('message assistant-message');
         const bubble = wrapper.createDiv('message-bubble');
-        MarkdownRenderer.render(this.app, t('onboarding.provider.selectPrompt'), bubble, '', this);
+        void MarkdownRenderer.render(this.app, t('onboarding.provider.selectPrompt'), bubble, '', this);
 
         const btnRow = bubble.createDiv('setup-welcome-buttons setup-provider-buttons');
         for (const p of providers) {
@@ -748,7 +748,7 @@ export class AgentSidebarView extends ItemView {
             t('onboarding.noModel.orSettings'),
         ].join('\n');
 
-        MarkdownRenderer.render(this.app, markdown, bubble, '', this);
+        void MarkdownRenderer.render(this.app, markdown, bubble, '', this);
 
         const btnRow = bubble.createDiv('setup-welcome-buttons');
 
@@ -837,7 +837,7 @@ export class AgentSidebarView extends ItemView {
     /** Disable all buttons in a row (gray out after choice). */
     private disableOnboardingButtons(row: HTMLElement): void {
         row.querySelectorAll('button').forEach((btn) => {
-            (btn as HTMLButtonElement).disabled = true;
+            btn.disabled = true;
             btn.addClass('setup-btn-disabled');
         });
     }
@@ -852,7 +852,7 @@ export class AgentSidebarView extends ItemView {
         this.onboardingSelectedProvider = null;
         // Mark as started (prevents re-trigger on reload)
         this.plugin.settings.onboarding.startedAt = new Date().toISOString();
-        this.plugin.saveSettings();
+        void this.plugin.saveSettings();
         // Clear welcome card, send hidden trigger
         if (this.chatContainer) this.chatContainer.empty();
         this.sendProgrammaticMessage(t('onboarding.trigger'), true);
@@ -867,7 +867,7 @@ export class AgentSidebarView extends ItemView {
         if (!this.textarea) return;
         this.nextMessageHidden = hidden;
         this.textarea.value = text;
-        this.handleSendMessage();
+        void this.handleSendMessage();
     }
 
     /**
@@ -1302,7 +1302,7 @@ export class AgentSidebarView extends ItemView {
 
                     if (el.classList.contains('tool-group-item')) {
                         // ── Grouped item result ───────────────────────────────────────
-                        const iconEl = el.querySelector('.tool-item-icon') as HTMLElement | null;
+                        const iconEl = el.querySelector<HTMLElement>('.tool-item-icon');
                         if (iconEl) {
                             iconEl.empty();
                             setIcon(iconEl, isError ? 'x' : 'check');
@@ -1317,7 +1317,7 @@ export class AgentSidebarView extends ItemView {
                                 '.tool-group-item:not(.item-done):not(.item-error)'
                             ).length;
                             if (stillRunning === 0) {
-                                const groupStatus = detailsEl.querySelector('.tool-status') as HTMLElement | null;
+                                const groupStatus = detailsEl.querySelector<HTMLElement>('.tool-status');
                                 if (groupStatus) {
                                     groupStatus.removeClass('tool-running');
                                     const anyError = bodyEl.querySelectorAll('.item-error').length > 0;
@@ -1377,10 +1377,10 @@ export class AgentSidebarView extends ItemView {
                     // Use closest('.assistant-message') so the lookup works both before
                     // and after the DOM-move (toolsEl.parentElement changes on move).
                     activityActionCount++;
-                    const actBadge = toolsEl.closest('.assistant-message')?.querySelector('.todo-activity-badge') as HTMLElement | null;
+                    const actBadge = toolsEl.closest('.assistant-message')?.querySelector<HTMLElement>('.todo-activity-badge') ?? null;
                     if (actBadge) actBadge.setText(t('ui.sidebar.activityCount', { count: activityActionCount }));
                     if (isError) {
-                        const actDetails = toolsEl.closest('.todo-activity-log') as HTMLDetailsElement | null;
+                        const actDetails = toolsEl.closest<HTMLDetailsElement>('.todo-activity-log');
                         if (actDetails) actDetails.open = true;
                     }
                 },
@@ -1434,7 +1434,7 @@ export class AgentSidebarView extends ItemView {
                         // Hide during re-render to avoid flash of raw → markdown transition
                         contentEl.classList.add('agent-u-visibility-hidden');
                         contentEl.empty();
-                        MarkdownRenderer.render(this.app, accumulatedText, contentEl, '', this);
+                        void MarkdownRenderer.render(this.app, accumulatedText, contentEl, '', this);
                         requestAnimationFrame(() => { contentEl.classList.remove('agent-u-visibility-hidden'); });
                     }
                     // Wrap resolve: after the user answers, show their answer as a
@@ -1552,7 +1552,7 @@ export class AgentSidebarView extends ItemView {
                     }
                     if (renderText) {
                         contentEl.empty();
-                        MarkdownRenderer.render(this.app, renderText, contentEl, '', this);
+                        void MarkdownRenderer.render(this.app, renderText, contentEl, '', this);
                         contentEl.classList.remove('agent-u-visibility-hidden');
                     } else if (hasTools) {
                         // Tools ran but the model returned no text — show a neutral placeholder
@@ -1588,7 +1588,7 @@ export class AgentSidebarView extends ItemView {
                             item.addEventListener('click', () => {
                                 if (this.textarea) {
                                     this.textarea.value = displayText;
-                                    this.handleSendMessage();
+                                    void this.handleSendMessage();
                                 }
                             });
                         }
@@ -1602,7 +1602,7 @@ export class AgentSidebarView extends ItemView {
                     }
                     // Post-task review: show all changes for review/undo
                     if (taskWriteCount > 0 && (this.plugin.settings.enableCheckpoints ?? true)) {
-                        this.showPostTaskReview(taskId);
+                        void this.showPostTaskReview(taskId);
                     }
                     // Notify when sidebar is not the active (focused) view
                     if (this.app.workspace.getMostRecentLeaf()?.view !== this) {
@@ -1677,7 +1677,7 @@ export class AgentSidebarView extends ItemView {
         if (!isOnboarding) {
             const userMessageText = typeof messageToSend === 'string'
                 ? messageToSend
-                : ((messageToSend as ContentBlock[]).find((b): b is ContentBlock & { type: 'text'; text: string } => b.type === 'text'))?.text ?? '';
+                : (Array.isArray(messageToSend) ? messageToSend.find((b): b is ContentBlock & { type: 'text'; text: string } => b.type === 'text')?.text ?? '' : '');
             const modeAllowed = this.plugin.settings.modeSkillAllowList?.[activeMode.slug];
             // empty/undefined = all allowed; non-empty = only those skill names
             const allowedSkillNames = modeAllowed && modeAllowed.length > 0 ? modeAllowed : undefined;
@@ -1703,7 +1703,7 @@ export class AgentSidebarView extends ItemView {
 
         // Build plugin skills section from VaultDNA (PAS-1) — skip during onboarding
         const pluginSkillsSection = isOnboarding ? undefined
-            : this.plugin.skillRegistry?.getPluginSkillsPromptSection() as string | undefined;
+            : this.plugin.skillRegistry?.getPluginSkillsPromptSection();
 
         const allowedMcpServers = this.plugin.settings.modeMcpServers?.[activeMode.slug];
 
@@ -1784,6 +1784,7 @@ export class AgentSidebarView extends ItemView {
             pluginSkillsSection: pluginSkillsSection || undefined,
             recipesSection,
             selfAuthoredSkillsSection,
+            configDir: this.app.vault.configDir,
         });
     }
 
@@ -1983,7 +1984,7 @@ export class AgentSidebarView extends ItemView {
         if (!this.chatContainer) return;
         const msgEl = this.chatContainer.createDiv(`message ${role}-message`);
         const contentEl = msgEl.createDiv('message-content');
-        MarkdownRenderer.render(this.app, markdown, contentEl, '', this);
+        void MarkdownRenderer.render(this.app, markdown, contentEl, '', this);
         this.chatContainer.scrollTop = this.chatContainer.scrollHeight;
     }
 
@@ -2033,7 +2034,7 @@ export class AgentSidebarView extends ItemView {
 
         // Copy message text
         makeBtn('copy', t('ui.sidebar.copy'), () => {
-            navigator.clipboard.writeText(text);
+            void navigator.clipboard.writeText(text);
             new Notice(t('notice.copied'));
         });
 
@@ -2080,7 +2081,7 @@ export class AgentSidebarView extends ItemView {
     }
 
     private switchMode(modeSlug: string): void {
-        this.modeService.switchMode(modeSlug); // saves settings
+        void this.modeService.switchMode(modeSlug); // saves settings
         this.updateModeButton();
         this.updateModelButton(); // model may differ per mode
     }
@@ -2220,7 +2221,7 @@ export class AgentSidebarView extends ItemView {
                 anchor.addEventListener('click', (e) => {
                     e.preventDefault();
                     const linkText = anchor.getAttribute('data-href') ?? href;
-                    this.app.workspace.openLinkText(linkText, '', false);
+                    void this.app.workspace.openLinkText(linkText, '', false);
                 });
             }
         });
@@ -2301,12 +2302,14 @@ export class AgentSidebarView extends ItemView {
             for (const m of text.matchAll(/\[(\d+)\]/g)) {
                 const num = parseInt(m[1]);
                 if (!sourceNums.has(num)) continue;
+                const matchIndex = m.index ?? 0;
 
-                const source = sources.find(s => s.num === num)!;
+                const source = sources.find(s => s.num === num);
+                if (!source) continue;
 
                 // Text before this match
-                if (m.index! > lastIndex) {
-                    fragment.appendChild(document.createTextNode(text.slice(lastIndex, m.index)));
+                if (matchIndex > lastIndex) {
+                    fragment.appendChild(document.createTextNode(text.slice(lastIndex, matchIndex)));
                 }
 
                 // Citation badge
@@ -2320,7 +2323,7 @@ export class AgentSidebarView extends ItemView {
                 });
                 fragment.appendChild(badge);
 
-                lastIndex = m.index! + m[0].length;
+                lastIndex = matchIndex + m[0].length;
                 replaced = true;
             }
 
@@ -2386,7 +2389,7 @@ export class AgentSidebarView extends ItemView {
         const noteName = source.note.replace(/^\[\[|\]\]$/g, '');
         titleEl.textContent = noteName;
         titleEl.addEventListener('click', () => {
-            this.app.workspace.openLinkText(noteName, '', false);
+            void this.app.workspace.openLinkText(noteName, '', false);
             popup.remove();
         });
         popup.appendChild(titleEl);
@@ -2430,7 +2433,7 @@ export class AgentSidebarView extends ItemView {
             const noteName = source.note.replace(/^\[\[|\]\]$/g, '');
             titleEl.textContent = noteName;
             titleEl.addEventListener('click', () => {
-                this.app.workspace.openLinkText(noteName, '', false);
+                void this.app.workspace.openLinkText(noteName, '', false);
                 popup.remove();
             });
             row.appendChild(titleEl);
@@ -2501,24 +2504,26 @@ export class AgentSidebarView extends ItemView {
         });
 
         // Create new note from response — open in a new leaf (not in sidebar)
-        makeBtn('file-plus', t('ui.sidebar.createNote'), async () => {
-            const now = new Date();
-            // Colons are forbidden in filenames on macOS/Windows — use dashes for HH-MM
-            const ts = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}`;
-            const fileName = `Agent response ${ts}.md`;
-            try {
-                const file = await this.app.vault.create(fileName, responseText);
-                // getLeaf(true) always creates a new leaf in the main content area
-                const leaf = this.app.workspace.getLeaf(true);
-                await leaf.openFile(file);
-            } catch (e) {
-                new Notice(t('notice.createNoteFailed', { error: (e as Error).message }));
-            }
+        makeBtn('file-plus', t('ui.sidebar.createNote'), () => {
+            void (async () => {
+                const now = new Date();
+                // Colons are forbidden in filenames on macOS/Windows — use dashes for HH-MM
+                const ts = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}`;
+                const fileName = `Agent response ${ts}.md`;
+                try {
+                    const file = await this.app.vault.create(fileName, responseText);
+                    // getLeaf(true) always creates a new leaf in the main content area
+                    const leaf = this.app.workspace.getLeaf(true);
+                    await leaf.openFile(file);
+                } catch (e) {
+                    new Notice(t('notice.createNoteFailed', { error: (e as Error).message }));
+                }
+            })();
         });
 
         // Copy to clipboard
         makeBtn('copy', t('ui.sidebar.copyResponse'), () => {
-            navigator.clipboard.writeText(responseText).then(() => {
+            void navigator.clipboard.writeText(responseText).then(() => {
                 new Notice(t('notice.copiedToClipboard'));
             });
         });
@@ -2531,7 +2536,7 @@ export class AgentSidebarView extends ItemView {
             // and re-send the last user message
             if (this.lastUserMessage) {
                 if (this.textarea) this.textarea.value = this.lastUserMessage;
-                this.handleSendMessage();
+                void this.handleSendMessage();
             }
         });
 
@@ -2558,7 +2563,7 @@ export class AgentSidebarView extends ItemView {
         toolsEl: HTMLElement,
         items: import('../core/tools/agent/UpdateTodoListTool').TodoItem[],
     ): void {
-        const messageEl = toolsEl.closest('.assistant-message') as HTMLElement | null;
+        const messageEl = toolsEl.closest<HTMLElement>('.assistant-message');
         if (!messageEl) return;
 
         let planBoxEl = messageEl.querySelector<HTMLElement>(':scope > .agent-todo-box');
@@ -2661,7 +2666,7 @@ export class AgentSidebarView extends ItemView {
         const input = inputRow.createEl('input', {
             cls: 'question-input',
             attr: { type: 'text', placeholder: t('ui.question.placeholder') },
-        }) as HTMLInputElement;
+        });
         const submitBtn = inputRow.createEl('button', { cls: 'question-submit-btn', text: t('ui.question.answer') });
         const submit = () => {
             const val = input.value.trim();
@@ -2711,16 +2716,18 @@ export class AgentSidebarView extends ItemView {
 
             allowBtn.addEventListener('click', () => { cleanup(); resolve({ decision: 'approved' }); });
             denyBtn.addEventListener('click', () => { cleanup(); resolve({ decision: 'rejected' }); });
-            enableBtn.addEventListener('click', async () => {
-                this.plugin.settings.autoApproval.enabled = true;
-                const permKey = this.groupToPermKey(group);
-                if (permKey) (this.plugin.settings.autoApproval as unknown as Record<string, boolean>)[permKey] = true;
-                await this.plugin.saveSettings();
-                cleanup();
-                resolve({ decision: 'approved' });
+            enableBtn.addEventListener('click', () => {
+                void (async () => {
+                    this.plugin.settings.autoApproval.enabled = true;
+                    const permKey = this.groupToPermKey(group);
+                    if (permKey) (this.plugin.settings.autoApproval as unknown as Record<string, boolean>)[permKey] = true;
+                    await this.plugin.saveSettings();
+                    cleanup();
+                    resolve({ decision: 'approved' });
+                })();
             });
 
-            this.chatContainer?.scrollTo({ top: this.chatContainer!.scrollHeight });
+            this.chatContainer?.scrollTo({ top: this.chatContainer.scrollHeight });
         });
     }
 
@@ -2806,12 +2813,12 @@ export class AgentSidebarView extends ItemView {
                 restoreBtn.classList.remove('agent-u-hidden');
             });
 
-            keepBtn.addEventListener('click', async () => {
-                await this.restoreCheckpoint(checkpoint, marker, options, false);
+            keepBtn.addEventListener('click', () => {
+                void this.restoreCheckpoint(checkpoint, marker, options, false);
             });
 
-            deleteBtn.addEventListener('click', async () => {
-                await this.restoreCheckpoint(checkpoint, marker, options, true);
+            deleteBtn.addEventListener('click', () => {
+                void this.restoreCheckpoint(checkpoint, marker, options, true);
             });
         });
     }
@@ -2825,7 +2832,7 @@ export class AgentSidebarView extends ItemView {
         optionsEl: HTMLElement,
         deleteChatFromHere: boolean,
     ): Promise<void> {
-        optionsEl.querySelectorAll('button').forEach((b) => ((b as HTMLButtonElement).disabled = true));
+        optionsEl.querySelectorAll('button').forEach((b) => (b.disabled = true));
         optionsEl.empty();
         optionsEl.setText(t('ui.checkpoint.restoring'));
 
@@ -2873,7 +2880,7 @@ export class AgentSidebarView extends ItemView {
         if (!assistantMsg) return;
 
         const allMessages = Array.from(this.chatContainer.querySelectorAll('.message'));
-        const idx = allMessages.indexOf(assistantMsg as Element);
+        const idx = allMessages.indexOf(assistantMsg);
         if (idx < 0) return;
 
         // Count assistant bubbles before this one (for array truncation)
@@ -3025,28 +3032,30 @@ export class AgentSidebarView extends ItemView {
             this.app,
             entries,
             { mode: 'review' },
-            async (decisions) => {
-                // Apply user decisions: write back reverted/edited content
-                for (const d of decisions) {
-                    if (!d.hasChanges) continue;
-                    try {
-                        const file = this.app.vault.getFileByPath(d.filePath);
-                        if (file instanceof TFile) {
-                            await this.app.vault.modify(file, d.finalContent);
-                        } else {
-                            await this.app.vault.adapter.write(d.filePath, d.finalContent);
+            (decisions) => {
+                void (async () => {
+                    // Apply user decisions: write back reverted/edited content
+                    for (const d of decisions) {
+                        if (!d.hasChanges) continue;
+                        try {
+                            const file = this.app.vault.getFileByPath(d.filePath);
+                            if (file instanceof TFile) {
+                                await this.app.vault.modify(file, d.finalContent);
+                            } else {
+                                await this.app.vault.adapter.write(d.filePath, d.finalContent);
+                            }
+                        } catch (e) {
+                            console.error(`[PostTaskReview] Failed to apply decision for ${d.filePath}:`, e);
                         }
-                    } catch (e) {
-                        console.error(`[PostTaskReview] Failed to apply decision for ${d.filePath}:`, e);
                     }
-                }
-                if (decisions.length > 0) {
-                    const files = decisions.map((d) => d.filePath).join(', ');
-                    this.conversationHistory.push({
-                        role: 'user',
-                        content: `[System] Post-task review: User reverted changes in ${decisions.length} file(s): ${files}. Vault state changed.`,
-                    });
-                }
+                    if (decisions.length > 0) {
+                        const files = decisions.map((d) => d.filePath).join(', ');
+                        this.conversationHistory.push({
+                            role: 'user',
+                            content: `[System] Post-task review: User reverted changes in ${decisions.length} file(s): ${files}. Vault state changed.`,
+                        });
+                    }
+                })();
             },
         ).open();
     }
@@ -3062,25 +3071,27 @@ export class AgentSidebarView extends ItemView {
             t('ui.undo.modified', { count: writeCount })
         );
         const undoBtn = bar.createEl('button', { cls: 'undo-btn', text: t('ui.undo.undoAll') });
-        undoBtn.addEventListener('click', async () => {
-            (undoBtn as HTMLButtonElement).disabled = true;
-            undoBtn.setText(t('ui.undo.restoring'));
-            console.debug(`[Undo] Attempting restore for taskId=${taskId} hasService=${!!this.plugin.checkpointService}`);
-            try {
-                const result = await this.plugin.checkpointService?.restoreLatestForTask(taskId);
-                console.debug('[Undo] Restore result:', result);
-                bar.empty();
-                if (result && result.restored.length > 0) {
-                    bar.createSpan('undo-success').setText(
-                        t('ui.undo.restored', { count: result.restored.length })
-                    );
-                } else {
-                    bar.createSpan('undo-error').setText(t('ui.undo.noCheckpoint'));
+        undoBtn.addEventListener('click', () => {
+            void (async () => {
+                undoBtn.disabled = true;
+                undoBtn.setText(t('ui.undo.restoring'));
+                console.debug(`[Undo] Attempting restore for taskId=${taskId} hasService=${!!this.plugin.checkpointService}`);
+                try {
+                    const result = await this.plugin.checkpointService?.restoreLatestForTask(taskId);
+                    console.debug('[Undo] Restore result:', result);
+                    bar.empty();
+                    if (result && result.restored.length > 0) {
+                        bar.createSpan('undo-success').setText(
+                            t('ui.undo.restored', { count: result.restored.length })
+                        );
+                    } else {
+                        bar.createSpan('undo-error').setText(t('ui.undo.noCheckpoint'));
+                    }
+                } catch {
+                    bar.empty();
+                    bar.createSpan('undo-error').setText(t('ui.undo.restoreFailed'));
                 }
-            } catch {
-                bar.empty();
-                bar.createSpan('undo-error').setText(t('ui.undo.restoreFailed'));
-            }
+            })();
         });
         this.chatContainer.scrollTo({ top: this.chatContainer.scrollHeight });
     }

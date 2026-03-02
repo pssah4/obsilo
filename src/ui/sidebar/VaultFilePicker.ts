@@ -60,7 +60,7 @@ export class VaultFilePicker {
         const footer = this.containerEl.createDiv('vfp-footer');
         this.countEl = footer.createSpan('vfp-count');
         const addBtn = footer.createEl('button', { cls: 'vfp-add-btn', text: t('ui.filePicker.add') });
-        addBtn.addEventListener('mousedown', (e) => { e.preventDefault(); this.confirm(); });
+        addBtn.addEventListener('mousedown', (e) => { e.preventDefault(); void this.confirm(); });
 
         // ── Wire up events ────────────────────────────────────────────
         this.searchInput.addEventListener('input', () => {
@@ -91,7 +91,7 @@ export class VaultFilePicker {
                         const item = this.filtered[this.activeIdx];
                         if (item) this.selected.add(item.file.path);
                     }
-                    this.confirm();
+                    void this.confirm();
                     break;
                 case 'Escape':
                     e.preventDefault();
@@ -199,7 +199,7 @@ export class VaultFilePicker {
             });
 
             const cb = row.createEl('input', { attr: { type: 'checkbox', tabindex: '-1' } });
-            (cb as HTMLInputElement).checked = isChecked;
+            cb.checked = isChecked;
 
             const info = row.createDiv('vfp-row-info');
             info.createSpan({ cls: 'vfp-row-name', text: label });
@@ -223,7 +223,7 @@ export class VaultFilePicker {
         });
 
         // Scroll active row into view
-        const activeRow = this.listEl.querySelector('.vfp-row-active') as HTMLElement | null;
+        const activeRow = this.listEl.querySelector<HTMLElement>('.vfp-row-active');
         activeRow?.scrollIntoView({ block: 'nearest' });
     }
 }

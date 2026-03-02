@@ -80,6 +80,7 @@ export interface AgentTaskRunConfig {
     pluginSkillsSection?: string;
     recipesSection?: string;
     selfAuthoredSkillsSection?: string;
+    configDir?: string;
 }
 
 export class AgentTask {
@@ -158,6 +159,7 @@ export class AgentTask {
             pluginSkillsSection,
             recipesSection,
             selfAuthoredSkillsSection,
+            configDir,
         } = config;
         // Resolve mode to ModeConfig
         let activeMode: ModeConfig = this.resolveMode(initialMode);
@@ -262,6 +264,7 @@ export class AgentTask {
                 allowedMcpServers,
                 pluginSkillsSection,
                 selfAuthoredSkillsSection,
+                configDir,
             });
             return childText;
         };
@@ -289,6 +292,7 @@ export class AgentTask {
                 webEnabled,
                 recipesSection,
                 selfAuthoredSkillsSection,
+                configDir: configDir ?? this.toolRegistry.plugin.app.vault.configDir,
             });
             cachedTools = this.modeService
                 ? this.modeService.getToolDefinitions(activeMode)
@@ -314,7 +318,7 @@ export class AgentTask {
                     if (newMode) {
                         activeMode = newMode;
                         if (this.modeService) {
-                            this.modeService.switchMode(pendingModeSwitch);
+                            void this.modeService.switchMode(pendingModeSwitch);
                         }
                         this.taskCallbacks.onModeSwitch?.(pendingModeSwitch);
                     }
@@ -451,7 +455,7 @@ export class AgentTask {
                 // Does NOT call onToolResult — caller is responsible for ordering.
                 const runTool = async (toolUse: ContentBlock & { type: 'tool_use' }) => {
                     // Detect repetitive tool loops before execution (recoverable — no signalCompletion)
-                    const repCheck = repetitionDetector.check(toolUse.name, toolUse.input as Record<string, unknown>);
+                    const repCheck = repetitionDetector.check(toolUse.name, toolUse.input);
                     if (repCheck.blocked) {
                         return { content: `<error>${repCheck.reason}</error>`, is_error: true as const };
                     }
@@ -483,7 +487,7 @@ export class AgentTask {
                     if (!result.is_error) {
                         repetitionDetector.record(
                             toolUse.name,
-                            toolUse.input as Record<string, unknown>,
+                            toolUse.input,
                             result.content.slice(0, 200),
                             iteration,
                         );
@@ -604,7 +608,7 @@ export class AgentTask {
                 const lastMsg = history[history.length - 1];
                 const wasWorking = lastMsg?.role === 'user'
                     && Array.isArray(lastMsg.content)
-                    && (lastMsg.content as ContentBlock[]).some((b) => b.type === 'tool_result');
+                    && lastMsg.content.some((b) => b.type === 'tool_result');
                 if (wasWorking) {
                     history.push({
                         role: 'user',
@@ -669,7 +673,7 @@ export class AgentTask {
                 const last = history[history.length - 1];
                 const isOrphaned = last.role === 'assistant'
                     && Array.isArray(last.content)
-                    && (last.content as ContentBlock[]).some((b) => b.type === 'tool_use');
+                    && last.content.some((b) => b.type === 'tool_use');
                 if (isOrphaned) {
                     history.pop();
                 } else {
@@ -724,9 +728,8 @@ export class AgentTask {
         for (const m of messages) {
             const content = Array.isArray(m.content)
                 ? m.content.map((b) => {
-                    const block = b as ContentBlock;
-                    if ('text' in block && typeof block.text === 'string') return block.text;
-                    if ('content' in block && typeof block.content === 'string') return block.content;
+                    if ('text' in b && typeof b.text === 'string') return b.text;
+                    if ('content' in b && typeof b.content === 'string') return b.content;
                     return '';
                 }).join('')
                 : typeof m.content === 'string' ? m.content : '';

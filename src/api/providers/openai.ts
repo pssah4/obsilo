@@ -61,18 +61,6 @@ interface OpenAIStreamChoice {
     finish_reason: string | null;
 }
 
-interface OpenAIStreamChunk {
-    id: string;
-    object: string;
-    model: string;
-    choices: OpenAIStreamChoice[];
-    usage?: {
-        prompt_tokens: number;
-        completion_tokens: number;
-        total_tokens: number;
-    };
-}
-
 // ---------------------------------------------------------------------------
 // Tool call accumulator for streaming
 // ---------------------------------------------------------------------------
@@ -268,7 +256,7 @@ export class OpenAiProvider implements ApiHandler {
             }
 
             // Array of ContentBlock
-            const blocks = msg.content as ContentBlock[];
+            const blocks = msg.content;
 
             if (msg.role === 'assistant') {
                 // Assistant messages may contain text + tool_use blocks

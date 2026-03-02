@@ -173,7 +173,7 @@ export class SemanticSearchTool extends BaseTool<'semantic_search'> {
                 const filterDesc = [
                     folderFilter ? `folder="${folderFilter}"` : '',
                     tagsFilter ? `tags=[${tagsFilter.join(',')}]` : '',
-                    sinceFilter ? `since=${input.since}` : '',
+                    sinceFilter ? `since=${String(input.since)}` : '',
                 ].filter(Boolean).join(', ');
                 callbacks.pushToolResult(`No results found for: "${query}"${filterDesc ? ` with filters: ${filterDesc}` : ''}`);
                 return;
@@ -190,7 +190,7 @@ export class SemanticSearchTool extends BaseTool<'semantic_search'> {
             const activeFilters = [
                 folderFilter ? `folder: ${folderFilter}` : '',
                 tagsFilter ? `tags: ${tagsFilter.join(', ')}` : '',
-                sinceFilter ? `since: ${input.since}` : '',
+                sinceFilter ? `since: ${String(input.since)}` : '',
             ].filter(Boolean).join(' | ');
             const hydeNote = hydeText ? ' · HyDE' : '';
             const lines = [

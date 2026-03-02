@@ -350,11 +350,11 @@ export class EmbeddingsTab {
                 chip.createSpan({ text: folder });
                 const removeBtn = chip.createSpan({ cls: 'excluded-folder-remove' });
                 setIcon(removeBtn, 'x');
-                removeBtn.addEventListener('click', async () => {
+                removeBtn.addEventListener('click', () => {
                     this.plugin.settings.semanticExcludedFolders =
                         (this.plugin.settings.semanticExcludedFolders ?? []).filter((f) => f !== folder);
                     getIdx()?.configure({ excludedFolders: this.plugin.settings.semanticExcludedFolders });
-                    await this.plugin.saveSettings();
+                    void this.plugin.saveSettings();
                     renderExcludedList();
                 });
             }
@@ -384,7 +384,7 @@ export class EmbeddingsTab {
                 e.preventDefault();
                 const val = folderInput.value.trim();
                 if (val) {
-                    suggest.onPick(val);
+                    void suggest.onPick(val);
                 }
             }
         });
@@ -428,13 +428,13 @@ export class EmbeddingsTab {
         const enableEl = row.createDiv('mc-enable');
         const toggle = enableEl.createEl('input', { attr: { type: 'radio', name: 'active-embedding' } });
         toggle.checked = isActive;
-        toggle.addEventListener('change', async () => {
+        toggle.addEventListener('change', () => { void (async () => {
             if (toggle.checked) {
                 this.plugin.settings.activeEmbeddingModelKey = key;
                 await this.plugin.saveSettings();
                 this.rerender();
             }
-        });
+        })(); });
 
         const actionsEl = row.createDiv('mc-actions');
         const configBtn = actionsEl.createEl('button', { cls: 'mc-action-btn', attr: { title: t('settings.embeddings.configureModel') } });
@@ -453,7 +453,7 @@ export class EmbeddingsTab {
 
         const delBtn = actionsEl.createEl('button', { cls: 'mc-action-btn mc-action-del', attr: { title: t('settings.embeddings.removeModel') } });
         setIcon(delBtn, 'trash');
-        delBtn.addEventListener('click', async () => {
+        delBtn.addEventListener('click', () => { void (async () => {
             this.plugin.settings.embeddingModels = (this.plugin.settings.embeddingModels ?? []).filter(
                 (m) => getModelKey(m) !== key,
             );
@@ -464,7 +464,7 @@ export class EmbeddingsTab {
             }
             await this.plugin.saveSettings();
             this.rerender();
-        });
+        })(); });
     }
 
 

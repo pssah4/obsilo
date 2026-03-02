@@ -152,7 +152,7 @@ export class CodeImportModal extends Modal {
         this.tempInputEl = tempRow.createEl('input', {
             cls: 'cim-temp-input',
             attr: { type: 'number', step: '0.1', min: '0', max: '2', value: '0.2' },
-        }) as HTMLInputElement;
+        });
         this.temperatureInput = 0.2;
         this.tempInputEl.addEventListener('input', () => {
             const val = parseFloat(this.tempInputEl!.value);
@@ -167,9 +167,9 @@ export class CodeImportModal extends Modal {
         this.testBtn = testRow.createEl('button', {
             cls: 'cim-test-btn',
             text: t('modal.codeImport.testConnection'),
-        }) as HTMLButtonElement;
+        });
         this.testBtn.disabled = true;
-        this.testBtn.addEventListener('click', () => this.runTestConnection());
+        this.testBtn.addEventListener('click', () => void this.runTestConnection());
         this.testResultEl = testRow.createDiv('cim-test-result');
 
         // Actions bar
@@ -180,7 +180,7 @@ export class CodeImportModal extends Modal {
         this.importBtn = actions.createEl('button', {
             cls: 'mod-cta cim-import-btn',
             text: t('modal.codeImport.import'),
-        }) as HTMLButtonElement;
+        });
         this.importBtn.disabled = true;
         this.importBtn.addEventListener('click', () => this.doImport());
     }

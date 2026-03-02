@@ -24,7 +24,7 @@ export class LogTab {
 
         const logger: OperationLogger | undefined = this.plugin.operationLogger;
         if (logger) {
-            logger.getLogDates().then((dates: string[]) => {
+            void logger.getLogDates().then((dates: string[]) => {
                 if (dates.length === 0) {
                     const opt = dateSelect.createEl('option');
                     opt.value = '';
@@ -45,7 +45,7 @@ export class LogTab {
             loadLogBtn.disabled = true;
         }
 
-        loadLogBtn.addEventListener('click', async () => {
+        loadLogBtn.addEventListener('click', () => { void (async () => {
             const date = dateSelect.value;
             if (!date || !logger) return;
             logTableWrap.empty();
@@ -57,9 +57,9 @@ export class LogTab {
             }
             downloadBtn.disabled = false;
             this.renderLogTable(logTableWrap, entries);
-        });
+        })(); });
 
-        downloadBtn.addEventListener('click', async () => {
+        downloadBtn.addEventListener('click', () => { void (async () => {
             const date = dateSelect.value;
             if (!date || !logger) return;
             const raw = await logger.readRawLog(date);
@@ -77,9 +77,9 @@ export class LogTab {
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
             new Notice(t('settings.log.downloaded', { date }));
-        });
+        })(); });
 
-        clearLogBtn.addEventListener('click', async () => {
+        clearLogBtn.addEventListener('click', () => { void (async () => {
             if (!logger) return;
             await logger.clearLogs();
             logTableWrap.empty();
@@ -90,7 +90,7 @@ export class LogTab {
             loadLogBtn.disabled = true;
             downloadBtn.disabled = true;
             new Notice(t('settings.log.cleared'));
-        });
+        })(); });
     }
 
     private renderLogTable(container: HTMLElement, entries: LogEntry[]): void {

@@ -3,10 +3,10 @@ import { t } from '../../i18n';
 
 export class ContentEditorModal extends Modal {
     private readonly initialContent: string;
-    private readonly onSave: (content: string) => void;
+    private readonly onSave: (content: string) => void | Promise<void>;
     private readonly modalTitle: string;
 
-    constructor(app: App, title: string, initialContent: string, onSave: (content: string) => void) {
+    constructor(app: App, title: string, initialContent: string, onSave: (content: string) => void | Promise<void>) {
         super(app);
         this.modalTitle = title;
         this.initialContent = initialContent;
@@ -28,7 +28,8 @@ export class ContentEditorModal extends Modal {
         const cancelBtn = btnRow.createEl('button', { text: t('modal.modelConfig.cancel') });
 
         saveBtn.addEventListener('click', () => {
-            this.onSave(textarea.value);
+            const result = this.onSave(textarea.value);
+            if (result instanceof Promise) void result.catch(console.error);
             this.close();
         });
         cancelBtn.addEventListener('click', () => this.close());

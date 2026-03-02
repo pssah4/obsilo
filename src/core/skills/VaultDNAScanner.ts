@@ -511,7 +511,7 @@ export class VaultDNAScanner {
             } else if (Array.isArray(value)) {
                 lines.push(`${prefix}${key}: [${value.join(', ')}]`);
             } else {
-                lines.push(`${prefix}${key}: ${value}`);
+                lines.push(`${prefix}${key}: ${String(value)}`);
             }
         }
 

@@ -166,7 +166,7 @@ export class EsbuildWasmManager {
             write: false,
             plugins: [{
                 name: 'virtual-packages',
-                setup(build: { onResolve: Function; onLoad: Function }) {
+                setup(build: { onResolve: (...args: unknown[]) => unknown; onLoad: (...args: unknown[]) => unknown }) {
                     build.onResolve(
                         { filter: /^[^.]/ },
                         (args: { path: string }) => ({

@@ -22,7 +22,8 @@ export function buildApiHandlerForModel(model: CustomModel) {
  * Build an ApiHandler from a LLMProvider config (legacy / internal path)
  */
 export function buildApiHandler(config: LLMProvider) {
-    switch (config.type) {
+    const providerType = config.type;
+    switch (providerType) {
         case 'anthropic':
             return new AnthropicProvider(config);
         case 'openai':
@@ -32,7 +33,9 @@ export function buildApiHandler(config: LLMProvider) {
         case 'azure':
         case 'custom':
             return new OpenAiProvider(config);
-        default:
-            throw new Error(`Unknown provider type: ${(config as LLMProvider).type}`);
+        default: {
+            const _exhaustive: never = providerType;
+            throw new Error(`Unknown provider type: ${_exhaustive}`);
+        }
     }
 }

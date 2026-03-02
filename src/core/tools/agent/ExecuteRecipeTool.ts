@@ -256,7 +256,7 @@ export class ExecuteRecipeTool extends BaseTool<'execute_recipe'> {
 
             // SIGKILL fallback if process doesn't exit after timeout
             const killTimer = setTimeout(() => {
-                try { child.kill('SIGKILL'); } catch {}
+                try { child.kill('SIGKILL'); } catch { /* process already exited */ }
             }, recipe.timeout + 5_000);
 
             child.on('close', (code: number | null) => {
