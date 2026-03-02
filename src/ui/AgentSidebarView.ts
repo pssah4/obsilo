@@ -2243,7 +2243,7 @@ export class AgentSidebarView extends ItemView {
         const sources: { num: number; note: string; context: string }[] = [];
 
         for (const line of match[1].split('\n')) {
-            const lineMatch = line.trim().match(/^(\d+)\.\s+(.+?)(?:\s+[—\-]+\s+(.+))?$/);
+            const lineMatch = line.trim().match(/^(\d+)\.\s+(.+?)(?:\s+[—-]+\s+(.+))?$/);
             if (lineMatch) {
                 sources.push({
                     num: parseInt(lineMatch[1]),

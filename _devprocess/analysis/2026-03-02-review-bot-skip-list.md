@@ -47,7 +47,7 @@ Same pattern as #1 -- the method overrides a base class lifecycle method that ex
 
 **7. "Unnecessary character escape `\[` in character class" (SemanticIndexService.ts:L525)**
 
-The regex uses `\[` and `\]` inside a character class. While the linter flags `\[` as unnecessary, removing the backslash from `]` causes it to close the character class prematurely, turning the remainder into invalid syntax (`SyntaxError: Nothing to repeat`). The escaped forms `\[\]` are required here for correctness. Confirmed by runtime crash when the escapes were removed.
+The regex uses `\[` and `\]` inside a character class to match literal bracket characters. While the linter flags `\[` as unnecessary, removing the escape from `]` causes it to close the character class prematurely, turning the remainder into invalid syntax (`SyntaxError: Nothing to repeat`). Keeping both `\[` and `\]` escaped is required for correctness. Confirmed by runtime crash when the escapes were removed. (Note: the `\-` escape in the same regex was fixed separately by moving `-` to end of character class.)
 ```
 
 ---
@@ -62,4 +62,4 @@ The regex uses `\[` and `\]` inside a character class. While the linter flags `\
 | 4 | async onload | `main.ts` | Standard Obsidian Plugin Pattern |
 | 5 | Deprecated Settings | `types/settings.ts` | Migrations-Shims fuer Abwaertskompatibilitaet |
 | 6 | async onClose | View-Klassen | Base-Class Lifecycle Override |
-| 7 | Unnecessary escape `\[` | `SemanticIndexService.ts:L525` | Runtime-Crash bei Entfernung (Regex bricht) |
+| 7 | Unnecessary escape `\[` | `SemanticIndexService.ts:L525` | Runtime-Crash bei Entfernung (`]` schliesst Character-Class vorzeitig) |

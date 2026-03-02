@@ -435,7 +435,7 @@ export class SemanticIndexService {
         this.autoUpdateQueue.add(filePath);
         if (!this.autoIndexRunning) {
             this.autoIndexRunning = true;
-            this.runAutoUpdateQueue();
+            void this.runAutoUpdateQueue();
         }
     }
 
@@ -522,7 +522,7 @@ export class SemanticIndexService {
     private static tokenize(text: string): string[] {
         return text
             .toLowerCase()
-            .split(/[\s\-_/,.;:!?()\[\]{}"'`|@#=+*<>~^]+/)
+            .split(/[\s_/,.;:!?()\[\]{}"'`|@#=+*<>~^-]+/)
             .filter((t) => t.length >= 3)
             .map((t) => SemanticIndexService.stemWord(t));
     }

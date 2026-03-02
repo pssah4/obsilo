@@ -79,7 +79,7 @@ export class RulesLoader {
      */
     async createRule(name: string, content: string): Promise<string> {
         await this.initialize();
-        const safeName = name.replace(/[^a-zA-Z0-9\-_ ]/g, '').trim() || 'rule';
+        const safeName = name.replace(/[^a-zA-Z0-9_ -]/g, '').trim() || 'rule';
         const rPath = `${this.rulesDir}/${safeName}.md`;
         await this.fs.write(rPath, content);
         return rPath;

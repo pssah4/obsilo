@@ -173,7 +173,7 @@ export class GenerateCanvasTool extends BaseTool<'generate_canvas'> {
                 const backlinks = this.app.metadataCache.getBacklinksForFile?.(centerFile);
                 if (backlinks?.data) {
                     for (const [path] of Object.entries(backlinks.data)) {
-                        const f = this.app.vault.getFileByPath(path as string);
+                        const f = this.app.vault.getFileByPath(path);
                         if (f) linked.add(f);
                     }
                 }

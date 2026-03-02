@@ -59,7 +59,7 @@ export class SkillsTab {
                 let skillName = file.name.replace(/\.[^.]+$/, '');
                 const fmMatch = content.match(/^---[\s\S]*?^name:\s*(.+)$/m);
                 if (fmMatch) skillName = fmMatch[1].trim();
-                const safeName = skillName.replace(/[^a-zA-Z0-9\-_ ]/g, '').trim();
+                const safeName = skillName.replace(/[^a-zA-Z0-9_ -]/g, '').trim();
                 const dir = `${skillsManager.skillsDir}/${safeName}`;
                 try {
                     await skillsManager.createSkill(dir, content);
@@ -183,7 +183,7 @@ export class SkillsTab {
         createBtn.addEventListener('click', () => { void (async () => {
             const name = nameInput.value.trim();
             if (!name || !skillsManager) return;
-            const safeName = name.replace(/[^a-zA-Z0-9\-_ ]/g, '').trim();
+            const safeName = name.replace(/[^a-zA-Z0-9_ -]/g, '').trim();
             const dir = `${skillsManager.skillsDir}/${safeName}`;
             const skillPath = `${dir}/SKILL.md`;
             const template = `---\nname: ${safeName}\ndescription: Describe when this skill applies\nkeywords: []\n---\n\n# ${safeName}\n\n<!-- Describe what this skill does and when to use it. The agent reads this file when the skill is relevant. -->\n\n`;

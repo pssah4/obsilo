@@ -81,7 +81,7 @@ export class UseMcpToolTool extends BaseTool<'use_mcp_tool'> {
         }
 
         try {
-            const result = await this.mcpClient.callTool(server_name, tool_name, args as Record<string, unknown>);
+            const result = await this.mcpClient.callTool(server_name, tool_name, args);
             callbacks.pushToolResult(result);
             callbacks.log(`MCP tool ${server_name}/${tool_name} returned ${result.length} chars`);
         } catch (error) {

@@ -80,7 +80,7 @@ export function validateParameter(
         }
 
         case 'safe-string': {
-            const pattern = param.pattern ?? /^[a-zA-Z0-9._\-\s]+$/;
+            const pattern = param.pattern ?? /^[a-zA-Z0-9._\s-]+$/;
             if (!pattern.test(strValue)) {
                 return `Invalid characters in "${param.name}"`;
             }

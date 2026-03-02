@@ -107,7 +107,7 @@ export class WorkflowLoader {
      */
     async createWorkflow(name: string, content: string): Promise<string> {
         await this.initialize();
-        const safeName = name.replace(/[^a-zA-Z0-9\-_ ]/g, '').trim() || 'workflow';
+        const safeName = name.replace(/[^a-zA-Z0-9_ -]/g, '').trim() || 'workflow';
         const wPath = `${this.workflowsDir}/${safeName}.md`;
         await this.fs.write(wPath, content);
         return wPath;
