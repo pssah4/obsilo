@@ -2,11 +2,10 @@ import { ItemView, WorkspaceLeaf, setIcon, Menu, MarkdownRenderer, MarkdownView,
 import type ObsidianAgentPlugin from '../main';
 import { AgentTask } from '../core/AgentTask';
 import { ModeService } from '../core/modes/ModeService';
-import type { MessageParam, ContentBlock, ImageMediaType } from '../api/types';
+import type { MessageParam, ContentBlock } from '../api/types';
 import { getModelKey, getFirstEnabledModelKey, modelToLLMProvider, BUILT_IN_MODELS } from '../types/settings';
 import type { CustomModel, ProviderType } from '../types/settings';
 import { buildApiHandler, buildApiHandlerForModel } from '../api/index';
-import { resolvePromptContent } from '../core/context/SupportPrompts';
 import { ToolPickerPopover } from './sidebar/ToolPickerPopover';
 import { TOOL_METADATA } from '../core/tools/toolMetadata';
 import { AttachmentHandler } from './sidebar/AttachmentHandler';
@@ -2568,7 +2567,6 @@ export class AgentSidebarView extends ItemView {
 
         let planBoxEl = messageEl.querySelector<HTMLElement>(':scope > .agent-todo-box');
         let planListEl: HTMLElement;
-        let activityBadgeEl: HTMLElement | null;
 
         if (!planBoxEl) {
             // First call — build the plan box and move toolsEl into it
@@ -2580,7 +2578,7 @@ export class AgentSidebarView extends ItemView {
             const header = planBoxEl.createDiv('todo-box-header');
             setIcon(header.createSpan('todo-box-icon'), 'list-checks');
             header.createSpan('todo-box-title').setText(t('ui.sidebar.plan'));
-            activityBadgeEl = header.createSpan('todo-activity-badge');
+            header.createSpan('todo-activity-badge');
 
             planListEl = planBoxEl.createDiv('todo-box-list');
 
@@ -2590,7 +2588,7 @@ export class AgentSidebarView extends ItemView {
             activityDetails.appendChild(toolsEl);
         } else {
             planListEl = planBoxEl.querySelector<HTMLElement>('.todo-box-list')!;
-            activityBadgeEl = planBoxEl.querySelector<HTMLElement>('.todo-activity-badge');
+            planBoxEl.querySelector<HTMLElement>('.todo-activity-badge');
         }
 
         // Update the todo items list

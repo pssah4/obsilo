@@ -1,4 +1,4 @@
-import { App, Notice, Setting, setIcon } from 'obsidian';
+import { App, Setting } from 'obsidian';
 import type ObsidianAgentPlugin from '../../main';
 import { BUILT_IN_RECIPES } from '../../core/tools/agent/recipeRegistry';
 import { PLUGIN_API_ALLOWLIST } from '../../core/tools/agent/pluginApiAllowlist';

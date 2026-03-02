@@ -17,7 +17,6 @@
 
 import type { Vault } from 'obsidian';
 import type { GlobalFileService } from './GlobalFileService';
-import pathModule from 'path';
 
 // ── Sync category mapping ─────────────────────────────────────────────────
 

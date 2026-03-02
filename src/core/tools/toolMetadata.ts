@@ -11,7 +11,6 @@
  * different purpose (function calling) and needs parameter details.
  */
 
-import type { ToolName } from './types';
 import type { ToolGroup } from '../../types/settings';
 
 export interface ToolMeta {

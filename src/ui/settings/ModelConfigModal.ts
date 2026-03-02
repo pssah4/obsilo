@@ -1,6 +1,6 @@
 import { App, Modal, Notice, setIcon } from 'obsidian';
 import type { CustomModel, ProviderType } from '../../types/settings';
-import { PROVIDER_LABELS, PROVIDER_COLORS, MODEL_SUGGESTIONS, EMBEDDING_PROVIDERS, EMBEDDING_SUGGESTIONS } from './constants';
+import { PROVIDER_LABELS, MODEL_SUGGESTIONS, EMBEDDING_PROVIDERS, EMBEDDING_SUGGESTIONS } from './constants';
 import { testModelConnection, testEmbeddingConnection, fetchProviderModels, fetchOllamaModels, fetchEmbeddingModels, isTemperatureFixed, maxTemperature } from './testModelConnection';
 import { t } from '../../i18n';
 

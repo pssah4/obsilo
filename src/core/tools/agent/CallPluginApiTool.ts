@@ -21,7 +21,6 @@ import type ObsidianAgentPlugin from '../../../main';
 import {
     findAllowedMethod,
     BLOCKED_METHODS,
-    type AllowedApiMethod,
 } from './pluginApiAllowlist';
 
 /** Default timeout for API calls (ms) */
@@ -167,8 +166,6 @@ export class CallPluginApiTool extends BaseTool<'call_plugin_api'> {
             maxReturnSize = allowedEntry.maxReturnSize;
         } else {
             // Tier 2: Check dynamic discovery (safeMethodOverrides in settings)
-            const overrideKey = `${pluginId}:${method}`;
-            const overrides = this.plugin.settings.pluginApi?.safeMethodOverrides ?? {};
             const isDynamicallyKnown = this.isDynamicallyDiscovered(pluginId, method);
 
             if (!isDynamicallyKnown) {

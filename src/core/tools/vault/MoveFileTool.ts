@@ -1,4 +1,4 @@
-import { TFile, TFolder } from 'obsidian';
+import { TFolder } from 'obsidian';
 import { BaseTool } from '../BaseTool';
 import type { ToolDefinition, ToolExecutionContext } from '../types';
 import type ObsidianAgentPlugin from '../../../main';

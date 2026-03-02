@@ -271,7 +271,7 @@ export class GitCheckpointService {
                     const diffLines = this.simpleDiff(original, current);
                     lines.push(...diffLines);
                 }
-            } catch (e) {
+            } catch {
                 lines.push(`--- ${vaultRelPath}: (error reading diff)`);
             }
         }

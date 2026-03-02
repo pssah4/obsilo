@@ -11,7 +11,7 @@ import type ObsidianAgentPlugin from '../../main';
 import type { ModeConfig, ToolGroup } from '../../types/settings';
 import type { ToolRegistry } from '../tools/ToolRegistry';
 import type { ToolDefinition } from '../tools/types';
-import { BUILT_IN_MODES, TOOL_GROUP_MAP, expandToolGroups } from './builtinModes';
+import { BUILT_IN_MODES, expandToolGroups } from './builtinModes';
 import { GlobalModeStore } from './GlobalModeStore';
 
 export class ModeService {

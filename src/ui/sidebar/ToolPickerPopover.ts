@@ -154,7 +154,7 @@ export class ToolPickerPopover {
             });
             if (tools.length === 0) continue;
 
-            const { subRow, subBody, subGroupCb } = makeSubCat(
+            const { subBody, subGroupCb } = makeSubCat(
                 builtInCatBody,
                 GROUP_META[group]?.label ?? group,
                 GROUP_META[group]?.icon ?? 'tool',

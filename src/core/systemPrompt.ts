@@ -26,7 +26,6 @@
  */
 
 import type { ModeConfig } from '../types/settings';
-import { BUILT_IN_MODES } from './modes/builtinModes';
 import type { McpClient } from './mcp/McpClient';
 import {
     getDateTimeSection,
