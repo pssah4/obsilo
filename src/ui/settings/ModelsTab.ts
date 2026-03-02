@@ -33,7 +33,7 @@ export class ModelsTab {
         const footer = containerEl.createDiv('model-table-footer');
         const addBtn = footer.createEl('button', { cls: 'mod-cta model-add-btn', text: t('settings.models.addModel') });
         addBtn.addEventListener('click', () => {
-            new ModelConfigModal(this.app, null, async (newModel) => {
+            new ModelConfigModal(this.app, null, (newModel) => { void (async () => {
                 const key = getModelKey(newModel);
                 if (this.plugin.settings.activeModels.some((m) => getModelKey(m) === key)) {
                     new Notice(t('settings.models.alreadyExists', { name: newModel.name }));
@@ -42,7 +42,7 @@ export class ModelsTab {
                 this.plugin.settings.activeModels.push(newModel);
                 await this.plugin.saveSettings();
                 this.rerender();
-            }).open();
+            })(); }).open();
         });
 
         // Import from Code button
@@ -51,7 +51,7 @@ export class ModelsTab {
             const existingKeys = new Set(
                 this.plugin.settings.activeModels.map((m) => getModelKey(m)),
             );
-            new CodeImportModal(this.app, existingKeys, async (newModels) => {
+            new CodeImportModal(this.app, existingKeys, (newModels) => { void (async () => {
                 let imported = 0;
                 let skipped = 0;
                 for (const model of newModels) {
@@ -71,7 +71,7 @@ export class ModelsTab {
                 if (imported > 0) parts.push(t('settings.models.imported', { count: imported }));
                 if (skipped > 0) parts.push(t('settings.models.skipped', { count: skipped }));
                 if (parts.length > 0) new Notice(parts.join('. ') + '.');
-            }).open();
+            })(); }).open();
         });
     }
 
@@ -144,7 +144,7 @@ export class ModelsTab {
         const configBtn = actionsEl.createEl('button', { cls: 'mc-action-btn', attr: { title: t('settings.models.configure') } });
         setIcon(configBtn, 'settings');
         configBtn.addEventListener('click', () => {
-            new ModelConfigModal(this.app, { ...model }, async (updated) => {
+            new ModelConfigModal(this.app, { ...model }, (updated) => { void (async () => {
                 const idx = this.plugin.settings.activeModels.findIndex((m) => getModelKey(m) === key);
                 if (idx !== -1) this.plugin.settings.activeModels[idx] = updated;
                 // If the active model was renamed, keep it active under the new key
@@ -153,7 +153,7 @@ export class ModelsTab {
                 }
                 await this.plugin.saveSettings();
                 this.rerender();
-            }).open();
+            })(); }).open();
         });
 
         const delBtn = actionsEl.createEl('button', { cls: 'mc-action-btn mc-action-del', attr: { title: t('settings.models.remove') } });

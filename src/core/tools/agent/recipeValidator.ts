@@ -40,6 +40,9 @@ export function validateParameter(
         return null; // Optional and not provided — skip
     }
 
+    if (typeof value !== 'string' && typeof value !== 'number' && typeof value !== 'boolean') {
+        return `Parameter "${param.name}" expected a primitive value`;
+    }
     const strValue = String(value);
 
     // S-01: Shell metacharacter check for ALL parameter types

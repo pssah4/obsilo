@@ -1,5 +1,5 @@
-import type { App, TFile } from 'obsidian';
-import { setIcon } from 'obsidian';
+import type { App } from 'obsidian';
+import { setIcon, TFile } from 'obsidian';
 import { t } from '../../i18n';
 
 /**
@@ -143,7 +143,7 @@ export class VaultFilePicker {
     private async confirm(): Promise<void> {
         const files = Array.from(this.selected)
             .map(p => this.app.vault.getAbstractFileByPath(p))
-            .filter((f): f is TFile => !!(f && (f as TFile).extension));
+            .filter((f): f is TFile => f instanceof TFile);
         this.hide();
         if (files.length > 0) await this.onConfirm(files);
     }

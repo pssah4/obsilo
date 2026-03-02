@@ -867,7 +867,7 @@ export default class ObsidianAgentPlugin extends Plugin {
 
         // Reveal the view and set sidebar width to 28.5% of window
         if (leaf) {
-            workspace.revealLeaf(leaf);
+            void workspace.revealLeaf(leaf);
 
             const rightSplit = workspace.rightSplit;
             if (rightSplit && typeof rightSplit.setSize === 'function') {

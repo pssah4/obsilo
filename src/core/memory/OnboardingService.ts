@@ -254,7 +254,7 @@ export class OnboardingService {
         // Ensure startedAt is set
         if (!this.plugin.settings.onboarding.startedAt) {
             this.plugin.settings.onboarding.startedAt = new Date().toISOString();
-            this.plugin.saveSettings();
+            void this.plugin.saveSettings();
         }
 
         return ONBOARDING_PROMPT;

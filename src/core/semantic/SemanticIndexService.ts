@@ -225,7 +225,7 @@ export class SemanticIndexService {
             const isFullRebuild = force || isModelChange || isChunkSizeChange || existingCheckpoint === null;
 
             if (isChunkSizeChange) {
-                console.debug(`[SemanticIndex] Chunk size changed (${existingCheckpoint!.chunkSize} → ${this.chunkSize}) — full rebuild.`);
+                console.debug(`[SemanticIndex] Chunk size changed (${existingCheckpoint.chunkSize} → ${this.chunkSize}) — full rebuild.`);
             }
 
             if (isFullRebuild) {

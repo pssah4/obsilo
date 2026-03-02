@@ -421,7 +421,7 @@ export class ModelConfigModal extends Modal {
                 });
                 this.suggestSelEl.selectedIndex = 0;
                 // Show/hide the fetch button
-                const fetchBtn = this.suggestRow.querySelector('.mcm-fetch-btn') as HTMLButtonElement | null;
+                const fetchBtn = this.suggestRow.querySelector<HTMLButtonElement>('.mcm-fetch-btn');
                 if (fetchBtn) fetchBtn.classList.toggle('agent-u-hidden', !hasFetchFetch);
             }
         }
@@ -494,7 +494,7 @@ export class ModelConfigModal extends Modal {
             this.temperatureSliderEl.disabled = !this.formTemperatureEnabled;
         }
 
-        const sliderWrap = this.temperatureSliderEl.closest('.mcm-temperature-slider-wrap') as HTMLElement | null;
+        const sliderWrap = this.temperatureSliderEl.closest<HTMLElement>('.mcm-temperature-slider-wrap');
         if (sliderWrap) sliderWrap.classList.toggle('agent-u-hidden', !this.formTemperatureEnabled);
     }
 

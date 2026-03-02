@@ -50,7 +50,7 @@ export class GitCheckpointService {
         this.vault = vault;
         this.repoRelPath = `${pluginDir}/checkpoints`;
         // isomorphic-git needs an absolute path
-        const vaultRoot = (vault.adapter as FileSystemAdapter).basePath as string;
+        const vaultRoot = (vault.adapter as FileSystemAdapter).basePath;
         this.repoPath = `${vaultRoot}/${this.repoRelPath}`;
         this.timeoutMs = timeoutSeconds * 1000;
         this.autoCleanup = autoCleanup;
@@ -418,7 +418,7 @@ export class GitCheckpointService {
             );
             promise.then(
                 (val) => { clearTimeout(timer); resolve(val); },
-                (err) => { clearTimeout(timer); reject(err); }
+                (err) => { clearTimeout(timer); reject(err instanceof Error ? err : new Error(String(err))); }
             );
         });
     }

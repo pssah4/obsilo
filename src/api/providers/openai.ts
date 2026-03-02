@@ -8,7 +8,7 @@
 
 import OpenAI from 'openai';
 import type { LLMProvider } from '../../types/settings';
-import type { ApiHandler, ApiStream, ApiStreamChunk, ContentBlock, MessageParam, ModelInfo } from '../types';
+import type { ApiHandler, ApiStream, ApiStreamChunk, MessageParam, ModelInfo } from '../types';
 import type { ToolDefinition } from '../../core/tools/types';
 
 // ---------------------------------------------------------------------------
@@ -53,12 +53,6 @@ interface OpenAIStreamDelta {
             arguments?: string;
         };
     }[];
-}
-
-interface OpenAIStreamChoice {
-    index: number;
-    delta: OpenAIStreamDelta;
-    finish_reason: string | null;
 }
 
 // ---------------------------------------------------------------------------

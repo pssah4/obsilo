@@ -238,19 +238,28 @@ export class QueryBaseTool extends BaseTool<'query_base'> {
             const prop = eq[1].trim();
             const rawVal = eq[2].trim().replace(/^"|"$/g, '');
             const fmVal = fm[prop];
-            const result = fmVal !== undefined && String(fmVal) === rawVal;
+            const fmStr = typeof fmVal === 'string' ? fmVal
+                : typeof fmVal === 'number' || typeof fmVal === 'boolean' ? String(fmVal)
+                : JSON.stringify(fmVal);
+            const result = fmVal !== undefined && fmStr === rawVal;
             return negated ? !result : result;
         }
 
         return true; // unknown filter — pass-through
     }
 
+    private toStr(val: unknown): string {
+        if (typeof val === 'string') return val;
+        if (typeof val === 'number' || typeof val === 'boolean') return String(val);
+        return JSON.stringify(val);
+    }
+
     private propContains(value: unknown, needle: string): boolean {
         if (value === undefined || value === null) return false;
         if (Array.isArray(value)) {
-            return value.some((v) => String(v).toLowerCase().includes(needle.toLowerCase()));
+            return value.some((v) => this.toStr(v).toLowerCase().includes(needle.toLowerCase()));
         }
-        return String(value).toLowerCase().includes(needle.toLowerCase());
+        return this.toStr(value).toLowerCase().includes(needle.toLowerCase());
     }
 
     private parseStringArgs(argsStr: string): string[] {

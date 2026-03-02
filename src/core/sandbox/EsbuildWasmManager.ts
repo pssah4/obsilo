@@ -321,7 +321,6 @@ export class EsbuildWasmManager {
         if (!this.notifiedPackages.has(name)) {
             this.notifiedPackages.add(name);
             console.warn(`[EsbuildWasmManager] Downloading npm package "${name}" from CDN for sandbox execution`);
-            // eslint-disable-next-line no-new -- fire-and-forget UI notification
             new Notice(`Sandbox: Downloading "${name}" from CDN`, 5000);
         }
 

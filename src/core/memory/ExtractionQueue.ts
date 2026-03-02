@@ -57,7 +57,7 @@ export class ExtractionQueue {
         this.items.push(item);
         await this.save();
         // Kick off processing if not already running
-        this.processQueue();
+        void this.processQueue();
     }
 
     dequeue(): PendingExtraction | undefined {

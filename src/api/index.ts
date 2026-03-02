@@ -35,7 +35,7 @@ export function buildApiHandler(config: LLMProvider) {
             return new OpenAiProvider(config);
         default: {
             const _exhaustive: never = providerType;
-            throw new Error(`Unknown provider type: ${_exhaustive}`);
+            throw new Error(`Unknown provider type: ${String(_exhaustive)}`);
         }
     }
 }

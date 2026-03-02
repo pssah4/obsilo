@@ -45,8 +45,8 @@ function safeReplacer(): (key: string, value: unknown) => unknown {
             // DOM node check
             if (typeof (value as Record<string, unknown>).nodeType === 'number') return '[DOMNode]';
             // Circular reference check
-            if (seen.has(value as object)) return '[Circular]';
-            seen.add(value as object);
+            if (seen.has(value)) return '[Circular]';
+            seen.add(value);
         }
         return value;
     };

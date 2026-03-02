@@ -56,7 +56,8 @@ export class ToolRepetitionDetector {
 
         // 2. Fuzzy search dedup: only for search tools
         if (SEARCH_TOOLS.has(toolName)) {
-            const queryText = String(input.query ?? input.pattern ?? '').toLowerCase();
+            const raw = input.query ?? input.pattern ?? '';
+            const queryText = (typeof raw === 'string' ? raw : '').toLowerCase();
             const queryTerms = new Set(queryText.split(/\s+/).filter((t) => t.length > 2));
 
             if (queryTerms.size > 0) {
@@ -93,8 +94,9 @@ export class ToolRepetitionDetector {
         iteration: number,
     ): void {
         const key = `${toolName}:${JSON.stringify(input)}`;
+        const rawQ = input.query ?? input.pattern ?? '';
         const queryText = SEARCH_TOOLS.has(toolName)
-            ? String(input.query ?? input.pattern ?? '').toLowerCase()
+            ? (typeof rawQ === 'string' ? rawQ : '').toLowerCase()
             : '';
         const queryTerms = new Set(queryText.split(/\s+/).filter((t) => t.length > 2));
 

@@ -2111,13 +2111,13 @@ export class AgentSidebarView extends ItemView {
         menu.addItem((item) => {
             item.setTitle(t('ui.menu.forceReindex'));
             item.setIcon('database');
-            item.onClick(async () => {
+            item.onClick(() => {
                 if (!this.plugin.semanticIndex) { new Notice(t('notice.semanticDisabled')); return; }
                 if (this.plugin.semanticIndex.building) { new Notice(t('notice.indexingInProgress')); return; }
                 new Notice(t('notice.reindexingVault'));
                 this.plugin.semanticIndex.buildIndex(undefined, true).then(() =>
                     new Notice(t('notice.vaultIndexRebuilt'))
-                ).catch((e) => new Notice(t('notice.reindexFailed', { error: e.message })));
+                ).catch((e: Error) => new Notice(t('notice.reindexFailed', { error: e.message })));
             });
         });
 

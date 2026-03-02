@@ -42,7 +42,7 @@ export class EmbeddingsTab {
         const footer = containerEl.createDiv('model-table-footer');
         const addBtn = footer.createEl('button', { cls: 'mod-cta model-add-btn', text: t('settings.embeddings.addModel') });
         addBtn.addEventListener('click', () => {
-            new ModelConfigModal(this.app, null, async (newModel) => {
+            new ModelConfigModal(this.app, null, (newModel) => { void (async () => {
                 const key = getModelKey(newModel);
                 if ((this.plugin.settings.embeddingModels ?? []).some((m) => getModelKey(m) === key)) {
                     new Notice(t('settings.embeddings.alreadyExists', { name: newModel.name }));
@@ -55,7 +55,7 @@ export class EmbeddingsTab {
                 }
                 await this.plugin.saveSettings();
                 this.rerender();
-            }, true /* forEmbedding */).open();
+            })(); }, true /* forEmbedding */).open();
         });
 
         // ── Semantic Index ────────────────────────────────────────────────────
@@ -368,7 +368,7 @@ export class EmbeddingsTab {
 
         // Folder suggest dropdown
         const suggest = new FolderInputSuggest(this.app, folderInput, excludedFolders);
-        suggest.onPick = async (folderPath: string) => {
+        suggest.onPick = (folderPath: string) => { void (async () => {
             if (!this.plugin.settings.semanticExcludedFolders) this.plugin.settings.semanticExcludedFolders = [];
             if (!this.plugin.settings.semanticExcludedFolders.includes(folderPath)) {
                 this.plugin.settings.semanticExcludedFolders.push(folderPath);
@@ -377,7 +377,7 @@ export class EmbeddingsTab {
                 renderExcludedList();
             }
             folderInput.value = '';
-        };
+        })(); };
 
         folderInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
@@ -440,7 +440,7 @@ export class EmbeddingsTab {
         const configBtn = actionsEl.createEl('button', { cls: 'mc-action-btn', attr: { title: t('settings.embeddings.configureModel') } });
         setIcon(configBtn, 'settings');
         configBtn.addEventListener('click', () => {
-            new ModelConfigModal(this.app, { ...model }, async (updated) => {
+            new ModelConfigModal(this.app, { ...model }, (updated) => { void (async () => {
                 const idx = (this.plugin.settings.embeddingModels ?? []).findIndex((m) => getModelKey(m) === key);
                 if (idx !== -1) this.plugin.settings.embeddingModels[idx] = updated;
                 if (this.plugin.settings.activeEmbeddingModelKey === key) {
@@ -448,7 +448,7 @@ export class EmbeddingsTab {
                 }
                 await this.plugin.saveSettings();
                 this.rerender();
-            }, true /* forEmbedding */).open();
+            })(); }, true /* forEmbedding */).open();
         });
 
         const delBtn = actionsEl.createEl('button', { cls: 'mc-action-btn mc-action-del', attr: { title: t('settings.embeddings.removeModel') } });

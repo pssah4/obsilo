@@ -364,7 +364,7 @@ export class BackupTab {
                 }
 
                 _importToggles = {};
-                for (const catId of Object.keys(_pendingImport!.categories)) {
+                for (const catId of Object.keys(_pendingImport.categories)) {
                     _importToggles[catId] = true;
                 }
 

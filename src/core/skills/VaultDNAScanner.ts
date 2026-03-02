@@ -64,7 +64,7 @@ export class VaultDNAScanner {
 
         // Delayed reclassification: some plugins register commands late.
         // Re-check NONE-classified enabled plugins after 3s.
-        setTimeout(() => this.reclassifyNonePlugins(), 3000);
+        setTimeout(() => { void this.reclassifyNonePlugins(); }, 3000);
 
         // Start continuous sync polling
         this.startSync();
@@ -804,7 +804,7 @@ export class VaultDNAScanner {
     startSync(): void {
         const enabledPlugins = this.app.plugins?.enabledPlugins;
         this.lastKnownEnabledSet = new Set(enabledPlugins ?? []);
-        this.pollIntervalId = setInterval(() => this.checkForChanges(), 5000);
+        this.pollIntervalId = setInterval(() => { void this.checkForChanges(); }, 5000);
     }
 
     stopSync(): void {

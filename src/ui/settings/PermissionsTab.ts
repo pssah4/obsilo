@@ -1,4 +1,4 @@
-import { App, Setting, setIcon } from 'obsidian';
+import { App, Modal, Setting, setIcon } from 'obsidian';
 import type ObsidianAgentPlugin from '../../main';
 import { t } from '../../i18n';
 
@@ -192,7 +192,7 @@ export class PermissionsTab {
      */
     private confirmHighRisk(title: string, message: string): Promise<boolean> {
         return new Promise((resolve) => {
-            const modal = new (class extends (require('obsidian') as typeof import('obsidian')).Modal {
+            const modal = new (class extends Modal {
                 onOpen(): void {
                     const { contentEl } = this;
                     contentEl.createEl('h3', { text: title });
