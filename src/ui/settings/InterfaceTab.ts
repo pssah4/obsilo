@@ -1,4 +1,4 @@
-import { App, Notice, Setting, setIcon } from 'obsidian';
+import { App, Notice, Setting } from 'obsidian';
 import type ObsidianAgentPlugin from '../../main';
 import { OnboardingService } from '../../core/memory/OnboardingService';
 import { t } from '../../i18n';

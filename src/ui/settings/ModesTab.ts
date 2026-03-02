@@ -6,10 +6,8 @@ import { BUILT_IN_MODES } from '../../core/modes/builtinModes';
 import { buildSystemPromptForMode } from '../../core/systemPrompt';
 import { GlobalModeStore } from '../../core/modes/GlobalModeStore';
 import { TOOL_LABEL_MAP, TOOL_GROUP_META } from './constants';
-import { ContentEditorModal } from './ContentEditorModal';
 import { SystemPromptPreviewModal } from './SystemPromptPreviewModal';
 import { NewModeModal } from './NewModeModal';
-import { addInfoButton } from './utils';
 import { t } from '../../i18n';
 import type { ModeService } from '../../core/modes/ModeService';
 
@@ -292,8 +290,6 @@ export class ModesTab {
                         }
 
                         toolCb.addEventListener('change', () => {
-                            // Compute new override for this mode
-                            const allGroupTools = meta.tools;
                             // Start from current override or all tools in all groups
                             let allActiveTools: string[] = this.plugin.settings.modeToolOverrides?.[slug]
                                 ?? this.modeService?.getToolNames(mode) ?? [];

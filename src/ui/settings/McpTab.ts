@@ -1,7 +1,5 @@
-import { App, Modal, Notice, Setting, setIcon } from 'obsidian';
+import { App, Modal, setIcon } from 'obsidian';
 import type ObsidianAgentPlugin from '../../main';
-import { ContentEditorModal } from './ContentEditorModal';
-import type { McpServerConfig } from '../../types/settings';
 import { t } from '../../i18n';
 
 export class McpTab {

@@ -1,4 +1,4 @@
-import { App, Notice, Setting, setIcon } from 'obsidian';
+import { App, Notice, setIcon } from 'obsidian';
 import type ObsidianAgentPlugin from '../../main';
 import { ContentEditorModal } from './ContentEditorModal';
 import { RulesLoader } from '../../core/context/RulesLoader';

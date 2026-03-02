@@ -2,7 +2,7 @@ import { App, Notice, Setting, setIcon, TFolder, AbstractInputSuggest, ButtonCom
 import type ObsidianAgentPlugin from '../../main';
 import { ModelConfigModal } from './ModelConfigModal';
 import { addInfoButton } from './utils';
-import { EMBEDDING_SUGGESTIONS, PROVIDER_LABELS, PROVIDER_COLORS } from './constants';
+import { PROVIDER_LABELS, PROVIDER_COLORS } from './constants';
 import type { CustomModel } from '../../types/settings';
 import { getModelKey } from '../../types/settings';
 import type { SemanticIndexService } from '../../core/semantic/SemanticIndexService';
