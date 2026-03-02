@@ -10,7 +10,6 @@ import type ObsidianAgentPlugin from '../../main';
 import type {
     ToolName,
     ToolDefinition,
-    ToolCallbacks,
     ToolExecutionContext,
 } from './types';
 
