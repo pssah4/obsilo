@@ -253,3 +253,325 @@ Identisch zum bestehenden postMessage-Protokoll in `SandboxExecutor.ts` / `sandb
 3. **Worker hat Node.js:** Der Kindprozess hat vollen Node.js-Zugriff. AstValidator + new Function() als Defense-in-Depth.
 4. **Permission Model:** Node.js `--permission` Flags erst ab Node 23.5. Obsidian liefert aktuell Node 20-22.
 5. **Separater Build-Output:** sandbox-worker.js muss neben main.js deployed werden. Erhoet Deployment-Komplexitaet.
+
+---
+
+## 9. Konkrete Bedrohungsszenarien
+
+### 9.1 Was iframe-Sandbox NICHT blocken kann
+
+Die iframe-Sandbox bietet **V8-Origin-Isolation** (logische Grenze im gleichen Prozess), aber **KEINE OS-Level-Isolation**. Folgende Angriffe sind theoretisch moeglich:
+
+#### A. Memory-Disclosure via Side-Channel (Spectre/Meltdown)
+
+**Angriff:** Code misst Timing-Unterschiede beim Speicherzugriff, um Speicher des Parent-Prozesses auszulesen.
+
+**iframe-Sandbox:** ✗ Blockiert NICHT (shared address space)
+**child_process.fork:** ✓ Blockiert (eigener Heap, keine shared memory)
+
+**Realistisch:** Sehr gering. Erfordert V8-JIT-Optimierungen + Browser-spezifische Implementierungsdetails.
+
+#### B. CPU-Denial-of-Service (Endlosschleife)
+
+**Angriff:** `while(true) {}` blockiert den Event Loop.
+
+**iframe-Sandbox:** ✗ Teilt Event Loop mit Plugin/Obsidian (kann UI einfrieren)
+**child_process.fork:** ✓ Eigener Event Loop (Plugin unbeeintraechtigt)
+
+**Realistisch:** Hoch. Wird durch Timeout (30s) begrenzt, aber UI bleibt bis Timeout reaktionslos.
+
+#### C. V8 Use-After-Free Exploit
+
+**Angriff:** Schwachstelle in V8 Engine (CVE-2024-XXXXX) erlaubt Arbitrary Code Execution.
+
+**iframe-Sandbox:** ✗ Exploit kann aus Sandbox ausbrechen -> Node.js-Zugriff
+**child_process.fork:** ✓ Exploit crasht nur Worker-Prozess, Plugin laeuft weiter
+
+**Realistisch:** Gering. Erfordert 0-Day in V8, aber Chromium-Exploits existieren.
+
+#### D. Shai Hulud Szenario (Self-Replicating Malware)
+
+**Angriff:** Code schreibt sich selbst in `.obsidian/plugins/malicious-plugin/main.js`, wird beim naechsten Start geladen.
+
+**iframe-Sandbox:** ✗ ctx.vault.write() ist erlaubt -> Persistenz moeglich
+**child_process.fork:** ✗ ctx.vault.write() ebenfalls erlaubt -> Persistenz moeglich
+
+**Realistisch:** Mittel. **Beide Sandboxes bieten keinen Schutz gegen Persistenz via Vault-Write**. Mitigation:
+- SandboxBridge validiert Pfade (blockt `.obsidian/plugins/*`)
+- User Approval erforderlich fuer jede Execution
+- Audit Trail loggt alle Vault-Writes
+
+**WICHTIG:** OS-Level-Isolation schuetzt NICHT gegen Vault-Manipulation, da `ctx.vault` absichtlich Zugriff gewaehrt. Die Sicherheit haengt von SandboxBridge-Validierung + User Approval ab.
+
+### 9.2 Defense-in-Depth Zusammenfassung
+
+| Bedrohung | iframe | child_process.fork | Mitigation |
+|-----------|--------|-------------------|------------|
+| Spectre/Meltdown | ✗ | ✓ | OS-Prozess-Grenze |
+| CPU-DoS | ✗ | ✓ | Eigener Event Loop + Timeout |
+| V8-Exploit | ✗ | ✓ | Crash-Isolation |
+| Vault-Persistenz | ✗ | ✗ | SandboxBridge Pfad-Validierung + User Approval |
+
+---
+
+## 10. User-facing Kommunikation
+
+### 10.1 Permission-Text Guidance
+
+**Problem:** User muessen verstehen, was sie genehmigen und welche Risiken bestehen.
+
+**Loesung:** Klare, mehrstufige Kommunikation:
+
+#### Stufe 1: Tool-Label (kurz)
+```
+Execute Code
+```
+
+#### Stufe 2: Tool-Description (technisch korrekt)
+```
+Execute JavaScript/TypeScript code in a sandboxed environment.
+Provides ctx.vault (full read/write/delete access to all vault files)
+and ctx.requestUrl (HTTP requests).
+```
+
+#### Stufe 3: When-to-Use (mit Sicherheitshinweis)
+```
+For one-off computations or binary file generation.
+IMPORTANT: Code runs with full vault access and internet access.
+The sandbox provides isolation via iframe (same-origin policy, CSP),
+but is NOT OS-level process isolation.
+Only execute code you understand.
+```
+
+#### Stufe 4: Common-Mistakes (Security-Warnung)
+```
+SECURITY: Never execute untrusted code or code from external sources
+without review.
+```
+
+### 10.2 Approval-Dialog-Text (UI)
+
+**Aktueller Text:**
+> "Evaluate (Sandbox) - sandbox nicht aktiviert"
+
+**Verbesserter Text:**
+> **Code ausfuehren (JavaScript/TypeScript)**
+>
+> Der Agent moechte Code ausfuehren mit folgenden Zugriffen:
+> - ✓ Lesen/Schreiben/Loeschen aller Vault-Dateien
+> - ✓ HTTP-Anfragen an externe URLs
+>
+> Sicherheit:
+> - Code laeuft in isoliertem Prozess (Desktop) oder iframe (Mobile)
+> - Execution wird nach 30 Sekunden abgebrochen
+> - Alle Operationen werden im Audit-Log aufgezeichnet
+>
+> **Fuehren Sie nur Code aus, dessen Funktion Sie verstehen.**
+
+**Implementierung:** Erfordert Anpassung in `src/ui/approval/ApprovalModal.ts`.
+
+### 10.3 Settings-Beschreibung
+
+**Empfohlen fuer Settings > Permissions:**
+> **Code Execution (Sandbox)**
+>
+> Erlaubt dem Agent, JavaScript/TypeScript-Code auszufuehren (z.B. fuer PDF-Generierung oder Datenanalyse).
+>
+> - Desktop: Code laeuft in separatem OS-Prozess (sichere Isolation)
+> - Mobile: Code laeuft in iframe-Sandbox (V8-Origin-Isolation)
+>
+> Code hat Zugriff auf:
+> - Alle Dateien im Vault (lesen, schreiben, loeschen)
+> - HTTP-Anfragen (konfigurierbare URL-Allowlist)
+>
+> **Empfehlung:** Nur aktivieren, wenn Sie die Funktionsweise verstehen.
+
+---
+
+## 11. Rollback-Strategie
+
+### 11.1 Szenarien fuer Rollback
+
+1. **First-Spawn-Latenz inakzeptabel:** >5s auf User-Systemen
+2. **Worker-Crash-Loop:** Kind-Prozess crashed bei jedem Start (3x Retry-Limit erreicht)
+3. **IPC-Deadlock:** Race-Condition zwischen Parent/Worker
+4. **Review-Bot-Ablehnung:** Community Plugin Review lehnt child_process ab
+
+### 11.2 Rollback-Mechanismus
+
+**A. Feature-Flag (empfohlen)**
+
+Neue Setting in `src/types/settings.ts`:
+
+```typescript
+export interface SandboxSettings {
+    mode: 'auto' | 'process' | 'iframe';
+    // 'auto': Platform.isDesktop ? process : iframe
+    // 'process': Force ProcessSandboxExecutor (Desktop-only)
+    // 'iframe': Force IframeSandboxExecutor (alle Platformen)
+}
+```
+
+Factory aendert sich zu:
+
+```typescript
+export function createSandboxExecutor(plugin: ObsidianAgentPlugin): ISandboxExecutor {
+    const mode = plugin.settings.sandbox.mode;
+    if (mode === 'iframe') return new IframeSandboxExecutor(plugin);
+    if (mode === 'process' && Platform.isDesktop) return new ProcessSandboxExecutor(plugin);
+    // auto:
+    if (Platform.isDesktop) return new ProcessSandboxExecutor(plugin);
+    return new IframeSandboxExecutor(plugin);
+}
+```
+
+User kann in Settings auf `mode: 'iframe'` umschalten, falls child_process Probleme macht.
+
+**B. Build-Zeit-Rollback (falls Review-Bot blockiert)**
+
+Kommentiere in `createSandboxExecutor.ts` aus:
+
+```typescript
+export function createSandboxExecutor(plugin: ObsidianAgentPlugin): ISandboxExecutor {
+    // ROLLBACK: child_process disabled due to review feedback
+    // if (Platform.isDesktop) return new ProcessSandboxExecutor(plugin);
+    return new IframeSandboxExecutor(plugin);
+}
+```
+
+Entferne `sandbox-worker.js` aus `esbuild.config.mjs` + Deploy-Script.
+
+**C. Monitoring-Trigger**
+
+OperationLogger erfasst:
+- Worker-Spawn-Zeit (first + subsequent)
+- Worker-Crash-Count
+- IPC-Timeout-Count
+
+Falls Worker-Crash-Rate >10% in 24h: Notice an User mit Empfehlung zu `mode: 'iframe'`.
+
+### 11.3 Rollback-Timeline
+
+| Phase | Action | Timeline |
+|-------|--------|----------|
+| 1. Detection | Monitoring erkennt Problem (Crash-Loop, Latenz >5s) | Immediate |
+| 2. User Notice | Settings-Notice empfiehlt Rollback | +1 Minute |
+| 3. User Action | User waehlt `mode: 'iframe'` in Settings | User-gesteuert |
+| 4. Fallback | Plugin nutzt IframeSandboxExecutor | Sofort nach Reload |
+| 5. Issue Filed | GitHub Issue mit Diagnostics | +1 Tag |
+| 6. Build Rollback | Falls nicht loesbar: Build-Zeit-Deaktivierung | Hotfix Release |
+
+---
+
+## 12. Performance-Benchmarks
+
+### 12.1 Messkriterien
+
+| Metrik | Ziel | Kritisch bei |
+|--------|------|--------------|
+| First-Spawn-Latenz | <1s | >3s |
+| Subsequent-Spawn-Latenz | <50ms | >500ms |
+| Execution-Overhead vs. iframe | <10% | >50% |
+| Memory-Overhead (Worker) | <50MB | >200MB |
+| IPC-Roundtrip-Latenz | <5ms | >50ms |
+
+### 12.2 Messverfahren
+
+**Test-Setup:**
+- macOS 14.x, Obsidian 1.7.7, M1 Pro
+- Vault: ~1000 Notizen, 10MB total
+- Code: `return 1+1` (minimal execution)
+
+**Messung:**
+
+```typescript
+// First-Spawn
+const start = Date.now();
+await executor.ensureReady();
+const firstSpawn = Date.now() - start;
+
+// Subsequent-Execution
+const execStart = Date.now();
+await executor.execute('return 1+1', {});
+const execTime = Date.now() - execStart;
+
+// Memory
+const workerPid = executor.getWorkerPid();
+const mem = process.memoryUsage.rss; // via IPC message
+```
+
+**Baseline (iframe-Sandbox):**
+- First-Spawn: ~5ms (srcdoc creation)
+- Execution: ~2ms
+- Memory: ~30MB (shared with Parent)
+
+**Ziel (child_process.fork):**
+- First-Spawn: <1000ms (acceptable for Keep-Alive)
+- Execution: <10ms (±5ms overhead)
+- Memory: <80MB (50MB Worker + 30MB Parent)
+
+### 12.3 Performance-Regression-Tests
+
+Neuer Test in `tests/sandbox/performance.test.ts`:
+
+```typescript
+test('ProcessSandboxExecutor meets latency targets', async () => {
+    const executor = new ProcessSandboxExecutor(plugin);
+    const start = Date.now();
+    await executor.ensureReady();
+    const firstSpawn = Date.now() - start;
+    expect(firstSpawn).toBeLessThan(3000); // Critical threshold
+
+    const execStart = Date.now();
+    await executor.execute('return 1+1', {});
+    const execTime = Date.now() - execStart;
+    expect(execTime).toBeLessThan(50); // Overhead target
+});
+```
+
+**CI-Integration:** Performance-Tests laufen auf jeder PR. Warnung bei Regression >20%.
+
+---
+
+## 13. Migration & Testing
+
+### 13.1 Migrations-Pfad
+
+**Phase 1: Vorbereitung**
+- ISandboxExecutor Interface erstellen
+- IframeSandboxExecutor (Rename von SandboxExecutor)
+- Factory mit Feature-Flag (`mode: 'auto'`)
+
+**Phase 2: ProcessSandboxExecutor**
+- sandbox-worker.ts implementieren
+- ProcessSandboxExecutor implementieren
+- Build-Konfiguration (zweiter Entry Point)
+
+**Phase 3: Testing**
+- Unit-Tests (beide Executors)
+- Integration-Tests (DynamicToolFactory, CodeModuleCompiler)
+- Performance-Tests (Latenz, Memory)
+
+**Phase 4: Rollout**
+- Beta-Release mit `mode: 'auto'`
+- Monitoring aktivieren (OperationLogger)
+- 2 Wochen Feedback-Phase
+
+**Phase 5: Stabilisierung**
+- Falls Probleme: Rollback via `mode: 'iframe'`
+- Sonst: Default bleibt `mode: 'auto'`
+
+### 13.2 Test-Matrix
+
+| Test | IframeSandboxExecutor | ProcessSandboxExecutor |
+|------|----------------------|------------------------|
+| Basic Execution | ✓ | ✓ |
+| ctx.vault.read() | ✓ | ✓ |
+| ctx.vault.write() | ✓ | ✓ |
+| ctx.vault.writeBinary() | ✓ | ✓ |
+| ctx.requestUrl() | ✓ | ✓ |
+| Dependencies (npm) | ✓ | ✓ |
+| Timeout (30s) | ✓ | ✓ |
+| Worker-Crash-Recovery | N/A | ✓ |
+| Plugin-Unload-Cleanup | ✓ | ✓ |
+| Performance (<1s First-Spawn) | ✓ | ✓ |

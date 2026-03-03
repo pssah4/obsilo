@@ -16,6 +16,9 @@ import { HistoryPanel } from './sidebar/HistoryPanel';
 import type { UiMessage } from '../core/history/ConversationStore';
 import { MemoryRetriever } from '../core/memory/MemoryRetriever';
 import { OnboardingService } from '../core/memory/OnboardingService';
+import { ContextTracker } from '../core/context/ContextTracker';
+import { ContextDisplay } from './sidebar/ContextDisplay';
+import { CondensationFeedback } from './sidebar/CondensationFeedback';
 import { t } from '../i18n';
 
 export const VIEW_TYPE_AGENT_SIDEBAR = 'obsidian-agent-sidebar';
@@ -76,6 +79,10 @@ export class AgentSidebarView extends ItemView {
     private autocomplete!: AutocompleteHandler;
     /** Vault file picker popover (@ button) */
     private vaultFilePicker!: VaultFilePicker;
+    /** Context tracking for condensing */
+    private contextTracker: ContextTracker | null = null;
+    /** Context window visualization */
+    private contextDisplay: ContextDisplay | null = null;
 
     constructor(leaf: WorkspaceLeaf, plugin: ObsidianAgentPlugin) {
         super(leaf);
@@ -107,6 +114,27 @@ export class AgentSidebarView extends ItemView {
         const container = this.containerEl.children[1] as HTMLElement;
         container.empty();
         container.addClass('obsidian-agent-sidebar');
+
+        // Initialize context tracker with current model's context window
+        try {
+            const currentModeSlug = this.modeService.getActiveMode().slug;
+            const modeModelKey = this.resolveEnabledModelKey(currentModeSlug);
+            const resolvedModel = this.plugin.settings.activeModels.find((m) => getModelKey(m) === modeModelKey);
+
+            if (resolvedModel) {
+                const apiHandler = buildApiHandlerForModel(resolvedModel);
+                const model = apiHandler.getModel();
+                const contextWindow = model?.info?.contextWindow ?? 200_000;
+                const maxTokens = resolvedModel?.maxTokens;
+                this.contextTracker = new ContextTracker(contextWindow, maxTokens);
+            } else {
+                // Fallback if no model is configured
+                this.contextTracker = new ContextTracker(200_000, 8192);
+            }
+        } catch (e) {
+            console.debug('[AgentSidebarView] Failed to initialize context tracker:', e);
+            this.contextTracker = new ContextTracker(200_000, 8192);
+        }
 
         this.buildHeader(container);
         this.buildChatContainer(container);
@@ -179,6 +207,7 @@ export class AgentSidebarView extends ItemView {
     private buildChatContainer(container: HTMLElement): void {
         // Chat container is wrapped in a relative parent so the history panel can overlay it
         const chatWrapper = container.createDiv('chat-wrapper');
+
         this.chatContainer = chatWrapper.createDiv('chat-messages');
 
         // History panel (absolute overlay inside the wrapper)
@@ -412,6 +441,22 @@ export class AgentSidebarView extends ItemView {
         (this.modelButton as HTMLButtonElement).title = hasModeOverride
             ? t('ui.sidebar.modeOverride', { label })
             : label;
+
+        // Update context tracker when model changes
+        if (this.contextTracker && model) {
+            try {
+                const apiHandler = buildApiHandlerForModel(model);
+                const modelInfo = apiHandler?.getModel().info;
+                if (modelInfo?.contextWindow) {
+                    this.contextTracker.updateContextWindow(
+                        modelInfo.contextWindow,
+                        model.maxTokens
+                    );
+                }
+            } catch (e) {
+                console.debug('[AgentSidebarView] Failed to update context window for model change:', e);
+            }
+        }
     }
 
     private showModelMenu(event: MouseEvent): void {
@@ -938,6 +983,7 @@ export class AgentSidebarView extends ItemView {
         // Track user UI message for history persistence (skip for hidden messages)
         if (!isHidden) {
             this.uiMessages.push({ role: 'user', text, ts: new Date().toISOString() });
+
         }
 
         // Snapshot attachments, clear the chip bar, render user bubble with previews
@@ -1059,6 +1105,23 @@ export class AgentSidebarView extends ItemView {
             requestAnimationFrame(() => { scrollPending = false; this.chatContainer?.scrollTo({ top: this.chatContainer.scrollHeight }); });
         };
 
+        // Debounced tool group label updates: batches rapid DOM updates during
+        // parallel tool execution to reduce flicker and reflows.
+        let groupUpdatePending = false;
+        const pendingGroupUpdates = new Set<{ nameEl: HTMLElement; name: string; count: number }>();
+        const scheduleGroupUpdate = (group: { nameEl: HTMLElement; name: string; count: number }) => {
+            pendingGroupUpdates.add(group);
+            if (groupUpdatePending) return;
+            groupUpdatePending = true;
+            requestAnimationFrame(() => {
+                groupUpdatePending = false;
+                for (const g of pendingGroupUpdates) {
+                    g.nameEl.setText(this.formatGroupedLabel(g.name, g.count));
+                }
+                pendingGroupUpdates.clear();
+            });
+        };
+
         // Map for O(1) tool-element lookup in onToolResult.
         // For groupable tools the values are item divs; for others they are details elements.
         const toolElsByName = new Map<string, HTMLElement[]>();
@@ -1135,6 +1198,18 @@ export class AgentSidebarView extends ItemView {
         let taskWriteCount = 0;
         let hasRenderedCheckpoints = false;
         let lastTodoItems: import('../core/tools/agent/UpdateTodoListTool').TodoItem[] = [];
+
+        // Initialize context tracker for this conversation turn (only if not exists)
+        const model = resolvedApiHandler.getModel();
+        const contextWindow = model?.info?.contextWindow ?? 200_000;
+        const maxTokens = resolvedModel?.maxTokens;
+
+        if (!this.contextTracker) {
+            this.contextTracker = new ContextTracker(contextWindow, maxTokens);
+        } else {
+            // Update existing tracker with current model's context window
+            this.contextTracker.updateContextWindow(contextWindow, maxTokens);
+        }
 
         const task = new AgentTask(
             resolvedApiHandler,
@@ -1250,7 +1325,7 @@ export class AgentSidebarView extends ItemView {
                         } else {
                             // Group already exists — update count and reset status
                             activeToolGroup.count++;
-                            activeToolGroup.nameEl.setText(this.formatGroupedLabel(name, activeToolGroup.count));
+                            scheduleGroupUpdate(activeToolGroup);
                             activeToolGroup.statusEl.removeClass('tool-done', 'tool-error');
                             activeToolGroup.statusEl.addClass('tool-running');
                             activeToolGroup.statusEl.setText('');
@@ -1391,17 +1466,40 @@ export class AgentSidebarView extends ItemView {
                     }
                     footerEl.setText(text);
                     footerEl.classList.remove('agent-u-hidden');
+
+                    // Update context tracker for condensing
+                    if (this.contextTracker) {
+                        this.contextTracker.updateUsage(inputTokens, outputTokens);
+                    }
                 },
                 onTodoUpdate: (items) => {
                     lastTodoItems = items;
                     this.renderTodoBox(toolsEl, items);
                 },
-                onContextCondensed: () => {
-                    // Show a subtle badge in the footer to indicate condensing happened
-                    if (footerEl) {
+                onContextCondensed: (prevTokens?: number, newTokens?: number) => {
+                    // Show condensation feedback with token reduction
+                    if (footerEl && prevTokens !== undefined && newTokens !== undefined) {
+                        const feedback = new CondensationFeedback();
+                        feedback.show(footerEl, {
+                            prevTokens,
+                            newTokens,
+                        });
+                        footerEl.classList.remove('agent-u-hidden');
+                    } else if (footerEl) {
+                        // Fallback: show simple badge if token counts not available
                         const badge = footerEl.createSpan('context-condensed-badge');
                         badge.setText(t('ui.sidebar.contextCondensed'));
                         footerEl.classList.remove('agent-u-hidden');
+                    }
+
+                    // Update context tracker with new token count after condensing
+                    if (this.contextTracker && newTokens !== undefined) {
+                        this.contextTracker.setTotalTokens(newTokens);
+                        if (this.contextDisplay) {
+                            const usage = this.contextTracker.getContextUsage();
+                            const color = this.contextTracker.getContextColor();
+                            this.contextDisplay.update(usage, color);
+                        }
                     }
                 },
                 onModeSwitch: (newModeSlug) => {
@@ -1471,7 +1569,7 @@ export class AgentSidebarView extends ItemView {
                     this.showQuestionCard(question, options, wrappedResolve, allowMultiple);
                 },
                 onApprovalRequired: async (toolName, input) => {
-                    return this.showApprovalCard(toolName, input, toolsEl);
+                    return this.showApprovalCard(toolName, input);
                 },
                 onAttemptCompletion: () => {
                     // Auto-complete any unfinished todo items — agent often skips
@@ -1785,6 +1883,33 @@ export class AgentSidebarView extends ItemView {
             selfAuthoredSkillsSection,
             configDir: this.app.vault.configDir,
         });
+    }
+
+    /**
+     * Trigger manual context condensing
+     */
+    private async triggerManualCondensing(): Promise<void> {
+        if (!this.contextTracker) {
+            new Notice('Context tracker not initialized');
+            return;
+        }
+
+        const usage = this.contextTracker.getContextUsage();
+        const percentage = usage.maxTokens > 0 ? (usage.tokensUsed / usage.maxTokens) * 100 : 0;
+
+        if (percentage < 60) {
+            new Notice('Context usage is below 60%. Condensing not needed yet.');
+            return;
+        }
+
+        new Notice('Manual context condensing is not yet fully implemented. Please use automatic condensing.');
+        // TODO: Implement manual condensing trigger
+        // This requires either:
+        // 1. Storing reference to current AgentTask
+        // 2. Implementing condensing via separate API call
+        // 3. Using event system to trigger condensing
+        //
+        // For now, automatic condensing at 65% threshold is active.
     }
 
     /**
@@ -2680,13 +2805,13 @@ export class AgentSidebarView extends ItemView {
     private async showApprovalCard(
         toolName: string,
         input: Record<string, unknown>,
-        container?: HTMLElement,
     ): Promise<import('../core/tool-execution/ToolExecutionPipeline').ApprovalResult> {
         // All tools use the same inline approval card during execution.
+        // Approvals are always rendered in chatContainer (not toolsEl) to ensure visibility
+        // even when .agent-steps-block is collapsed.
         // Post-task DiffReviewModal is shown in onComplete for collected review.
         return new Promise((resolve) => {
-            const target = container ?? this.chatContainer;
-            if (!target) { resolve({ decision: 'approved' }); return; }
+            if (!this.chatContainer) { resolve({ decision: 'approved' }); return; }
 
             const group = this.getToolGroup(toolName);
             const groupLabels: Record<string, string> = {
@@ -2697,8 +2822,8 @@ export class AgentSidebarView extends ItemView {
                 'plugin-api': t('ui.approval.pluginApi'), recipe: t('ui.approval.recipes'),
             };
 
-            // Compact inline row — appears within the tool call area
-            const row = target.createDiv('tool-approval-row');
+            // Always render in chatContainer (like Question-Cards)
+            const row = this.chatContainer.createDiv('tool-approval-row');
             const iconSpan = row.createSpan('tool-approval-icon');
             setIcon(iconSpan, 'shield-alert');
             row.createSpan('tool-approval-text').setText(
@@ -3092,5 +3217,14 @@ export class AgentSidebarView extends ItemView {
             })();
         });
         this.chatContainer.scrollTo({ top: this.chatContainer.scrollHeight });
+    }
+
+    /**
+     * Format token count for display (e.g., 1500 → 1.5k, 1500000 → 1.5M)
+     */
+    private formatTokens(num: number): string {
+        if (num >= 1_000_000) return (num / 1_000_000).toFixed(1) + 'M';
+        if (num >= 1_000) return (num / 1_000).toFixed(1) + 'k';
+        return num.toString();
     }
 }

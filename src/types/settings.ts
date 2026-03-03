@@ -488,6 +488,8 @@ export interface ObsidianAgentSettings {
     sendWithEnter: boolean;
     /** Inject current date and time into the system prompt */
     includeCurrentTimeInContext: boolean;
+    /** Display context window usage progress bar in sidebar (restart sidebar to apply) */
+    showContextProgress: boolean;
 
     // Rules (Sprint 3.2) — per-file enabled/disabled toggles
     // key: vault-relative path, value: true=enabled (default), false=disabled
@@ -694,6 +696,7 @@ export const DEFAULT_SETTINGS: ObsidianAgentSettings = {
     autoAddActiveFileContext: true,
     sendWithEnter: true,
     includeCurrentTimeInContext: true,
+    showContextProgress: false,
     rulesToggles: {},
     workflowToggles: {},
     manualSkillToggles: {},

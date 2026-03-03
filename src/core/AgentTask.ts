@@ -47,8 +47,8 @@ export interface AgentTaskCallbacks {
     onTodoUpdate?: (items: import('./tools/agent/UpdateTodoListTool').TodoItem[]) => void;
     /** Called when switch_mode changes the active mode */
     onModeSwitch?: (newModeSlug: string) => void;
-    /** Called when the conversation history was condensed (context summarized) */
-    onContextCondensed?: () => void;
+    /** Called when the conversation history was condensed (context summarized) - includes token counts before/after */
+    onContextCondensed?: (prevTokens?: number, newTokens?: number) => void;
     /** Called when a checkpoint is saved before a write tool */
     onCheckpoint?: (checkpoint: import('./checkpoints/GitCheckpointService').CheckpointInfo) => void;
     /** Called just before onComplete with tool execution data for episodic memory (ADR-018) */
@@ -115,7 +115,7 @@ export class AgentTask {
         consecutiveMistakeLimit = 0,
         rateLimitMs = 0,
         condensingEnabled = true,
-        condensingThreshold = 80,
+        condensingThreshold = 65,  // Was 80% - lowered for more safety
         powerSteeringFrequency = 0,
         maxIterations = 25,
         depth = 0,
@@ -233,7 +233,12 @@ export class AgentTask {
                     onComplete: () => { /* handled via Promise resolution */ },
                     onError: (err) => { throw err; },
                     onUsage: (i, o, cr, cc) => {
-                        // Forward subtask token usage to parent for accurate cost tracking
+                        // Akkumuliere Subtask-Tokens in Parent-Totals
+                        totalInputTokens += i;
+                        totalOutputTokens += o;
+                        totalCacheReadTokens += cr ?? 0;
+                        totalCacheCreationTokens += cc ?? 0;
+                        // Forward für UI-Update (wird später vom Parent-Final-Call überschrieben)
                         this.taskCallbacks.onUsage?.(i, o, cr, cc);
                     },
                     // K-1: Forward parent approval callback so subtask write ops are not
@@ -430,10 +435,35 @@ export class AgentTask {
                                 console.warn('[AgentTask] Pre-compaction flush failed (non-fatal):', e)
                             );
                             await this.condenseHistory(history, systemPrompt, abortSignal, repetitionDetector.getLedger());
-                            this.taskCallbacks.onContextCondensed?.();
+                            // onContextCondensed is called inside condenseHistory with token counts
+
+                            // Validierung: Falls immer noch über Threshold, zweite Runde
+                            let condensingRetries = 0;
+                            const MAX_CONDENSING_RETRIES = 2;
+
+                            while (condensingRetries < MAX_CONDENSING_RETRIES) {
+                                const postTokens = this.estimateTokens(history);
+                                if (postTokens <= threshold) break;
+
+                                console.warn(
+                                    `[AgentTask] Still over threshold after condensing (${postTokens} > ${threshold}). ` +
+                                    `Retry ${condensingRetries + 1}/${MAX_CONDENSING_RETRIES}`
+                                );
+
+                                await this.condenseHistory(history, systemPrompt, abortSignal, repetitionDetector.getLedger());
+                                // onContextCondensed is called inside condenseHistory with token counts
+                                condensingRetries++;
+                            }
+
+                            if (condensingRetries > 0) {
+                                console.debug(`[AgentTask] Required ${condensingRetries + 1} condensing passes to stay under threshold`);
+                            }
+
+                            // CHANGE: Continue loop after condensing instead of breaking
+                            continue;
                         }
                     }
-                    break;
+                    break;  // Only break if NO condensing was needed
                 }
 
                 // Tools that are safe to execute in parallel (pure reads, no side-effects).
@@ -579,7 +609,29 @@ export class AgentTask {
                             console.warn('[AgentTask] Pre-compaction flush failed (non-fatal):', e)
                         );
                         await this.condenseHistory(history, systemPrompt, abortSignal, repetitionDetector.getLedger());
-                        this.taskCallbacks.onContextCondensed?.();
+                        // onContextCondensed is called inside condenseHistory with token counts
+
+                        // Validierung: Falls immer noch über Threshold, zweite Runde
+                        let condensingRetries = 0;
+                        const MAX_CONDENSING_RETRIES = 2;
+
+                        while (condensingRetries < MAX_CONDENSING_RETRIES) {
+                            const postTokens = this.estimateTokens(history);
+                            if (postTokens <= threshold) break;
+
+                            console.warn(
+                                `[AgentTask] Still over threshold after condensing (${postTokens} > ${threshold}). ` +
+                                `Retry ${condensingRetries + 1}/${MAX_CONDENSING_RETRIES}`
+                            );
+
+                            await this.condenseHistory(history, systemPrompt, abortSignal, repetitionDetector.getLedger());
+                            // onContextCondensed is called inside condenseHistory with token counts
+                            condensingRetries++;
+                        }
+
+                        if (condensingRetries > 0) {
+                            console.debug(`[AgentTask] Required ${condensingRetries + 1} condensing passes to stay under threshold`);
+                        }
                     }
                 }
 
@@ -691,7 +743,7 @@ export class AgentTask {
                 console.warn('[AgentTask] Context overflow detected — attempting emergency condensing');
                 try {
                     await this.condenseHistory(history, cachedSystemPrompt, abortSignal);
-                    this.taskCallbacks.onContextCondensed?.();
+                    // onContextCondensed is called inside condenseHistory with token counts
                     this.taskCallbacks.onError(new Error(
                         'Context was too large. The conversation has been condensed — please resend your last message.',
                     ));
@@ -721,18 +773,39 @@ export class AgentTask {
     // Context Condensing helpers
     // -------------------------------------------------------------------------
 
-    /** Rough token estimate: ~4 chars per token (adequate for threshold checks). */
+    /**
+     * Improved token estimate that accounts for structured content blocks.
+     * ~4 chars/token for text, +150 for tool_use overhead, +50 for tool_result overhead.
+     */
     private estimateTokens(messages: MessageParam[]): number {
         let count = 0;
         for (const m of messages) {
-            const content = Array.isArray(m.content)
-                ? m.content.map((b) => {
-                    if ('text' in b && typeof b.text === 'string') return b.text;
-                    if ('content' in b && typeof b.content === 'string') return b.content;
-                    return '';
-                }).join('')
-                : typeof m.content === 'string' ? m.content : '';
-            count += Math.ceil(content.length / 4);
+            if (Array.isArray(m.content)) {
+                for (const block of m.content) {
+                    if (block.type === 'text' && 'text' in block && typeof block.text === 'string') {
+                        count += Math.ceil(block.text.length / 4);
+                    } else if (block.type === 'tool_use') {
+                        // tool_use overhead: id, name, type fields ~150 tokens
+                        count += 150;
+                        // input JSON payload
+                        if ('input' in block && block.input) {
+                            count += Math.ceil(JSON.stringify(block.input).length / 4);
+                        }
+                    } else if (block.type === 'tool_result') {
+                        // tool_result overhead: tool_use_id, type, is_error ~50 tokens
+                        count += 50;
+                        // content payload
+                        if ('content' in block && typeof block.content === 'string') {
+                            count += Math.ceil(block.content.length / 4);
+                        }
+                    } else if (block.type === 'image') {
+                        // Image tokens (flat estimate)
+                        count += 1000;
+                    }
+                }
+            } else if (typeof m.content === 'string') {
+                count += Math.ceil(m.content.length / 4);
+            }
         }
         return count;
     }
@@ -764,8 +837,42 @@ export class AgentTask {
         if (history.length < 7) return;
 
         const firstMsg = history[0];
-        const tail = history.slice(-4);
-        const toSummarize = history.slice(0, -4);
+
+        // Smart tail: collect messages from end until 10k tokens or min 2 messages
+        const MAX_TAIL_TOKENS = 10_000;
+        const MIN_TAIL_MESSAGES = 2;
+        const tail: MessageParam[] = [];
+        let tailTokens = 0;
+
+        for (let i = history.length - 1; i >= 0; i--) {
+            const msg = history[i];
+            const msgTokens = this.estimateTokens([msg]);
+
+            if (tail.length >= MIN_TAIL_MESSAGES && tailTokens + msgTokens > MAX_TAIL_TOKENS) {
+                break;
+            }
+
+            tail.unshift(msg);  // Prepend to maintain order
+            tailTokens += msgTokens;
+        }
+
+        // Guarantee min 2 messages (last user+assistant pair)
+        if (tail.length < MIN_TAIL_MESSAGES && history.length >= MIN_TAIL_MESSAGES) {
+            const fallbackTail = history.slice(-MIN_TAIL_MESSAGES);
+            tail.splice(0, tail.length, ...fallbackTail);
+        }
+
+        const toSummarize = history.slice(0, history.length - tail.length);
+
+        // Pre-condensing logging
+        const preMessageCount = history.length;
+        const preTokens = this.estimateTokens(history);
+        console.debug(
+            `[AgentTask] Context condensing triggered:\n` +
+            `  Messages: ${preMessageCount}\n` +
+            `  Estimated tokens: ${preTokens}\n` +
+            `  Threshold: ${Math.floor(this.getModelContextWindow() * (this.condensingThreshold / 100))} (${this.condensingThreshold}%)`
+        );
 
         const condensingPrompt: MessageParam = {
             role: 'user',
@@ -816,7 +923,24 @@ export class AgentTask {
             ...tail,
         );
 
-        console.debug(`[AgentTask] Context condensed: ${history.length} messages remain.`);
+        // Post-condensing logging
+        const postMessageCount = history.length;
+        const postTokens = this.estimateTokens(history);
+        const contextWindow = this.getModelContextWindow();
+        const threshold = Math.floor(contextWindow * (this.condensingThreshold / 100));
+        const percentUsed = contextWindow > 0 ? Math.round((postTokens / contextWindow) * 100) : 0;
+
+        console.debug(
+            `[AgentTask] Context condensed:\n` +
+            `  Before: ${preMessageCount} msgs, ~${preTokens} tokens\n` +
+            `  After:  ${postMessageCount} msgs, ~${postTokens} tokens\n` +
+            `  Saved:  ~${preTokens - postTokens} tokens (${Math.round(((preTokens - postTokens) / preTokens) * 100)}%)\n` +
+            `  Threshold: ${threshold} tokens (${this.condensingThreshold}%)\n` +
+            `  Status: ${percentUsed}% of context window used`
+        );
+
+        // Notify callback with token counts
+        this.taskCallbacks.onContextCondensed?.(preTokens, postTokens);
     }
 
     /** Resolve a mode slug or ModeConfig to a ModeConfig */
