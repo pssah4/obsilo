@@ -15,6 +15,9 @@
     flex-direction: column;
     height: 100%;
     padding: 0;
+    /* Allow text selection in chat (override Obsidian's default sidebar behavior) */
+    user-select: text;
+    -webkit-user-select: text;
 }
 
 /* Header */
@@ -61,6 +64,8 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
+    user-select: text !important;
+    -webkit-user-select: text !important;
 }
 
 .message-content {
@@ -68,6 +73,8 @@
     border-radius: 8px;
     max-width: 100%;
     line-height: 1.5;
+    user-select: text !important;
+    -webkit-user-select: text !important;
 }
 
 .message-content h1 {
@@ -1728,6 +1735,8 @@
 /* User message: right-aligned pill, compact */
 .user-message {
     align-items: flex-end;
+    user-select: text !important;
+    -webkit-user-select: text !important;
 }
 
 .user-message .message-content {
@@ -1737,9 +1746,28 @@
     border-radius: 12px 12px 4px 12px;
     padding: 6px 11px;
     font-size: 13px;
-    user-select: text;
-    -webkit-user-select: text;
+    user-select: text !important;
+    -webkit-user-select: text !important;
     cursor: text;
+}
+
+/* All child elements of user messages must also allow selection */
+.user-message .message-content * {
+    user-select: text !important;
+    -webkit-user-select: text !important;
+}
+
+/* Visible selection highlighting for user messages (white background on blue) */
+.user-message .message-content::selection,
+.user-message .message-content *::selection {
+    background: rgba(255, 255, 255, 0.3);
+    color: var(--text-on-accent);
+}
+
+.user-message .message-content::-moz-selection,
+.user-message .message-content *::-moz-selection {
+    background: rgba(255, 255, 255, 0.3);
+    color: var(--text-on-accent);
 }
 
 /* User message action bar (copy, edit) */
@@ -1773,6 +1801,19 @@
 .assistant-message .message-content * {
     user-select: text !important;
     -webkit-user-select: text !important;
+}
+
+/* Visible selection highlighting for assistant messages */
+.assistant-message .message-content::selection,
+.assistant-message .message-content *::selection {
+    background: var(--text-selection);
+    color: var(--text-normal);
+}
+
+.assistant-message .message-content::-moz-selection,
+.assistant-message .message-content *::-moz-selection {
+    background: var(--text-selection);
+    color: var(--text-normal);
 }
 
 /* Keep code blocks readable inside assistant messages */
