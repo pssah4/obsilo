@@ -7,8 +7,19 @@ import { t } from '../../i18n';
 export class RulesTab {
     constructor(private plugin: ObsidianAgentPlugin, private app: App, private rerender: () => void) {}
 
+    private buildIntroSection(containerEl: HTMLElement): void {
+        const infoBanner = containerEl.createDiv('agent-settings-info-banner');
+        const infoIcon = infoBanner.createSpan({ cls: 'agent-settings-info-icon' });
+        setIcon(infoIcon, 'lightbulb');
+        const infoText = infoBanner.createDiv({ cls: 'agent-settings-info-text' });
+        infoText.createEl('strong', { text: t('settings.rules.introTitle') });
+        infoText.createDiv({ text: t('settings.rules.introDesc') });
+        infoText.createDiv({ text: t('settings.rules.introDiff') });
+    }
+
     build(containerEl: HTMLElement): void {
         containerEl.createEl('h3', { text: t('settings.rules.heading') });
+        this.buildIntroSection(containerEl);
         containerEl.createEl('p', {
             cls: 'agent-settings-desc',
             text: t('settings.rules.desc'),

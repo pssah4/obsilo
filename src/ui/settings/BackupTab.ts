@@ -1,4 +1,4 @@
-import { App, Notice } from 'obsidian';
+import { App, Notice, setIcon } from 'obsidian';
 import type ObsidianAgentPlugin from '../../main';
 import { DEFAULT_SETTINGS } from '../../types/settings';
 import type { GlobalFileService } from '../../core/storage/GlobalFileService';
@@ -171,7 +171,17 @@ export class BackupTab {
         return this.plugin.globalFs;
     }
 
+    private buildIntroSection(containerEl: HTMLElement): void {
+        const infoBanner = containerEl.createDiv('agent-settings-info-banner');
+        const infoIcon = infoBanner.createSpan({ cls: 'agent-settings-info-icon' });
+        setIcon(infoIcon, 'lightbulb');
+        const infoText = infoBanner.createDiv({ cls: 'agent-settings-info-text' });
+        infoText.createEl('strong', { text: t('settings.backup.introTitle') });
+        infoText.createDiv({ text: t('settings.backup.introDesc') });
+    }
+
     build(containerEl: HTMLElement): void {
+        this.buildIntroSection(containerEl);
         containerEl.createEl('p', {
             cls: 'agent-settings-desc',
             text: t('settings.backup.desc'),

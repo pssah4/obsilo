@@ -10,6 +10,7 @@ import OpenAI from 'openai';
 import type { LLMProvider } from '../../types/settings';
 import type { ApiHandler, ApiStream, ApiStreamChunk, MessageParam, ModelInfo } from '../types';
 import type { ToolDefinition } from '../../core/tools/types';
+import { getModelContextWindow } from '../../types/model-registry';
 
 // ---------------------------------------------------------------------------
 // OpenAI REST API types (subset we need)
@@ -93,10 +94,13 @@ export class OpenAiProvider implements ApiHandler {
     }
 
     getModel(): { id: string; info: ModelInfo } {
+        // Get context window from central registry
+        const contextWindow = getModelContextWindow(this.config.model);
+
         return {
             id: this.config.model,
             info: {
-                contextWindow: 128000,
+                contextWindow,
                 supportsTools: true,
                 supportsStreaming: true,
             },

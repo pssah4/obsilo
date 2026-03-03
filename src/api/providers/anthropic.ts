@@ -12,6 +12,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import type { LLMProvider } from '../../types/settings';
 import type { ApiHandler, ApiStream, ApiStreamChunk, ContentBlock, MessageParam, ModelInfo } from '../types';
 import type { ToolDefinition } from '../../core/tools/types';
+import { getModelContextWindow } from '../../types/model-registry';
 
 export class AnthropicProvider implements ApiHandler {
     private client: Anthropic;
@@ -27,10 +28,13 @@ export class AnthropicProvider implements ApiHandler {
     }
 
     getModel(): { id: string; info: ModelInfo } {
+        // Get context window from central registry
+        const contextWindow = getModelContextWindow(this.config.model);
+
         return {
             id: this.config.model,
             info: {
-                contextWindow: 200000,
+                contextWindow,
                 supportsTools: true,
                 supportsStreaming: true,
             },

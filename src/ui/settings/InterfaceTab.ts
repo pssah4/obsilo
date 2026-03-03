@@ -1,4 +1,4 @@
-import { App, Notice, Setting } from 'obsidian';
+import { App, Notice, Setting, setIcon } from 'obsidian';
 import type ObsidianAgentPlugin from '../../main';
 import { OnboardingService } from '../../core/memory/OnboardingService';
 import { t } from '../../i18n';
@@ -7,7 +7,17 @@ import { t } from '../../i18n';
 export class InterfaceTab {
     constructor(private plugin: ObsidianAgentPlugin, private app: App, private rerender: () => void) {}
 
+    private buildIntroSection(containerEl: HTMLElement): void {
+        const infoBanner = containerEl.createDiv('agent-settings-info-banner');
+        const infoIcon = infoBanner.createSpan({ cls: 'agent-settings-info-icon' });
+        setIcon(infoIcon, 'lightbulb');
+        const infoText = infoBanner.createDiv({ cls: 'agent-settings-info-text' });
+        infoText.createEl('strong', { text: t('settings.interface.introTitle') });
+        infoText.createDiv({ text: t('settings.interface.introDesc') });
+    }
+
     build(containerEl: HTMLElement): void {
+        this.buildIntroSection(containerEl);
         // ─── Setup Dialog ─────────────────────────────────────────────
         containerEl.createEl('h3', { cls: 'agent-settings-section', text: t('settings.interface.headingSetup') });
 
@@ -75,6 +85,17 @@ export class InterfaceTab {
                     this.plugin.settings.includeCurrentTimeInContext = v;
                     await this.plugin.saveSettings();
                 }),
+            );
+
+        new Setting(containerEl)
+            .setName('Show context progress')
+            .setDesc('Display a progress bar showing context window usage. Restart sidebar to apply.')
+            .addToggle((toggle) =>
+                toggle.setValue(this.plugin.settings.showContextProgress).onChange(async (value) => {
+                    this.plugin.settings.showContextProgress = value;
+                    await this.plugin.saveSettings();
+                    new Notice('Please restart the sidebar (close & reopen) to apply changes.');
+                })
             );
 
         containerEl.createEl('h3', { cls: 'agent-settings-section', text: t('settings.interface.headingHistory') });

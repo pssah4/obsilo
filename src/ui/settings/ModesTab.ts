@@ -14,7 +14,17 @@ import type { ModeService } from '../../core/modes/ModeService';
 export class ModesTab {
     constructor(private plugin: ObsidianAgentPlugin, private app: App, private rerender: () => void, private modeService?: ModeService) {}
 
+    private buildIntroSection(containerEl: HTMLElement): void {
+        const infoBanner = containerEl.createDiv('agent-settings-info-banner');
+        const infoIcon = infoBanner.createSpan({ cls: 'agent-settings-info-icon' });
+        setIcon(infoIcon, 'lightbulb');
+        const infoText = infoBanner.createDiv({ cls: 'agent-settings-info-text' });
+        infoText.createEl('strong', { text: t('settings.modes.introTitle') });
+        infoText.createDiv({ text: t('settings.modes.introDesc') });
+    }
+
     build(containerEl: HTMLElement): void {
+        this.buildIntroSection(containerEl);
         // Collect all selectable modes (built-in + custom, not __custom instruction entries).
         // Vault entries with the same slug as a built-in are overrides — they are already
         // represented by the built-in entry in the dropdown, so exclude them here.

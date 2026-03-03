@@ -15,6 +15,9 @@
     flex-direction: column;
     height: 100%;
     padding: 0;
+    /* Allow text selection in chat (override Obsidian's default sidebar behavior) */
+    user-select: text;
+    -webkit-user-select: text;
 }
 
 /* Header */
@@ -52,6 +55,7 @@
     height: 100%;
     overflow-y: auto;
     padding: 16px;
+    padding-bottom: 140px;  /* Safety margin: Input-Container ist ~120px hoch */
     display: flex;
     flex-direction: column;
     gap: 12px;
@@ -61,6 +65,8 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
+    user-select: text !important;
+    -webkit-user-select: text !important;
 }
 
 .message-content {
@@ -68,6 +74,9 @@
     border-radius: 8px;
     max-width: 100%;
     line-height: 1.5;
+    user-select: text !important;
+    -webkit-user-select: text !important;
+    transition: opacity 150ms ease-out;
 }
 
 .message-content h1 {
@@ -569,6 +578,7 @@
     font-size: 11px;
     overflow: hidden;
     opacity: 0.65;
+    transition: opacity 100ms ease-out;
 }
 
 .tool-call-details:hover {
@@ -694,6 +704,7 @@
     padding: 1px 0;
     font-size: 11px;
     color: var(--text-faint);
+    transition: color 100ms ease-out;
 }
 
 .tool-group-item .tool-item-icon {
@@ -1087,7 +1098,7 @@
 /* Models table: name | provider | key | enable-toggle | default-radio | actions */
 .model-row {
     display: grid;
-    grid-template-columns: 1fr 100px 36px 56px 56px 48px;
+    grid-template-columns: 1fr 100px 36px 75px 66px 48px;
     align-items: center;
     padding: 5px 8px;
     gap: 4px;
@@ -1096,7 +1107,7 @@
 
 /* Embeddings table: name | provider | key | active-radio | actions */
 .embedding-table .model-row {
-    grid-template-columns: 1fr 100px 36px 56px 48px;
+    grid-template-columns: 1fr 100px 36px 66px 48px;
 }
 
 .model-row:last-child { border-bottom: none; }
@@ -1104,9 +1115,10 @@
 .model-row-header {
     background: var(--background-secondary);
     color: var(--text-muted);
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 500;
     padding: 5px 8px;
+    line-height: 1.3;
 }
 
 .model-row-active .mc-name-text { color: var(--interactive-accent); }
@@ -1122,6 +1134,14 @@
 .mc-name { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; min-width: 0; }
 .mc-name-text { font-size: 12px; color: var(--text-normal); }
 .mc-provider { overflow: hidden; }
+
+/* Header cells - allow wrapping for longer localized texts */
+.model-row-header .mc-enable,
+.model-row-header .mc-default {
+    white-space: normal;
+    word-wrap: break-word;
+    text-align: center;
+}
 
 .mc-key { display: flex; align-items: center; justify-content: center; }
 .mc-key svg { width: 12px; height: 12px; }
@@ -1705,6 +1725,7 @@
 /* ── Compact chat ─────────────────────────────────────────────────────── */
 .chat-messages {
     padding: 10px 12px;
+    padding-bottom: 140px;  /* Gleicher Safety-Margin wie Normal-Mode */
     gap: 6px;
 }
 
@@ -1719,6 +1740,8 @@
 /* User message: right-aligned pill, compact */
 .user-message {
     align-items: flex-end;
+    user-select: text !important;
+    -webkit-user-select: text !important;
 }
 
 .user-message .message-content {
@@ -1728,9 +1751,28 @@
     border-radius: 12px 12px 4px 12px;
     padding: 6px 11px;
     font-size: 13px;
-    user-select: text;
-    -webkit-user-select: text;
+    user-select: text !important;
+    -webkit-user-select: text !important;
     cursor: text;
+}
+
+/* All child elements of user messages must also allow selection */
+.user-message .message-content * {
+    user-select: text !important;
+    -webkit-user-select: text !important;
+}
+
+/* Visible selection highlighting for user messages (white background on blue) */
+.user-message .message-content::selection,
+.user-message .message-content *::selection {
+    background: rgba(255, 255, 255, 0.3);
+    color: var(--text-on-accent);
+}
+
+.user-message .message-content::-moz-selection,
+.user-message .message-content *::-moz-selection {
+    background: rgba(255, 255, 255, 0.3);
+    color: var(--text-on-accent);
 }
 
 /* User message action bar (copy, edit) */
@@ -1766,6 +1808,19 @@
     -webkit-user-select: text !important;
 }
 
+/* Visible selection highlighting for assistant messages */
+.assistant-message .message-content::selection,
+.assistant-message .message-content *::selection {
+    background: var(--text-selection);
+    color: var(--text-normal);
+}
+
+.assistant-message .message-content::-moz-selection,
+.assistant-message .message-content *::-moz-selection {
+    background: var(--text-selection);
+    color: var(--text-normal);
+}
+
 /* Keep code blocks readable inside assistant messages */
 .assistant-message .message-content pre {
     background: var(--code-background);
@@ -1799,6 +1854,7 @@
     border-left: 2px solid var(--background-modifier-border);
     padding-left: 8px;
     margin: 2px 0 4px;
+    border-radius: 4px;  /* Subtile Abrundung */
 }
 
 /* Hide the native disclosure triangle */
@@ -2136,13 +2192,13 @@
 .tool-approval-row {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 3px 6px;
-    margin: 2px 0;
-    border-radius: 3px;
+    gap: 8px;
+    padding: 10px 12px;  /* Mehr Padding für bessere Sichtbarkeit */
+    margin: 8px 0;       /* Mehr Abstand zu anderen Elementen */
+    border-radius: 8px;  /* Konsistent mit Message-Bubbles */
     border: 1px solid color-mix(in srgb, #f0a020 30%, var(--background-modifier-border));
     background: color-mix(in srgb, #f0a020 4%, transparent);
-    font-size: 11px;
+    font-size: 12px;
 }
 
 .tool-approval-icon { display: flex; align-items: center; color: #f0a020; flex-shrink: 0; }
@@ -2348,6 +2404,36 @@
     border-radius: 6px;
 }
 
+/* Info banner (for important notes) */
+.agent-settings-info-banner {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 13px;
+    line-height: 1.6;
+    margin: 0 0 20px;
+    padding: 12px 14px;
+    background: color-mix(in srgb, var(--color-blue) 8%, var(--background-primary));
+    border-left: 3px solid var(--color-blue);
+    border-radius: 4px;
+}
+
+.agent-settings-info-icon {
+    flex-shrink: 0;
+    margin-top: 2px;
+    color: var(--color-blue);
+}
+
+.agent-settings-info-text {
+    flex: 1;
+    color: var(--text-normal);
+}
+
+.agent-settings-info-text strong {
+    font-weight: var(--font-semibold);
+    color: var(--text-normal);
+}
+
 /* Compact Obsidian Setting items within the behavior tab */
 .agent-settings-content .setting-item {
     padding: 6px 0;
@@ -2394,6 +2480,7 @@
     margin-bottom: 5px;
     border-left: 2px solid var(--background-modifier-border);
     padding-left: 8px;
+    transition: opacity 150ms ease-out;
 }
 
 .thinking-header {
@@ -3360,6 +3447,7 @@
     border-collapse: collapse;
     font-size: var(--font-ui-small);
     margin-bottom: 16px;
+    table-layout: fixed;
 }
 
 .agent-skill-table thead th {
@@ -3372,8 +3460,8 @@
 }
 
 .agent-skill-th-status { width: 16px; }
-.agent-skill-th-cmds { width: 70px; }
-.agent-skill-th-actions { width: 60px; }
+.agent-skill-th-cmds { width: 60px; }
+.agent-skill-th-actions { width: 100px; }
 .agent-skill-th-toggle { width: 50px; text-align: center; }
 
 .agent-skill-table tbody tr {
@@ -3417,10 +3505,15 @@
     vertical-align: top;
     padding-top: 5px;
     padding-bottom: 5px;
+    max-width: 300px;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
 }
 
 .agent-skill-name {
     font-weight: 500;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
 }
 
 .agent-skill-desc {
@@ -3428,16 +3521,31 @@
     color: var(--text-muted);
     line-height: 1.3;
     margin-top: 1px;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+.agent-skill-desc-clamped {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .agent-skill-cmd-cell {
-    width: 70px;
+    width: 60px;
     text-align: center;
     color: var(--text-muted);
+    font-size: var(--font-ui-smaller);
+    word-break: keep-all;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .agent-skill-actions-cell {
-    width: 60px;
+    width: 100px;
     text-align: right;
     white-space: nowrap;
 }
@@ -4757,7 +4865,10 @@
 /* ── Utility classes ──────────────────────────────────────────────────── */
 .agent-u-hidden        { display: none !important; }
 .agent-u-visible       { display: '' !important; }
-.agent-u-visibility-hidden { visibility: hidden !important; }
+.agent-u-visibility-hidden {
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
 .agent-u-height-auto   { height: auto !important; }
 
 /* Copy button spacing (SystemPromptPreviewModal) */
@@ -4775,7 +4886,7 @@
 /* ── Security warning callouts (Settings > Permissions) ────────────────── */
 .agent-setting-warning {
     font-size: 11px;
-    color: var(--text-muted);
+    color: #d97706;
     margin-top: -8px;
     padding: 0 55px 8px 0;
     line-height: 1.4;
@@ -4784,10 +4895,10 @@
     display: inline-flex;
     vertical-align: middle;
     margin-right: 4px;
-    color: var(--color-yellow);
+    color: #d97706;
 }
 .agent-setting-warning--high-risk .agent-setting-warning-icon {
-    color: var(--color-red);
+    color: #d97706;
 }
 .agent-setting-warning-icon svg {
     width: 12px;
@@ -4797,4 +4908,169 @@
 .agent-approval-categories--disabled {
     opacity: 0.4;
     pointer-events: none;
+}
+
+/* ── Context Display Progress Bar ─────────────────────────────────────── */
+.context-display-container {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--background-modifier-border);
+    background: var(--background-primary);
+}
+
+.context-display-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 4px;
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.context-progress-bar-wrapper {
+    position: relative;
+}
+
+.context-progress-bar {
+    display: flex;
+    height: 4px;
+    border-radius: 2px;
+    overflow: hidden;
+    background: var(--background-modifier-border);
+    position: relative;
+}
+
+.context-segment-current,
+.context-segment-reserved,
+.context-segment-available {
+    height: 100%;
+    transition: width 0.3s ease-out;
+}
+
+.context-segment-current {
+    background: var(--text-normal);
+}
+
+.context-segment-reserved {
+    background: var(--text-muted);
+    opacity: 0.5;
+}
+
+.context-segment-available {
+    background: transparent;
+}
+
+/* Color variants */
+.context-green .context-segment-current {
+    background: var(--color-green);
+}
+
+.context-yellow .context-segment-current {
+    background: var(--color-yellow);
+}
+
+.context-red .context-segment-current {
+    background: var(--color-red);
+}
+
+/* Condense Button */
+.context-condense-button {
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+    color: var(--text-muted);
+    border-radius: 3px;
+}
+
+.context-condense-button:hover {
+    opacity: 1;
+    background: var(--background-modifier-hover);
+}
+
+.context-condense-button-disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.context-condense-button-disabled:hover {
+    opacity: 0.3;
+    background: transparent;
+}
+
+/* Tooltip */
+.context-tooltip {
+    position: absolute;
+    top: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--background-secondary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    padding: 8px;
+    font-size: 11px;
+    z-index: 100;
+    white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Condensation Feedback */
+.condensation-feedback {
+    display: flex;
+    padding: 8px 12px;
+    background: var(--background-secondary);
+    border-radius: 4px;
+    margin-bottom: 8px;
+    border-left: 3px solid var(--interactive-accent);
+}
+
+.condensation-feedback-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    flex: 1;
+}
+
+.condensation-icon {
+    color: var(--interactive-accent);
+    flex-shrink: 0;
+}
+
+.condensation-title {
+    font-weight: 600;
+    color: var(--text-normal);
+}
+
+.condensation-tokens {
+    color: var(--text-muted);
+}
+
+.condensation-cost {
+    margin-left: auto;
+    font-weight: 500;
+    color: var(--text-accent);
+}
+
+/* Timeline Entry for Context Condensing (fallback badge) */
+.context-condensed-badge {
+    display: inline-block;
+    padding: 2px 6px;
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.context-condensed-desc {
+    font-size: 12px;
+    color: var(--text-muted);
 }

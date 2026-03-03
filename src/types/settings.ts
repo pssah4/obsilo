@@ -57,6 +57,8 @@ export const BUILT_IN_MODELS: CustomModel[] = [
         enabled: false,
         isBuiltIn: true,
         maxTokens: 16384,
+        thinkingEnabled: true,
+        thinkingBudgetTokens: 10000,
     },
     {
         name: 'claude-opus-4-6',
@@ -65,6 +67,8 @@ export const BUILT_IN_MODELS: CustomModel[] = [
         enabled: false,
         isBuiltIn: true,
         maxTokens: 16384,
+        thinkingEnabled: true,
+        thinkingBudgetTokens: 10000,
     },
     {
         name: 'claude-haiku-4-5-20251001',
@@ -73,6 +77,8 @@ export const BUILT_IN_MODELS: CustomModel[] = [
         enabled: false,
         isBuiltIn: true,
         maxTokens: 8192,
+        thinkingEnabled: true,
+        thinkingBudgetTokens: 5000,
     },
     // OpenAI
     {
@@ -482,6 +488,8 @@ export interface ObsidianAgentSettings {
     sendWithEnter: boolean;
     /** Inject current date and time into the system prompt */
     includeCurrentTimeInContext: boolean;
+    /** Display context window usage progress bar in sidebar (restart sidebar to apply) */
+    showContextProgress: boolean;
 
     // Rules (Sprint 3.2) — per-file enabled/disabled toggles
     // key: vault-relative path, value: true=enabled (default), false=disabled
@@ -688,6 +696,7 @@ export const DEFAULT_SETTINGS: ObsidianAgentSettings = {
     autoAddActiveFileContext: true,
     sendWithEnter: true,
     includeCurrentTimeInContext: true,
+    showContextProgress: false,
     rulesToggles: {},
     workflowToggles: {},
     manualSkillToggles: {},

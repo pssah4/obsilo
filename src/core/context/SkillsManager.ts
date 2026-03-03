@@ -26,6 +26,8 @@ export interface SkillMeta {
     name: string;
     /** Description used for keyword matching */
     description: string;
+    /** Source: 'learned' (agent-created), 'user' (manual), or undefined (legacy) */
+    source?: 'learned' | 'user' | 'bundled';
 }
 
 export class SkillsManager {
@@ -168,13 +170,15 @@ export class SkillsManager {
 
         const nameMatch = yaml.match(/^name:\s*(.+)$/m);
         const descMatch = yaml.match(/^description:\s*(.+)$/m);
+        const sourceMatch = yaml.match(/^source:\s*(.+)$/m);
 
         const name = nameMatch?.[1]?.trim() ?? folder.split('/').pop() ?? 'unknown';
         const description = descMatch?.[1]?.trim() ?? '';
+        const source = sourceMatch?.[1]?.trim() as SkillMeta['source'];
 
         if (!description) return null;
 
-        return { path: skillPath, name, description };
+        return { path: skillPath, name, description, source };
     }
 
     private xmlEscape(s: string): string {

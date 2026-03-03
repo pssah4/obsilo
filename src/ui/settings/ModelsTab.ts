@@ -10,7 +10,26 @@ import { t } from '../../i18n';
 export class ModelsTab {
     constructor(private plugin: ObsidianAgentPlugin, private app: App, private rerender: () => void) {}
 
+    private buildIntroSection(containerEl: HTMLElement): void {
+        const infoBanner = containerEl.createDiv('agent-settings-info-banner');
+        const infoIcon = infoBanner.createSpan({ cls: 'agent-settings-info-icon' });
+        setIcon(infoIcon, 'lightbulb');
+        const infoText = infoBanner.createDiv({ cls: 'agent-settings-info-text' });
+        infoText.createEl('strong', { text: t('settings.models.introTitle') });
+        infoText.createDiv({ text: t('settings.models.introDesc') });
+    }
+
     build(containerEl: HTMLElement): void {
+        this.buildIntroSection(containerEl);
+
+        // Performance note banner
+        const infoBanner = containerEl.createDiv('agent-settings-info-banner');
+        const infoIcon = infoBanner.createSpan({ cls: 'agent-settings-info-icon' });
+        setIcon(infoIcon, 'info');
+        const infoText = infoBanner.createDiv({ cls: 'agent-settings-info-text' });
+        infoText.createEl('strong', { text: t('settings.models.performanceNote') });
+        infoText.createSpan({ text: ' ' + t('settings.models.performanceNoteDesc') });
+
         // Table header
         const table = containerEl.createDiv('model-table');
         const header = table.createDiv('model-row model-row-header');

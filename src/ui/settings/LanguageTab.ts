@@ -1,4 +1,4 @@
-import { App, Setting } from 'obsidian';
+import { App, Setting, setIcon } from 'obsidian';
 import type ObsidianAgentPlugin from '../../main';
 import { t, setLanguage } from '../../i18n';
 import { LANGUAGES, type Language } from '../../i18n/types';
@@ -6,7 +6,17 @@ import { LANGUAGES, type Language } from '../../i18n/types';
 export class LanguageTab {
     constructor(private plugin: ObsidianAgentPlugin, private app: App, private rerender: () => void) {}
 
+    private buildIntroSection(containerEl: HTMLElement): void {
+        const infoBanner = containerEl.createDiv('agent-settings-info-banner');
+        const infoIcon = infoBanner.createSpan({ cls: 'agent-settings-info-icon' });
+        setIcon(infoIcon, 'lightbulb');
+        const infoText = infoBanner.createDiv({ cls: 'agent-settings-info-text' });
+        infoText.createEl('strong', { text: t('settings.language.introTitle') });
+        infoText.createDiv({ text: t('settings.language.introDesc') });
+    }
+
     build(containerEl: HTMLElement): void {
+        this.buildIntroSection(containerEl);
         new Setting(containerEl)
             .setName(t('settings.language.language'))
             .setDesc(t('settings.language.languageDesc'))

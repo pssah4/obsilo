@@ -118,6 +118,88 @@ Eigenstaendiger Node.js-Kindprozess mit `ELECTRON_RUN_AS_NODE=1`.
 
 ---
 
+## Bedrohungsszenarien
+
+### Was iframe-Sandbox NICHT blocken kann
+
+| Bedrohung | iframe | child_process.fork | Realistisch |
+|-----------|--------|-------------------|-------------|
+| **Spectre/Meltdown** (Memory-Disclosure via Side-Channel) | ✗ Shared address space | ✓ Eigener Heap | Sehr gering |
+| **CPU-DoS** (Endlosschleife blockiert UI) | ✗ Shared Event Loop | ✓ Eigener Event Loop | Hoch |
+| **V8-Exploit** (Use-After-Free -> Node.js-Zugriff) | ✗ Escape moeglich | ✓ Crash isoliert | Gering (0-Day noetig) |
+| **Vault-Persistenz** (Shai Hulud Szenario) | ✗ ctx.vault erlaubt | ✗ ctx.vault erlaubt | Mittel (mitigiert via SandboxBridge) |
+
+**Kritische Einsicht:** OS-Level-Isolation schuetzt NICHT gegen Vault-Manipulation, da `ctx.vault` absichtlich Zugriff gewaehrt. Die Sicherheit haengt von SandboxBridge-Pfad-Validierung + User Approval ab.
+
+**Trade-off:** child_process.fork bietet Schutz gegen V8-Exploits und CPU-DoS, aber nicht gegen absichtliche Vault-Manipulation. Die Hauptverbesserung ist **Crash-Isolation** und **CPU-Isolation**, nicht Sandbox-Escape-Prevention.
+
+---
+
+## Rollback-Plan
+
+### Rollback-Trigger
+
+1. First-Spawn-Latenz >5s auf User-Systemen (inakzeptabel)
+2. Worker-Crash-Loop (3x Retry-Limit reached)
+3. IPC-Deadlock (Race-Condition zwischen Parent/Worker)
+4. Community Plugin Review lehnt child_process ab
+
+### Rollback-Mechanismus
+
+**Option A: Feature-Flag (empfohlen)**
+
+Neue Setting: `sandbox.mode: 'auto' | 'process' | 'iframe'`
+
+- `'auto'`: Desktop=process, Mobile=iframe (Default)
+- `'iframe'`: Force IframeSandboxExecutor (alle Platformen)
+- `'process'`: Force ProcessSandboxExecutor (Desktop-only)
+
+User kann in Settings zu `'iframe'` wechseln bei Problemen.
+
+**Option B: Build-Zeit-Rollback**
+
+Falls Review-Bot blockiert: Deaktiviere ProcessSandboxExecutor in `createSandboxExecutor.ts`, entferne `sandbox-worker.js` aus Build.
+
+### Monitoring
+
+OperationLogger erfasst:
+- Worker-Spawn-Zeit (first + subsequent)
+- Worker-Crash-Count
+- IPC-Timeout-Count
+
+Falls Crash-Rate >10% in 24h: Notice an User mit Empfehlung zu `mode: 'iframe'`.
+
+---
+
+## Performance-Trade-offs
+
+### Messkriterien
+
+| Metrik | iframe (Baseline) | child_process.fork (Ziel) | Kritisch bei |
+|--------|------------------|---------------------------|--------------|
+| First-Spawn | ~5ms | <1000ms (Keep-Alive) | >3000ms |
+| Execution-Overhead | ~2ms | <10ms | >50ms |
+| Memory-Overhead | ~30MB (shared) | <80MB (isolated) | >200MB |
+| IPC-Roundtrip | N/A | <5ms | >50ms |
+
+### Entscheidungs-Begrundung
+
+**Warum diese Trade-offs akzeptabel:**
+
+1. **First-Spawn-Latenz (~1s):** Einmalig pro Plugin-Load, Worker bleibt dann am Leben. Keep-Alive mitigiert.
+2. **Execution-Overhead (~5ms):** Vernachlaessigbar vs. LLM-API-Latenz (500-3000ms).
+3. **Memory-Overhead (50MB):** Akzeptabel fuer Desktop-Systeme mit 8GB+ RAM.
+
+**Warum diese Trade-offs NICHT akzeptabel waeren:**
+
+- First-Spawn >5s: User-Experience inakzeptabel
+- Execution-Overhead >50ms: Merkbar bei iterativen Workflows
+- Memory-Overhead >200MB: Problematisch auf low-end Systemen
+
+**Rollback bei Nichterreichen:** Falls Performance-Tests zeigen, dass Ziele nicht erreichbar -> Rollback zu iframe-only via Feature-Flag.
+
+---
+
 ## Referenzen
 
 - `_devprocess/analysis/security/AUDIT-obsilo-2026-03-01.md` -- Security Audit, Finding H-1

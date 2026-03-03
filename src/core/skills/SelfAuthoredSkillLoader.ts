@@ -90,19 +90,35 @@ export class SelfAuthoredSkillLoader {
      */
     async loadAll(): Promise<void> {
         this.skills.clear();
-        const folder = this.plugin.app.vault.getAbstractFileByPath(this.skillsDir);
-        if (!(folder instanceof TFolder)) return;
 
-        for (const child of folder.children) {
-            if (child instanceof TFolder) {
-                // Look for SKILL.md inside each skill folder
-                const skillFile = this.plugin.app.vault.getAbstractFileByPath(
-                    `${child.path}/SKILL.md`
-                );
-                if (skillFile instanceof TFile) {
-                    await this.loadSkillFile(skillFile);
+        // Use vault.adapter instead of getAbstractFileByPath for .obsidian directory
+        const adapter = this.plugin.app.vault.adapter;
+        const dirExists = await adapter.exists(this.skillsDir);
+        if (!dirExists) {
+            console.debug(`[SelfAuthoredSkillLoader] Skills directory not found: ${this.skillsDir}`);
+            return;
+        }
+
+        try {
+            const entries = await adapter.list(this.skillsDir);
+
+            // Scan each subfolder for SKILL.md
+            for (const subfolderPath of entries.folders) {
+                const skillPath = `${subfolderPath}/SKILL.md`;
+                const skillExists = await adapter.exists(skillPath);
+
+                if (skillExists) {
+                    // Create a TFile-like object for loadSkillFile compatibility
+                    const content = await adapter.read(skillPath);
+                    const parsed = this.parseSkillMd(content, skillPath);
+                    if (parsed) {
+                        this.skills.set(parsed.name, parsed);
+                    }
                 }
             }
+        } catch (e) {
+            console.warn(`[SelfAuthoredSkillLoader] Failed to scan skills directory:`, e);
+            return;
         }
 
         // After all skills are loaded, load cached code modules and register tools

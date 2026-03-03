@@ -302,12 +302,12 @@ export const TOOL_METADATA: Record<string, ToolMeta> = {
     // NOTE: group is 'agent' for mode-level availability (shows in Agent Control tools).
     // The Pipeline classifies this as 'sandbox' ApprovalGroup for approval checks.
     evaluate_expression: {
-        group: 'agent', label: 'Evaluate (Sandbox)', icon: 'code-2',
+        group: 'agent', label: 'Execute Code', icon: 'code-2',
         signature: 'evaluate_expression(expression, context?, dependencies?)',
-        description: 'Execute TypeScript/JS in the sandboxed iframe. Provides ctx.vault (read/write/binary) and ctx.requestUrl. Use for computations, data transforms, and binary file generation. Specify dependencies for npm packages.',
+        description: 'Execute JavaScript/TypeScript code in a sandboxed environment. Provides ctx.vault (full read/write/delete access to all vault files) and ctx.requestUrl (HTTP requests). Use for computations, data transformations, or generating binary files (PDF, DOCX, XLSX, etc.). Specify npm packages via dependencies parameter.',
         example: 'evaluate_expression("import PptxGenJS from \'pptxgenjs\'; const pptx = new PptxGenJS(); pptx.addSlide().addText(\'Hello\'); const buf = await pptx.write({outputType:\'arraybuffer\'}); await ctx.vault.writeBinary(\'out.pptx\', buf); return \'Done\'", undefined, ["pptxgenjs"])',
-        whenToUse: 'For one-off computations or binary file generation. For REUSABLE capabilities, create a skill with code_modules instead. NEVER write Python scripts or suggest manual execution.',
-        commonMistakes: 'Writing Python scripts instead of using this tool. Forgetting dependencies param when importing npm packages.',
+        whenToUse: 'For one-off computations or binary file generation. IMPORTANT: Code runs with full vault access and internet access. The sandbox provides isolation via iframe (same-origin policy, CSP), but is NOT OS-level process isolation. Only execute code you understand. For reusable capabilities, create a skill with code_modules instead. NEVER write Python or suggest manual execution.',
+        commonMistakes: 'Writing Python scripts instead of using this tool. Forgetting dependencies param when importing npm packages. SECURITY: Never execute untrusted code or code from external sources without review.',
     },
     manage_skill: {
         group: 'agent', label: 'Manage Skill', icon: 'bookmark-plus',

@@ -1,4 +1,4 @@
-import { App, Setting } from 'obsidian';
+import { App, Setting, setIcon } from 'obsidian';
 import type ObsidianAgentPlugin from '../../main';
 import { t } from '../../i18n';
 import { addInfoButton } from './utils';
@@ -6,7 +6,17 @@ import { addInfoButton } from './utils';
 export class LoopTab {
     constructor(private plugin: ObsidianAgentPlugin, private app: App, private rerender: () => void) {}
 
+    private buildIntroSection(containerEl: HTMLElement): void {
+        const infoBanner = containerEl.createDiv('agent-settings-info-banner');
+        const infoIcon = infoBanner.createSpan({ cls: 'agent-settings-info-icon' });
+        setIcon(infoIcon, 'lightbulb');
+        const infoText = infoBanner.createDiv({ cls: 'agent-settings-info-text' });
+        infoText.createEl('strong', { text: t('settings.loop.introTitle') });
+        infoText.createDiv({ text: t('settings.loop.introDesc') });
+    }
+
     build(containerEl: HTMLElement): void {
+        this.buildIntroSection(containerEl);
         containerEl.createEl('p', {
             cls: 'agent-settings-desc',
             text: t('settings.loop.desc'),

@@ -45,6 +45,11 @@ export class ModelConfigModal extends Modal {
     private thinkingRow: HTMLElement | null = null;
     private thinkingBudgetRow: HTMLElement | null = null;
     private thinkingNoteEl: HTMLElement | null = null;
+    private maxTokensRow: HTMLElement | null = null;
+    private maxTokensSliderEl: HTMLInputElement | null = null;
+    private maxTokensValueEl: HTMLElement | null = null;
+    private thinkingBudgetSliderEl: HTMLInputElement | null = null;
+    private thinkingBudgetValueEl: HTMLElement | null = null;
 
     constructor(app: App, model: CustomModel | null, onSave: (m: CustomModel) => void, forEmbedding = false) {
         super(app);
@@ -257,16 +262,29 @@ export class ModelConfigModal extends Modal {
         avInput.value = this.formApiVersion;
         avInput.addEventListener('input', () => (this.formApiVersion = avInput.value.trim()));
 
-        // ── Max Tokens ────────────────────────────────────────────────────
-        const mtRow = row(t('modal.modelConfig.maxTokens'), t('modal.modelConfig.maxTokensDesc'));
-        const mtInput = mtRow.createEl('input', {
-            cls: 'mcm-input mcm-input-sm',
-            attr: { type: 'number', placeholder: t('modal.modelConfig.maxTokensPlaceholder') },
+        // ── Max Tokens (Slider) ──────────────────────────────────────────
+        this.maxTokensRow = form.createDiv('mcm-row');
+        const mtLabel = this.maxTokensRow.createDiv('mcm-label');
+        mtLabel.createSpan({ text: t('modal.modelConfig.maxTokens') });
+        mtLabel.createSpan({ text: t('modal.modelConfig.maxTokensDesc'), cls: 'mcm-desc' });
+
+        const mtControls = this.maxTokensRow.createDiv('mcm-temperature-controls');
+        const mtSliderWrap = mtControls.createDiv('mcm-temperature-slider-wrap');
+        this.maxTokensSliderEl = mtSliderWrap.createEl('input', {
+            attr: { type: 'range', min: '1024', max: '200000', step: '1024' },
+            cls: 'mcm-temperature-slider',
         });
-        mtInput.value = String(this.formMaxTokens);
-        mtInput.addEventListener('input', () => {
-            const n = parseInt(mtInput.value);
-            if (!isNaN(n) && n > 0) this.formMaxTokens = n;
+        this.maxTokensSliderEl.value = String(this.formMaxTokens);
+        this.maxTokensValueEl = mtSliderWrap.createSpan({
+            cls: 'mcm-temperature-value',
+            text: this.formMaxTokens.toLocaleString(),
+        });
+        this.maxTokensSliderEl.addEventListener('input', () => {
+            this.formMaxTokens = parseInt(this.maxTokensSliderEl!.value);
+            if (this.maxTokensValueEl) {
+                this.maxTokensValueEl.setText(this.formMaxTokens.toLocaleString());
+            }
+            this.updateThinkingUI();
         });
 
         // ── Temperature ───────────────────────────────────────────────────
@@ -342,18 +360,32 @@ export class ModelConfigModal extends Modal {
             budgetLabel.createSpan({ text: t('modal.modelConfig.thinkingBudgetDesc'), cls: 'mcm-desc' });
             const budgetControls = this.thinkingBudgetRow.createDiv('mcm-temperature-controls');
             const budgetSliderWrap = budgetControls.createDiv('mcm-temperature-slider-wrap');
-            const budgetSlider = budgetSliderWrap.createEl('input', {
+            this.thinkingBudgetSliderEl = budgetSliderWrap.createEl('input', {
                 attr: { type: 'range', min: '1024', max: '128000', step: '1024' },
                 cls: 'mcm-temperature-slider',
             });
-            budgetSlider.value = String(this.formThinkingBudgetTokens);
-            const budgetValueEl = budgetSliderWrap.createSpan({
+            this.thinkingBudgetSliderEl.value = String(this.formThinkingBudgetTokens);
+            this.thinkingBudgetValueEl = budgetSliderWrap.createSpan({
                 cls: 'mcm-temperature-value',
                 text: this.formThinkingBudgetTokens.toLocaleString(),
             });
-            budgetSlider.addEventListener('input', () => {
-                this.formThinkingBudgetTokens = parseInt(budgetSlider.value);
-                budgetValueEl.setText(this.formThinkingBudgetTokens.toLocaleString());
+            this.thinkingBudgetSliderEl.addEventListener('input', () => {
+                this.formThinkingBudgetTokens = parseInt(this.thinkingBudgetSliderEl!.value);
+                if (this.thinkingBudgetValueEl) {
+                    this.thinkingBudgetValueEl.setText(this.formThinkingBudgetTokens.toLocaleString());
+                }
+
+                // Auto-adjust maxTokens slider if thinking budget exceeds it
+                if (this.formThinkingBudgetTokens > this.formMaxTokens) {
+                    this.formMaxTokens = this.formThinkingBudgetTokens;
+                    if (this.maxTokensSliderEl) {
+                        this.maxTokensSliderEl.value = String(this.formMaxTokens);
+                    }
+                    if (this.maxTokensValueEl) {
+                        this.maxTokensValueEl.setText(this.formMaxTokens.toLocaleString());
+                    }
+                }
+                this.updateThinkingUI();
             });
         }
 
@@ -387,6 +419,7 @@ export class ModelConfigModal extends Modal {
         if (this.apiVersionRow) this.apiVersionRow.classList.toggle('agent-u-hidden', p !== 'azure');
         if (this.ollamaBrowserRow) this.ollamaBrowserRow.classList.toggle('agent-u-hidden', p !== 'ollama');
         if (this.customBrowserRow) this.customBrowserRow.classList.toggle('agent-u-hidden', p !== 'custom' && p !== 'lmstudio');
+        // Max Tokens slider always visible (not provider-specific)
         if (this.promptCachingRow) this.promptCachingRow.classList.toggle('agent-u-hidden', p !== 'anthropic');
         if (this.thinkingRow) this.thinkingRow.classList.toggle('agent-u-hidden', p !== 'anthropic');
         if (this.thinkingBudgetRow) this.thinkingBudgetRow.classList.toggle('agent-u-hidden', p !== 'anthropic' || !this.formThinkingEnabled);
@@ -502,7 +535,14 @@ export class ModelConfigModal extends Modal {
         if (!this.thinkingBudgetRow || !this.thinkingNoteEl) return;
         this.thinkingBudgetRow.classList.toggle('agent-u-hidden', !this.formThinkingEnabled);
         if (this.formThinkingEnabled) {
-            this.thinkingNoteEl.setText(t('modal.modelConfig.thinkingNote'));
+            // Check if budget exceeds maxTokens and show appropriate message
+            if (this.formThinkingBudgetTokens > this.formMaxTokens) {
+                this.thinkingNoteEl.setText(
+                    `${t('modal.modelConfig.thinkingNote')} ⚠️ Max Tokens was automatically increased to ${this.formMaxTokens.toLocaleString()}.`
+                );
+            } else {
+                this.thinkingNoteEl.setText(t('modal.modelConfig.thinkingNote'));
+            }
             this.thinkingNoteEl.classList.remove('agent-u-hidden');
         } else {
             this.thinkingNoteEl.classList.add('agent-u-hidden');

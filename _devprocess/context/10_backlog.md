@@ -1,7 +1,7 @@
 # Obsilo Agent -- Vollstaendiges Backlog
 
-Stand: 2026-03-02
-Branch: `sandbox-os-isolation`
+Stand: 2026-03-03
+Branch: `reviewbot-fixes-round3`
 
 ---
 
@@ -120,6 +120,12 @@ Branch: `sandbox-os-isolation`
 | Self-Development | Spec + Level 1 (Skills als Markdown) | Level 2 (Dynamic Modules, iframe Sandbox) + Level 3 (Core Self-Modification) offen |
 | Sandbox OS-Level Isolation | Spec + ADR + Plan fertig | Implementierung auf Branch `sandbox-os-isolation` ausstehend |
 
+### In der Pipeline (Requirements fertig)
+
+| Feature | Spec | Prioritaet | Status |
+|---------|------|------------|--------|
+| Task Extraction & Management | FEATURE-100-task-extraction.md | P1-High | BA + Feature-Spec + Handoff fertig, wartet auf Architektur |
+
 ### Geplant (nicht implementiert)
 
 | Feature | Spec | Prioritaet |
@@ -181,8 +187,9 @@ Gesamt: 0 Critical, 6 High, 15 Medium, 11 Low, 5 Info
 ### Kurzfristig (2-4 Wochen)
 
 1. Onboarding Wizard vervollstaendigen (`update_settings`, `configure_model`)
-2. Agent Skill Mastery Phase 2 (Procedural Recipes, Auto-Promotion)
-3. UI Event-Listener Cleanup (FIX-04)
+2. **Task Extraction & Management** (FEATURE-100) -- Architektur (ADRs) -> Implementierung
+3. Agent Skill Mastery Phase 2 (Procedural Recipes, Auto-Promotion)
+4. UI Event-Listener Cleanup (FIX-04)
 
 ### Mittelfristig (4-8 Wochen)
 

@@ -1,7 +1,7 @@
 ---
 name: Requirements Engineer
 description: "Transformiert Business Analysis in Epics, Features und tech-agnostische Success Criteria. Erstellt Handoff-Dokumente fuer Architect und Claude Code."
-tools: ['codebase', 'editFiles', 'fetch', 'search', 'web']
+tools: [read/readFile, edit/createFile, edit/editFiles, search/changes, search/codebase, search/fileSearch, search/listDirectory, search/searchResults, search/textSearch, search/usages, web/fetch, web/githubRepo]
 model: claude-sonnet-4.5
 ---
 

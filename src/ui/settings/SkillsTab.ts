@@ -11,6 +11,9 @@ export class SkillsTab {
     constructor(private plugin: ObsidianAgentPlugin, private app: App, private rerender: () => void) {}
 
     build(containerEl: HTMLElement): void {
+        // -- Introduction: What are Skills? --
+        this.buildIntroSection(containerEl);
+
         // -- Manual Skills (first) --
         this.buildManualSkillsSection(containerEl);
 
@@ -27,14 +30,22 @@ export class SkillsTab {
         this.buildPluginSkillsSection(containerEl);
     }
 
+    // -- Introduction --
+
+    private buildIntroSection(containerEl: HTMLElement): void {
+        const intro = containerEl.createDiv('agent-settings-info-banner');
+        const infoIcon = intro.createSpan({ cls: 'agent-settings-info-icon' });
+        setIcon(infoIcon, 'lightbulb');
+        const infoText = intro.createDiv({ cls: 'agent-settings-info-text' });
+        infoText.createEl('strong', { text: t('settings.skills.introTitle') });
+        infoText.createEl('p', { text: t('settings.skills.introDesc') });
+        infoText.createEl('p', { text: t('settings.skills.introDiff') });
+    }
+
     // -- Manual Skills --
 
     private buildManualSkillsSection(containerEl: HTMLElement): void {
         containerEl.createEl('h3', { text: t('settings.skills.headingManual') });
-        containerEl.createEl('p', {
-            cls: 'agent-settings-desc',
-            text: t('settings.skills.desc'),
-        });
 
         const skillsManager = this.plugin.skillsManager;
 
@@ -80,8 +91,9 @@ export class SkillsTab {
                 listEl.createEl('p', { cls: 'agent-settings-desc', text: t('settings.skills.managerNotAvailable') });
                 return;
             }
-            const skills: { path: string; name: string; description: string }[] =
-                await skillsManager.discoverSkills();
+            const allSkills = await skillsManager.discoverSkills();
+            // Filter: Manual Skills section shows only user-created skills (NOT agent-created)
+            const skills = allSkills.filter(s => s.source !== 'learned');
             if (skills.length === 0) {
                 listEl.createEl('p', { cls: 'agent-empty-state', text: t('settings.skills.empty') });
                 return;
@@ -225,11 +237,6 @@ export class SkillsTab {
             return;
         }
 
-        containerEl.createEl('p', {
-            cls: 'agent-settings-desc',
-            text: `${skills.length} skill(s) created by the agent. Skills with code modules register custom tools.`,
-        });
-
         const table = containerEl.createEl('table', { cls: 'agent-skill-table' });
         const thead = table.createEl('thead');
         const hr = thead.createEl('tr');
@@ -237,43 +244,150 @@ export class SkillsTab {
         hr.createEl('th', { text: 'Skill' });
         hr.createEl('th', { text: 'Source', cls: 'agent-skill-th-cmds' });
         hr.createEl('th', { text: 'Code', cls: 'agent-skill-th-cmds' });
+        hr.createEl('th', { text: '', cls: 'agent-skill-th-actions' }); // Actions column
 
         const tbody = table.createEl('tbody');
 
-        for (const skill of skills) {
-            const tr = tbody.createEl('tr');
+        const refreshSkills = async () => {
+            tbody.empty();
+            const allSkills = loader.getAllSkills();
+            // Filter: Agent Created Skills section shows only agent-created skills (source: learned)
+            const currentSkills = allSkills.filter(s => s.source === 'learned');
+            for (const skill of currentSkills) {
+                const tr = tbody.createEl('tr');
 
-            // Status dot
-            const statusTd = tr.createEl('td', { cls: 'agent-skill-status-cell' });
-            const dot = statusTd.createSpan({ cls: 'agent-skill-dot agent-skill-dot-on' });
-            dot.setAttribute('aria-label', 'Active');
+                // Status dot
+                const statusTd = tr.createEl('td', { cls: 'agent-skill-status-cell' });
+                const dot = statusTd.createSpan({ cls: 'agent-skill-dot agent-skill-dot-on' });
+                dot.setAttribute('aria-label', 'Active');
 
-            // Name + description + trigger
-            const nameTd = tr.createEl('td', { cls: 'agent-skill-name-cell' });
-            nameTd.createDiv({ text: skill.name, cls: 'agent-skill-name' });
-            if (skill.description) {
-                nameTd.createDiv({ text: skill.description, cls: 'agent-skill-desc' });
-            }
-            nameTd.createDiv({
-                text: `trigger: ${skill.triggerSource}`,
-                cls: 'agent-skill-desc',
-            });
+                // Name + description (max 3 lines with line-clamp)
+                const nameTd = tr.createEl('td', { cls: 'agent-skill-name-cell' });
+                nameTd.createDiv({ text: skill.name, cls: 'agent-skill-name' });
+                if (skill.description) {
+                    nameTd.createDiv({ text: skill.description, cls: 'agent-skill-desc agent-skill-desc-clamped' });
+                }
 
-            // Source
-            tr.createEl('td', { text: skill.source, cls: 'agent-skill-cmd-cell' });
+                // Source (show as "Agent" instead of "learned")
+                const sourceText = skill.source === 'learned' ? 'Agent' : skill.source || '-';
+                tr.createEl('td', { text: sourceText, cls: 'agent-skill-cmd-cell' });
 
-            // Code modules
-            const codeTd = tr.createEl('td', { cls: 'agent-skill-cmd-cell' });
-            if (skill.codeModules.length > 0) {
-                const toolNames = skill.codeModuleInfos.map(m => m.name);
-                codeTd.createDiv({
-                    text: toolNames.join(', '),
-                    cls: 'agent-skill-desc',
+                // Code modules
+                const codeTd = tr.createEl('td', { cls: 'agent-skill-cmd-cell' });
+                if (skill.codeModules.length > 0) {
+                    const toolNames = skill.codeModuleInfos.map(m => m.name);
+                    codeTd.createDiv({
+                        text: toolNames.join(', '),
+                        cls: 'agent-skill-desc',
+                    });
+                } else {
+                    codeTd.setText('-');
+                }
+
+                // Actions (edit, export, delete)
+                const actionsTd = tr.createEl('td', { cls: 'agent-skill-actions-cell' });
+
+                // Edit button
+                const editBtn = actionsTd.createEl('button', {
+                    cls: 'agent-skill-action-btn', attr: { 'aria-label': 'Edit' },
                 });
-            } else {
-                codeTd.setText('-');
+                setIcon(editBtn, 'pencil');
+                editBtn.addEventListener('click', () => { void (async () => {
+                    const adapter = this.plugin.app.vault.adapter;
+                    try {
+                        const content = await adapter.read(skill.filePath);
+                        new ContentEditorModal(this.app, `Edit: ${skill.name}`, content, async (newContent) => {
+                            await adapter.write(skill.filePath, newContent);
+                        }).open();
+                    } catch (e) {
+                        new Notice('Failed to edit skill');
+                        console.error('[SkillsTab] Edit failed:', e);
+                    }
+                })(); });
+
+                // Export button
+                const exportBtn = actionsTd.createEl('button', {
+                    cls: 'agent-skill-action-btn', attr: { 'aria-label': 'Export' },
+                });
+                setIcon(exportBtn, 'download');
+                exportBtn.addEventListener('click', () => { void (async () => {
+                    const adapter = this.plugin.app.vault.adapter;
+                    try {
+                        const content = await adapter.read(skill.filePath);
+                        const blob = new Blob([content], { type: 'text/markdown' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `SKILL-${skill.name}.md`;
+                        a.click();
+                        URL.revokeObjectURL(url);
+                    } catch (e) {
+                        new Notice('Failed to export skill');
+                        console.error('[SkillsTab] Export failed:', e);
+                    }
+                })(); });
+
+                // Delete button
+                const delBtn = actionsTd.createEl('button', {
+                    cls: 'agent-skill-action-btn', attr: { 'aria-label': 'Delete' },
+                });
+                setIcon(delBtn, 'trash-2');
+                delBtn.addEventListener('click', () => { void (async () => {
+                    try {
+                        const adapter = this.plugin.app.vault.adapter;
+                        const skillDir = skill.filePath.replace(/\/SKILL\.md$/, '');
+
+                        // Unregister code tools first
+                        loader.unregisterCodeTools(skill);
+
+                        // Delete from vault (.obsidian/plugins/obsilo-agent/skills/)
+                        // First remove all files, then the directory
+                        const exists = await adapter.exists(skillDir);
+                        if (exists) {
+                            const listing = await adapter.list(skillDir);
+                            // Delete all files in skill directory
+                            for (const filePath of listing.files) {
+                                await adapter.remove(filePath);
+                            }
+                            // Delete subdirectories recursively
+                            for (const subdir of listing.folders) {
+                                const subdirListing = await adapter.list(subdir);
+                                for (const subfile of subdirListing.files) {
+                                    await adapter.remove(subfile);
+                                }
+                                if (subdirListing.folders.length === 0) {
+                                    await adapter.rmdir(subdir, false);
+                                }
+                            }
+                            // Delete the main skill directory
+                            await adapter.rmdir(skillDir, false);
+                        }
+
+                        // Also delete from global storage (~/.obsidian-agent/skills/)
+                        // Extract the skill folder name from the path
+                        const skillFolderName = skillDir.split('/').pop();
+                        if (this.plugin.skillsManager && skillFolderName) {
+                            const globalPath = `skills/${skillFolderName}/SKILL.md`;
+                            try {
+                                await this.plugin.skillsManager.deleteSkill(globalPath);
+                            } catch {
+                                // Non-fatal if already deleted
+                            }
+                        }
+
+                        // Reload skills
+                        await loader.loadAll();
+                        await refreshSkills();
+                        new Notice(`Skill "${skill.name}" deleted`);
+                    } catch (e) {
+                        new Notice('Failed to delete skill');
+                        console.error('[SkillsTab] Delete failed:', e);
+                    }
+                })(); });
             }
-        }
+        };
+
+        void refreshSkills();
     }
 
     // -- Obsidian Plugin Skills (PAS-1) --

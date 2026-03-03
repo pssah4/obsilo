@@ -9,7 +9,7 @@
  * 5. Memory Files (stats, view, reset)
  */
 
-import { App, Notice, Setting } from 'obsidian';
+import { App, Notice, Setting, setIcon } from 'obsidian';
 import type ObsidianAgentPlugin from '../../main';
 import { getModelKey } from '../../types/settings';
 import { OnboardingService } from '../../core/memory/OnboardingService';
@@ -18,7 +18,17 @@ import { t } from '../../i18n';
 export class MemoryTab {
     constructor(private plugin: ObsidianAgentPlugin, private app: App, private rerender: () => void) {}
 
+    private buildIntroSection(containerEl: HTMLElement): void {
+        const infoBanner = containerEl.createDiv('agent-settings-info-banner');
+        const infoIcon = infoBanner.createSpan({ cls: 'agent-settings-info-icon' });
+        setIcon(infoIcon, 'lightbulb');
+        const infoText = infoBanner.createDiv({ cls: 'agent-settings-info-text' });
+        infoText.createEl('strong', { text: t('settings.memory.introTitle') });
+        infoText.createDiv({ text: t('settings.memory.introDesc') });
+    }
+
     build(containerEl: HTMLElement): void {
+        this.buildIntroSection(containerEl);
         containerEl.createEl('p', {
             cls: 'agent-settings-desc',
             text: t('settings.memory.desc'),
