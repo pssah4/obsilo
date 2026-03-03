@@ -87,6 +87,17 @@ export class InterfaceTab {
                 }),
             );
 
+        new Setting(containerEl)
+            .setName('Show context progress')
+            .setDesc('Display a progress bar showing context window usage. Restart sidebar to apply.')
+            .addToggle((toggle) =>
+                toggle.setValue(this.plugin.settings.showContextProgress).onChange(async (value) => {
+                    this.plugin.settings.showContextProgress = value;
+                    await this.plugin.saveSettings();
+                    new Notice('Please restart the sidebar (close & reopen) to apply changes.');
+                })
+            );
+
         containerEl.createEl('h3', { cls: 'agent-settings-section', text: t('settings.interface.headingHistory') });
 
         new Setting(containerEl)
