@@ -100,9 +100,13 @@ export class CodeModuleCompiler {
             ? JSON.stringify(cm.dependencies)
             : '[]';
 
+        // Escape strings for safe embedding in generated TypeScript literals (CWE-116 fix)
+        const esc = (s: string): string =>
+            s.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n').replace(/\r/g, '\\r');
+
         return `export const definition = {
-    name: '${cm.name}',
-    description: '${cm.description.replace(/'/g, "\\'")}',
+    name: '${esc(cm.name)}',
+    description: '${esc(cm.description)}',
     input_schema: ${schemaStr},
     isWriteOperation: ${cm.is_write_operation ?? false},
     dependencies: ${depsStr},
