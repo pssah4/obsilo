@@ -48,14 +48,14 @@ export class ContextDisplay {
         }
 
         // Tooltip (hover on bar)
-        this.tooltipContent = this.container.createDiv('context-tooltip');
-        this.tooltipContent.style.display = 'none';
+        // L-1: CSS class instead of inline style for display toggle
+        this.tooltipContent = this.container.createDiv('context-tooltip agent-u-hidden');
 
         barContainer.addEventListener('mouseenter', () => {
-            if (this.tooltipContent) this.tooltipContent.style.display = 'block';
+            if (this.tooltipContent) this.tooltipContent.removeClass('agent-u-hidden');
         });
         barContainer.addEventListener('mouseleave', () => {
-            if (this.tooltipContent) this.tooltipContent.style.display = 'none';
+            if (this.tooltipContent) this.tooltipContent.addClass('agent-u-hidden');
         });
 
         return this.container;
@@ -81,15 +81,15 @@ export class ContextDisplay {
         const reservedPercent = total > 0 ? (reservedForOutput / total) * 100 : 0;
         const availablePercent = total > 0 ? (availableSize / total) * 100 : 0;
 
-        // Update segment widths
+        // L-1: style.setProperty() instead of inline style for dynamic widths
         if (this.barCurrent) {
-            this.barCurrent.style.width = `${currentPercent}%`;
+            this.barCurrent.style.setProperty('width', `${currentPercent}%`);
         }
         if (this.barReserved) {
-            this.barReserved.style.width = `${reservedPercent}%`;
+            this.barReserved.style.setProperty('width', `${reservedPercent}%`);
         }
         if (this.barAvailable) {
-            this.barAvailable.style.width = `${availablePercent}%`;
+            this.barAvailable.style.setProperty('width', `${availablePercent}%`);
         }
 
         // Update color
@@ -131,12 +131,13 @@ export class ContextDisplay {
         }
     }
 
+    // L-1: CSS class instead of inline style for show/hide
     show(): void {
-        if (this.container) this.container.style.display = 'block';
+        if (this.container) this.container.removeClass('agent-u-hidden');
     }
 
     hide(): void {
-        if (this.container) this.container.style.display = 'none';
+        if (this.container) this.container.addClass('agent-u-hidden');
     }
 
     private formatNumber(num: number): string {

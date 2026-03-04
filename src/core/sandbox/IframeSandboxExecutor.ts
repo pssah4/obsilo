@@ -91,6 +91,8 @@ export class IframeSandboxExecutor implements ISandboxExecutor {
             this.pending.set(id, { resolve, reject, timeout });
 
             const execMsg: PluginToSandboxMessage = { type: 'execute', id, code: compiledJs, input };
+            // L-2 Known Limitation: targetOrigin '*' required for srcdoc iframes (no own origin).
+            // Security: event.source check in handleMessage() prevents spoofing in receive direction.
             this.iframe?.contentWindow?.postMessage(execMsg, '*');
         });
     }
@@ -203,6 +205,7 @@ export class IframeSandboxExecutor implements ISandboxExecutor {
             }
 
             const response: PluginToSandboxMessage = { callId: bridgeMsg.callId, result };
+            // L-2: targetOrigin '*' -- see execute() comment for rationale
             this.iframe?.contentWindow?.postMessage(response, '*');
         } catch (e) {
             // M-8: Record error for circuit breaker

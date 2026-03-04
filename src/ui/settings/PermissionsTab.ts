@@ -4,6 +4,8 @@ import { t } from '../../i18n';
 
 
 export class PermissionsTab {
+    private permissiveWarning: HTMLElement | null = null;
+
     constructor(private plugin: ObsidianAgentPlugin, private app: App, private rerender: () => void) {}
 
     private buildIntroSection(containerEl: HTMLElement): void {
@@ -33,6 +35,7 @@ export class PermissionsTab {
                     this.plugin.settings.autoApproval.enabled = v;
                     await this.plugin.saveSettings();
                     this.updateCategoryState(categoryContainer, v);
+                    this.updatePermissiveWarning();
                 }),
             );
         this.addWarning(containerEl, 'settings.permissions.enableAutoApproveWarning', true);
@@ -72,6 +75,7 @@ export class PermissionsTab {
                 t.setValue(this.plugin.settings.autoApproval.noteEdits).onChange(async (v) => {
                     this.plugin.settings.autoApproval.noteEdits = v;
                     await this.plugin.saveSettings();
+                    this.updatePermissiveWarning();
                 }),
             );
         this.addWarning(categoryContainer, 'settings.permissions.noteEditsWarning');
@@ -83,6 +87,7 @@ export class PermissionsTab {
                 t.setValue(this.plugin.settings.autoApproval.vaultChanges).onChange(async (v) => {
                     this.plugin.settings.autoApproval.vaultChanges = v;
                     await this.plugin.saveSettings();
+                    this.updatePermissiveWarning();
                 }),
             );
         this.addWarning(categoryContainer, 'settings.permissions.vaultChangesWarning');
@@ -94,6 +99,7 @@ export class PermissionsTab {
                 t.setValue(this.plugin.settings.autoApproval.web).onChange(async (v) => {
                     this.plugin.settings.autoApproval.web = v;
                     await this.plugin.saveSettings();
+                    this.updatePermissiveWarning();
                 }),
             );
         this.addWarning(categoryContainer, 'settings.permissions.webOpsWarning');
@@ -187,8 +193,23 @@ export class PermissionsTab {
             );
         this.addWarning(categoryContainer, 'settings.permissions.sandboxWarning', true);
 
+        // H-1: Permissive mode warning — shown when web + writes are both auto-approved
+        this.permissiveWarning = containerEl.createDiv('agent-setting-warning agent-setting-warning--high-risk agent-u-hidden');
+        const permissiveIcon = this.permissiveWarning.createSpan('agent-setting-warning-icon');
+        setIcon(permissiveIcon, 'shield-alert');
+        this.permissiveWarning.createSpan({ text: t('settings.permissions.permissiveWarning') });
+        this.updatePermissiveWarning();
+
         // Set initial disabled state
         this.updateCategoryState(categoryContainer, this.plugin.settings.autoApproval.enabled);
+    }
+
+    /** H-1: Show/hide permissive mode warning when web + writes are both auto-approved. */
+    private updatePermissiveWarning(): void {
+        if (!this.permissiveWarning) return;
+        const a = this.plugin.settings.autoApproval;
+        const isPermissive = a.enabled && a.web && (a.noteEdits || a.vaultChanges);
+        this.permissiveWarning.toggleClass('agent-u-hidden', !isPermissive);
     }
 
     /** Toggle the disabled state of all category toggles. */

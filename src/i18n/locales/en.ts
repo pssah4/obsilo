@@ -318,6 +318,9 @@ export const en: Translations = {
     'settings.permissions.sandboxConfirmCancel': 'Cancel',
     'settings.permissions.sandboxConfirmAccept': 'I understand the risk \u2014 enable',
 
+    // H-1: Permissive mode warning (web + writes both auto-approved)
+    'settings.permissions.permissiveWarning': 'Permissive mode: Web access and write operations are both auto-approved. Content from untrusted web pages or vault notes could trick the agent into modifying your vault without review. This is the highest-risk configuration. Consider disabling auto-approval for either web access or write operations.',
+
     // =========================================================================
     // Settings — Loop Tab
     // =========================================================================

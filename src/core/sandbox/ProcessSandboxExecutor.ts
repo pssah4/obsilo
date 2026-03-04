@@ -126,7 +126,13 @@ export class ProcessSandboxExecutor implements ISandboxExecutor {
             `--max-old-space-size=${ProcessSandboxExecutor.HEAP_LIMIT_MB}`,
             workerPath,
         ], {
-            env: { ...process.env },
+            // M-1: Minimal env -- avoid leaking secrets via process.env to sandbox worker
+            env: {
+                PATH: process.env['PATH'],
+                HOME: process.env['HOME'],
+                LANG: process.env['LANG'] ?? 'en_US.UTF-8',
+                NODE_PATH: process.env['NODE_PATH'],
+            },
             stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
         });
 

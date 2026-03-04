@@ -199,17 +199,26 @@ export class LongTermExtractor {
             if (cleaned.startsWith('```')) {
                 cleaned = cleaned.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
             }
-            const parsed = JSON.parse(cleaned);
-            if (!parsed.updates || !Array.isArray(parsed.updates)) {
-                console.warn('[LongTermExtractor] Invalid response structure');
+            // M-5: Schema validation for LLM response — validate shape before property access
+            const raw: unknown = JSON.parse(cleaned);
+            if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
+                console.warn('[LongTermExtractor] LLM response is not an object');
                 return null;
             }
-            // Validate each update
-            const valid = parsed.updates.filter((u: MemoryUpdate) =>
-                typeof u.file === 'string' &&
-                typeof u.content === 'string' &&
-                ['user-profile.md', 'projects.md', 'patterns.md', 'soul.md', 'learnings.md', 'errors.md', 'custom-tools.md'].includes(u.file) &&
-                ['append', 'replace'].includes(u.action)
+            const parsed = raw as Record<string, unknown>;
+            if (!Array.isArray(parsed.updates)) {
+                console.warn('[LongTermExtractor] Invalid response structure: missing updates array');
+                return null;
+            }
+            // Validate each update entry individually
+            const ALLOWED_FILES = ['user-profile.md', 'projects.md', 'patterns.md', 'soul.md', 'learnings.md', 'errors.md', 'custom-tools.md'];
+            const ALLOWED_ACTIONS = ['append', 'replace'];
+            const valid = (parsed.updates as unknown[]).filter((u): u is MemoryUpdate =>
+                typeof u === 'object' && u !== null &&
+                typeof (u as Record<string, unknown>).file === 'string' &&
+                typeof (u as Record<string, unknown>).content === 'string' &&
+                ALLOWED_FILES.includes((u as Record<string, unknown>).file as string) &&
+                ALLOWED_ACTIONS.includes((u as Record<string, unknown>).action as string)
             );
             return { updates: valid };
         } catch (e) {
