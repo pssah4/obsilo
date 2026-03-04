@@ -317,8 +317,13 @@ export class WebFetchTool extends BaseTool<'web_fetch'> {
         md = md.replace(/<[^>]*(tr|table|thead|tbody|tfoot)[^>]*>/gi, '\n');
 
         // Final safety pass: remove any script/style fragments that survived conversion
-        md = md.replace(/<\/?script[^>]*>/gi, '');
-        md = md.replace(/<\/?style[^>]*>/gi, '');
+        // Use while-loops to handle nested/reconstructed fragments like <scr<script>ipt> (CWE-116)
+        while (/<\/?script[^>]*>/gi.test(md)) {
+            md = md.replace(/<\/?script[^>]*>/gi, '');
+        }
+        while (/<\/?style[^>]*>/gi.test(md)) {
+            md = md.replace(/<\/?style[^>]*>/gi, '');
+        }
 
         // Strip remaining HTML tags
         md = md.replace(/<[^>]+>/g, '');
@@ -337,6 +342,15 @@ export class WebFetchTool extends BaseTool<'web_fetch'> {
         md = md.replace(/&#x([0-9a-f]+);/gi, (_, code) =>
             String.fromCharCode(parseInt(code, 16))
         );
+
+        // Post-decode safety: remove any HTML tags that emerged from entity decoding (CWE-116 fix)
+        while (/<\/?script[^>]*>/gi.test(md)) {
+            md = md.replace(/<\/?script[^>]*>/gi, '');
+        }
+        while (/<\/?style[^>]*>/gi.test(md)) {
+            md = md.replace(/<\/?style[^>]*>/gi, '');
+        }
+        md = md.replace(/<[^>]+>/g, '');
 
         // Collapse excessive blank lines (max 2 in a row)
         md = md.replace(/\n{3,}/g, '\n\n');
