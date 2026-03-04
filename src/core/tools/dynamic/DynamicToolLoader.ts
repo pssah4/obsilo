@@ -149,11 +149,15 @@ Migrated from dynamic tool. This skill provides the ${toolName} tool.
                 createdPaths.push(skillFilePath);
 
                 // Write TypeScript source
+                // Escape strings for safe embedding in generated TypeScript literals (CWE-116 fix)
+                const escapeForStringLiteral = (s: string): string =>
+                    s.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n').replace(/\r/g, '\\r');
+
                 const tsSource = record.sourceTs.includes('export const definition')
                     ? record.sourceTs
                     : `export const definition = {
-    name: '${toolName}',
-    description: '${record.definition.description.replace(/'/g, "\\'")}',
+    name: '${escapeForStringLiteral(toolName)}',
+    description: '${escapeForStringLiteral(record.definition.description)}',
     input_schema: ${schemaStr},
     isWriteOperation: ${record.definition.isWriteOperation ?? false},
     dependencies: ${depsStr},
