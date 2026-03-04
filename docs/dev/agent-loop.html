@@ -11,6 +11,7 @@
 <body>
 
 <header class="site-header">
+  <button class="mobile-menu-btn" aria-label="Menu" onclick="toggleMobileMenu()"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
   <a href="../index.html" class="logo">
     <img src="../assets/OBSILO_LOGOFULL_SW_v2.png" alt="Obsilo" class="logo-img">
   </a>
@@ -37,6 +38,8 @@
 </header>
 <script>function toggleTheme(){var h=document.documentElement,n=h.getAttribute('data-theme')==='light'?'dark':'light';h.setAttribute('data-theme',n);localStorage.setItem('theme',n);document.querySelectorAll('.logo-img').forEach(function(i){i.src=n==='light'?'../assets/OBSILO_LOGOFULL_v2.png':'../assets/OBSILO_LOGOFULL_SW_v2.png'})}(function(){var t=document.documentElement.getAttribute('data-theme');if(t==='light'){document.querySelectorAll('.logo-img').forEach(function(i){i.src='../assets/OBSILO_LOGOFULL_v2.png'})}})()</script>
 
+<div class="mobile-sidebar-backdrop" onclick="toggleMobileMenu()"></div>
+<script>function toggleMobileMenu(){var s=document.querySelector('.docs-sidebar');var b=document.querySelector('.mobile-sidebar-backdrop');if(!s||!b)return;var open=s.classList.toggle('mobile-open');b.classList.toggle('visible',open);document.body.style.overflow=open?'hidden':''}</script>
 <div class="docs-layout">
   <aside class="docs-sidebar">
     <div class="sidebar-section"><div class="sidebar-section-title" data-i18n="dev_sidebar.title">Architecture</div><nav class="sidebar-nav"><a href="index.html" data-i18n="dev_sidebar.hub">Overview</a></nav></div>
@@ -88,7 +91,7 @@
         <tbody>
           <tr><td><code>api</code></td><td>ApiHandler</td><td>&mdash;</td><td>LLM provider instance</td></tr>
           <tr><td><code>toolRegistry</code></td><td>ToolRegistry</td><td>&mdash;</td><td>Available tools</td></tr>
-          <tr><td><code>taskCallbacks</code></td><td>AgentTaskCallbacks</td><td>&mdash;</td><td>UI callback interface (14 methods)</td></tr>
+          <tr><td><code>taskCallbacks</code></td><td>AgentTaskCallbacks</td><td>&mdash;</td><td>UI callback interface (15 methods)</td></tr>
           <tr><td><code>modeService</code></td><td>ModeService</td><td>&mdash;</td><td>Mode resolution and filtering</td></tr>
           <tr><td><code>consecutiveMistakeLimit</code></td><td>number</td><td>0 (disabled)</td><td>Max consecutive errors before abort</td></tr>
           <tr><td><code>rateLimitMs</code></td><td>number</td><td>0</td><td>Delay between iterations</td></tr>
@@ -169,7 +172,7 @@
       </table>
 
       <h2 id="callbacks">AgentTask Callbacks</h2>
-      <p>The <code>AgentTaskCallbacks</code> interface defines 14 callback methods for the UI to observe the agent's execution:</p>
+      <p>The <code>AgentTaskCallbacks</code> interface defines 15 callback methods for the UI to observe the agent's execution:</p>
       <pre><code><span class="code-keyword">interface</span> <span class="code-type">AgentTaskCallbacks</span> {
   <span class="code-function">onIterationStart</span>(iteration: <span class="code-type">number</span>): <span class="code-keyword">void</span>;
   <span class="code-function">onThinking</span>(text: <span class="code-type">string</span>): <span class="code-keyword">void</span>;

@@ -12,6 +12,7 @@
 
 <!-- Header -->
 <header class="site-header">
+  <button class="mobile-menu-btn" aria-label="Menu" onclick="toggleMobileMenu()"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
   <a href="index.html" class="logo">
     <img src="assets/OBSILO_LOGOFULL_SW_v2.png" alt="Obsilo" class="logo-img">
   </a>
@@ -36,6 +37,14 @@
   <button class="search-btn" onclick="openDocsSearch()" aria-label="Search docs" data-i18n-aria="header.search"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span data-i18n="header.search">Search</span></button>
 </header>
 <script>function toggleTheme(){var h=document.documentElement,n=h.getAttribute('data-theme')==='light'?'dark':'light';h.setAttribute('data-theme',n);localStorage.setItem('theme',n);document.querySelectorAll('.logo-img').forEach(function(i){i.src=n==='light'?'assets/OBSILO_LOGOFULL_v2.png':'assets/OBSILO_LOGOFULL_SW_v2.png'})}(function(){var t=document.documentElement.getAttribute('data-theme');if(t==='light'){document.querySelectorAll('.logo-img').forEach(function(i){i.src='assets/OBSILO_LOGOFULL_v2.png'})}})()</script>
+<div class="mobile-nav-overlay" id="mobileNavOverlay">
+  <a href="getting-started.html">Guide</a>
+  <a href="dev/index.html">Architecture</a>
+  <a href="about.html">About</a>
+  <a href="https://github.com/pssah4/obsilo">GitHub</a>
+</div>
+<script>function toggleMobileMenu(){var o=document.getElementById('mobileNavOverlay');if(!o)return;var open=o.classList.toggle('mobile-open');document.body.style.overflow=open?'hidden':''}</script>
+
 
 <!-- Hero -->
 <section class="hero">

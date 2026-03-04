@@ -11,6 +11,7 @@
 <body>
 
 <header class="site-header">
+  <button class="mobile-menu-btn" aria-label="Menu" onclick="toggleMobileMenu()"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
   <a href="../index.html" class="logo">
     <img src="../assets/OBSILO_LOGOFULL_SW_v2.png" alt="Obsilo" class="logo-img">
   </a>
@@ -37,6 +38,8 @@
 </header>
 <script>function toggleTheme(){var h=document.documentElement,n=h.getAttribute('data-theme')==='light'?'dark':'light';h.setAttribute('data-theme',n);localStorage.setItem('theme',n);document.querySelectorAll('.logo-img').forEach(function(i){i.src=n==='light'?'../assets/OBSILO_LOGOFULL_v2.png':'../assets/OBSILO_LOGOFULL_SW_v2.png'})}(function(){var t=document.documentElement.getAttribute('data-theme');if(t==='light'){document.querySelectorAll('.logo-img').forEach(function(i){i.src='../assets/OBSILO_LOGOFULL_v2.png'})}})()</script>
 
+<div class="mobile-sidebar-backdrop" onclick="toggleMobileMenu()"></div>
+<script>function toggleMobileMenu(){var s=document.querySelector('.docs-sidebar');var b=document.querySelector('.mobile-sidebar-backdrop');if(!s||!b)return;var open=s.classList.toggle('mobile-open');b.classList.toggle('visible',open);document.body.style.overflow=open?'hidden':''}</script>
 <div class="docs-layout">
   <aside class="docs-sidebar">
     <div class="sidebar-section"><div class="sidebar-section-title" data-i18n="dev_sidebar.title">Architecture</div><nav class="sidebar-nav"><a href="index.html" data-i18n="dev_sidebar.hub">Overview</a></nav></div>
@@ -133,7 +136,7 @@
           <tr><td><code>vault</code></td><td><code>get_frontmatter</code>, <code>search_by_tag</code>, <code>get_vault_stats</code>, <code>get_linked_notes</code>, <code>get_daily_note</code>, <code>open_note</code>, <code>semantic_search</code>, <code>query_base</code></td></tr>
           <tr><td><code>edit</code></td><td><code>write_file</code>, <code>edit_file</code>, <code>append_to_file</code>, <code>create_folder</code>, <code>delete_file</code>, <code>move_file</code>, <code>update_frontmatter</code>, <code>generate_canvas</code>, <code>create_excalidraw</code>, <code>create_base</code>, <code>update_base</code></td></tr>
           <tr><td><code>web</code></td><td><code>web_fetch</code>, <code>web_search</code></td></tr>
-          <tr><td><code>agent</code></td><td><code>ask_followup_question</code>, <code>attempt_completion</code>, <code>update_todo_list</code>, <code>new_task</code>, <code>switch_mode</code>, <code>update_settings</code>, <code>configure_model</code></td></tr>
+          <tr><td><code>agent</code></td><td><code>ask_followup_question</code>, <code>attempt_completion</code>, <code>update_todo_list</code>, <code>new_task</code>, <code>switch_mode</code>, <code>update_settings</code>, <code>configure_model</code>, <code>evaluate_expression</code>, <code>manage_skill</code>, <code>manage_mcp_server</code>, <code>manage_source</code>, <code>read_agent_logs</code></td></tr>
           <tr><td><code>mcp</code></td><td><code>use_mcp_tool</code></td></tr>
           <tr><td><code>skill</code></td><td><code>execute_command</code>, <code>execute_recipe</code>, <code>call_plugin_api</code>, <code>resolve_capability_gap</code>, <code>enable_plugin</code></td></tr>
         </tbody>

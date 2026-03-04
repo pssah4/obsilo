@@ -34,6 +34,10 @@ export const zhCN: Translations = {
     // =========================================================================
     // Settings — Models Tab
     // =========================================================================
+    'settings.models.introTitle': 'AI模型',
+    'settings.models.introDesc': '配置代理使用的AI模型。您可以添加多个模型并在它们之间切换。',
+    'settings.models.performanceNote': '注意：',
+    'settings.models.performanceNoteDesc': '代理可以使用所有模型（包括本地模型）。最佳结果和体验通过Anthropic的强大模型（Claude Sonnet 4.5、Opus 4.6）获得。',
     'settings.models.headerModel': '模型',
     'settings.models.headerProvider': '提供商',
     'settings.models.headerKey': '密钥',
@@ -51,6 +55,8 @@ export const zhCN: Translations = {
     // =========================================================================
     // Settings — Embeddings Tab
     // =========================================================================
+    'settings.embeddings.introTitle': '语义搜索',
+    'settings.embeddings.introDesc': '嵌入使代理能够按含义而非精确关键字查找笔记。代理可以从您的Vault中检索相关上下文。',
     'settings.embeddings.headingModels': '嵌入模型',
     'settings.embeddings.headingIndex': '语义索引',
     'settings.embeddings.headingConfig': '索引配置',
@@ -149,6 +155,8 @@ export const zhCN: Translations = {
     // =========================================================================
     // Settings — Web Search Tab
     // =========================================================================
+    'settings.webSearch.introTitle': 'Web访问',
+    'settings.webSearch.introDesc': '允许代理获取网页和进行互联网研究。可选：使用Brave或Tavily进行关键字搜索。',
     'settings.webSearch.desc': '配置 web_fetch（读取任意 URL）和 web_search（Brave / Tavily）。web_fetch 无需 API 密钥即可使用；web_search 需要密钥。',
     'settings.webSearch.headingGeneral': '常规',
     'settings.webSearch.headingProvider': '搜索提供商',
@@ -169,6 +177,8 @@ export const zhCN: Translations = {
     // =========================================================================
     // Settings — MCP Tab
     // =========================================================================
+    'settings.mcp.introTitle': '模型上下文协议',
+    'settings.mcp.introDesc': 'MCP将外部工具和数据源连接到代理。每个MCP服务器提供代理可以使用的新工具。',
     'settings.mcp.desc': '通过模型上下文协议（MCP）连接外部工具和数据源。每个服务器暴露智能体可通过 use_mcp_tool 调用的工具。',
     'settings.mcp.addServer': '添加服务器',
     'settings.mcp.disconnect': '断开连接',
@@ -196,6 +206,8 @@ export const zhCN: Translations = {
     // =========================================================================
     // Settings — Modes Tab
     // =========================================================================
+    'settings.modes.introTitle': '代理模式',
+    'settings.modes.introDesc': '模式是具有不同工具集和系统指令的预定义配置。根据您的任务切换模式。',
     'settings.modes.groupBuiltIn': '内置',
     'settings.modes.groupGlobal': '全局（所有仓库）',
     'settings.modes.groupVault': '当前仓库',
@@ -248,10 +260,24 @@ export const zhCN: Translations = {
     // =========================================================================
     // Settings — Permissions Tab
     // =========================================================================
+    'settings.permissions.introTitle': '自动审批',
+    'settings.permissions.introDesc': '控制代理是否可以自动执行工具还是需要您的批准。按类别决定您想要的安全级别。',
     'settings.permissions.desc': '模式定义智能体可使用的工具。自动批准控制智能体是否可以立即运行这些工具，还是必须先请求您的确认。当某个类别关闭时，智能体在执行该类别中的每个操作前会暂停并显示批准对话框。',
-    'settings.permissions.headingGeneral': '常规',
+    'settings.permissions.headingAutoApprove': '自动审批',
+    'settings.permissions.headingBehavior': '代理行为',
     'settings.permissions.headingPerCategory': '按类别',
     'settings.permissions.headingPluginApi': '插件 API 与配方',
+    'settings.permissions.headingSandbox': '沙箱代码执行',
+    'settings.permissions.sandbox': '自动批准沙箱执行',
+    'settings.permissions.sandboxConfirmAccept': '我了解风险 — 启用',
+    'settings.permissions.sandboxConfirmCancel': '取消',
+    'settings.permissions.sandboxConfirmMessage': '这允许代理在未经您审查的情况下运行代码。沙箱提供基本保护，但并非完全隔离。误导性内容（如来自网页或Vault笔记）可能导致未经审查的代码运行。您确定要启用吗？',
+    'settings.permissions.sandboxConfirmTitle': '启用沙箱自动批准？',
+    'settings.permissions.sandboxDesc': '让代理在受保护的沙箱中运行代码而无需询问。默认关闭。您的确认是防止有害代码的主要保障。',
+    'settings.permissions.sandboxWarning': '高风险：代理可以在沙箱中运行任何代码。沙箱提供基本保护，但并非完全与应用程序的其余部分隔离。误导性输入可能导致代理在未经您审查的情况下运行有害代码。除非您完全了解风险，否则请保持关闭。',
+    'settings.permissions.webOps': 'Web操作',
+    'settings.permissions.webOpsDesc': '代理可以代表您打开网页和进行网络搜索。',
+    'settings.permissions.webOpsWarning': '代理在外部服务器上打开网页和执行搜索。来自不受信任的网站的内容可能会影响代理的行为。',
     'settings.permissions.enableAutoApprove': '启用自动批准',
     'settings.permissions.enableAutoApproveDesc': '主开关。关闭时，无论下方类别设置如何，每个工具调用都需要手动批准。',
     'settings.permissions.showApprovalBar': '在聊天中显示批准栏',
@@ -293,6 +319,8 @@ export const zhCN: Translations = {
     // =========================================================================
     // Settings — Loop Tab
     // =========================================================================
+    'settings.loop.introTitle': '代理循环',
+    'settings.loop.introDesc': '控制错误容忍度、重试行为以及代理可以处理复杂任务的时间。上下文压缩和力量转向保持代理专注。',
     'settings.loop.desc': '控制智能体循环的运行方式、上下文保持时间以及智能体保持任务专注的可靠性。',
     'settings.loop.headingLoop': '智能体循环',
     'settings.loop.headingCondensing': '上下文压缩',
@@ -319,6 +347,8 @@ export const zhCN: Translations = {
     // =========================================================================
     // Settings — Memory Tab
     // =========================================================================
+    'settings.memory.introTitle': '长期记忆',
+    'settings.memory.introDesc': '代理从过去的对话中学习并建立长期记忆。这帮助它记住您的偏好和项目的重要信息。',
     'settings.memory.desc': '配置智能体如何记住对话并从过去的交互中学习。记忆在后台使用专用模型提取。',
     'settings.memory.headingHistory': '聊天历史',
     'settings.memory.headingMemory': '记忆',
@@ -367,6 +397,9 @@ export const zhCN: Translations = {
     // =========================================================================
     // Settings — Rules Tab
     // =========================================================================
+    'settings.rules.introTitle': '什么是规则？',
+    'settings.rules.introDesc': '规则是注入到每个代理会话系统提示中的静态指令。它们定义约束、边界和基本行为准则。',
+    'settings.rules.introDiff': '区别：技能是反应性行为（仅在相关时激活）。工作流是带有斜杠命令的具体序列。规则是始终适用的被动原则。',
     'settings.rules.heading': '规则',
     'settings.rules.desc': '规则会注入到每个智能体会话的系统提示词中。将规则文件以 .md 或 .txt 格式存储在仓库的 .obsidian-agent/rules/ 目录下。',
     'settings.rules.placeholder': '规则名称（如 "always-use-iso-dates"）',
@@ -383,6 +416,9 @@ export const zhCN: Translations = {
     // =========================================================================
     // Settings — Workflows Tab
     // =========================================================================
+    'settings.workflows.introTitle': '什么是工作流？',
+    'settings.workflows.introDesc': '工作流是通过聊天中的斜杠命令触发的多步骤序列。它们自动化重复的任务链并标准化复杂流程。',
+    'settings.workflows.introDiff': '区别：工作流是用户明确触发的序列（通过/工作流名称）。技能在相关时自动激活。规则是被动原则。工具执行单个操作。',
     'settings.workflows.heading': '工作流',
     'settings.workflows.desc': '在聊天中输入 /工作流名称 触发工作流。将工作流文件以 .md 或 .txt 格式存储在仓库的 .obsidian-agent/workflows/ 目录下。',
     'settings.workflows.placeholder': '工作流名称（如 "daily-review"）',
@@ -399,6 +435,9 @@ export const zhCN: Translations = {
     // =========================================================================
     // Settings — Skills Tab
     // =========================================================================
+    'settings.skills.introTitle': '什么是技能？',
+    'settings.skills.introDesc': '技能是代理在匹配请求时自动应用的可重用行为。它们通过特定任务的专业知识和指导扩展代理的能力。',
+    'settings.skills.introDiff': '区别：工具执行具体操作（读取文件、API调用）。工作流定义固定序列。技能是代理根据需要组合和调整的灵活指令。',
     'settings.skills.headingManual': '手动技能',
     'settings.skills.headingPlugin': 'Obsidian 插件技能',
     'settings.skills.desc': '技能会在与用户消息相关时自动注入到系统提示词中。每个技能存放在 .obsidian-agent/skills/{name}/SKILL.md 子文件夹中，包含 frontmatter：name、description。',
@@ -439,6 +478,9 @@ export const zhCN: Translations = {
     // =========================================================================
     // Settings — Prompts Tab
     // =========================================================================
+    'settings.prompts.introTitle': '什么是支持提示？',
+    'settings.prompts.introDesc': '支持提示是通过斜杠命令触发的带变量的可重用文本模板。它们实现内容的快速格式化、转换和分析。',
+    'settings.prompts.introDiff': '区别：提示是没有逻辑的纯文本模板。工作流是结构化序列。技能是带条件的自适应行为。规则是静态约束。',
     'settings.prompts.heading': '提示词',
     'settings.prompts.desc': '创建您自己的提示词模板。在聊天中输入 / 触发它们。使用 {{userInput}} 插入当前消息文本，使用 {{activeFile}} 插入当前活动笔记的名称。',
     'settings.prompts.namePlaceholder': '提示词名称（如 "daily-report"）',
@@ -465,6 +507,8 @@ export const zhCN: Translations = {
     // =========================================================================
     // Settings — Interface Tab
     // =========================================================================
+    'settings.interface.introTitle': '用户界面',
+    'settings.interface.introDesc': '自定义聊天行为：自动上下文、键盘快捷键、在Vault中保存聊天历史等。',
     'settings.interface.headingSetup': '设置对话',
     'settings.interface.headingInterface': '界面',
     'settings.interface.headingHistory': '聊天历史',
@@ -489,6 +533,8 @@ export const zhCN: Translations = {
     // =========================================================================
     // Settings — Shell Tab
     // =========================================================================
+    'settings.shell.introTitle': '插件API和配方',
+    'settings.shell.introDesc': '允许代理与Obsidian插件交互并执行外部工具（如Pandoc）。所有操作都在安全的沙箱中运行。',
     'settings.shell.desc': '配置智能体如何与插件 API 和外部工具交互。插件 API 调用在 Obsidian 的 JavaScript 沙箱中运行。配方以严格的参数验证和无 shell 展开方式执行外部程序（如 Pandoc）。',
     'settings.shell.headingPluginApi': '插件 API',
     'settings.shell.headingAllowlist': '内置允许列表',
@@ -509,6 +555,8 @@ export const zhCN: Translations = {
     // =========================================================================
     // Settings — Log Tab
     // =========================================================================
+    'settings.log.introTitle': '执行日志',
+    'settings.log.introDesc': '记录代理进行的所有工具调用。对调试和审计很有帮助。日志保留最多30天。',
     'settings.log.desc': '所有工具执行的审计跟踪。日志按天存储（最多 30 天）。点击行展开详情。',
     'settings.log.load': '加载',
     'settings.log.download': '下载',
@@ -534,12 +582,16 @@ export const zhCN: Translations = {
     // =========================================================================
     // Settings — Debug Tab
     // =========================================================================
+    'settings.debug.introTitle': '开发者工具',
+    'settings.debug.introDesc': '在浏览器控制台中启用详细日志。对故障排除或报告错误很有用。',
     'settings.debug.debugMode': '调试模式',
     'settings.debug.debugModeDesc': '将详细日志写入浏览器开发者控制台。仅用于排查问题。使用 Cmd+Option+I（Mac）或 Ctrl+Shift+I（Windows）打开控制台。',
 
     // =========================================================================
     // Settings — Backup Tab
     // =========================================================================
+    'settings.backup.introTitle': '备份和迁移',
+    'settings.backup.introDesc': '导出和导入所有插件数据：设置、记忆、聊天历史、技能、工作流。非常适合备份或设备迁移。',
     'settings.backup.desc': '导出和导入插件数据以进行备份或迁移到其他设备。',
     'settings.backup.headingExport': '导出',
     'settings.backup.headingImport': '导入',
@@ -591,6 +643,8 @@ export const zhCN: Translations = {
     // =========================================================================
     // Settings — Language Tab
     // =========================================================================
+    'settings.language.introTitle': '显示语言',
+    'settings.language.introDesc': '选择插件界面的语言。与代理的通信可以使用任何语言，无论此设置如何。',
     'settings.language.language': '语言',
     'settings.language.languageDesc': '选择插件界面的显示语言。未翻译的字符串将回退到英语。',
     'settings.language.restartHint': '重启 Obsidian 以使所有更改生效。',
@@ -777,6 +831,8 @@ export const zhCN: Translations = {
     'ui.approval.pluginSkills': '插件技能',
     'ui.approval.pluginApi': '插件 API',
     'ui.approval.recipes': '配方',
+    'ui.approval.configDirWarning': '对受保护目录的写入访问：{{path}}。此目录中的文件控制插件、主题和Obsidian设置。意外更改可能会改变Obsidian的行为或将恶意代码作为插件安装。',
+    'ui.approval.sandbox': '沙箱执行',
     'ui.approval.notEnabled': '{{tool}} \u2014 {{group}} 未启用',
     'ui.approval.allowOnce': '允许一次',
     'ui.approval.enableInSettings': '在设置中启用',
