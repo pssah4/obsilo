@@ -325,8 +325,15 @@ export class WebFetchTool extends BaseTool<'web_fetch'> {
             md = md.replace(/<\/?style[^>]*>/gi, '');
         }
 
-        // Strip remaining HTML tags
-        md = md.replace(/<[^>]+>/g, '');
+        // Strip ALL remaining HTML tags in a loop until stable (CWE-116 / CodeQL #50)
+        // A single pass can miss tags reconstructed from nested fragments.
+        {
+            let prev: string;
+            do {
+                prev = md;
+                md = md.replace(/<[^>]+>/g, '');
+            } while (md !== prev);
+        }
 
         // Decode common HTML entities (&amp; last to prevent double-unescaping)
         md = md.replace(/&lt;/g, '<');
@@ -343,14 +350,21 @@ export class WebFetchTool extends BaseTool<'web_fetch'> {
             String.fromCharCode(parseInt(code, 16))
         );
 
-        // Post-decode safety: remove any HTML tags that emerged from entity decoding (CWE-116 fix)
+        // Post-decode safety: entity decoding may reconstruct HTML tags (CodeQL #53)
+        // Remove dangerous tags first, then strip all remaining tags until stable.
         while (/<\/?script[^>]*>/gi.test(md)) {
             md = md.replace(/<\/?script[^>]*>/gi, '');
         }
         while (/<\/?style[^>]*>/gi.test(md)) {
             md = md.replace(/<\/?style[^>]*>/gi, '');
         }
-        md = md.replace(/<[^>]+>/g, '');
+        {
+            let prev: string;
+            do {
+                prev = md;
+                md = md.replace(/<[^>]+>/g, '');
+            } while (md !== prev);
+        }
 
         // Collapse excessive blank lines (max 2 in a row)
         md = md.replace(/\n{3,}/g, '\n\n');
