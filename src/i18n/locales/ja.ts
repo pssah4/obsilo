@@ -34,6 +34,10 @@ export const ja: Translations = {
     // =========================================================================
     // Settings — Models Tab
     // =========================================================================
+    'settings.models.introTitle': 'AIモデル',
+    'settings.models.introDesc': 'エージェントが使用するAIモデルを設定します。複数のモデルを追加して切り替えることができます。',
+    'settings.models.performanceNote': '注意:',
+    'settings.models.performanceNoteDesc': 'エージェントはすべてのモデル（ローカルモデルを含む）で動作します。最高の結果はAnthropicの強力なモデル（Claude Sonnet 4.5、Opus 4.6）で得られます。',
     'settings.models.headerModel': 'モデル',
     'settings.models.headerProvider': 'プロバイダー',
     'settings.models.headerKey': 'キー',
@@ -51,6 +55,8 @@ export const ja: Translations = {
     // =========================================================================
     // Settings — Embeddings Tab
     // =========================================================================
+    'settings.embeddings.introTitle': 'セマンティック検索',
+    'settings.embeddings.introDesc': 'エンベディングにより、エージェントはキーワードの完全一致ではなく意味でノートを検索できます。エージェントはVaultから関連するコンテキストを取得できます。',
     'settings.embeddings.headingModels': '埋め込みモデル',
     'settings.embeddings.headingIndex': 'セマンティックインデックス',
     'settings.embeddings.headingConfig': 'インデックス設定',
@@ -149,6 +155,8 @@ export const ja: Translations = {
     // =========================================================================
     // Settings — Web Search Tab
     // =========================================================================
+    'settings.webSearch.introTitle': 'Webアクセス',
+    'settings.webSearch.introDesc': 'エージェントがWebページを取得し、インターネットで調査できるようにします。オプション：BraveまたはTavilyでキーワード検索。',
     'settings.webSearch.desc': 'web_fetch（任意のURLを読み込み）と web_search（Brave / Tavily）を設定します。web_fetch はAPIキー不要で動作します。web_search にはAPIキーが必要です。',
     'settings.webSearch.headingGeneral': '全般',
     'settings.webSearch.headingProvider': '検索プロバイダー',
@@ -169,6 +177,8 @@ export const ja: Translations = {
     // =========================================================================
     // Settings — MCP Tab
     // =========================================================================
+    'settings.mcp.introTitle': 'モデルコンテキストプロトコル',
+    'settings.mcp.introDesc': 'MCPは外部ツールやデータソースをエージェントに接続します。各MCPサーバーはエージェントが使用できる新しいツールを提供します。',
     'settings.mcp.desc': 'Model Context Protocol（MCP）を介して外部ツールやデータソースを接続します。各サーバーはエージェントが use_mcp_tool を使って呼び出せるツールを公開します。',
     'settings.mcp.addServer': 'サーバーを追加',
     'settings.mcp.disconnect': '切断',
@@ -196,6 +206,8 @@ export const ja: Translations = {
     // =========================================================================
     // Settings — Modes Tab
     // =========================================================================
+    'settings.modes.introTitle': 'エージェントモード',
+    'settings.modes.introDesc': 'モードは異なるツールセットとシステム指示を持つ事前定義された設定です。タスクに応じてモードを切り替えます。',
     'settings.modes.groupBuiltIn': '組み込み',
     'settings.modes.groupGlobal': 'グローバル（全保管庫）',
     'settings.modes.groupVault': 'この保管庫',
@@ -248,8 +260,11 @@ export const ja: Translations = {
     // =========================================================================
     // Settings — Permissions Tab
     // =========================================================================
+    'settings.permissions.introTitle': '自動承認',
+    'settings.permissions.introDesc': 'エージェントがツールを自動的に実行できるか、承認が必要かを制御します。カテゴリごとにセキュリティレベルを決定します。',
     'settings.permissions.desc': 'モードはエージェントが使用できるツールを定義します。自動承認は、エージェントがそれらのツールを即座に実行できるか、確認を求める必要があるかを制御します。カテゴリーがオフの場合、エージェントはそのカテゴリーのアクションごとに承認ダイアログを表示して一時停止します。',
-    'settings.permissions.headingGeneral': '全般',
+    'settings.permissions.headingAutoApprove': '自動承認',
+    'settings.permissions.headingBehavior': 'エージェントの動作',
     'settings.permissions.headingPerCategory': 'カテゴリー別',
     'settings.permissions.headingPluginApi': 'プラグインAPI & レシピ',
     'settings.permissions.enableAutoApprove': '自動承認を有効にする',
@@ -306,6 +321,8 @@ export const ja: Translations = {
     // =========================================================================
     // Settings — Loop Tab
     // =========================================================================
+    'settings.loop.introTitle': 'エージェントループ',
+    'settings.loop.introDesc': 'エラー耐性、リトライ動作、エージェントが複雑なタスクにどのくらい取り組めるかを制御します。コンテキスト凝縮とパワーステアリングでエージェントを集中させます。',
     'settings.loop.desc': 'エージェントループの動作、コンテキストの保持期間、エージェントがタスクに集中し続ける信頼性を制御します。',
     'settings.loop.headingLoop': 'エージェントループ',
     'settings.loop.headingCondensing': 'コンテキスト圧縮',
@@ -332,6 +349,8 @@ export const ja: Translations = {
     // =========================================================================
     // Settings — Memory Tab
     // =========================================================================
+    'settings.memory.introTitle': '長期記憶',
+    'settings.memory.introDesc': 'エージェントは過去の会話から学び、長期記憶を構築します。これにより、あなたの好みやプロジェクトに関する重要な情報を記憶できます。',
     'settings.memory.desc': 'エージェントが会話を記憶し、過去のインタラクションから学習する方法を設定します。メモリーは専用モデルを使用してバックグラウンドで抽出されます。',
     'settings.memory.headingHistory': 'チャット履歴',
     'settings.memory.headingMemory': 'メモリー',
@@ -380,6 +399,9 @@ export const ja: Translations = {
     // =========================================================================
     // Settings — Rules Tab
     // =========================================================================
+    'settings.rules.introTitle': 'ルールとは？',
+    'settings.rules.introDesc': 'ルールはエージェントセッションのシステムプロンプトに注入される静的な指示です。制約、境界、基本的な行動ガイドラインを定義します。',
+    'settings.rules.introDiff': '違い：スキルはリアクティブな動作（関連する場合のみアクティブ）。ワークフローはスラッシュコマンドによる具体的なシーケンス。ルールは常に適用される受動的な原則。',
     'settings.rules.heading': 'ルール',
     'settings.rules.desc': 'ルールはすべてのエージェントセッションのシステムプロンプトに注入されます。ルールファイルは .md または .txt 形式で保管庫の .obsidian-agent/rules/ に保存してください。',
     'settings.rules.placeholder': 'ルール名（例: "always-use-iso-dates"）',
@@ -396,6 +418,9 @@ export const ja: Translations = {
     // =========================================================================
     // Settings — Workflows Tab
     // =========================================================================
+    'settings.workflows.introTitle': 'ワークフローとは？',
+    'settings.workflows.introDesc': 'ワークフローはチャットのスラッシュコマンドでトリガーされる複数ステップのシーケンスです。繰り返しのタスクチェーンを自動化し、複雑なプロセスを標準化します。',
+    'settings.workflows.introDiff': '違い：ワークフローはユーザーが明示的にトリガーするシーケンス（/ワークフロー名で）。スキルは関連する場合に自動的に有効化。ルールは受動的な原則。ツールは個別のアクションを実行。',
     'settings.workflows.heading': 'ワークフロー',
     'settings.workflows.desc': 'ワークフローはチャットで /workflow-name と入力してトリガーします。ワークフローファイルは .md または .txt 形式で保管庫の .obsidian-agent/workflows/ に保存してください。',
     'settings.workflows.placeholder': 'ワークフロー名（例: "daily-review"）',
@@ -412,6 +437,9 @@ export const ja: Translations = {
     // =========================================================================
     // Settings — Skills Tab
     // =========================================================================
+    'settings.skills.introTitle': 'スキルとは？',
+    'settings.skills.introDesc': 'スキルはリクエストに一致した場合にエージェントが自動的に適用する再利用可能な動作です。特定のタスクに対する専門知識とガイダンスでエージェントの能力を拡張します。',
+    'settings.skills.introDiff': '違い：ツールは具体的なアクションを実行（ファイル読み取り、API呼び出し）。ワークフローは固定シーケンスを定義。スキルはエージェントが必要に応じて組み合わせ、適応させる柔軟な指示。',
     'settings.skills.headingManual': '手動スキル',
     'settings.skills.headingPlugin': 'Obsidian プラグインスキル',
     'settings.skills.desc': 'スキルはユーザーのメッセージに関連する場合にシステムプロンプトに自動注入されます。各スキルは .obsidian-agent/skills/{name}/SKILL.md のサブフォルダーに配置し、フロントマターに name と description を記述します。',
@@ -452,6 +480,9 @@ export const ja: Translations = {
     // =========================================================================
     // Settings — Prompts Tab
     // =========================================================================
+    'settings.prompts.introTitle': 'サポートプロンプトとは？',
+    'settings.prompts.introDesc': 'サポートプロンプトはスラッシュコマンドでトリガーされる変数付きの再利用可能なテキストテンプレートです。コンテンツの高速フォーマット、変換、分析を可能にします。',
+    'settings.prompts.introDiff': '違い：プロンプトはロジックのない純粋なテキストテンプレート。ワークフローは構造化されたシーケンス。スキルは条件付きの適応的な動作。ルールは静的な制約。',
     'settings.prompts.heading': 'プロンプト',
     'settings.prompts.desc': '独自のプロンプトテンプレートを作成します。チャットで / を入力してトリガーします。{{userInput}} で現在のメッセージテキストを、{{activeFile}} でアクティブなノート名を挿入できます。',
     'settings.prompts.namePlaceholder': 'プロンプト名（例: "daily-report"）',
@@ -478,6 +509,8 @@ export const ja: Translations = {
     // =========================================================================
     // Settings — Interface Tab
     // =========================================================================
+    'settings.interface.introTitle': 'ユーザーインターフェース',
+    'settings.interface.introDesc': 'チャット動作をカスタマイズ：自動コンテキスト、キーボードショートカット、Vaultにチャット履歴を保存など。',
     'settings.interface.headingSetup': 'セットアップダイアログ',
     'settings.interface.headingInterface': 'インターフェース',
     'settings.interface.headingHistory': 'チャット履歴',
@@ -502,6 +535,8 @@ export const ja: Translations = {
     // =========================================================================
     // Settings — Shell Tab
     // =========================================================================
+    'settings.shell.introTitle': 'プラグインAPIとレシピ',
+    'settings.shell.introDesc': 'エージェントがObsidianプラグインと対話し、外部ツール（Pandocなど）を実行できるようにします。すべてセキュアなサンドボックスで実行されます。',
     'settings.shell.desc': 'エージェントがプラグインAPIや外部ツールと対話する方法を設定します。プラグインAPI呼び出しは Obsidian のJavaScriptサンドボックスで実行されます。レシピは厳格なパラメーター検証とシェル展開なしで外部プログラム（Pandocなど）を実行します。',
     'settings.shell.headingPluginApi': 'プラグインAPI',
     'settings.shell.headingAllowlist': '組み込み許可リスト',
@@ -522,6 +557,8 @@ export const ja: Translations = {
     // =========================================================================
     // Settings — Log Tab
     // =========================================================================
+    'settings.log.introTitle': '実行ログ',
+    'settings.log.introDesc': 'エージェントが行うすべてのツール呼び出しを記録します。デバッグと監査に役立ちます。ログは最大30日間保持されます。',
     'settings.log.desc': 'すべてのツール実行の監査証跡です。ログは日ごとに保存されます（最大30日間）。行をクリックすると詳細が展開されます。',
     'settings.log.load': '読み込み',
     'settings.log.download': 'ダウンロード',
@@ -547,12 +584,16 @@ export const ja: Translations = {
     // =========================================================================
     // Settings — Debug Tab
     // =========================================================================
+    'settings.debug.introTitle': '開発者ツール',
+    'settings.debug.introDesc': 'ブラウザコンソールで詳細ログを有効にします。トラブルシューティングやバグ報告に役立ちます。',
     'settings.debug.debugMode': 'デバッグモード',
     'settings.debug.debugModeDesc': 'ブラウザの開発者コンソールに詳細なログを出力します。トラブルシューティング時のみ有用です。コンソールは Cmd+Option+I（Mac）または Ctrl+Shift+I（Windows）で開けます。',
 
     // =========================================================================
     // Settings — Backup Tab
     // =========================================================================
+    'settings.backup.introTitle': 'バックアップと移行',
+    'settings.backup.introDesc': 'すべてのプラグインデータをエクスポートおよびインポート：設定、メモリ、チャット履歴、スキル、ワークフロー。バックアップやデバイス移行に最適。',
     'settings.backup.desc': 'バックアップや別のデバイスへの移行のためにプラグインデータをエクスポート/インポートします。',
     'settings.backup.headingExport': 'エクスポート',
     'settings.backup.headingImport': 'インポート',
@@ -604,6 +645,8 @@ export const ja: Translations = {
     // =========================================================================
     // Settings — Language Tab
     // =========================================================================
+    'settings.language.introTitle': '表示言語',
+    'settings.language.introDesc': 'プラグインインターフェースの言語を選択します。エージェントとのコミュニケーションはこの設定に関係なく任意の言語で行えます。',
     'settings.language.language': '言語',
     'settings.language.languageDesc': 'プラグインインターフェースの表示言語を選択します。未翻訳の文字列には英語がフォールバックとして使用されます。',
     'settings.language.restartHint': 'すべての変更を反映するには Obsidian を再起動してください。',
@@ -793,6 +836,8 @@ export const ja: Translations = {
     'ui.approval.notEnabled': '{{tool}} \u2014 {{group}} は有効ではありません',
     'ui.approval.allowOnce': '1回だけ許可',
     'ui.approval.enableInSettings': '設定で有効にする',
+    'ui.approval.configDirWarning': '保護されたディレクトリへの書き込みアクセス: {{path}}。このディレクトリのファイルはプラグイン、テーマ、Obsidianの設定を制御します。意図しない変更はObsidianの動作を変更したり、悪意のあるコードをプラグインとしてインストールする可能性があります。',
+    'ui.approval.sandbox': 'サンドボックス実行',
 
     // =========================================================================
     // Chat UI — Checkpoint

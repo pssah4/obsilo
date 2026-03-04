@@ -1,8 +1,8 @@
 # Obsidian Agent — System Architecture Overview
 
-**Version:** 3.0
-**Date:** 2026-02-26
-**Status:** All Features Implemented (Phase A-D complete)
+**Version:** 4.0
+**Date:** 2026-03-04
+**Status:** All Features Implemented (Phase A-D complete, Sandbox OS-Level Isolation complete)
 
 ---
 
@@ -10,7 +10,7 @@
 
 Obsidian Agent (Obsilo Agent) is a desktop-first Obsidian plugin (v1.1.0) that provides an agentic operating layer for vault operations. It adapts the Kilo Code architecture to the Obsidian context, replacing IDE operations with vault operations while maintaining the core patterns of tool governance, approval systems, checkpoints, and MCP extensibility.
 
-**Key Stats:** 158 TypeScript files, ~38k LOC, 37 tools across 7 groups, 6 languages, 20 ADRs.
+**Key Stats:** 158 TypeScript files, ~38k LOC, 42 tools across 7 groups, 6 languages, 21 ADRs.
 
 ### Key Architectural Principles
 
@@ -50,16 +50,16 @@ Obsidian Agent (Obsilo Agent) is a desktop-first Obsidian plugin (v1.1.0) that p
   +--------------+    +-----------------+    +----------------+
   | Chat View    |    | Tool Execution  |    | Services       |
   | Mode Select  |    | Pipeline (Gov)  |    | - Checkpoint   |
-  | Autocomplete |    | 37 Tools        |    | - Semantic     |
+  | Autocomplete |    | 42 Tools        |    | - Semantic     |
   | History      |    | (7 groups)      |    | - Memory       |
   | Attachments  |    |                 |    | - MCP Client   |
   +--------------+    +-----------------+    | - VaultDNA     |
                                |             | - SafeStorage  |
-                               v             +----------------+
-                      +-----------------+
+                               v             | - Sandbox      |
+                      +-----------------+    +----------------+
                       | Tool Registry   |
                       | - Vault (22)    |
-                      | - Agent (7)     |
+                      | - Agent (12)    |
                       | - Skill (5)     |
                       | - Web (2)       |
                       | - MCP (1)       |
@@ -83,7 +83,7 @@ Obsidian Agent (Obsilo Agent) is a desktop-first Obsidian plugin (v1.1.0) that p
 ### 3.2 Core Engine
 - **AgentTask**: Main orchestrator — iteration loop, streaming, tool calls, context condensing, power steering, sub-agent spawning
 - **ToolExecutionPipeline**: Central 6-step governance (validate -> approval -> checkpoint -> execute -> log -> result cache)
-- **ToolRegistry**: Registry of 37 internal tools across 7 groups + MCP tools
+- **ToolRegistry**: Registry of 42 internal tools across 7 groups + MCP tools
 - **ToolRepetitionDetector**: Sliding window (10 calls, max 3 repeats), fuzzy dedup, ledger
 - **ModeService**: Built-in (ask, agent) + custom modes with per-mode model, MCP whitelist
 - **systemPrompt.ts**: Modular prompt builder (16 sections as pure functions)
@@ -118,9 +118,15 @@ Obsidian Agent (Obsilo Agent) is a desktop-first Obsidian plugin (v1.1.0) that p
 - **OpenAI-compatible provider**: Supports OpenAI, Ollama, LM Studio, Azure, OpenRouter, Google Gemini, custom endpoints
 - **CodeConfigParser**: Auto-extract provider/URL/models from pasted code snippets
 
-### 3.7 Internationalization
+### 3.7 Sandbox Execution
+- **AstValidator**: Pre-check TypeScript for blocked patterns (require, process, fs, child_process)
+- **EsbuildWasmManager**: Compile TypeScript via esbuild-wasm, resolve npm dependencies from CDN (esm.sh, jsdelivr)
+- **IframeSandboxExecutor**: Run compiled code in `<iframe sandbox="allow-scripts">` with CSP
+- **SandboxBridge**: Cross-boundary mediation (vault I/O, HTTP, rate limiting)
+
+### 3.8 Internationalization
 - 6 languages: English, German, Spanish, Japanese, Simplified Chinese, Hindi
-- 937 translation keys per locale
+- 1008 translation keys per locale
 - Lazy-load architecture, fallback to English
 
 ---
@@ -218,10 +224,11 @@ Obsidian Agent (Obsilo Agent) is a desktop-first Obsidian plugin (v1.1.0) that p
 - MCP per-mode whitelist
 - SafeStorageService for API key encryption
 - Content size limits (Rules 50KB, GlobalModeStore 500KB)
+- Sandbox OS-level isolation for evaluate_expression (ADR-021): iframe sandbox, CSP, AST validation, blocked APIs
 
 ---
 
-## 8. Tool Inventory (37 tools, 7 groups)
+## 8. Tool Inventory (42 tools, 7 groups)
 
 | Group | Count | Tools |
 |-------|-------|-------|
@@ -229,7 +236,7 @@ Obsidian Agent (Obsilo Agent) is a desktop-first Obsidian plugin (v1.1.0) that p
 | vault | 8 | get_frontmatter, search_by_tag, get_vault_stats, get_linked_notes, get_daily_note, open_note, semantic_search, query_base |
 | edit | 11 | write_file, edit_file, append_to_file, create_folder, delete_file, move_file, update_frontmatter, generate_canvas, create_excalidraw, create_base, update_base |
 | web | 2 | web_fetch, web_search |
-| agent | 7 | ask_followup_question, attempt_completion, update_todo_list, new_task, switch_mode, update_settings, configure_model |
+| agent | 12 | ask_followup_question, attempt_completion, update_todo_list, new_task, switch_mode, update_settings, configure_model, evaluate_expression, manage_skill, manage_mcp_server, manage_source, read_agent_logs |
 | skill | 5 | execute_command, execute_recipe, call_plugin_api, resolve_capability_gap, enable_plugin |
 | mcp | 1 | use_mcp_tool |
 
@@ -237,8 +244,8 @@ Obsidian Agent (Obsilo Agent) is a desktop-first Obsidian plugin (v1.1.0) that p
 
 ## 9. Related Documents
 
-- [arc42 Architecture](../architecture/arc42.md) — Full arc42 documentation (v3.1)
-- [ADR Index](../architecture/) — 20 Architecture Decision Records
+- [arc42 Architecture](../architecture/arc42.md) — Full arc42 documentation (v3.4)
+- [ADR Index](../architecture/) — 21 Architecture Decision Records
 - [Backlog](../context/10_backlog.md) — Feature implementation status
 - [Agent Internals](../implementation/TECH-agent-internals.md) — Deep technical internals
 - [Component Designs](DESIGN-component-designs.md) — Detailed component specifications

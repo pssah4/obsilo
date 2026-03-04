@@ -1,6 +1,6 @@
 # Requirements Overview — Obsidian Agent
 Scope: Production (alle Phasen A-D komplett)
-Date: 2026-02-26 (aktualisiert)
+Date: 2026-03-04 (aktualisiert)
 
 ## Goal
 Local-only, agentic operating layer fuer Obsidian: safe, governed vault operations, multi-provider support, MCP extensibility, semantic search, persistent memory, multi-agent orchestration, and plugin auto-discovery.
@@ -32,6 +32,9 @@ Local-only, agentic operating layer fuer Obsidian: safe, governed vault operatio
 - Notifications (System-Notification bei Task-Abschluss)
 - Chat History (ConversationStore, HistoryPanel, restore + continue)
 - Autocomplete (/workflows, @files, VaultFilePicker)
+- Self-Development Tools (evaluate_expression, manage_skill, manage_source)
+- Sandbox OS-Level Isolation (iframe sandbox, CSP, AST validation, CDN dependency resolution)
+- Agent Log Viewer (read_agent_logs)
 
 **Out of Scope:**
 - Direct manipulation of Obsidian internal Memory Graph
@@ -68,6 +71,8 @@ Local-only, agentic operating layer fuer Obsidian: safe, governed vault operatio
 | I18N-01 | Localization | `FEATURE-localization.md` |
 | STORE-01 | Global Storage | `FEATURE-global-storage.md` |
 | SAFE-01 | Safe Storage | `FEATURE-safe-storage.md` |
+| SELF-01 | Self-Development & Sandbox | `FEATURE-self-development.md` |
+| LOG-01 | Agent Log Viewer | `FEATURE-agent-logs.md` |
 
 ## Top Success Criteria
 - SC-01 Users explicitly approve 100% of write operations before execution (or auto-approve per category).

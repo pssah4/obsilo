@@ -1294,17 +1294,132 @@ a.hero-badge:hover { background: var(--bg-4); border-color: var(--accent-light);
   color: var(--text-muted);
 }
 
+/* ── Mobile menu button (hidden on desktop) ── */
+.mobile-menu-btn {
+  display: none;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0.5rem;
+  line-height: 1;
+  border-radius: 6px;
+  transition: color 0.15s, background 0.15s;
+}
+.mobile-menu-btn:hover { color: var(--text); background: var(--bg-3); }
+
+/* ── Mobile sidebar backdrop ── */
+.mobile-sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 99;
+}
+.mobile-sidebar-backdrop.visible { display: block; }
+
+/* ── Mobile nav overlay (for pages without sidebar) ── */
+.mobile-nav-overlay {
+  display: none;
+  position: fixed;
+  top: var(--header-h);
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--bg-2);
+  z-index: 99;
+  padding: 1.5rem;
+  overflow-y: auto;
+  transform: translateX(-100%);
+  transition: transform 0.25s ease;
+}
+.mobile-nav-overlay.mobile-open {
+  display: block;
+  transform: translateX(0);
+}
+.mobile-nav-overlay a {
+  display: block;
+  padding: 0.75rem 0;
+  font-size: 1rem;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+  text-decoration: none;
+}
+.mobile-nav-overlay a:hover { color: var(--text); text-decoration: none; }
+
 /* ── Responsive ── */
 @media (max-width: 768px) {
-  .docs-sidebar { display: none; }
+  /* -- Header -- */
+  .mobile-menu-btn { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; }
+  .site-header { padding: 0 0.75rem; gap: 0.5rem; }
+  .site-header .logo-img { height: 40px; }
+  .site-header .header-links { display: none; }
+  .search-btn span { display: none; }
+  .search-btn { min-width: 44px; min-height: 44px; justify-content: center; padding: 0.4rem; }
+  .theme-toggle { min-width: 44px; min-height: 44px; }
+  .lang-toggle { min-width: 44px; min-height: 44px; }
+
+  /* -- Sidebar as slide-in overlay -- */
+  .docs-sidebar {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 280px;
+    z-index: 100;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+    padding-top: calc(var(--header-h) + 1rem);
+  }
+  .docs-sidebar.mobile-open { transform: translateX(0); }
+
+  /* -- Main content -- */
   .docs-main { margin-left: 0; }
+  .docs-content { padding: 1.5rem 1rem 3rem; }
+
+  /* -- Typography -- */
+  h1 { font-size: 1.75rem; }
+  h2 { font-size: 1.3rem; }
+
+  /* -- Grids to single column -- */
   .page-nav { grid-template-columns: 1fr; }
   .tool-grid { grid-template-columns: 1fr; }
   .feature-grid { grid-template-columns: 1fr; }
   .landing-features { grid-template-columns: 1fr; }
   .docs-grid { grid-template-columns: 1fr; }
+  .lp-grid { grid-template-columns: 1fr; }
+  .dev-hub-grid { grid-template-columns: 1fr; }
+
+  /* -- Touch targets -- */
+  .sidebar-nav a { padding: 0.6rem 1.25rem; min-height: 44px; display: flex; align-items: center; }
+  .page-nav-item { padding: 1.25rem; }
+
+  /* -- Tables horizontal scroll -- */
+  .docs-content table { display: block; overflow-x: auto; white-space: nowrap; }
+
+  /* -- Code blocks -- */
+  pre { padding: 1rem; font-size: 0.8rem; }
+  .arch-diagram { font-size: 0.7rem; padding: 1rem; }
+
+  /* -- Hero -- */
+  .hero { padding: calc(var(--header-h) + 1.5rem) 1rem 1.5rem; }
+  .hero-sub-detail br { display: none; }
+
+  /* -- Chat mockup -- */
   .chat-mockup { margin: 1rem auto 0; }
   .chat-mockup-body { padding: 0.7rem 0.75rem; }
   .chat-mockup-text { font-size: 0.78rem; }
-  .hero { padding: calc(var(--header-h) + 1.5rem) 1rem 1.5rem; }
+
+  /* -- Search modal -- */
+  .search-modal.visible { padding-top: 5vh; }
+  .search-dialog { max-width: calc(100% - 1rem); margin: 0 0.5rem; border-radius: 8px; }
+
+  /* -- About page -- */
+  .about-profile { gap: 1.25rem; }
+  .about-avatar { width: 80px; height: 80px; }
+
+  /* -- Footer -- */
+  .footer { padding: 1.5rem 1rem; }
 }

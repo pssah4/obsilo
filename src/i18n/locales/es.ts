@@ -34,6 +34,10 @@ export const es: Translations = {
     // =========================================================================
     // Settings — Models Tab
     // =========================================================================
+    'settings.models.introTitle': 'Modelos de IA',
+    'settings.models.introDesc': 'Configura los modelos de IA que usa el agente. Puedes agregar multiples modelos y alternar entre ellos.',
+    'settings.models.performanceNote': 'Nota:',
+    'settings.models.performanceNoteDesc': 'El agente funciona con todos los modelos (incluidos los locales). Los mejores resultados se logran con modelos potentes de Anthropic (Claude Sonnet 4.5, Opus 4.6).',
     'settings.models.headerModel': 'Modelo',
     'settings.models.headerProvider': 'Proveedor',
     'settings.models.headerKey': 'Clave',
@@ -51,6 +55,8 @@ export const es: Translations = {
     // =========================================================================
     // Settings — Embeddings Tab
     // =========================================================================
+    'settings.embeddings.introTitle': 'Busqueda semantica',
+    'settings.embeddings.introDesc': 'Los embeddings permiten al agente encontrar notas por significado en lugar de palabras clave exactas. El agente puede recuperar contexto relevante de tu vault.',
     'settings.embeddings.headingModels': 'Modelos de embedding',
     'settings.embeddings.headingIndex': 'Indice semantico',
     'settings.embeddings.headingConfig': 'Configuracion del indice',
@@ -149,6 +155,8 @@ export const es: Translations = {
     // =========================================================================
     // Settings — Web Search Tab
     // =========================================================================
+    'settings.webSearch.introTitle': 'Acceso web',
+    'settings.webSearch.introDesc': 'Permite al agente buscar paginas web e investigar en internet. Opcional: Usa Brave o Tavily para busquedas.',
     'settings.webSearch.desc': 'Configura web_fetch (leer cualquier URL) y web_search (Brave / Tavily). web_fetch funciona sin API Key; web_search requiere una.',
     'settings.webSearch.headingGeneral': 'General',
     'settings.webSearch.headingProvider': 'Proveedor de busqueda',
@@ -169,6 +177,8 @@ export const es: Translations = {
     // =========================================================================
     // Settings — MCP Tab
     // =========================================================================
+    'settings.mcp.introTitle': 'Protocolo de Contexto de Modelo',
+    'settings.mcp.introDesc': 'MCP conecta herramientas y fuentes de datos externas al agente. Cada servidor MCP proporciona nuevas herramientas que el agente puede usar.',
     'settings.mcp.desc': 'Conecta herramientas externas y fuentes de datos mediante el Model Context Protocol (MCP). Cada servidor expone herramientas que el agente puede llamar usando use_mcp_tool.',
     'settings.mcp.addServer': 'Agregar servidor',
     'settings.mcp.disconnect': 'Desconectar',
@@ -196,6 +206,8 @@ export const es: Translations = {
     // =========================================================================
     // Settings — Modes Tab
     // =========================================================================
+    'settings.modes.introTitle': 'Modos del agente',
+    'settings.modes.introDesc': 'Los modos son configuraciones predefinidas con diferentes conjuntos de herramientas e instrucciones. Cambia entre modos segun tu tarea.',
     'settings.modes.groupBuiltIn': 'Integrados',
     'settings.modes.groupGlobal': 'Global (todos los vaults)',
     'settings.modes.groupVault': 'Este Vault',
@@ -248,8 +260,11 @@ export const es: Translations = {
     // =========================================================================
     // Settings — Permissions Tab
     // =========================================================================
+    'settings.permissions.introTitle': 'Auto-aprobacion',
+    'settings.permissions.introDesc': 'Controla si el agente puede ejecutar herramientas automaticamente o necesita tu aprobacion primero. Decide por categoria que nivel de seguridad deseas.',
     'settings.permissions.desc': 'Los modos definen que herramientas puede usar el agente. La auto-aprobacion controla si el agente puede ejecutar esas herramientas inmediatamente o debe pedir tu confirmacion primero. Cuando una categoria esta desactivada, el agente se detiene y muestra un dialogo de aprobacion antes de cada accion en esa categoria.',
-    'settings.permissions.headingGeneral': 'General',
+    'settings.permissions.headingAutoApprove': 'Auto-aprobacion',
+    'settings.permissions.headingBehavior': 'Comportamiento del agente',
     'settings.permissions.headingPerCategory': 'Por categoria',
     'settings.permissions.headingPluginApi': 'API de plugins y recetas',
     'settings.permissions.enableAutoApprove': 'Activar auto-aprobacion',
@@ -306,6 +321,8 @@ export const es: Translations = {
     // =========================================================================
     // Settings — Loop Tab
     // =========================================================================
+    'settings.loop.introTitle': 'Bucle del agente',
+    'settings.loop.introDesc': 'Controla la tolerancia a errores, el comportamiento de reintento y cuanto tiempo puede trabajar el agente en tareas complejas. La condensacion de contexto y el steering mantienen al agente enfocado.',
     'settings.loop.desc': 'Controla como se ejecuta el bucle del agente, cuanto tiempo se mantiene el contexto y con que fiabilidad el agente se mantiene en la tarea.',
     'settings.loop.headingLoop': 'Bucle del agente',
     'settings.loop.headingCondensing': 'Condensacion de contexto',
@@ -332,6 +349,8 @@ export const es: Translations = {
     // =========================================================================
     // Settings — Memory Tab
     // =========================================================================
+    'settings.memory.introTitle': 'Memoria a largo plazo',
+    'settings.memory.introDesc': 'El agente aprende de conversaciones pasadas y construye memoria a largo plazo. Esto le ayuda a recordar tus preferencias e informacion importante sobre tus proyectos.',
     'settings.memory.desc': 'Configura como el agente recuerda conversaciones y aprende de interacciones pasadas. La memoria se extrae en segundo plano usando un modelo dedicado.',
     'settings.memory.headingHistory': 'Historial de chat',
     'settings.memory.headingMemory': 'Memoria',
@@ -380,6 +399,9 @@ export const es: Translations = {
     // =========================================================================
     // Settings — Rules Tab
     // =========================================================================
+    'settings.rules.introTitle': 'Que son las reglas?',
+    'settings.rules.introDesc': 'Las reglas son instrucciones estaticas inyectadas en el prompt del sistema de cada sesion del agente. Definen restricciones, limites y directrices de comportamiento fundamentales.',
+    'settings.rules.introDiff': 'Diferencia: Las habilidades son comportamientos reactivos (solo activos cuando son relevantes). Los flujos de trabajo son secuencias concretas con comandos slash. Las reglas son principios pasivos que siempre aplican.',
     'settings.rules.heading': 'Reglas',
     'settings.rules.desc': 'Las reglas se inyectan en el prompt de sistema de cada sesion del agente. Almacena archivos de reglas como .md o .txt en tu vault en .obsidian-agent/rules/.',
     'settings.rules.placeholder': 'Nombre de la regla (ej. "siempre-usar-fechas-iso")',
@@ -396,6 +418,9 @@ export const es: Translations = {
     // =========================================================================
     // Settings — Workflows Tab
     // =========================================================================
+    'settings.workflows.introTitle': 'Que son los flujos de trabajo?',
+    'settings.workflows.introDesc': 'Los flujos de trabajo son secuencias de multiples pasos activadas por comandos slash en el chat. Automatizan cadenas de tareas recurrentes y estandarizan procesos complejos.',
+    'settings.workflows.introDiff': 'Diferencia: Los flujos de trabajo son secuencias activadas explicitamente por el usuario (via /nombre-flujo). Las habilidades se activan automaticamente cuando son relevantes. Las reglas son principios pasivos. Las herramientas realizan acciones individuales.',
     'settings.workflows.heading': 'Workflows',
     'settings.workflows.desc': 'Los workflows se activan escribiendo /nombre-del-workflow en el chat. Almacena archivos de workflow como .md o .txt en tu vault en .obsidian-agent/workflows/.',
     'settings.workflows.placeholder': 'Nombre del workflow (ej. "revision-diaria")',
@@ -412,6 +437,9 @@ export const es: Translations = {
     // =========================================================================
     // Settings — Skills Tab
     // =========================================================================
+    'settings.skills.introTitle': 'Que son las habilidades?',
+    'settings.skills.introDesc': 'Las habilidades son comportamientos reutilizables que el agente aplica automaticamente cuando coinciden con la solicitud. Amplian las capacidades del agente con conocimiento especifico para tareas particulares.',
+    'settings.skills.introDiff': 'Diferencia: Las herramientas ejecutan acciones concretas (leer archivos, llamadas API). Los flujos de trabajo definen secuencias fijas. Las habilidades son instrucciones flexibles que el agente combina y adapta segun sea necesario.',
     'settings.skills.headingManual': 'Skills manuales',
     'settings.skills.headingPlugin': 'Skills de plugins de Obsidian',
     'settings.skills.desc': 'Los skills se inyectan automaticamente en el prompt de sistema cuando son relevantes para el mensaje del usuario. Cada skill vive en una subcarpeta en .obsidian-agent/skills/{name}/SKILL.md con frontmatter: name, description.',
@@ -452,6 +480,9 @@ export const es: Translations = {
     // =========================================================================
     // Settings — Prompts Tab
     // =========================================================================
+    'settings.prompts.introTitle': 'Que son los prompts de soporte?',
+    'settings.prompts.introDesc': 'Los prompts de soporte son plantillas de texto reutilizables con variables, activadas por comandos slash. Permiten formateo rapido, transformacion y analisis de contenido.',
+    'settings.prompts.introDiff': 'Diferencia: Los prompts son plantillas de texto puras sin logica. Los flujos de trabajo son secuencias estructuradas. Las habilidades son comportamientos adaptativos con condiciones. Las reglas son restricciones estaticas.',
     'settings.prompts.heading': 'Prompts',
     'settings.prompts.desc': 'Crea tus propias plantillas de prompts. Escribe / en el chat para activarlas. Usa {{userInput}} para insertar tu mensaje actual y {{activeFile}} para insertar el nombre de la nota activa.',
     'settings.prompts.namePlaceholder': 'Nombre del prompt (ej. "reporte-diario")',
@@ -478,6 +509,8 @@ export const es: Translations = {
     // =========================================================================
     // Settings — Interface Tab
     // =========================================================================
+    'settings.interface.introTitle': 'Interfaz de usuario',
+    'settings.interface.introDesc': 'Personaliza el comportamiento del chat: auto-contexto, atajos de teclado, guardar historial en el vault y mas.',
     'settings.interface.headingSetup': 'Dialogo de configuracion',
     'settings.interface.headingInterface': 'Interfaz',
     'settings.interface.headingHistory': 'Historial de chat',
@@ -502,6 +535,8 @@ export const es: Translations = {
     // =========================================================================
     // Settings — Shell Tab
     // =========================================================================
+    'settings.shell.introTitle': 'API de plugins y recetas',
+    'settings.shell.introDesc': 'Permite al agente interactuar con plugins de Obsidian y ejecutar herramientas externas (como Pandoc). Todo se ejecuta de forma segura en un sandbox.',
     'settings.shell.desc': 'Configura como el agente interactua con las APIs de plugins y herramientas externas. Las llamadas a la API de plugins se ejecutan en el sandbox de JavaScript de Obsidian. Las recetas ejecutan programas externos (como Pandoc) con validacion estricta de parametros y sin expansion de shell.',
     'settings.shell.headingPluginApi': 'API de plugins',
     'settings.shell.headingAllowlist': 'Lista de permitidos integrada',
@@ -522,6 +557,8 @@ export const es: Translations = {
     // =========================================================================
     // Settings — Log Tab
     // =========================================================================
+    'settings.log.introTitle': 'Registros de ejecucion',
+    'settings.log.introDesc': 'Registra todas las llamadas a herramientas que hace el agente. Util para depuracion y auditoria. Los registros se mantienen hasta 30 dias.',
     'settings.log.desc': 'Registro de auditoria de todas las ejecuciones de herramientas. Los registros se almacenan por dia (hasta 30 dias). Haz clic en una fila para expandir los detalles.',
     'settings.log.load': 'Cargar',
     'settings.log.download': 'Descargar',
@@ -547,12 +584,16 @@ export const es: Translations = {
     // =========================================================================
     // Settings — Debug Tab
     // =========================================================================
+    'settings.debug.introTitle': 'Herramientas de desarrollo',
+    'settings.debug.introDesc': 'Habilita registros detallados en la consola del navegador. Util para solucionar problemas o reportar errores.',
     'settings.debug.debugMode': 'Modo de depuracion',
     'settings.debug.debugModeDesc': 'Escribe registros detallados en la consola del desarrollador del navegador. Solo util para solucionar problemas. Abre la consola con Cmd+Option+I (Mac) o Ctrl+Shift+I (Windows).',
 
     // =========================================================================
     // Settings — Backup Tab
     // =========================================================================
+    'settings.backup.introTitle': 'Respaldo y migracion',
+    'settings.backup.introDesc': 'Exporta e importa todos los datos del plugin: configuraciones, memoria, historial de chat, habilidades, flujos de trabajo. Perfecto para respaldos o migracion de dispositivos.',
     'settings.backup.desc': 'Exporta e importa datos del plugin para respaldo o migracion a otro dispositivo.',
     'settings.backup.headingExport': 'Exportar',
     'settings.backup.headingImport': 'Importar',
@@ -604,6 +645,8 @@ export const es: Translations = {
     // =========================================================================
     // Settings — Language Tab
     // =========================================================================
+    'settings.language.introTitle': 'Idioma de la interfaz',
+    'settings.language.introDesc': 'Elige el idioma para la interfaz del plugin. La comunicacion con el agente puede ser en cualquier idioma, independientemente de esta configuracion.',
     'settings.language.language': 'Idioma',
     'settings.language.languageDesc': 'Selecciona el idioma de la interfaz del plugin. El ingles es el idioma de respaldo para cadenas no traducidas.',
     'settings.language.restartHint': 'Reinicia Obsidian para que todos los cambios surtan efecto.',
@@ -790,6 +833,8 @@ export const es: Translations = {
     'ui.approval.pluginSkills': 'skills de plugins',
     'ui.approval.pluginApi': 'API de plugins',
     'ui.approval.recipes': 'recetas',
+    'ui.approval.configDirWarning': 'Acceso de escritura al directorio protegido: {{path}}. Los archivos en este directorio controlan plugins, temas y configuraciones de Obsidian. Los cambios no deseados pueden alterar el comportamiento de Obsidian o instalar codigo malicioso como plugin.',
+    'ui.approval.sandbox': 'Ejecucion en sandbox',
     'ui.approval.notEnabled': '{{tool}} -- {{group}} no activado',
     'ui.approval.allowOnce': 'Permitir una vez',
     'ui.approval.enableInSettings': 'Activar en Configuracion',
