@@ -287,24 +287,23 @@ export default class ObsidianAgentPlugin extends Plugin {
         // Auto-index: keep semantic index current as vault files change.
         // Only enabled when semanticAutoIndexOnChange is explicitly set.
         if (this.settings.enableSemanticIndex && this.semanticIndex && this.settings.semanticAutoIndexOnChange) {
+            const DOCUMENT_EXTENSIONS = new Set(['pdf', 'pptx', 'xlsx', 'docx']);
+            const isIndexable = (f: TFile): boolean =>
+                f.extension === 'md' || (this.settings.semanticIndexPdfs && DOCUMENT_EXTENSIONS.has(f.extension));
             this.registerEvent(this.app.vault.on('modify', (file) => {
-                if (!(file instanceof TFile)) return;
-                if (file.extension !== 'md' && !(this.settings.semanticIndexPdfs && file.extension === 'pdf')) return;
+                if (!(file instanceof TFile) || !isIndexable(file)) return;
                 this.scheduleFileIndex(file.path);
             }));
             this.registerEvent(this.app.vault.on('create', (file) => {
-                if (!(file instanceof TFile)) return;
-                if (file.extension !== 'md' && !(this.settings.semanticIndexPdfs && file.extension === 'pdf')) return;
+                if (!(file instanceof TFile) || !isIndexable(file)) return;
                 this.scheduleFileIndex(file.path);
             }));
             this.registerEvent(this.app.vault.on('delete', (file) => {
-                if (!(file instanceof TFile)) return;
-                if (file.extension !== 'md' && !(this.settings.semanticIndexPdfs && file.extension === 'pdf')) return;
+                if (!(file instanceof TFile) || !isIndexable(file)) return;
                 void this.semanticIndex?.removeFile(file.path);
             }));
             this.registerEvent(this.app.vault.on('rename', (file, oldPath) => {
-                if (!(file instanceof TFile)) return;
-                if (file.extension !== 'md' && !(this.settings.semanticIndexPdfs && file.extension === 'pdf')) return;
+                if (!(file instanceof TFile) || !isIndexable(file)) return;
                 void this.semanticIndex?.removeFile(oldPath);
                 this.scheduleFileIndex(file.path);
             }));

@@ -15,6 +15,7 @@
 - Private Dokumentation (_devprocess/) auf Deutsch
 - Public Dokumentation (README, docs/, ARCHITECTURE.md) auf Englisch
 - Keine Emojis -- nicht in Code, nicht in UI, nicht in Kommunikation
+- Deutsche Umlaute korrekt schreiben: ä, ö, ü, ß -- nicht ae, oe, ue, ss
 - Technische Begriffe und Identifier bleiben immer Englisch, auch in deutschen Texten
 - Co-Authored-By Claude in jedem Commit
 

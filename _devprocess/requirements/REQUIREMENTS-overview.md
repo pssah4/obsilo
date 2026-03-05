@@ -90,6 +90,16 @@ Local-only, agentic operating layer fuer Obsidian: safe, governed vault operatio
 - **Scalability:** Indexing supports vaults up to 10k markdown files. Incremental builds with resume support.
 - **Internationalization:** Full UI in 6 languages with lazy-load architecture.
 
+## Planned Features (Epics)
+
+### EPIC-003: Chat-Linking (Provenienz & Nachvollziehbarkeit)
+| Feature Ref | Feature Name | Priority | Spec |
+|---|---|---|---|
+| FEATURE-300 | Protocol Handler (Deep-Links) | P0 | `FEATURE-300-protocol-handler.md` |
+| FEATURE-301 | Auto-Frontmatter-Linking | P0 | `FEATURE-301-auto-frontmatter-linking.md` |
+| FEATURE-302 | Semantisches Chat-Titling | P1 | `FEATURE-302-semantic-chat-titling.md` |
+| FEATURE-303 | Chat-Linking Setting | P2 | `FEATURE-303-chat-linking-setting.md` |
+
 ## ASR Summary
 - ASR-01: isomorphic-git Checkpoints (ADR-002) — Implemented
 - ASR-02: Central Tool Execution Pipeline (ADR-001) — Implemented
@@ -97,6 +107,7 @@ Local-only, agentic operating layer fuer Obsidian: safe, governed vault operatio
 - ASR-03: vectra Semantic Index (ADR-003) — Implemented
 - ASR-04: 3-Tier Memory (ADR-013) — Implemented
 - ASR-05: Global Storage (ADR-020) — Implemented
+- ASR-06: Pipeline Post-Write Hook für Chat-Linking (ADR-022) — Planned
 
 ## Resolved Decisions
 1. Vector storage: vectra (HNSW, TypeScript-native) — ADR-003

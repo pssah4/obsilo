@@ -106,10 +106,6 @@ export class SemanticIndexService {
     // don't spawn dozens of simultaneous embedding calls (which freezes Obsidian).
     private autoUpdateQueue = new Set<string>();
     private autoIndexRunning = false;
-
-    // pdfjs-dist circuit breaker: set to true on first fatal import/parse error.
-    private pdfParseUnavailable = false;
-
     /** Number of unique files indexed (updated live during build). */
     docCount = 0;
     /** Live progress for external polling (e.g. Settings UI). */
@@ -199,10 +195,11 @@ export class SemanticIndexService {
             // 1. Determine file list (Markdown + optionally PDFs)
             // ----------------------------------------------------------------
             const mdFiles = this.vault.getMarkdownFiles();
+            const DOCUMENT_EXTENSIONS = new Set(['pdf', 'pptx', 'xlsx', 'docx']);
             const allFiles = this.indexPdfs
                 ? [
                     ...mdFiles,
-                    ...this.vault.getFiles().filter((f) => f.extension === 'pdf'),
+                    ...this.vault.getFiles().filter((f) => DOCUMENT_EXTENSIONS.has(f.extension)),
                 ]
                 : mdFiles;
             const files = this.excludedFolders.length > 0
@@ -941,17 +938,19 @@ export class SemanticIndexService {
     }
 
     // -----------------------------------------------------------------------
-    // File reading (Markdown + PDF)
+    // File reading (Markdown + PDF + Office documents)
     // -----------------------------------------------------------------------
+
+    private static readonly BINARY_DOCUMENT_EXTENSIONS = new Set(['pdf', 'pptx', 'xlsx', 'docx']);
 
     /**
      * Read a file's text content.
      * - Markdown/plaintext: uses vault.cachedRead (fast, cached)
-     * - PDF: extracts text via pdfjs-dist (fake-worker mode, no web worker needed)
+     * - PDF/PPTX/XLSX/DOCX: extracts text via parseDocument (document-parsers module)
      */
     private async readFileContent(file: { path: string; extension: string }): Promise<string> {
-        if (file.extension === 'pdf') {
-            return this.extractPdfText(file.path);
+        if (SemanticIndexService.BINARY_DOCUMENT_EXTENSIONS.has(file.extension)) {
+            return this.extractDocumentText(file.path, file.extension);
         }
         // For all other types (md, txt, canvas, …) use the vault cache
         const vaultFile = this.vault.getFileByPath(file.path);
@@ -960,63 +959,25 @@ export class SemanticIndexService {
     }
 
     /**
-     * Extract plain text from a PDF using pdfjs-dist (browser-compatible, no test-file issue).
-     * Runs without a web worker (fake-worker mode) so it works in Obsidian's bundled environment.
-     * Returns empty string for encrypted, image-only, or unreadable PDFs.
+     * Extract plain text from a binary document (PDF, PPTX, XLSX, DOCX).
+     * Delegates to the shared parseDocument function (document-parsers module).
+     * Returns empty string on parse errors (circuit breaker for PDF-specific failures).
      */
-    private async extractPdfText(filePath: string): Promise<string> {
-        if (this.pdfParseUnavailable) return '';
-
+    private async extractDocumentText(filePath: string, extension: string): Promise<string> {
         try {
-            // Dynamically import pdfjs-dist to avoid bundling its worker at startup.
-            // Dynamic import returns module namespace — typed as Record since pdfjs-dist
-            // doesn't export a single typed module object for dynamic import.
-            const pdfjsLib = await import('pdfjs-dist') as Record<string, unknown> & {
-                GlobalWorkerOptions?: { workerSrc: string };
-                getDocument(params: { data: Uint8Array; useWorkerFetch: boolean }): {
-                    promise: Promise<{
-                        numPages: number;
-                        getPage(num: number): Promise<{
-                            getTextContent(): Promise<{ items: Array<{ str?: string }> }>;
-                        }>;
-                    }>;
-                };
-            };
-
-            // Disable the web worker — pdfjs falls back to in-process (fake-worker) mode,
-            // which works correctly in Obsidian's Electron renderer without a separate worker URL.
-            if (pdfjsLib.GlobalWorkerOptions) {
-                pdfjsLib.GlobalWorkerOptions.workerSrc = '';
-            }
-
             const basePath = (this.vault.adapter as import('obsidian').FileSystemAdapter).getBasePath?.() ?? '';
             const absPath = path.join(basePath, filePath);
-            const data = new Uint8Array(await fs.promises.readFile(absPath));
+            const buffer = await fs.promises.readFile(absPath);
 
-            const loadingTask = pdfjsLib.getDocument({ data, useWorkerFetch: false });
-            const pdf = await loadingTask.promise;
-
-            const parts: string[] = [];
-            for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-                const page = await pdf.getPage(pageNum);
-                const content = await page.getTextContent();
-                const pageText = content.items
-                    .map((item: { str?: string }) => (item.str ?? ''))
-                    .join(' ')
-                    .replace(/\s+/g, ' ')
-                    .trim();
-                if (pageText) parts.push(pageText);
-            }
-            return parts.join('\n\n');
+            const { parseDocument } = await import('../document-parsers/parseDocument');
+            const result = await parseDocument(buffer.buffer as ArrayBuffer, extension);
+            return result.text;
         } catch (e: unknown) {
             const msg = e instanceof Error ? e.message : String(e);
             if (msg.includes('PasswordException') || msg.includes('InvalidPDFException')) {
-                // Expected for encrypted or corrupt PDFs — don't log noise
                 return '';
             }
-            // Unexpected error — log once, trip circuit breaker for remaining files
-            console.warn('[SemanticIndex] PDF extraction unavailable:', msg);
-            this.pdfParseUnavailable = true;
+            console.warn(`[SemanticIndex] Document extraction failed for ${filePath}:`, msg);
             return '';
         }
     }

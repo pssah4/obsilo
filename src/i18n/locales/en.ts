@@ -83,8 +83,8 @@ export const en: Translations = {
     'settings.embeddings.autoIndexDisabled': 'Auto-index on change disabled. Reload Obsidian to deactivate.',
     'settings.embeddings.enableIndex': 'Enable semantic index',
     'settings.embeddings.enableIndexDesc': 'Lets the agent find relevant notes by meaning, not just exact keywords. Requires an embedding model. First build may take a few minutes for large vaults.',
-    'settings.embeddings.indexPdfs': 'Index PDF attachments',
-    'settings.embeddings.indexPdfsDesc': 'Also index PDF files in your vault. Text is extracted from PDFs and indexed alongside your notes. Image-only (scanned) PDFs are skipped automatically.',
+    'settings.embeddings.indexPdfs': 'Index documents (PDF, Office)',
+    'settings.embeddings.indexPdfsDesc': 'Also index PDF, PPTX, XLSX, and DOCX files in your vault. Text is extracted and indexed alongside your notes. Image-only (scanned) PDFs are skipped automatically.',
     'settings.embeddings.buildIndexName': 'Build index',
     'settings.embeddings.buildIndexDesc': 'Index new and modified notes. Already-indexed notes are skipped. Use "force rebuild" to reindex everything from scratch.',
     'settings.embeddings.cancelIndexing': 'Cancel indexing',
@@ -941,9 +941,10 @@ export const en: Translations = {
     // =========================================================================
     // Attachment Handler
     // =========================================================================
-    'ui.attachment.tooLarge': '"{{name}}" exceeds the 10 MB limit.',
-    'ui.attachment.unsupported': '"{{name}}" is not supported. Use images (PNG/JPG/GIF/WebP) or text files.',
+    'ui.attachment.tooLarge': '"{{name}}" exceeds the 50 MB limit.',
+    'ui.attachment.unsupported': '"{{name}}" is not supported. Use images, Office documents (PPTX/XLSX/DOCX/PDF), or text files.',
     'ui.attachment.readFailed': 'Could not read "{{path}}"',
+    'ui.attachment.largeDocument': '"{{name}}" is very large. Content may be condensed during the conversation.',
 
     // =========================================================================
     // Modal — New Mode

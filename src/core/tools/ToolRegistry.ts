@@ -13,6 +13,7 @@ import type { ToolName, ToolDefinition } from './types';
 
 // Import tools — vault: read
 import { ReadFileTool } from './vault/ReadFileTool';
+import { ReadDocumentTool } from './vault/ReadDocumentTool';
 import { ListFilesTool } from './vault/ListFilesTool';
 import { SearchFilesTool } from './vault/SearchFilesTool';
 // Import tools — vault: write
@@ -123,6 +124,7 @@ export class ToolRegistry {
     ): void {
         // Vault: read
         this.register(new ReadFileTool(this.plugin));
+        this.register(new ReadDocumentTool(this.plugin));
         this.register(new ListFilesTool(this.plugin));
         this.register(new SearchFilesTool(this.plugin));
         // Vault: write (Sprint 1.1)

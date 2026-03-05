@@ -10,6 +10,7 @@
 export type ToolName =
     // Vault: read
     | 'read_file'
+    | 'read_document'
     | 'list_files'
     | 'search_files'
     // Vault: write

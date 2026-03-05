@@ -171,9 +171,11 @@ export class VaultFilePicker {
             if (match) this.filtered.push({ file: activeFile, label: t('ui.filePicker.activeFile', { name: activeFile.basename }) });
         }
 
-        // All other markdown files
-        this.app.vault.getMarkdownFiles()
-            .filter(f => (!activeFile || f.path !== activeFile.path)
+        // All supported files (markdown + office + data formats)
+        const SUPPORTED = new Set(['md', 'txt', 'pptx', 'xlsx', 'docx', 'pdf', 'json', 'xml', 'csv']);
+        this.app.vault.getFiles()
+            .filter(f => SUPPORTED.has(f.extension)
+                && (!activeFile || f.path !== activeFile.path)
                 && (query === ''
                     || f.basename.toLowerCase().includes(query)
                     || f.path.toLowerCase().includes(query)))

@@ -76,6 +76,14 @@ export const TOOL_METADATA: Record<string, ToolMeta> = {
         whenToUse: 'Before any edit, or when user asks to see content. NOT needed if content already in conversation.',
         commonMistakes: 'Re-reading a file whose content was already returned by a previous tool call.',
     },
+    read_document: {
+        group: 'read', label: 'Read Document', icon: 'file-scan',
+        signature: 'read_document(path)',
+        description: 'Parse and extract text from Office/data documents (PPTX, XLSX, DOCX, PDF, JSON, XML, CSV). Returns structured Markdown text.',
+        example: 'read_document("Reports/Q3-results.pptx")',
+        whenToUse: 'For binary document formats. Use read_file for plain text files (.md, .txt, .ts).',
+        commonMistakes: 'Using read_file for PPTX/XLSX/DOCX/PDF — that returns raw binary. Use read_document instead.',
+    },
     list_files: {
         group: 'read', label: 'List Files', icon: 'folder-open',
         signature: 'list_files(path, recursive?)',

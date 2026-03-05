@@ -83,8 +83,8 @@ export const de: Translations = {
     'settings.embeddings.autoIndexDisabled': 'Auto-Index bei Änderungen deaktiviert. Obsidian neu starten, um die Einstellung zu deaktivieren.',
     'settings.embeddings.enableIndex': 'Semantischen Index aktivieren',
     'settings.embeddings.enableIndexDesc': 'Ermöglicht dem Agenten, relevante Notizen nach Bedeutung zu finden, nicht nur nach exakten Stichworten. Benötigt ein Embedding-Modell. Der erste Aufbau kann bei großen Vaults einige Minuten dauern.',
-    'settings.embeddings.indexPdfs': 'PDF-Anhänge indexieren',
-    'settings.embeddings.indexPdfsDesc': 'Auch PDF-Dateien im Vault indexieren. Text wird aus PDFs extrahiert und zusammen mit den Notizen indexiert. Reine Bild-PDFs (Scans) werden automatisch übersprungen.',
+    'settings.embeddings.indexPdfs': 'Dokumente indexieren (PDF, Office)',
+    'settings.embeddings.indexPdfsDesc': 'Auch PDF-, PPTX-, XLSX- und DOCX-Dateien im Vault indexieren. Text wird extrahiert und zusammen mit den Notizen indexiert. Reine Bild-PDFs (Scans) werden automatisch übersprungen.',
     'settings.embeddings.buildIndexName': 'Index erstellen',
     'settings.embeddings.buildIndexDesc': 'Neue und geänderte Notizen indexieren. Bereits indexierte Notizen werden übersprungen. "Neu aufbauen" verwenden, um alles von Grund auf neu zu indexieren.',
     'settings.embeddings.cancelIndexing': 'Indexierung abbrechen',
@@ -938,9 +938,10 @@ export const de: Translations = {
     // =========================================================================
     // Attachment Handler
     // =========================================================================
-    'ui.attachment.tooLarge': '"{{name}}" überschreitet das Limit von 10 MB.',
-    'ui.attachment.unsupported': '"{{name}}" wird nicht unterstützt. Bilder (PNG/JPG/GIF/WebP) oder Textdateien verwenden.',
+    'ui.attachment.tooLarge': '"{{name}}" überschreitet das Limit von 50 MB.',
+    'ui.attachment.unsupported': '"{{name}}" wird nicht unterstützt. Bilder, Office-Dokumente (PPTX/XLSX/DOCX/PDF) oder Textdateien verwenden.',
     'ui.attachment.readFailed': '"{{path}}" konnte nicht gelesen werden',
+    'ui.attachment.largeDocument': '"{{name}}" ist sehr gross. Inhalte werden ggf. im Gespraech gekürzt.',
 
     // =========================================================================
     // Modal — New Mode

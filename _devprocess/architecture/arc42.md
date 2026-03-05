@@ -1,7 +1,7 @@
 # arc42 — Obsidian Agent Architecture
 
-**Version:** 3.4
-**Stand:** 2026-03-02
+**Version:** 3.5
+**Stand:** 2026-03-05
 **Status:** Aktuell — alle Features implementiert, Dokumentation vollstaendig
 
 ---
@@ -108,6 +108,14 @@ Obsidian Agent ist ein Obsidian-Plugin, das einen vollständigen KI-Agenten dire
 
 11. **Agent Skill Mastery (3-Ebenen)** — A) Rich Tool Descriptions mit Examples/When-to-use in ToolMeta [ADR-016](ADR-016-rich-tool-descriptions.md). B) Procedural Recipes: Schritt-fuer-Schritt Rezepte fuer bekannte Tasks, keyword-first Matching, 2000 chars Budget [ADR-017](ADR-017-procedural-recipes.md). C) Episodic Task Memory: Aufzeichnung erfolgreicher Ausfuehrungen ohne extra API-Call, Auto-Promotion zu Rezepten bei 3+ Erfolgen [ADR-018](ADR-018-episodic-task-memory.md).
 
+12. **Chat-Linking (Pipeline Post-Write Hook)** — Nach jeder erfolgreichen Write-Operation auf `.md`-Dateien wird die aktuelle Conversation-ID als `obsidian://obsilo-chat?id={id}` Deep-Link im YAML-Frontmatter gespeichert. Hook sitzt in der Pipeline (konsistent mit Checkpoint, Cache, Audit). Nutzer kann aus jeder Note direkt in den Chat-Kontext zurueckspringen. [ADR-022](ADR-022-chat-linking.md)
+
+13. **Document Parser als wiederverwendbare Tools (Hybrid)** — Parsing-Logik in `DocumentParserRegistry` (Service-Kern), Chat-Attachments rufen Service direkt auf (Performance), Agent nutzt Tool-Wrapper (`read_document`, `extract_document_images`) in ToolRegistry. Neue Formate ohne Architekturaenderung. [ADR-023](ADR-023-document-parser-tools.md)
+
+14. **Leichtgewicht-Parsing (JSZip + Custom OOXML)** — JSZip (~30 KB) als einzige neue Dependency fuer OOXML-Formate (PPTX, XLSX, DOCX). Eigene Parser navigieren ZIP-Struktur + DOMParser fuer XML. PDF via pdfjs-dist (bestehend). JSON/XML/CSV nativ. [ADR-024](ADR-024-parsing-library-selection.md)
+
+15. **On-Demand Bild-Nachlade (Lazy Extraction)** — Beim Parsing nur Bild-Metadaten erfasst, Bilder erst bei Agent-Tool-Aufruf extrahiert. Vision-Gate prueft Model-Capability. System Prompt steuert Agent-Entscheidung. [ADR-025](ADR-025-on-demand-image-strategy.md)
+
 ---
 
 ## 5. Bausteinsicht
@@ -168,7 +176,8 @@ AgentTask.run()
   │           │     └── ApproveEditModal (Diff-View für edit_file)
   │           ├── 3. GitCheckpointService.snapshot()
   │           ├── 4. tool.execute()
-  │           └── 5. OperationLogger.log()
+  │           ├── 5. OperationLogger.log()
+  │           └── 6. stampChatLink() [.md + chatLinking enabled]
   │
   └── Context Condensing (wenn threshold erreicht)
 ```
@@ -196,9 +205,33 @@ ToolRegistry
   └── mcp group (1):   use_mcp_tool
 ```
 
+### 5.4 Ebene 2: Document Parser Pipeline (EPIC-002)
+
+```
+DocumentParserRegistry (Service-Kern)
+  ├── register(extensions, parser)   -- Extension -> IDocumentParser
+  ├── parse(path, data, options?)    -- Dispatcher
+  └── canParse(extension)            -- Format-Check
+
+Registrierte Parser:
+  ├── PptxParser   (.pptx)  -- JSZip + DOMParser, Folien-Text + Bild-Metadaten
+  ├── XlsxParser   (.xlsx)  -- JSZip + DOMParser, Sheet-Tab-Struktur
+  ├── DocxParser   (.docx)  -- JSZip + DOMParser, Absaetze + Ueberschriften
+  ├── PdfParser    (.pdf)   -- pdfjs-dist v4.4.168 (Refactoring aus SemanticIndexService)
+  └── DataFormatParser (.json, .xml, .csv)  -- Native APIs
+
+Aufrufwege:
+  1. Chat-Attachment:  AttachmentHandler -> DocumentParserRegistry.parse() (direkt, kein Tool-Overhead)
+  2. Agent-initiiert:  Agent -> ReadDocumentTool -> DocumentParserRegistry.parse() (via Tool-Pipeline)
+  3. Bild-Nachlade:    Agent -> ExtractDocumentImagesTool -> JSZip (erneutes Oeffnen, Lazy Extraction)
+  4. Semantic Index:   SemanticIndexService -> PdfParser.parse() (Refactoring, keine Duplikation)
+```
+
+ADR: [ADR-023](ADR-023-document-parser-tools.md), [ADR-024](ADR-024-parsing-library-selection.md), [ADR-025](ADR-025-on-demand-image-strategy.md).
+
 Tool-Beschreibungen kommen aus `toolMetadata.ts` (Single Source of Truth fuer Prompt und UI). Feature-Spec: `FEATURE-tool-metadata-registry.md`. ADR: [ADR-008](ADR-008-modular-prompt-sections.md).
 
-### 5.4 Ebene 2: Semantic Search Pipeline
+### 5.5 Ebene 2: Semantic Search Pipeline
 
 ```
 SemanticSearchTool.execute()
@@ -498,6 +531,20 @@ Total budget: ~1200 tokens. Knowledge memory is retrieved on demand via `semanti
 
 `attempt_completion` result is an internal signal, not user-facing text. `AgentTask` tracks `hasStreamedText` — completion result only rendered as fallback when no text was streamed. System prompt rules ensure attempt_completion is only called after multi-step tool workflows.
 
+#### Chat-Linking (ADR-022)
+
+Automatische Traceability zwischen Chats und Notes. Wenn der Agent eine `.md`-Datei schreibt, wird der aktuelle Chat als Deep-Link im Frontmatter gespeichert:
+
+```yaml
+obsilo-chats:
+  - obsidian://obsilo-chat?id=2026-03-05-a1b2c3
+```
+
+- **Hook:** `ToolExecutionPipeline.stampChatLink()` — nach erfolgreicher Write-Op auf `.md`-Dateien
+- **Deep-Link:** `obsidian://obsilo-chat?id={id}` — oeffnet Chat in der Sidebar via Protocol Handler
+- **Setting:** `chatLinking` (boolean, default: true)
+- **Frontmatter-API:** `app.fileManager.processFrontMatter()` (atomare Updates, Duplikat-safe)
+
 #### Key Files
 
 | File | Purpose |
@@ -590,6 +637,10 @@ Siehe einzelne ADRs in `_devprocess/architecture/`:
 | [ADR-019](ADR-019-electron-safestorage.md) | Electron SafeStorage (OS Keychain fuer API-Keys) |
 | [ADR-020](ADR-020-global-storage.md) | Global Storage Architecture (cross-vault Settings) |
 | [ADR-021](ADR-021-sandbox-os-isolation.md) | OS-Level Sandbox via child_process.fork() (Hybrid Desktop/Mobile) |
+| [ADR-022](ADR-022-chat-linking.md) | Chat-Linking via Pipeline Post-Write Hook (Frontmatter Deep-Links) |
+| [ADR-023](ADR-023-document-parser-tools.md) | Document Parser als wiederverwendbare Tools (Service-Kern + Tool-Wrapper) |
+| [ADR-024](ADR-024-parsing-library-selection.md) | Parsing-Library-Auswahl: JSZip + Custom OOXML + pdfjs-dist + Native APIs |
+| [ADR-025](ADR-025-on-demand-image-strategy.md) | On-Demand Bild-Nachlade via Lazy Extraction + Vision-Gate |
 
 ---
 
@@ -668,3 +719,14 @@ Siehe einzelne ADRs in `_devprocess/architecture/`:
 | **RecipePromotionService** | Promoviert haeufig erfolgreiche Episoden (3+ Erfolge) automatisch zu wiederverwendbaren Rezepten |
 | **ISandboxExecutor** | Interface fuer Sandbox-Backends. Desktop: ProcessSandboxExecutor (child_process.fork, OS-Level), Mobile: IframeSandboxExecutor (iframe, V8-Level). ADR-021 |
 | **ProcessSandboxExecutor** | Desktop-Sandbox-Backend. Startet eigenstaendigen Node.js-Prozess via child_process.fork() mit ELECTRON_RUN_AS_NODE=1. OS-Level Prozess-Isolation |
+| **Chat-Linking** | Automatische Verlinkung von Agent-Chats im YAML-Frontmatter bearbeiteter Notes. Pipeline Post-Write Hook fuegt `obsidian://obsilo-chat?id={id}` Deep-Links ein. ADR-022 |
+| **stampChatLink** | Pipeline-Methode die nach erfolgreichen Write-Ops auf .md-Dateien den Chat-Link im Frontmatter einfuegt. Nutzt `processFrontMatter()` fuer atomare Updates |
+| **DocumentParserRegistry** | Service-Registry die Dateiendungen auf Parser-Implementierungen mappt. Zentraler Dispatcher fuer alle Dokument-Parsing-Aufrufe (ADR-023) |
+| **IDocumentParser** | Interface fuer Document Parser: `parse(data: ArrayBuffer, options?): Promise<ParseResult>`. Jeder Parser (PPTX, XLSX, DOCX, PDF, Datenformate) implementiert dieses Interface |
+| **ParseResult** | Ergebnis eines Parser-Aufrufs: strukturierter Text, Bild-Metadaten (Anzahl, Positionen, Dateinamen), Dokument-Metadaten (Seitenanzahl, Sheets, etc.) |
+| **ReadDocumentTool** | Tool-Wrapper (`read_document`) ueber den der Agent Dokumente aus dem Vault lesen und parsen kann. Delegiert an DocumentParserRegistry |
+| **ExtractDocumentImagesTool** | Tool-Wrapper (`extract_document_images`) fuer On-Demand Bild-Extraktion aus OOXML-Dokumenten. Prueft Vision-Capability des Modells (Vision-Gate). ADR-025 |
+| **Lazy Extraction** | Bild-Nachlade-Strategie: Beim initialen Parsing werden nur Metadaten erfasst. Bilder werden erst aus dem OOXML-Archiv extrahiert wenn der Agent das Tool aufruft (ADR-025) |
+| **Vision-Gate** | Pruefung ob das aktuelle LLM-Modell Vision (Bildanalyse) unterstuetzt. ExtractDocumentImagesTool liefert erklaerenden Fehler bei Modellen ohne Vision |
+| **OOXML** | Office Open XML -- ZIP-basiertes Dateiformat von Microsoft Office (PPTX, XLSX, DOCX). Enthaelt XML-Dateien fuer Inhalte und Media-Ordner fuer Bilder |
+| **JSZip** | Leichtgewichtige JavaScript-Library (~30 KB) zum Lesen und Schreiben von ZIP-Archiven. Basis fuer alle OOXML-Parser (ADR-024) |
