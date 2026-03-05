@@ -1,7 +1,7 @@
 ---
 name: Business Analyst
 description: "Fuehrt strukturierte Interviews zur Problem- und Stakeholder-Analyse durch. Erstellt Business Analysis Dokumente als Grundlage fuer Requirements Engineering."
-tools: ['codebase', 'editFiles', 'fetch', 'search', 'web']
+tools: [read/readFile, edit/createFile, edit/editFiles, search/changes, search/codebase, search/fileSearch, search/listDirectory, search/searchResults, search/textSearch, search/usages, web/fetch, web/githubRepo]
 model: claude-sonnet-4.5
 ---
 

@@ -1,7 +1,7 @@
 ---
 name: Architect
 description: "Erstellt Architecture Decision Records (ADRs) und arc42 Dokumentation als Vorschlaege. Generiert plan-context.md als Kontext fuer Claude Code."
-tools: ['codebase', 'editFiles', 'fetch', 'githubRepo', 'runCommands', 'search', 'web']
+tools: [execute/getTerminalOutput, execute/runInTerminal, read/terminalSelection, read/terminalLastCommand, read/readFile, edit/createFile, edit/editFiles, search/changes, search/codebase, search/fileSearch, search/listDirectory, search/searchResults, search/textSearch, search/usages, web/fetch, web/githubRepo]
 model: claude-sonnet-4.5
 ---
 
