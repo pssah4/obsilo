@@ -178,6 +178,17 @@ export class AgentTask {
         history.push({ role: 'user', content: userMessage });
 
         const MAX_ITERATIONS = this.maxIterations;
+        const SOFT_LIMIT = Math.floor(MAX_ITERATIONS * 0.6);
+
+        // Tools that are safe to execute in parallel (pure reads, no side-effects).
+        // Write tools and control-flow tools always run sequentially.
+        const PARALLEL_SAFE = new Set([
+            'read_file', 'list_files', 'search_files', 'get_frontmatter',
+            'get_linked_notes', 'search_by_tag', 'get_vault_stats', 'get_daily_note',
+            'web_fetch', 'web_search',
+            'semantic_search', 'query_base', 'open_note',
+        ]);
+
         // Feature 6: Accumulate token usage across all iterations
         let totalInputTokens = 0;
         let totalOutputTokens = 0;
@@ -359,7 +370,6 @@ export class AgentTask {
                 }
 
                 // Soft limit: nudge the agent to wrap up at 60% of max iterations
-                const SOFT_LIMIT = Math.floor(MAX_ITERATIONS * 0.6);
                 if (iteration === SOFT_LIMIT) {
                     history.push({
                         role: 'user',
@@ -468,21 +478,13 @@ export class AgentTask {
                                 console.debug(`[AgentTask] Required ${condensingRetries + 1} condensing passes to stay under threshold`);
                             }
 
-                            // CHANGE: Continue loop after condensing instead of breaking
-                            continue;
+                            // Condensing is housekeeping for future messages — the model
+                            // already delivered its text answer, so we're done.
+                            break;
                         }
                     }
                     break;  // Only break if NO condensing was needed
                 }
-
-                // Tools that are safe to execute in parallel (pure reads, no side-effects).
-                // Write tools and control-flow tools always run sequentially.
-                const PARALLEL_SAFE = new Set([
-                    'read_file', 'list_files', 'search_files', 'get_frontmatter',
-                    'get_linked_notes', 'search_by_tag', 'get_vault_stats', 'get_daily_note',
-                    'web_fetch', 'web_search',
-                    'semantic_search', 'query_base', 'open_note',
-                ]);
 
                 const validToolUses = toolUses.filter(
                     (t): t is ContentBlock & { type: 'tool_use' } =>
@@ -854,7 +856,10 @@ export class AgentTask {
 
         const firstMsg = history[0];
 
-        // Smart tail: collect messages from end until 10k tokens or min 2 messages
+        // Smart tail: collect messages from end until 10k tokens or min 2 messages.
+        // IMPORTANT: We must never split a tool_use / tool_result pair across the
+        // condensing boundary — Anthropic requires every tool_use block to be
+        // immediately followed by a tool_result in the next message.
         const MAX_TAIL_TOKENS = 10_000;
         const MIN_TAIL_MESSAGES = 2;
         const tail: MessageParam[] = [];
@@ -878,7 +883,74 @@ export class AgentTask {
             tail.splice(0, tail.length, ...fallbackTail);
         }
 
-        const toSummarize = history.slice(0, history.length - tail.length);
+        // Fix tool_use / tool_result boundary: Anthropic requires every assistant
+        // tool_use block to be immediately followed by a user tool_result message.
+        // The tail boundary must never split such a pair. We also need to ensure
+        // that toSummarize (sent to the condensing API) doesn't end with an
+        // orphaned tool_use or tool_result.
+        const tailStartIdx = history.length - tail.length;
+        if (tailStartIdx > 0 && tail.length > 0) {
+            const firstTailMsg = tail[0];
+            const contentArr = Array.isArray(firstTailMsg.content) ? firstTailMsg.content : [];
+
+            if (firstTailMsg.role === 'user'
+                && contentArr.some((b: ContentBlock) => b.type === 'tool_result')) {
+                // Case 1: Tail starts with tool_result — pull preceding assistant(tool_use) in
+                const prevMsg = history[tailStartIdx - 1];
+                tail.unshift(prevMsg);
+                tailTokens += this.estimateTokens([prevMsg]);
+            }
+        }
+
+        // After adjusting for Case 1, recompute the split point
+        let toSummarize = history.slice(0, history.length - tail.length);
+
+        // Case 2: toSummarize ends with assistant(tool_use) — the condensing API
+        // call would receive tool_use without tool_result, causing a 400 error.
+        // Move the trailing tool_use assistant + its tool_result user into the tail.
+        while (toSummarize.length > 1) {
+            const lastSumMsg = toSummarize[toSummarize.length - 1];
+            const lastContent = Array.isArray(lastSumMsg.content) ? lastSumMsg.content : [];
+            const endsWithToolUse = lastSumMsg.role === 'assistant'
+                && lastContent.some((b: ContentBlock) => b.type === 'tool_use');
+
+            if (!endsWithToolUse) break;
+
+            // Move the assistant(tool_use) and its following user(tool_result) to the tail
+            const moved = toSummarize.splice(-1, 1);
+            tail.unshift(...moved);
+            // If tail now starts with assistant(tool_use), the tool_result should
+            // already be the next element in the original tail — no further action needed.
+
+            // Re-check: the new last element might also be a user(tool_result) whose
+            // assistant(tool_use) was already moved, creating another orphan. Loop handles this.
+        }
+
+        // Case 3: toSummarize ends with user(tool_result) — the condensing API
+        // would have tool_result without the preceding tool_use, causing a 400.
+        while (toSummarize.length > 1) {
+            const lastSumMsg = toSummarize[toSummarize.length - 1];
+            const lastContent = Array.isArray(lastSumMsg.content) ? lastSumMsg.content : [];
+            const endsWithToolResult = lastSumMsg.role === 'user'
+                && lastContent.some((b: ContentBlock) => b.type === 'tool_result');
+
+            if (!endsWithToolResult) break;
+
+            // Move this tool_result and the preceding assistant(tool_use) to the tail
+            const movedResult = toSummarize.splice(-1, 1);
+            tail.unshift(...movedResult);
+            // Also move the preceding assistant message (should contain tool_use)
+            if (toSummarize.length > 1) {
+                const movedAssistant = toSummarize.splice(-1, 1);
+                tail.unshift(...movedAssistant);
+            }
+        }
+
+        // After boundary adjustments, toSummarize might be too small to condense
+        if (toSummarize.length < 3) {
+            console.debug('[AgentTask] toSummarize too small after boundary fix — skipping condensing');
+            return;
+        }
 
         // Pre-condensing logging
         const preMessageCount = history.length;
@@ -890,27 +962,43 @@ export class AgentTask {
             `  Threshold: ${Math.floor(this.getModelContextWindow() * (this.condensingThreshold / 100))} (${this.condensingThreshold}%)`
         );
 
-        const condensingPrompt: MessageParam = {
-            role: 'user',
-            content:
-                'Summarize this conversation compactly. Preserve:\n' +
-                '- The original task and goal\n' +
-                '- Key decisions made\n' +
-                '- Files read, created, or modified (include exact paths)\n' +
-                '- Important findings, code snippets, or facts discovered\n' +
-                '- ALL tool calls that were executed and their outcomes\n' +
-                '- Search queries performed and their result summaries\n' +
-                '- Errors encountered and how they were resolved\n\n' +
-                (toolCallLedger ? toolCallLedger + '\n\n' : '') +
-                'IMPORTANT: After condensing, the agent MUST NOT repeat tool calls listed above.\n\n' +
-                'Output only the summary — no preamble or meta-commentary.',
-        };
+        const condensingInstruction =
+            'Summarize this conversation compactly. Preserve:\n' +
+            '- The original task and goal\n' +
+            '- Key decisions made\n' +
+            '- Files read, created, or modified (include exact paths)\n' +
+            '- Important findings, code snippets, or facts discovered\n' +
+            '- ALL tool calls that were executed and their outcomes\n' +
+            '- Search queries performed and their result summaries\n' +
+            '- Errors encountered and how they were resolved\n\n' +
+            (toolCallLedger ? toolCallLedger + '\n\n' : '') +
+            'IMPORTANT: After condensing, the agent MUST NOT repeat tool calls listed above.\n\n' +
+            'Output only the summary — no preamble or meta-commentary.';
+
+        // Build the message list for the condensing API call.
+        // Ensure proper role alternation: if toSummarize ends with a user message,
+        // merge the condensing instruction into it instead of appending a second user message.
+        const condensingMessages = [...toSummarize];
+        const lastMsg = condensingMessages[condensingMessages.length - 1];
+        if (lastMsg.role === 'user') {
+            // Merge: append instruction to existing user message
+            const existingContent = typeof lastMsg.content === 'string'
+                ? lastMsg.content
+                : lastMsg.content.filter(b => b.type === 'text').map(b => 'text' in b ? b.text : '').join('\n');
+            condensingMessages[condensingMessages.length - 1] = {
+                role: 'user',
+                content: existingContent + '\n\n---\n\n' + condensingInstruction,
+            };
+        } else {
+            // toSummarize ends with assistant — safe to append a user message
+            condensingMessages.push({ role: 'user', content: condensingInstruction });
+        }
 
         let summary = '';
         try {
             for await (const chunk of this.api.createMessage(
                 systemPrompt,
-                [...toSummarize, condensingPrompt],
+                condensingMessages,
                 [],
                 abortSignal,
             )) {
