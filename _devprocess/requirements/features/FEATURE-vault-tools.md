@@ -4,7 +4,7 @@
 **Source:** `src/core/tools/vault/`
 
 ## Summary
-30+ tools organized in three groups covering all vault operations: reading/searching files, writing/editing content, and Obsidian-specific intelligence (frontmatter, tags, links, daily notes, vault stats).
+43+ tools organized in seven groups covering all vault operations: reading/searching files, writing/editing content, and Obsidian-specific intelligence (frontmatter, tags, links, daily notes, vault stats).
 
 ---
 

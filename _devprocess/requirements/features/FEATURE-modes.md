@@ -122,6 +122,5 @@ TOOL_GROUP_MAP = {
 - New tool groups can be added to `TOOL_GROUP_MAP` + `TOOL_SECTIONS` in `systemPrompt.ts`
 
 ## Known Limitations
-- Max iterations (10) not per-mode configurable — could be useful for "safe" low-limit modes
+- Max iterations (25) not per-mode configurable — could be useful for "safe" low-limit modes
 - `switch_mode` during parallel tool execution is deferred to next iteration (correct behavior, but worth noting in multi-tool responses)
-- Global modes file (`~/.obsidian-agent/modes.json`) not yet implemented — `GlobalModeStore` exists but reads from local settings as fallback

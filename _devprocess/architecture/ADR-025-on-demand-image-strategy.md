@@ -1,6 +1,6 @@
 # ADR-025: On-Demand Bild-Nachlade-Strategie
 
-**Status:** Proposed
+**Status:** Akzeptiert, geplant
 **Date:** 2026-03-05
 **Deciders:** Sebastian (Owner), Claude Code (Implementierung)
 

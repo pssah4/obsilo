@@ -1,6 +1,6 @@
 # FEATURE: Global Storage Architecture
 
-**Status:** In Progress
+**Status:** Implemented
 **ADR:** ADR-020-global-storage.md
 **Source:** `src/core/storage/GlobalFileService.ts`, `src/core/storage/SyncBridge.ts`, `src/main.ts`
 

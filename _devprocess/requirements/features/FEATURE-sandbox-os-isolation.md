@@ -2,7 +2,7 @@
 
 **Datum**: 2026-03-02
 **Revision**: 1
-**Status**: Spezifiziert, Implementierung ausstehend
+**Status**: Implementiert
 **Abhaengigkeit**: Bestehende Sandbox-Infrastruktur (FEATURE-self-development.md Phase 3)
 **ADR**: ADR-021-sandbox-os-isolation.md
 **Bezug**: AUDIT-obsilo-2026-03-01.md, Finding H-1 (CWE-693)

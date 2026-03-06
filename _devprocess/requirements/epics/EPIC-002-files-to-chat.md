@@ -30,11 +30,11 @@ UNSERE LÖSUNG extrahiert Inhalte lokal, strukturiert und performant -- mit inte
 
 | Feature ID | Name | Priority | Effort | Status |
 |------------|------|----------|--------|--------|
-| FEATURE-200 | Document Parsing Pipeline | P0-Critical | L | Not Started |
-| FEATURE-201 | File Picker Erweiterung | P0-Critical | S | Not Started |
-| FEATURE-202 | Token-Budget-Management | P1-High | M | Not Started |
-| FEATURE-203 | On-Demand Bild-Extraktion | P1-High | M | Not Started |
-| FEATURE-204 | Modell-Kompatibilitäts-Check | P1-High | S | Not Started |
+| FEATURE-200 | Document Parsing Pipeline | P0-Critical | L | Implementiert |
+| FEATURE-201 | File Picker Erweiterung | P0-Critical | S | Implementiert |
+| FEATURE-202 | Token-Budget-Management | P1-High | M | Geplant |
+| FEATURE-203 | On-Demand Bild-Extraktion | P1-High | M | Geplant |
+| FEATURE-204 | Modell-Kompatibilitäts-Check | P1-High | S | Geplant |
 
 **Priority Legend:**
 - P0-Critical: Ohne geht MVP nicht

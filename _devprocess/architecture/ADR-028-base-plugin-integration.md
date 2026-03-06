@@ -1,6 +1,6 @@
 # ADR-028: Base-Erstellung und optionale Plugin-Integration fuer Task Extraction
 
-**Status:** Proposed
+**Status:** Akzeptiert, teilweise implementiert (Task-Notes ja, Base-Erstellung und Iconic-Integration ausstehend)
 **Date:** 2026-03-06
 **Deciders:** Architect Agent, Claude Code
 **Feature:** FEATURE-100 Task Extraction & Management

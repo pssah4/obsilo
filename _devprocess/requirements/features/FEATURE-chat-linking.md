@@ -1,7 +1,7 @@
 # FEATURE: Chat-Linking
 
-**Status:** Spezifiziert (Pre-Implementation)
-**Branch:** add-files-to-chat
+**Status:** Implementiert
+**Branch:** chat-linking (gemergt in dev)
 **ADR:** [ADR-022](../../architecture/ADR-022-chat-linking.md)
 
 ## Summary

@@ -4,6 +4,7 @@
 > **Epic**: EPIC-003 - Chat-Linking
 > **Priority**: P2-Medium
 > **Effort Estimate**: S
+> **Status**: Implementiert
 
 ## Feature Description
 

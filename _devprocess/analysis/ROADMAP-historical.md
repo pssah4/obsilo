@@ -1,7 +1,10 @@
-# Obsidian Agent — Roadmap
+# Obsidian Agent — Roadmap (HISTORISCH)
+
+> **HINWEIS:** Diese Roadmap ist veraltet und dient nur als historische Referenz.
+> Aktueller Stand: `_devprocess/context/10_backlog.md`
 
 > Details: [BACKLOG.md](BACKLOG.md)
-> Status: ✅ fertig · 🔄 teilweise · ⬜ offen
+> Status: fertig / teilweise / offen
 
 ---
 

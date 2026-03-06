@@ -8,7 +8,7 @@
 
 ## Kontext
 
-Der Agent hat 30+ Tools. Nicht jeder Mode soll Zugriff auf alle Tools haben (z.B. soll ein reiner "Ask"-Mode keine Schreiboperationen ausführen können). Wie wird Tool-Verfügbarkeit pro Mode gesteuert?
+Der Agent hat 43+ Tools. Nicht jeder Mode soll Zugriff auf alle Tools haben (z.B. soll ein reiner "Ask"-Mode keine Schreiboperationen ausführen können). Wie wird Tool-Verfügbarkeit pro Mode gesteuert?
 
 Optionen:
 1. Pro-Tool-Whitelist in jedem Mode (explizite Liste aller erlaubten Tools)
@@ -21,7 +21,7 @@ Optionen:
 
 Jeder Mode definiert eine Liste von Tool-Gruppen (`toolGroups: string[]`). `ModeService.getToolDefinitions()` filtert Tools entsprechend. Zusätzlich: `sessionToolOverride` ermöglicht temporäre Overrides ohne Mode-Wechsel.
 
-Gruppen: `read`, `vault`, `edit`, `web`, `agent`, `mcp`
+Gruppen: `read`, `vault`, `edit`, `web`, `agent`, `mcp`, `skill`
 
 ## Begründung
 
@@ -47,4 +47,4 @@ Gruppen: `read`, `vault`, `edit`, `web`, `agent`, `mcp`
 
 `src/core/modes/builtinModes.ts` — `TOOL_GROUP_MAP`
 `src/core/modes/ModeService.ts` — `getToolDefinitions()`
-Built-in Modes: `ask` (read, vault, agent), `agent` (alle Gruppen)
+Built-in Modes: `ask` (read, vault, agent), `agent` (read, vault, edit, web, agent, mcp, skill)

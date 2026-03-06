@@ -1,6 +1,6 @@
 # FEATURE: Keyword Search Upgrade — Stemming + TF-IDF + Word Boundaries
 
-**Status:** In Progress
+**Status:** Implemented
 **Source:** `src/core/semantic/SemanticIndexService.ts`
 **Depends on:** FEATURE-semantic-index
 

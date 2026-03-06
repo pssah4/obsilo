@@ -53,7 +53,7 @@ Child tasks spawned via `new_task` always have `powerSteeringFrequency = 0`:
 ```typescript
 new AgentTask(api, registry, callbacks, modeService,
     consecutiveMistakeLimit, rateLimitMs,
-    false, 80, 0,  // condensingEnabled=false, threshold=80, powerSteering=0
+    false, 70, 0,  // condensingEnabled=false, threshold=70, powerSteering=0
     maxIterations, childDepth, maxSubtaskDepth
 )
 ```

@@ -1,6 +1,6 @@
 # ADR-024: Parsing-Library-Auswahl fuer Office-Formate
 
-**Status:** Proposed
+**Status:** Akzeptiert, implementiert
 **Date:** 2026-03-05
 **Deciders:** Sebastian (Owner), Claude Code (Implementierung)
 

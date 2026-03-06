@@ -1,4 +1,5 @@
 # Feature: Attachments, Clipboard, and Images
+**Status:** Implemented
 Priority: P1
 Related Epic: Agentic Core & Interaction Layer (siehe FEATURE-agent-core.md, Epic Context)
 

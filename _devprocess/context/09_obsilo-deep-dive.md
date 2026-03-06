@@ -129,7 +129,7 @@ In dieser Reihenfolge:
 7. **McpClient** — Verbindet zu konfigurierten MCP-Servern
 8. **SandboxExecutor + EsbuildWasmManager** — Sandbox für dynamischen Code
 9. **SelfAuthoredSkillLoader** — Vom Agent erstellte Skills laden
-10. **ToolRegistry** — Registriert alle 30+ Tools
+10. **ToolRegistry** — Registriert alle 43+ Tools
 11. **SemanticIndexService** — Vektor-Index für semantische Suche
 12. **RecipeStore + Mastery-System** — Prozedurale Rezepte und episodisches Lernen
 13. **ConversationStore** — Persistente Chat-History

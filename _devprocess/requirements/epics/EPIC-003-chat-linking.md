@@ -30,10 +30,10 @@ UNSERE LÖSUNG verknüpft Notes mit ihren Quell-Chats wie Fußnoten -- dezent, a
 
 | Feature ID | Name | Priority | Effort | Status |
 |------------|------|----------|--------|--------|
-| FEATURE-300 | Protocol Handler (Deep-Links) | P0-Critical | S | Not Started |
-| FEATURE-301 | Auto-Frontmatter-Linking | P0-Critical | M | Not Started |
-| FEATURE-302 | Semantisches Chat-Titling | P1-High | S | Not Started |
-| FEATURE-303 | Chat-Linking Setting | P2-Medium | S | Not Started |
+| FEATURE-300 | Protocol Handler (Deep-Links) | P0-Critical | S | Implementiert |
+| FEATURE-301 | Auto-Frontmatter-Linking | P0-Critical | M | Implementiert |
+| FEATURE-302 | Semantisches Chat-Titling | P1-High | S | Implementiert |
+| FEATURE-303 | Chat-Linking Setting | P2-Medium | S | Implementiert |
 
 **Priority Legend:**
 - P0-Critical: Ohne geht MVP nicht (Linking + Deep-Link = Kernfunktion)

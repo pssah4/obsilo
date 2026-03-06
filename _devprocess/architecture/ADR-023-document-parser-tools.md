@@ -1,6 +1,6 @@
 # ADR-023: Document Parser als wiederverwendbare Tools
 
-**Status:** Proposed
+**Status:** Akzeptiert, implementiert
 **Date:** 2026-03-05
 **Deciders:** Sebastian (Owner), Claude Code (Implementierung)
 

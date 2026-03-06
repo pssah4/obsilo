@@ -4,7 +4,7 @@
 **Source:** `src/core/tools/agent/`
 
 ## Summary
-Five built-in tools that control the agent's flow, communicate with the user, spawn sub-agents, and manage task planning. These tools are always auto-approved (never require user confirmation).
+17 built-in agent tools that control the agent's flow, communicate with the user, spawn sub-agents, manage task planning, configure settings, execute commands, handle MCP servers, and provide self-development capabilities. Core control tools are always auto-approved (never require user confirmation).
 
 ## Tools
 
@@ -102,12 +102,96 @@ Five built-in tools that control the agent's flow, communicate with the user, sp
 
 **System prompt guidance:** "Use ONLY for complex tasks with 3+ distinct steps. For simple tasks, execute directly — no plan needed."
 
+---
+
+### configure_model
+**Purpose:** Change the active AI model mid-conversation.
+**Source:** `src/core/tools/agent/ConfigureModelTool.ts`
+
+---
+
+### enable_plugin
+**Purpose:** Enable a Community Plugin by ID at runtime.
+**Source:** `src/core/tools/agent/EnablePluginTool.ts`
+
+---
+
+### execute_command
+**Purpose:** Execute an Obsidian command by its command ID.
+**Source:** `src/core/tools/agent/ExecuteCommandTool.ts`
+
+---
+
+### resolve_capability_gap
+**Purpose:** Dynamically resolve missing capabilities by suggesting or installing plugins/skills.
+**Source:** `src/core/tools/agent/ResolveCapabilityGapTool.ts`
+
+---
+
+### update_settings
+**Purpose:** Update plugin settings programmatically (model, theme, features).
+**Source:** `src/core/tools/agent/UpdateSettingsTool.ts`
+
+---
+
+### manage_mcp_server
+**Purpose:** Add, remove, update, list, reconnect, or test MCP servers.
+**Source:** `src/core/tools/agent/ManageMcpServerTool.ts`
+
+---
+
+### read_agent_logs
+**Purpose:** Read the agent's operation log (ring buffer) for debugging.
+**Source:** `src/core/tools/agent/ReadAgentLogsTool.ts`
+
+---
+
+### manage_source
+**Purpose:** Read and modify the plugin's own source code (self-development).
+**Source:** `src/core/tools/agent/ManageSourceTool.ts`
+
+---
+
+### execute_recipe
+**Purpose:** Execute a procedural recipe (skill mastery system, ADR-017).
+**Source:** `src/core/tools/agent/ExecuteRecipeTool.ts`
+
+---
+
+### evaluate_expression
+**Purpose:** Execute JavaScript/TypeScript code in a sandboxed iframe environment.
+**Source:** `src/core/tools/agent/EvaluateExpressionTool.ts`
+
+---
+
+### call_plugin_api
+**Purpose:** Call Obsidian Community Plugin APIs via an allowlisted interface.
+**Source:** `src/core/tools/agent/CallPluginApiTool.ts`
+
+---
+
+### manage_skill
+**Purpose:** Create, list, read, update, or delete user-authored skills (markdown instructions).
+**Source:** `src/core/tools/agent/ManageSkillTool.ts`
+
 ## Key Files
 - `src/core/tools/agent/AskFollowupQuestionTool.ts`
 - `src/core/tools/agent/AttemptCompletionTool.ts`
 - `src/core/tools/agent/NewTaskTool.ts`
 - `src/core/tools/agent/SwitchModeTool.ts`
 - `src/core/tools/agent/UpdateTodoListTool.ts`
+- `src/core/tools/agent/ConfigureModelTool.ts`
+- `src/core/tools/agent/EnablePluginTool.ts`
+- `src/core/tools/agent/ExecuteCommandTool.ts`
+- `src/core/tools/agent/ResolveCapabilityGapTool.ts`
+- `src/core/tools/agent/UpdateSettingsTool.ts`
+- `src/core/tools/agent/ManageMcpServerTool.ts`
+- `src/core/tools/agent/ReadAgentLogsTool.ts`
+- `src/core/tools/agent/ManageSourceTool.ts`
+- `src/core/tools/agent/ExecuteRecipeTool.ts`
+- `src/core/tools/agent/EvaluateExpressionTool.ts`
+- `src/core/tools/agent/CallPluginApiTool.ts`
+- `src/core/tools/agent/ManageSkillTool.ts`
 
 ## Dependencies
 - `ToolExecutionContext.askQuestion` — wired in AgentTask.run()
@@ -120,7 +204,7 @@ Five built-in tools that control the agent's flow, communicate with the user, sp
 - `AgentTaskCallbacks.onModeSwitch` — UI mode indicator update
 
 ## Tool Group
-All 5 tools are in the `agent` tool group. All are classified as `'agent'` in `ToolExecutionPipeline.TOOL_GROUPS` → always auto-approved, never checkpointed.
+All 17 tools are in the `agent` tool group. Core control tools (`ask_followup_question`, `attempt_completion`, `new_task`, `switch_mode`, `update_todo_list`) are always auto-approved, never checkpointed. Other agent tools may require approval depending on their write impact.
 
 **Availability by mode:**
 - Ask mode: `ask_followup_question`, `attempt_completion` (from `agent` group, but not `new_task`)
@@ -129,7 +213,7 @@ All 5 tools are in the `agent` tool group. All are classified as `'agent'` in `T
 Note: `switch_mode` is always available in the pipeline's TOOL_GROUPS classification but its availability in the LLM's tool list depends on mode configuration.
 
 ## Known Limitations / Edge Cases
-- `new_task` depth: sub-agents should not spawn further sub-agents. No hard enforcement — infinite recursion is theoretically possible. Document in roleDefinition and monitor.
+- `new_task` depth: hard enforcement via `depth`/`maxSubtaskDepth` (default 2). Children at max depth cannot spawn further sub-agents.
 - `ask_followup_question` blocks the loop until the user responds. If used in a sub-agent, the question appears in the parent UI (via forwarded `onQuestion` callback — check if implemented in sub-agent wiring).
 - `switch_mode` is deferred to next iteration — if the current iteration has multiple tools, they all execute before the mode switch takes effect.
 - `update_todo_list` sends the full list each time (no diff). UI re-renders on each call.

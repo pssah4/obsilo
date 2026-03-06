@@ -27,8 +27,8 @@ constructor(
     modeService?: ModeService,    // Mode resolution + tool filtering
     consecutiveMistakeLimit = 0,  // Stop after N consecutive tool errors (0 = disabled)
     rateLimitMs = 0,              // Min ms between iterations (0 = disabled)
-    condensingEnabled = false,    // Auto-condense when context fills up
-    condensingThreshold = 80,     // Trigger at this % of model context window
+    condensingEnabled = true,     // Auto-condense when context fills up
+    condensingThreshold = 70,     // Trigger at this % of model context window
     powerSteeringFrequency = 0,   // Inject mode reminder every N iterations (0 = disabled)
     maxIterations = 25,           // Hard iteration cap per message
     depth = 0,                    // Nesting depth (0 = root, 1 = first child, ...)
@@ -52,8 +52,10 @@ constructor(
 | `onApprovalRequired(toolName, input)` | Write tool needs user approval -- pauses loop |
 | `onTodoUpdate(items)` | `update_todo_list` publishes new plan |
 | `onModeSwitch(newModeSlug)` | `switch_mode` changed the active mode |
-| `onContextCondensed()` | History was condensed |
+| `onContextCondensed(prevTokens?, newTokens?)` | History was condensed (with token counts) |
 | `onCheckpoint(checkpoint)` | Checkpoint saved before a write |
+| `onEpisodeData(data)` | Tool sequence for episodic memory (ADR-018) |
+| `onPreCompactionFlush(history)` | Flush important facts before condensing |
 | `onError(error)` | Unrecoverable error |
 
 ### 1.2 Iteration Flow (Step by Step)

@@ -20,18 +20,19 @@ Optionen:
 
 **Option 4 — Keep-First-Last mit LLM-Summarize-Middle.**
 
-Trigger: Geschaetzte Token-Zahl > `condensingThreshold` % des Context Windows (Default: 80%).
+Trigger: Geschaetzte Token-Zahl > `condensingThreshold` % des Context Windows (Default: 70%).
 
 Algorithmus:
 1. Behalte die erste User-Nachricht (Original-Aufgabe)
-2. Behalte die letzten 4 Nachrichten (aktueller Kontext)
-3. Komprimiere den mittleren Teil via LLM-Call in eine Zusammenfassung
-4. Ersetze die History mit: [erste Nachricht, Zusammenfassung als User-Message, letzte 4 Nachrichten]
+2. Smart Tail: Behalte die letzten Nachrichten (bis zu 10k Tokens, min. 2 Nachrichten)
+3. Komprimiere den mittleren Teil via LLM-Call in eine Zusammenfassung (mit Tool-Call-Ledger)
+4. Ersetze die History mit: [erste Nachricht, Zusammenfassung als User-Message, ...tail]
+5. Multi-pass: Bis zu 2 Retries falls nach erstem Pass immer noch ueber Threshold
 
 ## Begruendung
 
 - **Aufgaben-Kontext bleibt erhalten**: Die erste Nachricht definiert die Aufgabe — ihr Verlust fuehrt zu Orientierungsverlust.
-- **Aktueller Zustand bleibt erhalten**: Die letzten 4 Nachrichten enthalten den aktuellen Arbeitskontext und letzte Tool-Results.
+- **Aktueller Zustand bleibt erhalten**: Smart Tail (bis zu 10k Tokens, min 2 Nachrichten) enthaelt den aktuellen Arbeitskontext und letzte Tool-Results.
 - **LLM-Qualitaet**: Eine LLM-Zusammenfassung ist deutlich besser als simples Abschneiden.
 - **Token-Schaetzung statt exakter Zaehlung**: `estimateTokenCount()` nutzt eine 4-Chars-pro-Token-Heuristik. Exaktes Tokenizing waere zu langsam fuer Echtzeit-Checks.
 - **Kilo Code Referenz**: Uebernimmt die Strategie aus der Kilo-Code-Referenz.

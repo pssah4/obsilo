@@ -1,4 +1,5 @@
 # Feature: Core Agent Interaction & Modes
+**Status:** Implemented
 Priority: P0
 Related Epic: Agentic Core & Interaction Layer (siehe FEATURE-agent-core.md, Epic Context)
 

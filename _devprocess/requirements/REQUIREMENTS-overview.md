@@ -1,6 +1,6 @@
 # Requirements Overview — Obsidian Agent
-Scope: Production (alle Phasen A-D komplett)
-Date: 2026-03-04 (aktualisiert)
+Scope: Production (alle Phasen A-F komplett)
+Date: 2026-03-06 (aktualisiert)
 
 ## Goal
 Local-only, agentic operating layer fuer Obsidian: safe, governed vault operations, multi-provider support, MCP extensibility, semantic search, persistent memory, multi-agent orchestration, and plugin auto-discovery.
@@ -33,8 +33,12 @@ Local-only, agentic operating layer fuer Obsidian: safe, governed vault operatio
 - Chat History (ConversationStore, HistoryPanel, restore + continue)
 - Autocomplete (/workflows, @files, VaultFilePicker)
 - Self-Development Tools (evaluate_expression, manage_skill, manage_source)
-- Sandbox OS-Level Isolation (iframe sandbox, CSP, AST validation, CDN dependency resolution)
+- Sandbox OS-Level Isolation (ProcessSandboxExecutor Desktop, IframeSandboxExecutor Mobile-Fallback)
 - Agent Log Viewer (read_agent_logs)
+- Chat-Linking (Protocol Handler, Auto-Frontmatter-Linking, Semantic Titling, Setting)
+- Document Parsing Pipeline (PPTX, XLSX, DOCX, PDF, JSON, XML, CSV)
+- File Picker Erweiterung (Office-Formate)
+- Task Extraction & Management (TaskExtractor, TaskNoteCreator, TaskSelectionModal)
 
 **Out of Scope:**
 - Direct manipulation of Obsidian internal Memory Graph
@@ -90,15 +94,29 @@ Local-only, agentic operating layer fuer Obsidian: safe, governed vault operatio
 - **Scalability:** Indexing supports vaults up to 10k markdown files. Incremental builds with resume support.
 - **Internationalization:** Full UI in 6 languages with lazy-load architecture.
 
-## Planned Features (Epics)
+## Implementierte Epics
 
-### EPIC-003: Chat-Linking (Provenienz & Nachvollziehbarkeit)
-| Feature Ref | Feature Name | Priority | Spec |
-|---|---|---|---|
-| FEATURE-300 | Protocol Handler (Deep-Links) | P0 | `FEATURE-300-protocol-handler.md` |
-| FEATURE-301 | Auto-Frontmatter-Linking | P0 | `FEATURE-301-auto-frontmatter-linking.md` |
-| FEATURE-302 | Semantisches Chat-Titling | P1 | `FEATURE-302-semantic-chat-titling.md` |
-| FEATURE-303 | Chat-Linking Setting | P2 | `FEATURE-303-chat-linking-setting.md` |
+### EPIC-002: Files-to-Chat (Office-Format-Support) — Teilweise implementiert
+| Feature Ref | Feature Name | Priority | Spec | Status |
+|---|---|---|---|---|
+| FEATURE-200 | Document Parsing Pipeline | P0 | `FEATURE-200-document-parsing-pipeline.md` | Implementiert |
+| FEATURE-201 | File Picker Erweiterung | P0 | `FEATURE-201-file-picker-extension.md` | Implementiert |
+| FEATURE-202 | Token-Budget-Management | P1 | `FEATURE-202-token-budget-management.md` | Geplant |
+| FEATURE-203 | On-Demand Bild-Extraktion | P1 | `FEATURE-203-on-demand-image-extraction.md` | Geplant |
+| FEATURE-204 | Modell-Kompatibilitäts-Check | P1 | `FEATURE-204-model-compatibility-check.md` | Geplant |
+
+### EPIC-003: Chat-Linking (Provenienz & Nachvollziehbarkeit) — Vollständig implementiert
+| Feature Ref | Feature Name | Priority | Spec | Status |
+|---|---|---|---|---|
+| FEATURE-300 | Protocol Handler (Deep-Links) | P0 | `FEATURE-300-protocol-handler.md` | Implementiert |
+| FEATURE-301 | Auto-Frontmatter-Linking | P0 | `FEATURE-301-auto-frontmatter-linking.md` | Implementiert |
+| FEATURE-302 | Semantisches Chat-Titling | P1 | `FEATURE-302-semantic-chat-titling.md` | Implementiert |
+| FEATURE-303 | Chat-Linking Setting | P2 | `FEATURE-303-chat-linking-setting.md` | Implementiert |
+
+### FEATURE-100: Task Extraction & Management — Implementiert
+| Feature Ref | Feature Name | Priority | Spec | Status |
+|---|---|---|---|---|
+| FEATURE-100 | Task Extraction & Management | P1 | `FEATURE-100-task-extraction.md` | Implementiert |
 
 ## ASR Summary
 - ASR-01: isomorphic-git Checkpoints (ADR-002) — Implemented
@@ -107,7 +125,7 @@ Local-only, agentic operating layer fuer Obsidian: safe, governed vault operatio
 - ASR-03: vectra Semantic Index (ADR-003) — Implemented
 - ASR-04: 3-Tier Memory (ADR-013) — Implemented
 - ASR-05: Global Storage (ADR-020) — Implemented
-- ASR-06: Pipeline Post-Write Hook für Chat-Linking (ADR-022) — Planned
+- ASR-06: Pipeline Post-Write Hook für Chat-Linking (ADR-022) — Implemented
 
 ## Resolved Decisions
 1. Vector storage: vectra (HNSW, TypeScript-native) — ADR-003

@@ -4,6 +4,7 @@
 > **Epic**: EPIC-002 - Files-to-Chat
 > **Priority**: P0-Critical
 > **Effort Estimate**: S
+> **Status**: Implementiert
 
 ## Feature Description
 

@@ -1,4 +1,5 @@
 # Feature: Controlled Content Editing
+**Status:** Implemented
 Priority: P0
 Related Epic: Vault Operations & Content Synthesis (siehe FEATURE-vault-ops.md, Epic Context)
 

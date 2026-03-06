@@ -1,4 +1,5 @@
 # Feature: Vault Operations (Full CRUD)
+**Status:** Implemented
 Priority: P0
 Related Epic: Vault Operations & Content Synthesis (siehe Epic Context unten)
 

@@ -100,7 +100,7 @@ Child tasks spawned via `new_task` do NOT condense or power-steer:
 ```typescript
 new AgentTask(api, registry, callbacks, modeService,
   consecutiveMistakeLimit, rateLimitMs,
-  false, 80, 0  // condensingEnabled=false, powerSteering=0
+  false, 70, 0  // condensingEnabled=false, threshold=70, powerSteering=0
 )
 ```
 Keeps child loops lean and prevents recursive condensing.

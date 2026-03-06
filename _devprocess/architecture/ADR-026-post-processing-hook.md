@@ -1,6 +1,6 @@
 # ADR-026: Post-Processing Hook fuer Task Extraction
 
-**Status:** Proposed
+**Status:** Akzeptiert, implementiert
 **Date:** 2026-03-06
 **Deciders:** Architect Agent, Claude Code
 **Feature:** FEATURE-100 Task Extraction & Management

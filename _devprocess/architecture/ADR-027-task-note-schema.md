@@ -1,6 +1,6 @@
 # ADR-027: Task-Note Frontmatter Schema
 
-**Status:** Proposed
+**Status:** Akzeptiert, implementiert
 **Date:** 2026-03-06
 **Deciders:** Architect Agent, Claude Code
 **Feature:** FEATURE-100 Task Extraction & Management
@@ -99,25 +99,38 @@ Interne Keys englisch, aber Obsidian Property-Aliase oder Bases-Spaltenumbenennu
 
 **Schema-Versionierung:** Kein separates `schemaVersion`-Feld. Stattdessen ist `Typ: Aufgabe` (Wert, nicht Key) der Schema-Marker. Wenn je ein Schema-Update noetig wird, kann eine Migration `Typ: Aufgabe` Notes erkennen und aktualisieren.
 
-**Hinweis:** Dies ist ein VORSCHLAG. Claude Code entscheidet final basierend auf dem realen Zustand der Codebase.
+**Hinweis:** Option 1 war der Vorschlag. Die Implementierung weicht in Details ab (siehe "Implementiertes Schema").
 
-## Schema Definition
+## Implementiertes Schema
+
+Die Implementierung in `TaskNoteCreator.ts` verwendet folgendes Schema:
 
 ```typescript
 interface TaskFrontmatter {
-    Typ: 'Aufgabe';                        // Konstante — identifiziert Task-Notes
-    Status: 'Offen' | 'Erledigt';          // Nutzer aendert manuell
-    Zusammenfassung: string;               // Aus Checkbox-Text extrahiert
-    Erstellt: string;                      // ISO-Datum (YYYY-MM-DD)
-    Fälligkeit: string;                    // ISO-Datum oder leer
+    Kategorie: string[];                   // ['Task'] — Array-Format fuer Bases-Filter
+    Zusammenfassung: string;               // Aus Checkbox-Text extrahiert (toTitle)
+    Status: 'Todo' | 'Doing' | 'Done' | 'Waiting';  // Mehr Zustaende als Vorschlag
     Dringend: boolean;                     // Eisenhower: urgent
     Wichtig: boolean;                      // Eisenhower: important
-    Quelle: string;                        // Wikilink zur Ursprungs-Konversation
-    Kontext: string;                       // User-Message die den Agent-Task ausgeloest hat
-    icon?: string;                         // Iconic: z.B. 'lucide//check-square'
-    iconColor?: string;                    // Iconic: z.B. '#4CAF50'
+    Fälligkeit: string;                    // ISO-Datum oder leer
+    Assignee: string;                      // Zugewiesen an (aus TaskItem)
+    Quelle: string;                        // Wikilink zur Ursprungs-Note
+    created: string;                       // ISO-Datum (englisch, Obsidian-Konvention)
+    Notizen: string[];                     // Leeres Array fuer spaetere Ergaenzungen
 }
 ```
+
+**Abweichungen vom Vorschlag (Option 1):**
+
+| Vorschlag | Implementierung | Begruendung |
+|-----------|----------------|-------------|
+| `Typ: Aufgabe` | `Kategorie: [Task]` | Array-Format besser fuer Bases-Filter (`containsAny`) |
+| `Status: Offen/Erledigt` | `Status: Todo/Doing/Done/Waiting` | Mehr Granularitaet fuer Kanban-Workflows |
+| `Erstellt` (deutsch) | `created` (englisch) | Konsistent mit Obsidian-Core-Property |
+| `Kontext` | nicht implementiert | Entscheidung: Spart Token, Kontext ueber Quelle erreichbar |
+| `icon`, `iconColor` | nicht implementiert | Deferred: Iconic-Integration als separates Feature |
+| — | `Assignee` hinzugefuegt | Praxis-Anforderung fuer Team-Workflows |
+| — | `Notizen: []` hinzugefuegt | Platzhalter fuer strukturierte Ergaenzungen |
 
 ## Consequences
 
