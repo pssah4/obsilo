@@ -70,25 +70,23 @@ function parseJson(data: ArrayBuffer): ParseResult {
 
 function parseXml(data: ArrayBuffer): ParseResult {
     const text = new TextDecoder('utf-8').decode(data);
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(text, 'text/xml');
 
-    // Check for parse error
-    const errorEl = doc.querySelector('parsererror');
-    if (errorEl) {
-        return {
-            text: `## XML (parse error)\n\n\`\`\`xml\n${text.slice(0, 5000)}\n\`\`\``,
-            images: [],
-            metadata: { format: 'xml' },
-        };
-    }
+    // Extract root element name via regex (avoids DOMParser — CodeQL js/xss-through-dom)
+    // Skip BOM, XML declaration, comments, and processing instructions before root element
+    const stripped = text
+        .replace(/^[\s\uFEFF]+/, '')
+        .replace(/^<\?[^?]*\?>\s*/g, '')
+        .replace(/^<!--[\s\S]*?-->\s*/g, '');
+    const rootMatch = stripped.match(/<([a-zA-Z_][\w.:-]*)[>\s/]/);
+    const rootTag = rootMatch ? rootMatch[1] : 'unknown';
 
-    // Extract structured text by walking the DOM tree
-    const rootTag = doc.documentElement.localName;
-    const childCount = doc.documentElement.children.length;
+    // Count element tags (rough heuristic for size indication)
+    const afterRoot = stripped.slice(stripped.indexOf('>') + 1);
+    const childMatches = afterRoot.match(/<[a-zA-Z_][\w.:-]*[\s>]/g);
+    const childCount = childMatches ? childMatches.length : 0;
 
     return {
-        text: `## XML Document (root: <${rootTag}>, ${childCount} child element(s))\n\n\`\`\`xml\n${text}\n\`\`\``,
+        text: `## XML Document (root: <${rootTag}>, ~${childCount} element(s))\n\n\`\`\`xml\n${text}\n\`\`\``,
         images: [],
         metadata: { format: 'xml' },
     };

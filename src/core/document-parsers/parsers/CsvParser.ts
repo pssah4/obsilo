@@ -86,7 +86,7 @@ function parseRows(text: string, delimiter: string): string[][] {
 
 /** Escape pipe characters for Markdown table cells. */
 function escapeCell(value: string): string {
-    return value.replace(/\|/g, '\\|').replace(/\n/g, ' ');
+    return value.replace(/\\/g, '\\\\').replace(/\|/g, '\\|').replace(/\n/g, ' ');
 }
 
 /** Convert rows to a Markdown table. First row is treated as header. */

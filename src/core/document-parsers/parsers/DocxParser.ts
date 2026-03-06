@@ -136,6 +136,7 @@ function processTable(tbl: Element): string | null {
             const cellText = getElementsByLocalName(tc, 't')
                 .map(t => t.textContent ?? '')
                 .join(' ')
+                .replace(/\\/g, '\\\\')
                 .replace(/\|/g, '\\|')
                 .replace(/\n/g, ' ')
                 .trim();
