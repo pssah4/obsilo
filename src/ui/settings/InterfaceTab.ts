@@ -1,6 +1,7 @@
 import { App, Notice, Setting, setIcon } from 'obsidian';
 import type ObsidianAgentPlugin from '../../main';
 import { OnboardingService } from '../../core/memory/OnboardingService';
+import { getModelKey } from '../../types/settings';
 import { t } from '../../i18n';
 
 
@@ -118,6 +119,43 @@ export class InterfaceTab {
                         }
                     }),
             );
+
+        // ─── Chat Linking (ADR-022) ─────────────────────────────────────
+        containerEl.createEl('h3', { cls: 'agent-settings-section', text: t('settings.interface.headingChatLinking') });
+
+        const cl = this.plugin.settings.chatLinking;
+
+        new Setting(containerEl)
+            .setName(t('settings.interface.chatLinkingToggle'))
+            .setDesc(t('settings.interface.chatLinkingToggleDesc'))
+            .addToggle((tog) =>
+                tog.setValue(cl.enabled).onChange(async (v) => {
+                    this.plugin.settings.chatLinking.enabled = v;
+                    await this.plugin.saveSettings();
+                }),
+            );
+
+        const models = this.plugin.settings.activeModels.filter((m) => m.enabled);
+        if (models.length === 0) {
+            new Setting(containerEl)
+                .setName(t('settings.interface.chatLinkingModel'))
+                .setDesc(t('settings.interface.chatLinkingNoModels'));
+        } else {
+            new Setting(containerEl)
+                .setName(t('settings.interface.chatLinkingModel'))
+                .setDesc(t('settings.interface.chatLinkingModelDesc'))
+                .addDropdown((d) => {
+                    d.addOption('', t('settings.interface.chatLinkingSelectModel'));
+                    for (const m of models) {
+                        d.addOption(getModelKey(m), m.displayName ?? m.name);
+                    }
+                    d.setValue(cl.titlingModelKey);
+                    d.onChange(async (v) => {
+                        this.plugin.settings.chatLinking.titlingModelKey = v;
+                        await this.plugin.saveSettings();
+                    });
+                });
+        }
     }
 
 }

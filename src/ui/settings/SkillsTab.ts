@@ -218,12 +218,12 @@ export class SkillsTab {
 
     private buildSelfAuthoredSkillsSection(containerEl: HTMLElement): void {
         const loader = this.plugin.selfAuthoredSkillLoader;
-        containerEl.createEl('h3', { text: 'Agent-created skills' });
+        containerEl.createEl('h3', { text: 'Agent-created skills (sandbox custom tools)' });
 
         if (!loader) {
             containerEl.createEl('p', {
                 cls: 'agent-settings-desc',
-                text: 'Self-authored skill loader not available.',
+                text: 'Custom tool loader not available.',
             });
             return;
         }
@@ -232,7 +232,7 @@ export class SkillsTab {
         if (skills.length === 0) {
             containerEl.createEl('p', {
                 cls: 'agent-empty-state',
-                text: 'No agent-created skills yet. The agent can create skills via the manage_skill tool.',
+                text: 'No agent-created custom tools yet. The agent can create sandbox tools via the manage_skill tool. These tools run in the sandbox and are limited to text/JSON processing.',
             });
             return;
         }
@@ -243,7 +243,7 @@ export class SkillsTab {
         hr.createEl('th', { text: '', cls: 'agent-skill-th-status' });
         hr.createEl('th', { text: 'Skill' });
         hr.createEl('th', { text: 'Source', cls: 'agent-skill-th-cmds' });
-        hr.createEl('th', { text: 'Code', cls: 'agent-skill-th-cmds' });
+        hr.createEl('th', { text: 'Custom Tools', cls: 'agent-skill-th-cmds' });
         hr.createEl('th', { text: '', cls: 'agent-skill-th-actions' }); // Actions column
 
         const tbody = table.createEl('tbody');

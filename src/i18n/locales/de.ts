@@ -83,8 +83,8 @@ export const de: Translations = {
     'settings.embeddings.autoIndexDisabled': 'Auto-Index bei Änderungen deaktiviert. Obsidian neu starten, um die Einstellung zu deaktivieren.',
     'settings.embeddings.enableIndex': 'Semantischen Index aktivieren',
     'settings.embeddings.enableIndexDesc': 'Ermöglicht dem Agenten, relevante Notizen nach Bedeutung zu finden, nicht nur nach exakten Stichworten. Benötigt ein Embedding-Modell. Der erste Aufbau kann bei großen Vaults einige Minuten dauern.',
-    'settings.embeddings.indexPdfs': 'PDF-Anhänge indexieren',
-    'settings.embeddings.indexPdfsDesc': 'Auch PDF-Dateien im Vault indexieren. Text wird aus PDFs extrahiert und zusammen mit den Notizen indexiert. Reine Bild-PDFs (Scans) werden automatisch übersprungen.',
+    'settings.embeddings.indexPdfs': 'Dokumente indexieren (PDF, Office)',
+    'settings.embeddings.indexPdfsDesc': 'Auch PDF-, PPTX-, XLSX- und DOCX-Dateien im Vault indexieren. Text wird extrahiert und zusammen mit den Notizen indexiert. Reine Bild-PDFs (Scans) werden automatisch übersprungen.',
     'settings.embeddings.buildIndexName': 'Index erstellen',
     'settings.embeddings.buildIndexDesc': 'Neue und geänderte Notizen indexieren. Bereits indexierte Notizen werden übersprungen. "Neu aufbauen" verwenden, um alles von Grund auf neu zu indexieren.',
     'settings.embeddings.cancelIndexing': 'Indexierung abbrechen',
@@ -317,6 +317,7 @@ export const de: Translations = {
     'settings.permissions.sandboxConfirmMessage': 'Dies erlaubt dem Agenten, beliebigen JavaScript/TypeScript-Code ohne Ihre Prüfung auszuführen. Die Sandbox bietet V8-Origin-Isolation, aber KEINE OS-Level-Prozessisolation in Electron. Prompt-injizierter Inhalt (z.\u00A0B. aus Webseiten oder Vault-Notizen) könnte ungeprüfte Code-Ausführung auslösen. Sind Sie sicher?',
     'settings.permissions.sandboxConfirmCancel': 'Abbrechen',
     'settings.permissions.sandboxConfirmAccept': 'Ich verstehe das Risiko — aktivieren',
+    'settings.permissions.permissiveWarning': 'Permissiver Modus: Webzugriff und Schreiboperationen werden beide automatisch genehmigt. Inhalte von nicht vertrauenswürdigen Webseiten oder Vault-Notizen könnten den Agenten dazu bringen, Ihr Vault ohne Überprüfung zu ändern. Dies ist die Konfiguration mit dem höchsten Risiko. Erwägen Sie, die automatische Genehmigung für Webzugriff oder Schreiboperationen zu deaktivieren.',
 
     // =========================================================================
     // Settings — Loop Tab
@@ -437,11 +438,11 @@ export const de: Translations = {
     // =========================================================================
     // Settings — Skills Tab
     // =========================================================================
-    'settings.skills.introTitle': 'Was sind Skills?',
-    'settings.skills.introDesc': 'Skills sind wiederverwendbare Verhaltensweisen, die der Agent automatisch anwendet, wenn sie zur Anfrage passen. Sie erweitern die Faehigkeiten des Agents mit spezifischem Wissen und Anleitungen für bestimmte Aufgaben.',
-    'settings.skills.introDiff': 'Unterschied: Tools führen konkrete Aktionen aus (Dateien lesen, API-Calls). Workflows definieren feste Ablaeufe. Skills sind flexible Anleitungen, die der Agent nach Bedarf kombiniert und anpasst.',
-    'settings.skills.headingManual': 'Manuelle Skills',
-    'settings.skills.headingPlugin': 'Obsidian-Plugin-Skills',
+    'settings.skills.introTitle': 'Skills vs Tools',
+    'settings.skills.introDesc': 'Skills sind Anleitungen (Markdown), die den Agent bei bestimmten Aufgabentypen steuern. Sie werden automatisch per Keyword-Matching erkannt und in den System-Prompt injiziert, wenn sie relevant sind.',
+    'settings.skills.introDiff': 'Wichtiger Unterschied: Tools fuehren Aktionen aus (Dateien lesen, suchen, bearbeiten). Skills geben Anleitungen (wie man Meeting-Notizen erstellt, Projekte plant, etc.). Workflows definieren feste Schritt-fuer-Schritt-Ablaeufe.',
+    'settings.skills.headingManual': 'Benutzer-Skills',
+    'settings.skills.headingPlugin': 'Plugin-Skills',
     'settings.skills.desc': 'Skills werden automatisch in den System-Prompt injiziert, wenn sie für die Nachricht relevant sind. Jeder Skill liegt in einem Unterordner unter .obsidian-agent/skills/{name}/SKILL.md mit Frontmatter: name, description.',
     'settings.skills.pluginDisabled': 'Plugin-Skills sind deaktiviert. "VaultDNA" in den erweiterten Einstellungen aktivieren, um Obsidian-Plugins automatisch als Agent-Skills zu erkennen.',
     'settings.skills.pluginStats': 'Automatisch aus installierten Obsidian-Plugins erkannt. Aktiv: {{active}} | Deaktiviert: {{disabled}} | Gesamt: {{total}}',
@@ -531,6 +532,13 @@ export const de: Translations = {
     'settings.interface.skipSetup': 'Einrichtung überspringen',
     'settings.interface.historyPlaceholder': 'Agent/History',
     'settings.interface.setupSkipped': 'Einrichtung übersprungen. Kann jederzeit in den Einstellungen neu gestartet werden.',
+    'settings.interface.headingChatLinking': 'Chat-Linking',
+    'settings.interface.chatLinkingToggle': 'Chats automatisch im Frontmatter verlinken',
+    'settings.interface.chatLinkingToggleDesc': 'Fuegt automatisch eine klickbare Chat-Referenz in das Frontmatter jeder Note ein, die der Agent erstellt oder bearbeitet. Deaktivieren, um das Frontmatter sauber zu halten.',
+    'settings.interface.chatLinkingModel': 'Titling-Modell',
+    'settings.interface.chatLinkingModelDesc': 'Waehle ein kleines, schnelles Modell (z.B. Haiku, Flash) fuer kosteneffiziente semantische Titelgenerierung. Leer lassen, um die ersten 60 Zeichen als Titel zu verwenden.',
+    'settings.interface.chatLinkingNoModels': 'Keine Modelle konfiguriert. Fuege zuerst ein Modell unter Anbieter hinzu.',
+    'settings.interface.chatLinkingSelectModel': '-- kein semantisches Titling --',
 
     // =========================================================================
     // Settings — Shell Tab
@@ -838,6 +846,29 @@ export const de: Translations = {
     'ui.approval.allowOnce': 'Einmal erlauben',
     'ui.approval.enableInSettings': 'Immer erlauben',
     'ui.approval.configDirWarning': 'Schreibzugriff auf geschuetztes Verzeichnis: {{path}}. Dateien in diesem Verzeichnis steuern Plugins, Themes und Obsidian-Einstellungen. Ungewollte Aenderungen koennen das Verhalten von Obsidian veraendern oder Schadcode als Plugin installieren.',
+    'ui.approval.explain.writeFile': 'Der Agent moechte eine neue Datei erstellen:',
+    'ui.approval.explain.editFile': 'Der Agent moechte eine bestehende Datei bearbeiten:',
+    'ui.approval.explain.appendFile': 'Der Agent moechte Text an eine Datei anhaengen:',
+    'ui.approval.explain.deleteFile': 'Der Agent moechte eine Datei in den Papierkorb verschieben:',
+    'ui.approval.explain.moveFile': 'Der Agent moechte eine Datei verschieben:',
+    'ui.approval.explain.moveFileTo': 'nach',
+    'ui.approval.explain.createFolder': 'Der Agent moechte einen neuen Ordner anlegen:',
+    'ui.approval.explain.sandbox': 'Der Agent moechte ein Skript ausfuehren, um Daten in deinem Vault zu verarbeiten.',
+    'ui.approval.explain.webFetch': 'Der Agent moechte eine Webseite abrufen:',
+    'ui.approval.explain.webSearch': 'Der Agent moechte im Internet suchen nach:',
+    'ui.approval.explain.newTask': 'Der Agent moechte einen Unter-Agenten starten fuer eine Teilaufgabe.',
+    'ui.approval.explain.mcpTool': 'Der Agent moechte ein externes Tool verwenden:',
+    'ui.approval.explain.pluginApi': 'Der Agent moechte auf ein Plugin zugreifen:',
+    'ui.approval.explain.command': 'Der Agent moechte einen Obsidian-Befehl ausfuehren:',
+    'ui.approval.explain.recipe': 'Der Agent moechte ein Rezept ausfuehren:',
+    'ui.approval.explain.switchMode': 'Der Agent moechte in einen anderen Modus wechseln.',
+    'ui.approval.explain.frontmatter': 'Der Agent moechte die Metadaten einer Notiz aendern:',
+    'ui.approval.explain.canvas': 'Der Agent moechte eine Canvas-Visualisierung erstellen:',
+    'ui.approval.explain.excalidraw': 'Der Agent moechte eine Excalidraw-Zeichnung erstellen:',
+    'ui.approval.explain.selfModify': 'Der Agent moechte seine eigene Konfiguration aendern.',
+    'ui.approval.explain.fallback': 'Der Agent moechte folgende Aktion ausfuehren:',
+    'ui.approval.explain.showDetails': 'Details anzeigen',
+    'ui.approval.explain.hideDetails': 'Details ausblenden',
 
     // =========================================================================
     // Chat UI — Checkpoint
@@ -881,6 +912,7 @@ export const de: Translations = {
     'notice.modeSwitched': 'Zu Modus {{mode}} gewechselt',
     'notice.taskComplete': 'Agent-Aufgabe abgeschlossen',
     'notice.loadConversationFailed': 'Konversation konnte nicht geladen werden',
+    'notice.conversationNotFound': 'Diese Konversation existiert nicht mehr. Sie wurde moeglicherweise aus dem Verlauf geloescht.',
     'notice.copied': 'Kopiert.',
     'notice.insertedAtCursor': 'An Cursorposition eingefügt.',
     'notice.noOpenNote': 'Keine geöffnete Notiz gefunden \u2014 zuerst eine Notiz im Editor öffnen.',
@@ -899,15 +931,15 @@ export const de: Translations = {
     // =========================================================================
     // ToolPicker Popover
     // =========================================================================
-    'ui.toolPicker.title': 'Tools konfigurieren',
+    'ui.toolPicker.title': 'Tools & Skills',
     'ui.toolPicker.selected': '{{count}} ausgewählt',
-    'ui.toolPicker.filter': 'Tools filtern\u2026',
-    'ui.toolPicker.builtIn': 'Integriert',
+    'ui.toolPicker.filter': 'Filtern\u2026',
+    'ui.toolPicker.builtIn': 'Integrierte Tools',
     'ui.toolPicker.mcpServers': 'MCP-Server',
     'ui.toolPicker.noMcpServers': 'Keine MCP-Server konfiguriert.',
-    'ui.toolPicker.skills': 'Skills',
+    'ui.toolPicker.skills': 'Benutzer-Skills',
     'ui.toolPicker.loading': 'Laden\u2026',
-    'ui.toolPicker.noSkills': 'Keine Skills gefunden.',
+    'ui.toolPicker.noSkills': 'Keine Benutzer-Skills gefunden.',
     'ui.toolPicker.errorSkills': 'Fehler beim Laden der Skills.',
     'ui.toolPicker.workflows': 'Workflows',
     'ui.toolPicker.noWorkflows': 'Keine Workflows gefunden.',
@@ -934,13 +966,21 @@ export const de: Translations = {
     'ui.history.thisWeek': 'Diese Woche',
     'ui.history.older': 'Aelter',
     'ui.history.messageCount': '{{count}} Nachr.',
+    'ui.history.copyLink': 'Chat-Link kopieren',
+    'ui.history.linkCopied': 'Chat-Link kopiert',
+    'ui.history.addToNote': 'Link zur aktiven Notiz hinzufuegen',
+    'ui.history.linkAdded': 'Chat-Link zur Notiz hinzugefuegt',
+    'ui.history.linkAlreadyExists': 'Link existiert bereits in der Notiz',
+    'ui.history.linkAddFailed': 'Link konnte nicht hinzugefuegt werden',
+    'ui.history.noActiveNote': 'Keine aktive Markdown-Notiz',
 
     // =========================================================================
     // Attachment Handler
     // =========================================================================
-    'ui.attachment.tooLarge': '"{{name}}" überschreitet das Limit von 10 MB.',
-    'ui.attachment.unsupported': '"{{name}}" wird nicht unterstützt. Bilder (PNG/JPG/GIF/WebP) oder Textdateien verwenden.',
+    'ui.attachment.tooLarge': '"{{name}}" überschreitet das Limit von 50 MB.',
+    'ui.attachment.unsupported': '"{{name}}" wird nicht unterstützt. Bilder, Office-Dokumente (PPTX/XLSX/DOCX/PDF) oder Textdateien verwenden.',
     'ui.attachment.readFailed': '"{{path}}" konnte nicht gelesen werden',
+    'ui.attachment.largeDocument': '"{{name}}" ist sehr gross. Inhalte werden ggf. im Gespraech gekürzt.',
 
     // =========================================================================
     // Modal — New Mode

@@ -42,7 +42,7 @@ export const GROUP_META: Record<string, { label: string; icon: string }> = {
     web:   { label: 'Web Access',          icon: 'globe' },
     agent: { label: 'Agent Control',       icon: 'list-checks' },
     mcp:   { label: 'MCP Tools',           icon: 'plug-2' },
-    skill: { label: 'Plugin Skills',      icon: 'puzzle' },
+    skill: { label: 'Plugin Integration',  icon: 'puzzle' },
 };
 
 /**
@@ -55,7 +55,7 @@ export const GROUP_PROMPT_HEADERS: Record<string, string> = {
     web:   '**Web:**',
     agent: '**Agent Control:**',
     mcp:   '**MCP Tools:**',
-    skill: '**Plugin Skills:**',
+    skill: '**Plugin Integration:**',
 };
 
 /**
@@ -75,6 +75,14 @@ export const TOOL_METADATA: Record<string, ToolMeta> = {
         example: 'read_file("Projects/meeting-2024-01-15.md")',
         whenToUse: 'Before any edit, or when user asks to see content. NOT needed if content already in conversation.',
         commonMistakes: 'Re-reading a file whose content was already returned by a previous tool call.',
+    },
+    read_document: {
+        group: 'read', label: 'Read Document', icon: 'file-scan',
+        signature: 'read_document(path)',
+        description: 'Parse and extract text from Office/data documents (PPTX, XLSX, DOCX, PDF, JSON, XML, CSV). Returns structured Markdown text.',
+        example: 'read_document("Reports/Q3-results.pptx")',
+        whenToUse: 'For binary document formats. Use read_file for plain text files (.md, .txt, .ts).',
+        commonMistakes: 'Using read_file for PPTX/XLSX/DOCX/PDF — that returns raw binary. Use read_document instead.',
     },
     list_files: {
         group: 'read', label: 'List Files', icon: 'folder-open',
@@ -247,6 +255,32 @@ export const TOOL_METADATA: Record<string, ToolMeta> = {
         commonMistakes: 'Creating a new base when you should update an existing one — check if it exists first.',
     },
 
+    // ── Office Document Creation ────────────────────────────────────────
+    create_pptx: {
+        group: 'edit', label: 'Create PPTX', icon: 'presentation',
+        signature: 'create_pptx(output_path, slides, title?, theme?)',
+        description: 'Create a PowerPoint presentation (.pptx) with slides, text, bullets, tables, and images.',
+        example: 'create_pptx("Presentations/quarterly.pptx", [{"title":"Q1 Results","bullets":["Revenue +15%","Users +20k"]}])',
+        whenToUse: 'For creating PowerPoint files. Never use write_file or evaluate_expression for .pptx.',
+        commonMistakes: 'Using write_file or evaluate_expression for .pptx -- always use create_pptx instead.',
+    },
+    create_docx: {
+        group: 'edit', label: 'Create DOCX', icon: 'file-text',
+        signature: 'create_docx(output_path, sections, title?, theme?)',
+        description: 'Create a Word document (.docx) with structured sections, headings, bullets, and tables.',
+        example: 'create_docx("Documents/report.docx", [{"heading":"Introduction","body":"Main text..."}])',
+        whenToUse: 'For creating Word documents. Never use write_file or evaluate_expression for .docx.',
+        commonMistakes: 'Using write_file or evaluate_expression for .docx -- always use create_docx instead.',
+    },
+    create_xlsx: {
+        group: 'edit', label: 'Create XLSX', icon: 'table',
+        signature: 'create_xlsx(output_path, sheets)',
+        description: 'Create an Excel spreadsheet (.xlsx) with sheets, data rows, headers, and optional formulas.',
+        example: 'create_xlsx("Data/budget.xlsx", [{"name":"Sheet1","headers":["Item","Cost"],"rows":[["Server",500],["Domain",12]]}])',
+        whenToUse: 'For creating Excel files. Never use write_file or evaluate_expression for .xlsx.',
+        commonMistakes: 'Using write_file or evaluate_expression for .xlsx -- always use create_xlsx instead.',
+    },
+
     // ── Web ───────────────────────────────────────────────────────────────
     web_fetch: {
         group: 'web', label: 'Fetch URL', icon: 'globe',
@@ -302,19 +336,19 @@ export const TOOL_METADATA: Record<string, ToolMeta> = {
     // NOTE: group is 'agent' for mode-level availability (shows in Agent Control tools).
     // The Pipeline classifies this as 'sandbox' ApprovalGroup for approval checks.
     evaluate_expression: {
-        group: 'agent', label: 'Execute Code', icon: 'code-2',
+        group: 'agent', label: 'Sandbox Code', icon: 'code-2',
         signature: 'evaluate_expression(expression, context?, dependencies?)',
-        description: 'Execute TypeScript/JavaScript in an isolated sandbox. Provides ctx.vault (read, readBinary, write, writeBinary, list) and ctx.requestUrl (HTTPS CDN-only). npm packages via dependencies param (browser ESM from esm.sh). No Blob, Buffer, DOM, require, fetch available. Binary output: ArrayBuffer/Uint8Array only.',
-        example: 'evaluate_expression("import ExcelJS from \'exceljs\'; const wb = new ExcelJS.Workbook(); const ws = wb.addWorksheet(\'Data\'); ws.addRow([\'Name\',\'Value\']); ws.addRow([\'Test\',42]); const buf = await wb.xlsx.writeBuffer(); await ctx.vault.writeBinary(\'output.xlsx\', buf); return \'Done\'", undefined, ["exceljs"])',
-        whenToUse: 'For computations or binary file generation. Read the sandbox-environment skill for detailed API reference and proven patterns before writing code. NEVER write Python or suggest manual execution.',
-        commonMistakes: 'Writing Python. Forgetting dependencies param. Using Blob/Buffer/DOM (not available). Using require() or dynamic import() (not available). Using outputType:"blob" — always use "arraybuffer".',
+        description: 'Execute TypeScript in an isolated sandbox. Provides ctx.vault (read, readBinary, write, writeBinary, list) and ctx.requestUrl. For: batch operations across many files (5+), computations, data transforms, HTTP API calls, npm packages. NOT for: single-file edits (use read_file + edit_file/write_file instead) or binary file generation (DOCX, PPTX, XLSX, PDF).',
+        example: 'evaluate_expression("const files = await ctx.vault.list(\'Projects/\'); let count = 0; for (const f of files) { const c = await ctx.vault.read(f); count += (c.match(/- \\\\[ \\\\]/g) || []).length; } return `${count} open tasks`")',
+        whenToUse: 'ONLY when built-in tools cannot do the job: batch processing across 5+ files, computations, complex data transforms, HTTP requests, npm packages. NEVER for single-file operations — use read_file + edit_file/write_file instead.',
+        commonMistakes: 'Using sandbox for single-file edits instead of read_file + edit_file/write_file. Using sandbox for PPTX/DOCX/XLSX — use create_pptx/create_docx/create_xlsx instead. Writing Python. Using require()/fetch()/Blob/Buffer (not available).',
     },
     manage_skill: {
         group: 'agent', label: 'Manage Skill', icon: 'bookmark-plus',
-        signature: 'manage_skill(action, name, description?, trigger?, body?, code_modules?)',
-        description: 'Create, update, delete, list, or read self-authored skills. Skills persist across sessions. Can include code_modules (TypeScript compiled to sandbox tools with "custom_" prefix, npm dependencies supported).',
-        whenToUse: 'After solving a novel problem: save the solution as a reusable skill with a trigger pattern. Use code_modules for NEW computational capabilities.',
-        commonMistakes: 'Not creating a skill after solving a new type of problem. Always persist reusable solutions for instant future use.',
+        signature: 'manage_skill(action, name, description?, trigger?, body?)',
+        description: 'Create, update, delete, list, or read skills. Skills are persistent instruction sets (Markdown) that guide the agent for specific task types. They are keyword-matched and injected into the system prompt when relevant.',
+        whenToUse: 'After solving a novel problem: save the approach as a reusable skill with a trigger pattern so you can apply it instantly next time.',
+        commonMistakes: 'Confusing skills with tools. Skills are instructions (how to approach a task), not executable code.',
     },
     manage_mcp_server: {
         group: 'agent', label: 'Manage MCP', icon: 'plug-2',

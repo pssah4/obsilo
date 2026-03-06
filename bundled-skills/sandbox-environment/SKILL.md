@@ -33,45 +33,27 @@ Blob, File, Buffer (Node.js), require(), dynamic import(), fetch(), XMLHttpReque
 
 ## Proven Patterns
 
-### Binary File Generation (XLSX, PPTX, PDF)
-CRITICAL: Always use outputType:"arraybuffer" or writeBuffer(). NEVER use outputType:"blob".
+### Binary File Generation (PPTX, XLSX, DOCX, PDF)
+IMPORTANT: Use the dedicated built-in tools instead of the sandbox for Office documents:
+- **PPTX**: Use `create_pptx` tool (not evaluate_expression)
+- **XLSX**: Use `create_xlsx` tool (not evaluate_expression)
+- **DOCX**: Use `create_docx` tool (not evaluate_expression)
+- **PDF**: Use `workspace:export-pdf` (Tier 1) or `pandoc-pdf` recipe (Tier 2)
 
-**Excel (ExcelJS -- recommended):**
-```typescript
-import ExcelJS from 'exceljs';
-const wb = new ExcelJS.Workbook();
-const ws = wb.addWorksheet('Sheet1');
-ws.addRow(['Header1', 'Header2']);
-ws.addRow(['Data1', 42]);
-const buf = await wb.xlsx.writeBuffer();
-await ctx.vault.writeBinary('output.xlsx', buf);
-return 'Created output.xlsx';
-```
+These built-in tools run in the plugin context with full Node.js access and produce professional output.
+The sandbox should NOT be used for binary file generation -- it lacks Buffer/Blob support.
 
-**PDF (pdf-lib -- recommended):**
+If you need simple PDF generation from scratch (not conversion), pdf-lib remains available in the sandbox:
 ```typescript
-import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import { PDFDocument, StandardFonts } from 'pdf-lib';
 const doc = await PDFDocument.create();
 const page = doc.addPage([595, 842]); // A4
 const font = await doc.embedFont(StandardFonts.Helvetica);
 page.drawText('Hello World', { x: 50, y: 750, size: 24, font });
-const buf = await doc.save(); // Returns Uint8Array
+const buf = await doc.save();
 await ctx.vault.writeBinary('output.pdf', buf);
 return 'Created output.pdf';
 ```
-
-**PPTX (pptxgenjs):**
-IMPORTANT: pptxgenjs may fail if the CDN bundle requires Blob internally.
-Use outputType:"arraybuffer" and test carefully:
-```typescript
-import PptxGenJS from 'pptxgenjs';
-const pptx = new PptxGenJS();
-pptx.addSlide().addText('Hello', { x: 1, y: 1, fontSize: 24 });
-const buf = await pptx.write({ outputType: 'arraybuffer' });
-await ctx.vault.writeBinary('output.pptx', buf);
-return 'Created output.pptx';
-```
-If pptxgenjs fails with Blob errors: fall back to creating the presentation content as Markdown and suggest the user export via Pandoc.
 
 ### Data Transformation
 ```typescript

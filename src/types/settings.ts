@@ -381,6 +381,17 @@ export interface MemorySettings {
 }
 
 // ---------------------------------------------------------------------------
+// Chat-Linking settings (ADR-022)
+// ---------------------------------------------------------------------------
+
+export interface ChatLinkingSettings {
+    /** Master toggle: auto-link chats in frontmatter of edited notes + semantic titling */
+    enabled: boolean;
+    /** Model key for semantic title generation (picks from activeModels[]) */
+    titlingModelKey: string;
+}
+
+// ---------------------------------------------------------------------------
 // Main plugin settings
 // ---------------------------------------------------------------------------
 
@@ -479,6 +490,8 @@ export interface ObsidianAgentSettings {
     enableChatHistory: boolean;
     /** Memory system settings (session extraction, long-term memory, etc.) */
     memory: MemorySettings;
+    /** Chat-Linking: auto-stamp frontmatter + semantic titling (ADR-022) */
+    chatLinking: ChatLinkingSettings;
     /** @deprecated — migrated to enableChatHistory. Kept for migration. */
     chatHistoryFolder: string;
 
@@ -529,6 +542,9 @@ export interface ObsidianAgentSettings {
     _encrypted?: boolean;
     /** Whether data has been migrated to global storage (~/.obsidian-agent/) — ADR-020 */
     _globalStorageMigrated?: boolean;
+
+    // Task Extraction (FEATURE-100, ADR-026/027/028)
+    taskExtraction: import('../core/tasks/types').TaskExtractionSettings;
 
     // Advanced
     debugMode: boolean;
@@ -693,6 +709,10 @@ export const DEFAULT_SETTINGS: ObsidianAgentSettings = {
         memoryModelKey: '',
         extractionThreshold: 6,
     },
+    chatLinking: {
+        enabled: true,
+        titlingModelKey: '',
+    },
     chatHistoryFolder: '',
 
     autoAddActiveFileContext: true,
@@ -731,5 +751,9 @@ export const DEFAULT_SETTINGS: ObsidianAgentSettings = {
     },
     language: 'en',
     sandboxMode: 'auto',
+    taskExtraction: {
+        enabled: true,
+        taskFolder: 'Tasks',
+    },
     debugMode: false,
 };

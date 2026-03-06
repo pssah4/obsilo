@@ -117,6 +117,8 @@ export interface ContextExtensions {
     onCheckpoint?: (checkpoint: import('../checkpoints/GitCheckpointService').CheckpointInfo) => void;
     /** Invalidate cached tool definitions (e.g. after webTools.enabled changes) */
     invalidateToolCache?: () => void;
+    /** Active conversation ID for chat-linking frontmatter stamping (ADR-022) */
+    conversationId?: string;
 }
 
 export class ToolExecutionPipeline {
@@ -127,6 +129,7 @@ export class ToolExecutionPipeline {
 
     /** Per-task result cache for read-only tools. Key = tool:sortedJSON(input). */
     private resultCache = new Map<string, string>();
+
 
     /** Tools eligible for result caching (read-only, deterministic within a task). */
     private static readonly CACHEABLE = new Set([
@@ -263,6 +266,14 @@ export class ToolExecutionPipeline {
             // Cache successful read-only results for deduplication
             if (!executionHadError && ToolExecutionPipeline.CACHEABLE.has(toolCall.name)) {
                 this.resultCache.set(this.cacheKey(toolCall.name, toolCall.input), content);
+            }
+
+            // 7. Chat-Linking: track written .md paths for deferred frontmatter stamping (ADR-022)
+            if (tool.isWriteOperation && !executionHadError && extensions?.conversationId) {
+                const writePath = toolCall.input?.path as string | undefined;
+                if (writePath) {
+                    this.plugin.trackChatLinkPath(extensions.conversationId, writePath);
+                }
             }
 
             return {

@@ -5,7 +5,7 @@
  * Placed inside the chat container as an absolute-positioned overlay.
  */
 
-import { setIcon } from 'obsidian';
+import { Notice, setIcon } from 'obsidian';
 import type { ConversationMeta, ConversationStore } from '../../core/history/ConversationStore';
 import { t } from '../../i18n';
 
@@ -58,6 +58,7 @@ export class HistoryPanel {
         private store: ConversationStore,
         private onLoad: (id: string) => void,
         private onDelete: (id: string) => void,
+        private onStampLink: (conversationId: string, title: string) => void,
         private activeConversationId: string | null,
     ) {}
 
@@ -178,8 +179,34 @@ export class HistoryPanel {
                 meta.createSpan({ text: timeStr });
                 meta.createSpan({ text: ` \u00B7 ${t('ui.history.messageCount', { count: conv.messageCount })}` });
 
-                // Delete button (visible on hover)
-                const delBtn = row.createEl('button', { cls: 'history-row-delete clickable-icon' });
+                // Action buttons (visible on hover)
+                const actions = row.createDiv({ cls: 'history-row-actions' });
+
+                const copyBtn = actions.createEl('button', { cls: 'history-row-action clickable-icon' });
+                setIcon(copyBtn, 'link');
+                copyBtn.setAttribute('aria-label', t('ui.history.copyLink'));
+                copyBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const uri = `obsidian://obsilo-chat?id=${encodeURIComponent(conv.id)}`;
+                    let linkTitle = conv.title.replace(/\n.*/s, '').trim();
+                    if (linkTitle.length > 60) linkTitle = linkTitle.slice(0, 57) + '...';
+                    const mdLink = `[${linkTitle}](${uri})`;
+                    void navigator.clipboard.writeText(mdLink).then(() => {
+                        new Notice(t('ui.history.linkCopied'));
+                    });
+                });
+
+                const stampBtn = actions.createEl('button', { cls: 'history-row-action clickable-icon' });
+                setIcon(stampBtn, 'file-plus');
+                stampBtn.setAttribute('aria-label', t('ui.history.addToNote'));
+                stampBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    let linkTitle = conv.title.replace(/\n.*/s, '').trim();
+                    if (linkTitle.length > 60) linkTitle = linkTitle.slice(0, 57) + '...';
+                    this.onStampLink(conv.id, linkTitle);
+                });
+
+                const delBtn = actions.createEl('button', { cls: 'history-row-action history-row-action-danger clickable-icon' });
                 setIcon(delBtn, 'trash-2');
                 delBtn.addEventListener('click', (e) => {
                     e.stopPropagation();

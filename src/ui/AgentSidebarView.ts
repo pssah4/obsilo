@@ -19,6 +19,9 @@ import { OnboardingService } from '../core/memory/OnboardingService';
 import { ContextTracker } from '../core/context/ContextTracker';
 import { ContextDisplay } from './sidebar/ContextDisplay';
 import { CondensationFeedback } from './sidebar/CondensationFeedback';
+import { scan as scanTasks } from '../core/tasks/TaskExtractor';
+import { TaskNoteCreator } from '../core/tasks/TaskNoteCreator';
+import { TaskSelectionModal } from './TaskSelectionModal';
 import { t } from '../i18n';
 
 export const VIEW_TYPE_AGENT_SIDEBAR = 'obsidian-agent-sidebar';
@@ -217,6 +220,7 @@ export class AgentSidebarView extends ItemView {
                 store,
                 (id) => { void this.loadConversation(id); },
                 (id) => { void this.deleteConversation(id); },
+                (convId, title) => { void this.stampChatLinkToActiveFile(convId, title); },
                 this.activeConversationId,
             );
             this.historyPanel.mount(chatWrapper);
@@ -351,7 +355,7 @@ export class AgentSidebarView extends ItemView {
         });
         setIcon(vaultBtn.createSpan('toolbar-icon'), 'at-sign');
         vaultBtn.addEventListener('click', () => {
-            this.vaultFilePicker.show(vaultBtn);
+            this.vaultFilePicker.show(vaultBtn, this.containerEl);
         });
 
         // Ellipsis options menu button
@@ -1027,10 +1031,13 @@ export class AgentSidebarView extends ItemView {
             messageToSend = textWithContext;
         }
 
-        // Process slash commands (Sprint 3.3) — if text starts with /workflow-slug,
-        // replace with workflow content as explicit instructions (plain string only;
+        // Process slash commands (Sprint 3.3) — if text starts with /workflow-slug or /prompt-slug,
+        // replace with workflow/prompt content as explicit instructions (plain string only;
         // attachment blocks are passed through unchanged).
         if (typeof messageToSend === 'string' && text.startsWith('/')) {
+            let slashResolved = false;
+
+            // 1. Try workflows first
             const workflowLoader = this.plugin.workflowLoader;
             if (workflowLoader) {
                 const processedText = await workflowLoader.processSlashCommand(
@@ -1038,8 +1045,30 @@ export class AgentSidebarView extends ItemView {
                     this.plugin.settings.workflowToggles ?? {},
                 );
                 if (processedText !== text) {
-                    // Re-add active file context after workflow expansion
                     messageToSend = processedText + (activeFile
+                        ? `\n\n<context>\nActive file in editor: ${activeFile.path}\n</context>`
+                        : '');
+                    slashResolved = true;
+                }
+            }
+
+            // 2. If no workflow matched, try custom prompts
+            if (!slashResolved) {
+                const spaceIdx = text.indexOf(' ');
+                const slug = spaceIdx === -1 ? text.slice(1) : text.slice(1, spaceIdx);
+                const rest = spaceIdx === -1 ? '' : text.slice(spaceIdx + 1).trim();
+
+                const prompt = (this.plugin.settings.customPrompts ?? []).find(
+                    (p) => p.slug === slug && p.enabled !== false,
+                );
+                if (prompt) {
+                    const activeFileName = activeFile?.name;
+                    const { resolvePromptContent } = await import('../core/context/SupportPrompts');
+                    const resolved = resolvePromptContent(prompt.content, {
+                        userInput: rest,
+                        activeFile: activeFileName,
+                    });
+                    messageToSend = resolved + (activeFile
                         ? `\n\n<context>\nActive file in editor: ${activeFile.path}\n</context>`
                         : '');
                 }
@@ -1711,12 +1740,20 @@ export class AgentSidebarView extends ItemView {
                     }
                     // Auto-save conversation to ConversationStore
                     this.saveCurrentConversation();
-                    // Auto-title: update conversation title after first assistant response
+
+                    // Task Extraction Post-Processing (ADR-026, FEATURE-100)
+                    if (this.plugin.settings.taskExtraction?.enabled && accumulatedText) {
+                        void this.maybeExtractTasks(accumulatedText);
+                    }
+
+                    // Auto-title: set fallback title for immediate history display (ADR-022)
+                    // Semantic titling happens later in finalizeConversation() on conversation end.
                     if (this.activeConversationId && this.uiMessages.length <= 2 && this.plugin.conversationStore) {
                         const firstUserMsg = this.uiMessages.find((m) => m.role === 'user');
                         if (firstUserMsg) {
-                            const title = firstUserMsg.text.slice(0, 60).replace(/\n/g, ' ').trim() || t('ui.sidebar.newConversation');
-                            this.plugin.conversationStore.updateMeta(this.activeConversationId, { title }).catch(() => {});
+                            const fallback = firstUserMsg.text.slice(0, 60).replace(/\n/g, ' ').trim() || t('ui.sidebar.newConversation');
+                            void this.plugin.conversationStore.updateMeta(this.activeConversationId, { title: fallback }).catch(() => {});
+                            this.historyPanel?.refresh();
                         }
                     }
                 },
@@ -1882,6 +1919,7 @@ export class AgentSidebarView extends ItemView {
             recipesSection,
             selfAuthoredSkillsSection,
             configDir: this.app.vault.configDir,
+            conversationId: this.activeConversationId ?? undefined,
         });
     }
 
@@ -1939,6 +1977,12 @@ export class AgentSidebarView extends ItemView {
         this.saveCurrentConversation();
         // Enqueue memory extraction (fire-and-forget, threshold-gated)
         this.enqueueMemoryExtraction();
+        // Finalize outgoing conversation: semantic title + frontmatter links (ADR-022)
+        // Capture messages before clearing -- finalizeConversation runs async
+        if (this.activeConversationId) {
+            const msgs = [...this.uiMessages];
+            void this.finalizeConversation(this.activeConversationId, msgs);
+        }
         this.activeConversationId = null;
         this.uiMessages = [];
         this.conversationHistory = [];
@@ -1961,6 +2005,39 @@ export class AgentSidebarView extends ItemView {
         store.save(this.activeConversationId, this.conversationHistory, this.uiMessages).catch((e) =>
             console.warn('[History] Save failed:', e)
         );
+    }
+
+    /**
+     * Post-processing hook: scan agent response for `- [ ]` items and show selection modal.
+     * ADR-026: Fire-and-forget (void-prefixed), does not block onComplete.
+     */
+    private async maybeExtractTasks(text: string): Promise<void> {
+        try {
+            const items = scanTasks(text);
+            if (items.length === 0) return;
+
+            const sourceNote = this.app.workspace.getActiveFile()?.basename ?? '';
+            const settings = this.plugin.settings.taskExtraction;
+
+            new TaskSelectionModal(
+                this.app,
+                items,
+                async (selected) => {
+                    try {
+                        const creator = new TaskNoteCreator(this.app);
+                        const created = await creator.createNotes(selected, settings, sourceNote);
+                        if (created.length > 0) {
+                            new Notice(`${created.length} Task-Note${created.length === 1 ? '' : 's'} erstellt`);
+                        }
+                    } catch (err) {
+                        console.warn('[TaskExtraction] Failed to create task notes:', err);
+                        new Notice('Fehler beim Erstellen der Task-Notes');
+                    }
+                },
+            ).open();
+        } catch (err) {
+            console.warn('[TaskExtraction] Scan failed:', err);
+        }
     }
 
     /** Enqueue memory extraction if the conversation meets the threshold. Fire-and-forget. */
@@ -1992,6 +2069,100 @@ export class AgentSidebarView extends ItemView {
         }).catch((e) => console.warn('[Memory] Enqueue failed:', e));
     }
 
+    /**
+     * Finalize a conversation on end (clear/switch/unload): generate semantic title,
+     * stamp frontmatter links, clean up pending paths. (ADR-022)
+     * Fire-and-forget caller — errors are caught internally.
+     */
+    /** Stamp a chat link into the currently active file's frontmatter. */
+    private async stampChatLinkToActiveFile(conversationId: string, title: string): Promise<void> {
+        const file = this.app.workspace.getActiveFile();
+        if (!(file instanceof TFile) || file.extension !== 'md') {
+            new Notice(t('ui.history.noActiveNote'));
+            return;
+        }
+        const uri = `obsidian://obsilo-chat?id=${encodeURIComponent(conversationId)}`;
+        const link = `[${title}](${uri})`;
+        try {
+            await this.app.fileManager.processFrontMatter(file, (fm) => {
+                const links: string[] = fm['Chats'] ?? [];
+                if (links.some((l: string) => l.includes(conversationId))) {
+                    new Notice(t('ui.history.linkAlreadyExists'));
+                    return;
+                }
+                links.push(link);
+                fm['Chats'] = links;
+            });
+            new Notice(t('ui.history.linkAdded'));
+        } catch (e) {
+            console.warn('[ChatLink] Failed to stamp active file:', e);
+            new Notice(t('ui.history.linkAddFailed'));
+        }
+    }
+
+    /**
+     * Finalize a conversation: generate semantic title, stamp frontmatter links.
+     * Messages are passed in because this.uiMessages may already be cleared when this runs.
+     */
+    private async finalizeConversation(
+        conversationId: string,
+        messages: Array<{ role: string; text: string }>,
+    ): Promise<void> {
+        const settings = this.plugin.settings;
+        const store = this.plugin.conversationStore;
+        if (!store) return;
+
+        // 1. Semantic titling (always, if model configured)
+        const modelKey = settings.chatLinking?.titlingModelKey;
+        const model = modelKey
+            ? settings.activeModels.find((m) => getModelKey(m) === modelKey && m.enabled)
+            : undefined;
+
+        if (model) {
+            const userMsg = messages.find((m) => m.role === 'user')?.text ?? '';
+            const assistantMsg = messages.find((m) => m.role === 'assistant')?.text ?? '';
+
+            if (userMsg) {
+                try {
+                    const api = buildApiHandlerForModel(model);
+                    const stream = api.createMessage(
+                        'Create a short title (maximum 5-8 words) for this conversation. '
+                        + 'The title must capture the essence, not summarize. '
+                        + 'Output ONLY the title. No quotes, no prefix, no explanation. '
+                        + 'Same language as the user.',
+                        [{ role: 'user', content: `User: ${userMsg.slice(0, 300)}\nAssistant: ${assistantMsg.slice(0, 300)}` }],
+                        [],
+                    );
+                    let title = '';
+                    for await (const chunk of stream) {
+                        if (chunk.type === 'text') title += chunk.text;
+                    }
+                    title = title.trim().replace(/^["']|["']$/g, '').replace(/\n.*/s, '');
+                    if (title.length > 60) title = title.slice(0, 57) + '...';
+                    if (title) {
+                        console.debug(`[ChatLink] Semantic title: "${title}"`);
+                        await store.updateMeta(conversationId, { title });
+                    }
+                } catch (e) {
+                    console.warn('[ChatLink] Semantic title generation failed (non-fatal):', e);
+                }
+            }
+        }
+
+        // 2. Stamp frontmatter links with final title
+        if (settings.chatLinking?.enabled) {
+            await this.plugin.flushPendingChatLinks(conversationId);
+            this.plugin.clearPendingChatLinks(conversationId);
+        }
+
+        this.historyPanel?.refresh();
+    }
+
+    /** Public entry point for deep-link protocol handler (ADR-022, FEATURE-300). */
+    async loadConversationById(id: string): Promise<void> {
+        return this.loadConversation(id);
+    }
+
     /** Load a conversation from history and restore it in the chat panel. */
     private async loadConversation(id: string): Promise<void> {
         const store = this.plugin.conversationStore;
@@ -2005,6 +2176,12 @@ export class AgentSidebarView extends ItemView {
 
         // Save current conversation before switching
         this.saveCurrentConversation();
+        // Finalize outgoing conversation: semantic title + frontmatter links (ADR-022)
+        // Capture messages before switching -- finalizeConversation runs async
+        if (this.activeConversationId) {
+            const msgs = [...this.uiMessages];
+            void this.finalizeConversation(this.activeConversationId, msgs);
+        }
 
         // Reset state
         this.conversationHistory = data.messages;
@@ -2802,6 +2979,89 @@ export class AgentSidebarView extends ItemView {
         this.chatContainer.scrollTo({ top: this.chatContainer.scrollHeight });
     }
 
+    /**
+     * Build a human-readable explanation for a tool call.
+     * Returns { text, target? } where text is the explanation sentence
+     * and target is the highlighted value (path, URL, query etc.).
+     */
+    private buildHumanReadableExplanation(
+        toolName: string,
+        input: Record<string, unknown>,
+    ): { text: string; target?: string } {
+        const str = (key: string): string => typeof input[key] === 'string' ? input[key] as string : '';
+
+        switch (toolName) {
+            case 'write_file':
+                return { text: t('ui.approval.explain.writeFile'), target: str('path') };
+            case 'edit_file':
+                return { text: t('ui.approval.explain.editFile'), target: str('path') };
+            case 'append_to_file':
+                return { text: t('ui.approval.explain.appendFile'), target: str('path') };
+            case 'update_frontmatter':
+                return { text: t('ui.approval.explain.frontmatter'), target: str('path') };
+            case 'delete_file':
+                return { text: t('ui.approval.explain.deleteFile'), target: str('path') };
+            case 'move_file': {
+                const from = str('source');
+                const to = str('destination');
+                return { text: t('ui.approval.explain.moveFile'), target: to ? `${from} ${t('ui.approval.explain.moveFileTo')} ${to}` : from };
+            }
+            case 'create_folder':
+                return { text: t('ui.approval.explain.createFolder'), target: str('path') };
+            case 'generate_canvas':
+                return { text: t('ui.approval.explain.canvas'), target: str('output_path') };
+            case 'create_excalidraw':
+                return { text: t('ui.approval.explain.excalidraw'), target: str('output_path') };
+            case 'evaluate_expression':
+                return { text: t('ui.approval.explain.sandbox') };
+            case 'web_fetch':
+                return { text: t('ui.approval.explain.webFetch'), target: str('url') };
+            case 'web_search':
+                return { text: t('ui.approval.explain.webSearch'), target: str('query') };
+            case 'new_task':
+                return { text: t('ui.approval.explain.newTask') };
+            case 'use_mcp_tool': {
+                const server = str('server_name');
+                const tool = str('tool_name');
+                return { text: t('ui.approval.explain.mcpTool'), target: tool ? `${tool} (${server})` : server };
+            }
+            case 'call_plugin_api':
+                return { text: t('ui.approval.explain.pluginApi'), target: str('plugin_id') };
+            case 'execute_command':
+                return { text: t('ui.approval.explain.command'), target: str('command_id') };
+            case 'execute_recipe':
+                return { text: t('ui.approval.explain.recipe'), target: str('recipe_id') };
+            case 'switch_mode':
+                return { text: t('ui.approval.explain.switchMode') };
+            case 'manage_skill':
+            case 'manage_source':
+                return { text: t('ui.approval.explain.selfModify') };
+            default:
+                return { text: t('ui.approval.explain.fallback'), target: this.formatToolLabel(toolName) };
+        }
+    }
+
+    /**
+     * Truncate a string to maxLen characters, appending "..." if truncated.
+     */
+    private truncateForApproval(value: string, maxLen: number): string {
+        if (value.length <= maxLen) return value;
+        return value.slice(0, maxLen) + '...';
+    }
+
+    /**
+     * Format the raw tool input as a readable string for the details section.
+     */
+    private formatInputForDetails(input: Record<string, unknown>): string {
+        const MAX_VALUE_LEN = 500;
+        const lines: string[] = [];
+        for (const [key, value] of Object.entries(input)) {
+            const strVal = typeof value === 'string' ? value : JSON.stringify(value, null, 2);
+            lines.push(`${key}: ${this.truncateForApproval(strVal, MAX_VALUE_LEN)}`);
+        }
+        return lines.join('\n');
+    }
+
     private async showApprovalCard(
         toolName: string,
         input: Record<string, unknown>,
@@ -2830,6 +3090,43 @@ export class AgentSidebarView extends ItemView {
             row.createSpan('tool-approval-text').setText(
                 t('ui.approval.notEnabled', { tool: this.formatToolLabel(toolName), group: groupLabels[group] ?? group })
             );
+
+            // Human-readable explanation
+            const { text: explanationText, target } = this.buildHumanReadableExplanation(toolName, input);
+            const explanationEl = row.createDiv('tool-approval-explanation');
+            explanationEl.createSpan().setText(explanationText);
+            if (target) {
+                explanationEl.createSpan('tool-approval-target').setText(target);
+            }
+
+            // For sandbox: show code preview (first 3 lines)
+            if (toolName === 'evaluate_expression' && typeof input['expression'] === 'string') {
+                const expr = input['expression'] as string;
+                const previewLines = expr.split('\n').slice(0, 3);
+                const preview = previewLines.join('\n') + (expr.split('\n').length > 3 ? '\n...' : '');
+                const codePreview = row.createDiv('tool-approval-code-preview');
+                codePreview.createEl('code').setText(preview);
+            }
+
+            // Collapsible details for power users
+            const detailsToggle = row.createEl('span', {
+                cls: 'tool-approval-details-toggle',
+                text: t('ui.approval.explain.showDetails'),
+            });
+            const detailsContainer = row.createDiv('tool-approval-details');
+            detailsContainer.createEl('pre', { cls: 'tool-approval-details-content' })
+                .setText(this.formatInputForDetails(input));
+
+            detailsToggle.addEventListener('click', () => {
+                const isVisible = detailsContainer.hasClass('is-visible');
+                if (isVisible) {
+                    detailsContainer.removeClass('is-visible');
+                    detailsToggle.setText(t('ui.approval.explain.showDetails'));
+                } else {
+                    detailsContainer.addClass('is-visible');
+                    detailsToggle.setText(t('ui.approval.explain.hideDetails'));
+                }
+            });
 
             // Shai Hulud Mitigation: warn when writing to configDir (plugins/themes/settings)
             const inputPath = typeof input['path'] === 'string' ? input['path'] : '';

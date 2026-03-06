@@ -17,6 +17,7 @@ export class SemanticSearchTool extends BaseTool<'semantic_search'> {
                 'Search the vault by meaning AND keywords (hybrid search). ' +
                 'Combines semantic similarity with exact keyword matching so both conceptual questions ' +
                 'and exact names/tags/codes are found reliably. ' +
+                'Searches across notes AND indexed documents (PDF, PPTX, XLSX, DOCX). ' +
                 'Also automatically includes 1-hop wikilink neighbors as linked context. ' +
                 'For questions about vault content, synthesize your answer from the returned excerpts — ' +
                 'do NOT call read_file on the results just to gather more context. ' +

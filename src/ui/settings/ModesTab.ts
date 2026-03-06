@@ -240,57 +240,102 @@ export class ModesTab {
                 const currentOverride: string[] | undefined =
                     this.plugin.settings.modeToolOverrides?.[slug];
 
+                // Collect all tool checkboxes per group for accurate counting
+                const groupToolCbs = new Map<string, { name: string; cb: HTMLInputElement }[]>();
+                // Group-level UI elements per group key
+                const groupUi = new Map<string, { groupCb: HTMLInputElement; badgeEl: HTMLElement; details: HTMLElement }>();
+
+                const countChecked = (grp: string): string => {
+                    const cbs = groupToolCbs.get(grp) ?? [];
+                    const checked = cbs.filter((t) => t.cb.checked).length;
+                    return `${checked} / ${cbs.length}`;
+                };
+
+                /** Sync group checkbox + toolGroups based on children state */
+                const syncGroupState = (group: string) => {
+                    const ui = groupUi.get(group);
+                    if (!ui) return;
+                    const cbs = groupToolCbs.get(group) ?? [];
+                    const checkedCount = cbs.filter((t) => t.cb.checked).length;
+                    const allChecked = checkedCount === cbs.length;
+                    const noneChecked = checkedCount === 0;
+
+                    ui.groupCb.checked = !noneChecked;
+                    ui.groupCb.indeterminate = !allChecked && !noneChecked;
+                    ui.badgeEl.setText(countChecked(group));
+
+                    // Sync toolGroups: group active if any tool is checked
+                    const editable = getOrCreateEditable();
+                    if (noneChecked) {
+                        editable.toolGroups = editable.toolGroups.filter((g) => g !== group);
+                    } else if (!editable.toolGroups.includes(group as ToolGroup)) {
+                        editable.toolGroups.push(group as ToolGroup);
+                    }
+                    mode.toolGroups = [...editable.toolGroups];
+                };
+
+                // Persist all checked tools across all groups as override
+                const persistOverride = () => {
+                    // Start from current override to preserve hidden runtime tools
+                    const base = new Set<string>(
+                        this.plugin.settings.modeToolOverrides?.[slug]
+                        ?? this.modeService?.getToolNames(mode) ?? [],
+                    );
+                    // Sync visible tools with checkbox state
+                    for (const [, cbs] of groupToolCbs) {
+                        for (const { name, cb } of cbs) {
+                            if (cb.checked) base.add(name);
+                            else base.delete(name);
+                        }
+                    }
+                    if (!this.plugin.settings.modeToolOverrides) this.plugin.settings.modeToolOverrides = {};
+                    this.plugin.settings.modeToolOverrides[slug] = [...base];
+                    void this.plugin.saveSettings();
+                };
+
                 for (const [group, meta] of Object.entries(TOOL_GROUP_META)) {
-                    const isGroupEnabled = mode.toolGroups.includes(group as ToolGroup);
+                    groupToolCbs.set(group, []);
+
+                    // Determine initial checked state per tool
+                    const groupInMode = mode.toolGroups.includes(group as ToolGroup);
 
                     // --- Group accordion ---
                     const details = toolsBody.createEl('details', { cls: 'modes-tool-group-accordion' });
-                    if (isGroupEnabled) details.open = true;
+                    if (groupInMode) details.open = true;
 
                     const summary = details.createEl('summary', { cls: 'modes-tool-group-summary' });
 
-                    // Group enable/disable checkbox
+                    // Group checkbox — reflects children state, acts as select-all/none
                     const groupCb = summary.createEl('input', { type: 'checkbox' });
-                    groupCb.checked = isGroupEnabled;
                     groupCb.addEventListener('click', (e) => e.stopPropagation()); // prevent accordion toggle
                     groupCb.addEventListener('change', () => {
-                        const editable = getOrCreateEditable();
-                        if (groupCb.checked) {
-                            if (!editable.toolGroups.includes(group as ToolGroup)) editable.toolGroups.push(group as ToolGroup);
-                            details.open = true;
-                        } else {
-                            editable.toolGroups = editable.toolGroups.filter((g) => g !== group);
-                            details.open = false;
+                        const checked = groupCb.checked;
+                        groupCb.indeterminate = false;
+                        // Set all children
+                        for (const { cb } of groupToolCbs.get(group) ?? []) {
+                            cb.checked = checked;
                         }
-                        mode.toolGroups = [...editable.toolGroups];
+                        if (checked) details.open = true;
+                        persistOverride();
+                        syncGroupState(group);
                         void saveMode();
-                        // Recount active tools badge
-                        badgeEl.setText(getCountBadge(group, groupCb.checked));
                     });
 
                     summary.createEl('span', { cls: 'modes-tool-group-label', text: meta.label });
+                    const badgeEl = summary.createEl('span', { cls: 'modes-tool-count-badge' });
 
-                    // Active tools count badge
-                    const getCountBadge = (grp: string, enabled: boolean): string => {
-                        if (!enabled) return '0 / ' + TOOL_GROUP_META[grp].tools.length;
-                        const override = this.plugin.settings.modeToolOverrides?.[slug];
-                        if (!override) return meta.tools.length + ' / ' + meta.tools.length;
-                        const active = meta.tools.filter((tn) => override.includes(tn)).length;
-                        return `${active} / ${meta.tools.length}`;
-                    };
-                    const badgeEl = summary.createEl('span', {
-                        cls: 'modes-tool-count-badge',
-                        text: getCountBadge(group, isGroupEnabled),
-                    });
+                    groupUi.set(group, { groupCb, badgeEl, details });
 
                     // --- Individual tool checkboxes ---
                     const toolsGrid = details.createDiv('modes-tool-checkboxes');
                     for (const toolName of meta.tools) {
                         const row = toolsGrid.createDiv('modes-tool-row');
                         const toolCb = row.createEl('input', { type: 'checkbox' });
-                        const isEnabled = !currentOverride || currentOverride.includes(toolName);
-                        toolCb.checked = isEnabled && isGroupEnabled;
-                        toolCb.disabled = !isGroupEnabled;
+                        // Initial state: group must be in mode AND tool in override (or no override = all)
+                        const toolInOverride = !currentOverride || currentOverride.includes(toolName);
+                        toolCb.checked = groupInMode && toolInOverride;
+
+                        groupToolCbs.get(group)!.push({ name: toolName, cb: toolCb });
 
                         const toolMeta = TOOL_LABEL_MAP[toolName];
                         const labelEl = row.createEl('label', { cls: 'modes-tool-name' });
@@ -300,18 +345,14 @@ export class ModesTab {
                         }
 
                         toolCb.addEventListener('change', () => {
-                            // Start from current override or all tools in all groups
-                            let allActiveTools: string[] = this.plugin.settings.modeToolOverrides?.[slug]
-                                ?? this.modeService?.getToolNames(mode) ?? [];
-                            if (toolCb.checked) {
-                                if (!allActiveTools.includes(toolName)) allActiveTools = [...allActiveTools, toolName];
-                            } else {
-                                allActiveTools = allActiveTools.filter((tn) => tn !== toolName);
-                            }
-                            void this.modeService?.setModeToolOverride(slug, allActiveTools);
-                            badgeEl.setText(getCountBadge(group, isGroupEnabled));
+                            persistOverride();
+                            syncGroupState(group);
+                            void saveMode();
                         });
                     }
+
+                    // Set initial group checkbox + badge from children state
+                    syncGroupState(group);
                 }
             };
 

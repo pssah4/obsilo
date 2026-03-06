@@ -57,4 +57,13 @@ declare module 'obsidian' {
             keys(): string[];
         };
     }
+
+    interface MetadataTypeManager {
+        setType(property: string, type: string): void;
+        getType(property: string): string | undefined;
+    }
+
+    interface App {
+        metadataTypeManager: MetadataTypeManager;
+    }
 }

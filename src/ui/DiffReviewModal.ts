@@ -29,6 +29,13 @@ interface DiffHunk {
     status: 'pending' | 'approved' | 'rejected';
 }
 
+/** Pre-computed diff-line range for a hunk */
+interface HunkRange {
+    hunk: DiffHunk;
+    startDi: number;
+    endDi: number;
+}
+
 /** Semantic grouping of hunks by Markdown section */
 interface SemanticGroup {
     id: number;
@@ -51,6 +58,8 @@ interface FileDiffState {
     diffLines: DiffLine[];
     hunks: DiffHunk[];
     semanticGroups: SemanticGroup[];
+    /** Pre-computed: hunkId → diff-line range (computed once, used everywhere) */
+    hunkRangeMap: Map<number, HunkRange>;
 }
 
 // ---------------------------------------------------------------------------
@@ -111,64 +120,102 @@ export class DiffReviewModal extends Modal {
     ) {
         super(app);
         this.modalEl.addClass('diff-review-modal');
+
+        // Prevent closing by clicking the backdrop or pressing Escape —
+        // user must choose an explicit action (Keep All / Undo All / Apply)
+        this.containerEl.addEventListener('click', (e: Event) => {
+            if (e.target === this.containerEl) {
+                e.stopPropagation();
+                e.preventDefault();
+            }
+        }, true);
+        this.scope.register([], 'Escape', (e: KeyboardEvent) => {
+            e.preventDefault();
+            return false;
+        });
     }
 
     onOpen(): void {
         const { contentEl, titleEl } = this;
 
-        // Compute diffs + semantic groups for all files
-        let globalHunkId = 0;
-        let globalGroupId = 0;
-        for (const entry of this.entries) {
-            const dl = diffLines(entry.oldContent, entry.newContent);
-            const hunks = this.buildHunks(dl, globalHunkId);
-            globalHunkId += hunks.length;
+        // Hide Obsidian's default close button — user must use footer actions
+        const closeBtn = this.modalEl.querySelector('.modal-close-button');
+        if (closeBtn instanceof HTMLElement) closeBtn.addClass('agent-u-hidden');
 
-            const sections = parseMarkdownSections(entry.newContent);
-            const groups = this.mapHunksToSections(dl, hunks, sections, globalGroupId);
-            globalGroupId += groups.length;
-
-            this.files.push({
-                filePath: entry.filePath,
-                oldContent: entry.oldContent,
-                newContent: entry.newContent,
-                diffLines: dl,
-                hunks,
-                semanticGroups: groups,
-            });
-        }
-
-        // Title
-        const fileCount = this.files.length;
+        // Show loading state immediately so the modal feels responsive
         titleEl.setText(
             this.options.mode === 'checkpoint'
                 ? t('modal.diffReview.titleCheckpoint')
-                : t('modal.diffReview.titleReview', { count: fileCount }),
+                : t('modal.diffReview.titleReview', { count: this.entries.length }),
         );
+        const loadingEl = contentEl.createDiv('diff-loading');
+        loadingEl.setText('...');
 
-        // Checkpoint info header
-        if (this.options.mode === 'checkpoint' && this.options.checkpointInfo) {
-            const cp = this.options.checkpointInfo;
-            const infoEl = contentEl.createDiv('checkpoint-diff-header');
-            const time = new Date(cp.timestamp).toLocaleTimeString('de-DE', {
-                hour: '2-digit', minute: '2-digit', second: '2-digit',
-            });
-            infoEl.createSpan({ text: `${time} · ${cp.toolName ?? 'write'}` });
-        }
+        // Defer heavy computation + rendering to next frame
+        requestAnimationFrame(() => {
+            loadingEl.remove();
 
-        // Render each file section
-        for (const file of this.files) {
-            this.renderFileSection(contentEl, file);
-        }
+            // Compute diffs + semantic groups for all files
+            let globalHunkId = 0;
+            let globalGroupId = 0;
+            for (const entry of this.entries) {
+                const dl = diffLines(entry.oldContent, entry.newContent);
+                const hunks = this.buildHunks(dl, globalHunkId);
+                globalHunkId += hunks.length;
 
-        // Footer
-        this.renderFooter(contentEl);
+                const sections = parseMarkdownSections(entry.newContent);
+                const groups = this.mapHunksToSections(dl, hunks, sections, globalGroupId);
+                globalGroupId += groups.length;
+
+                // Pre-compute hunk ranges once per file
+                const hunkRangeMap = this.buildHunkRangeMap(dl, hunks);
+
+                this.files.push({
+                    filePath: entry.filePath,
+                    oldContent: entry.oldContent,
+                    newContent: entry.newContent,
+                    diffLines: dl,
+                    hunks,
+                    semanticGroups: groups,
+                    hunkRangeMap,
+                });
+            }
+
+            // Update title with actual file count
+            titleEl.setText(
+                this.options.mode === 'checkpoint'
+                    ? t('modal.diffReview.titleCheckpoint')
+                    : t('modal.diffReview.titleReview', { count: this.files.length }),
+            );
+
+            // Checkpoint info header
+            if (this.options.mode === 'checkpoint' && this.options.checkpointInfo) {
+                const cp = this.options.checkpointInfo;
+                const infoEl = contentEl.createDiv('checkpoint-diff-header');
+                const time = new Date(cp.timestamp).toLocaleTimeString('de-DE', {
+                    hour: '2-digit', minute: '2-digit', second: '2-digit',
+                });
+                infoEl.createSpan({ text: `${time} · ${cp.toolName ?? 'write'}` });
+            }
+
+            // Render each file section
+            for (const file of this.files) {
+                this.renderFileSection(contentEl, file);
+            }
+
+            // Footer
+            this.renderFooter(contentEl);
+        });
+    }
+
+    /** Block close() unless the user made an explicit decision */
+    close(): void {
+        if (!this.resolved) return;
+        super.close();
     }
 
     onClose(): void {
-        if (!this.resolved) {
-            this.resolved = true;
-        }
+        // noop — cleanup handled by decision callbacks
     }
 
     // =========================================================================
@@ -194,6 +241,33 @@ export class DiffReviewModal extends Modal {
             hunks.push({ id: hunkId++, lines: [...currentChanged], status: 'pending' });
         }
         return hunks;
+    }
+
+    /**
+     * Pre-compute: for each hunk, find its diff-line index range.
+     * Computed once per file, used by renderDiff and renderGroupDiffLines.
+     */
+    private buildHunkRangeMap(dl: DiffLine[], hunks: DiffHunk[]): Map<number, HunkRange> {
+        const map = new Map<number, HunkRange>();
+        let hunkIdx = 0;
+        let blockStart = -1;
+
+        for (let di = 0; di < dl.length; di++) {
+            if (dl[di].type !== 'unchanged') {
+                if (blockStart === -1) blockStart = di;
+            } else {
+                if (blockStart !== -1 && hunkIdx < hunks.length) {
+                    map.set(hunks[hunkIdx].id, { hunk: hunks[hunkIdx], startDi: blockStart, endDi: di - 1 });
+                    hunkIdx++;
+                    blockStart = -1;
+                }
+            }
+        }
+        if (blockStart !== -1 && hunkIdx < hunks.length) {
+            map.set(hunks[hunkIdx].id, { hunk: hunks[hunkIdx], startDi: blockStart, endDi: dl.length - 1 });
+        }
+
+        return map;
     }
 
     // =========================================================================
@@ -317,23 +391,27 @@ export class DiffReviewModal extends Modal {
 
         // Build lookup: diffLine index → hunkId (for changed lines)
         const diffLineToHunkId = new Map<number, number>();
-        {
-            let hunkIdx = 0;
-            let inBlock = false;
-            for (let di = 0; di < file.diffLines.length; di++) {
-                if (file.diffLines[di].type !== 'unchanged') {
-                    if (!inBlock && hunkIdx < file.hunks.length) {
-                        inBlock = true;
-                    }
-                    if (inBlock && hunkIdx < file.hunks.length) {
-                        diffLineToHunkId.set(di, file.hunks[hunkIdx].id);
-                    }
-                } else {
-                    if (inBlock) {
-                        hunkIdx++;
-                        inBlock = false;
-                    }
+        for (const [hunkId, range] of file.hunkRangeMap) {
+            for (let di = range.startDi; di <= range.endDi; di++) {
+                diffLineToHunkId.set(di, hunkId);
+            }
+        }
+
+        // Pre-compute: set of all diffLine indices covered by any group
+        // (changed lines + unchanged lines between hunks of the same group)
+        const groupCoveredIndices = new Set<number>();
+        for (const g of file.semanticGroups) {
+            let minDi = file.diffLines.length;
+            let maxDi = 0;
+            for (const hId of g.hunkIds) {
+                const range = file.hunkRangeMap.get(hId);
+                if (range) {
+                    if (range.startDi < minDi) minDi = range.startDi;
+                    if (range.endDi > maxDi) maxDi = range.endDi;
                 }
+            }
+            for (let di = minDi; di <= maxDi; di++) {
+                groupCoveredIndices.add(di);
             }
         }
 
@@ -366,7 +444,6 @@ export class DiffReviewModal extends Modal {
         };
 
         for (let di = 0; di < file.diffLines.length; di++) {
-            const line = file.diffLines[di];
             const hunkId = diffLineToHunkId.get(di);
 
             if (hunkId !== undefined) {
@@ -376,47 +453,14 @@ export class DiffReviewModal extends Modal {
                     renderedGroups.add(group.id);
                     this.renderSemanticGroup(container, group, file);
                 }
-                // Lines belonging to already-rendered groups: skip (rendered inside group)
-                // Ungrouped hunks (shouldn't happen): also skip
             } else {
-                // Unchanged line — check if it's INSIDE a rendered group's range
-                // (context between hunks within the same group)
-                // If so, skip it (already rendered inside the group)
-                let insideRenderedGroup = false;
-                for (const gid of renderedGroups) {
-                    const g = file.semanticGroups.find((sg) => sg.id === gid);
-                    if (!g) continue;
-                    // Check if this unchanged line's newLineIndex falls within the group's hunks
-                    // Simple heuristic: if this line is between two hunks of the same group, skip
-                    const groupHunkDiffRanges = this.getGroupDiffLineRange(file, g, diffLineToHunkId);
-                    if (di >= groupHunkDiffRanges.start && di <= groupHunkDiffRanges.end) {
-                        insideRenderedGroup = true;
-                        break;
-                    }
-                }
-                if (!insideRenderedGroup) {
-                    contextBuffer.push(line);
+                // Unchanged line — skip if covered by a group range (O(1) lookup)
+                if (!groupCoveredIndices.has(di)) {
+                    contextBuffer.push(file.diffLines[di]);
                 }
             }
         }
         flushContext();
-    }
-
-    /** Get the diff-line index range that spans all hunks in a group */
-    private getGroupDiffLineRange(
-        file: FileDiffState,
-        group: SemanticGroup,
-        diffLineToHunkId: Map<number, number>,
-    ): { start: number; end: number } {
-        let start = file.diffLines.length;
-        let end = 0;
-        for (const [di, hId] of diffLineToHunkId) {
-            if (group.hunkIds.includes(hId)) {
-                if (di < start) start = di;
-                if (di > end) end = di;
-            }
-        }
-        return { start, end };
     }
 
     // =========================================================================
@@ -483,32 +527,17 @@ export class DiffReviewModal extends Modal {
 
     /** Render diff lines for all hunks within a semantic group (side-by-side) */
     private renderGroupDiffLines(container: HTMLElement, group: SemanticGroup, file: FileDiffState): void {
-        // Collect diff-line ranges for each hunk in the group
-        const hunkRanges: Array<{ hunk: DiffHunk; startDi: number; endDi: number }> = [];
-        {
-            let hunkIdx = 0;
-            let blockStart = -1;
-            for (let di = 0; di < file.diffLines.length; di++) {
-                if (file.diffLines[di].type !== 'unchanged') {
-                    if (blockStart === -1) blockStart = di;
-                } else {
-                    if (blockStart !== -1 && hunkIdx < file.hunks.length) {
-                        if (group.hunkIds.includes(file.hunks[hunkIdx].id)) {
-                            hunkRanges.push({ hunk: file.hunks[hunkIdx], startDi: blockStart, endDi: di - 1 });
-                        }
-                        hunkIdx++;
-                        blockStart = -1;
-                    }
-                }
-            }
-            if (blockStart !== -1 && hunkIdx < file.hunks.length) {
-                if (group.hunkIds.includes(file.hunks[hunkIdx].id)) {
-                    hunkRanges.push({ hunk: file.hunks[hunkIdx], startDi: blockStart, endDi: file.diffLines.length - 1 });
-                }
-            }
+        // Use pre-computed hunk ranges — O(1) lookup per hunk instead of full scan
+        const hunkRanges: HunkRange[] = [];
+        for (const hId of group.hunkIds) {
+            const range = file.hunkRangeMap.get(hId);
+            if (range) hunkRanges.push(range);
         }
 
         if (hunkRanges.length === 0) return;
+
+        // Build all DOM into a fragment, then append once (avoids per-element reflow)
+        const frag = document.createDocumentFragment();
 
         for (let hi = 0; hi < hunkRanges.length; hi++) {
             const range = hunkRanges[hi];
@@ -524,8 +553,8 @@ export class DiffReviewModal extends Modal {
                         const before = gapLines.slice(0, CONTEXT_LINES);
                         const middle = gapLines.slice(CONTEXT_LINES, -CONTEXT_LINES);
                         const after = gapLines.slice(-CONTEXT_LINES);
-                        for (const l of before) this.renderContextRow(container, l);
-                        const btn = container.createEl('button', {
+                        for (const l of before) this.renderContextRowTo(frag, l);
+                        const btn = createEl('button', {
                             cls: 'diff-collapse-btn',
                             text: t('modal.diffReview.unchangedLines', { count: middle.length }),
                         });
@@ -534,9 +563,10 @@ export class DiffReviewModal extends Modal {
                             btn.remove();
                             for (const l of captured) this.renderContextRow(container, l);
                         });
-                        for (const l of after) this.renderContextRow(container, l);
+                        frag.appendChild(btn);
+                        for (const l of after) this.renderContextRowTo(frag, l);
                     } else {
-                        for (const l of gapLines) this.renderContextRow(container, l);
+                        for (const l of gapLines) this.renderContextRowTo(frag, l);
                     }
                 }
             }
@@ -551,11 +581,14 @@ export class DiffReviewModal extends Modal {
 
             const rows = Math.max(leftLines.length, rightLines.length);
             for (let r = 0; r < rows; r++) {
-                const row = container.createDiv('diff-row');
+                const row = createDiv('diff-row');
                 this.renderSide(row, leftLines[r] ?? null, 'old');
                 this.renderSide(row, rightLines[r] ?? null, 'new');
+                frag.appendChild(row);
             }
         }
+
+        container.appendChild(frag);
     }
 
     /** Render one side (old/new) of a side-by-side diff row */
@@ -583,6 +616,18 @@ export class DiffReviewModal extends Modal {
         const right = row.createDiv('diff-side diff-side-new diff-line-unchanged');
         right.createSpan({ cls: 'diff-line-prefix', text: ' ' });
         right.createSpan({ cls: 'diff-line-content', text: line.content });
+    }
+
+    /** Render context row into a DocumentFragment (batch mode) */
+    private renderContextRowTo(frag: DocumentFragment, line: DiffLine): void {
+        const row = createDiv('diff-row');
+        const left = row.createDiv('diff-side diff-side-old diff-line-unchanged');
+        left.createSpan({ cls: 'diff-line-prefix', text: ' ' });
+        left.createSpan({ cls: 'diff-line-content', text: line.content });
+        const right = row.createDiv('diff-side diff-side-new diff-line-unchanged');
+        right.createSpan({ cls: 'diff-line-prefix', text: ' ' });
+        right.createSpan({ cls: 'diff-line-content', text: line.content });
+        frag.appendChild(row);
     }
 
     // =========================================================================
@@ -703,7 +748,10 @@ export class DiffReviewModal extends Modal {
 
         if (this.options.mode === 'checkpoint') {
             footer.createEl('button', { text: t('modal.diffReview.close') })
-                .addEventListener('click', () => this.close());
+                .addEventListener('click', () => {
+                    this.resolved = true;
+                    this.close();
+                });
 
             if (this.options.onRestore) {
                 const restoreBtn = footer.createEl('button', {

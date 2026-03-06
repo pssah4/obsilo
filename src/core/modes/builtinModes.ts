@@ -18,9 +18,9 @@ import type { ToolName } from '../tools/types';
 // ---------------------------------------------------------------------------
 
 export const TOOL_GROUP_MAP: Readonly<Record<ToolGroup, readonly ToolName[]>> = {
-    read:  ['read_file', 'list_files', 'search_files'],
+    read:  ['read_file', 'read_document', 'list_files', 'search_files'],
     vault: ['get_frontmatter', 'search_by_tag', 'get_vault_stats', 'get_linked_notes', 'get_daily_note', 'open_note', 'semantic_search', 'query_base'],
-    edit:  ['write_file', 'edit_file', 'append_to_file', 'create_folder', 'delete_file', 'move_file', 'update_frontmatter', 'generate_canvas', 'create_excalidraw', 'create_base', 'update_base'],
+    edit:  ['write_file', 'edit_file', 'append_to_file', 'create_folder', 'delete_file', 'move_file', 'update_frontmatter', 'generate_canvas', 'create_excalidraw', 'create_base', 'update_base', 'create_pptx', 'create_docx', 'create_xlsx'],
     web:   ['web_fetch', 'web_search'],
     agent: ['ask_followup_question', 'attempt_completion', 'update_todo_list', 'new_task', 'switch_mode', 'update_settings', 'configure_model', 'read_agent_logs', 'manage_mcp_server', 'manage_skill', 'evaluate_expression', 'manage_source'],
     mcp:   ['use_mcp_tool'],
@@ -139,7 +139,8 @@ Never leave the user with output that looks correct but doesn't work.
 ## Direct execution (default)
 
 You have all the tools needed for most tasks. Use them directly:
-- File conversion (PDF, DOCX) → execute_recipe (pandoc-pdf, pandoc-docx, pandoc-convert)
+- Office document creation (PPTX, DOCX, XLSX) → create_pptx, create_docx, create_xlsx
+- File conversion (PDF, DOCX from Markdown) → execute_recipe (pandoc-pdf, pandoc-docx, pandoc-convert)
 - Plugin data (Dataview, Omnisearch, MetaEdit) → call_plugin_api
 - Plugin commands → execute_command
 - Vault read/write → read_file, write_file, edit_file
@@ -148,27 +149,34 @@ You have all the tools needed for most tasks. Use them directly:
 
 NEVER delegate to a sub-agent what you can do directly in 1-4 tool calls.
 
-## Sandbox-first execution
+## Tool priority: built-in tools first, sandbox only as escalation
 
-NEVER write Python scripts, shell scripts, or suggest manual execution. You have a TypeScript sandbox (evaluate_expression) that can:
-- Run computations, data transforms, regex, JSON processing
-- Import npm packages via the dependencies parameter (bundled via esbuild from CDN)
-- Read/write text and binary files via ctx.vault (read, readBinary, write, writeBinary, list)
-- Make HTTP requests via ctx.requestUrl
-- Generate binary formats (PPTX, XLSX, PDF, images)
+ALWAYS prefer built-in tools over the sandbox. This is the tool hierarchy — follow it strictly:
+1. **Built-in tools** (read_file, edit_file, write_file, search_files, etc.) — for all single-file and few-file operations
+2. **Plugin tools** (execute_command, execute_recipe, call_plugin_api) — for plugin functionality
+3. **Sandbox** (evaluate_expression) — ONLY when built-in tools cannot do the job
 
-IMPORTANT: npm packages in the sandbox are downloaded from CDN (esm.sh) as pre-bundled browser ES modules — they do NOT require Node.js, npm install, or system shell access. Packages like pptxgenjs, xlsx, d3, pdf-lib work in the sandbox. Do NOT claim a package "requires Node.js" — try it first via evaluate_expression with the dependencies parameter. Only fall back to other approaches if you get an actual runtime error.
+The sandbox is justified ONLY for:
+- Batch operations across many files (5+) in a loop
+- Computations, data transforms, or complex regex beyond simple find/replace
+- HTTP API calls via ctx.requestUrl
+- Tasks requiring npm packages (via dependencies parameter)
 
-For one-off tasks: use evaluate_expression directly (with dependencies if npm packages needed).
+NEVER use evaluate_expression for tasks that read_file + edit_file or read_file + write_file can handle. "Delete a section", "rename a heading", "add a paragraph" — these are built-in tool tasks, not sandbox tasks.
+
+NEVER write Python scripts, shell scripts, or suggest manual execution.
+
+npm packages in the sandbox are downloaded from CDN (esm.sh) as pre-bundled browser ES modules — they do NOT require Node.js, npm install, or system shell access. Do NOT claim a package "requires Node.js" — try it first via evaluate_expression with the dependencies parameter.
+
+For one-off computation tasks: use evaluate_expression directly (with dependencies if npm packages needed).
 For reusable capabilities: create a skill with code_modules via manage_skill.
 
 ## Output quality for generated files
 
-After generating binary files (PPTX, XLSX, PDF, images):
-1. Check the file was written successfully (no empty or near-empty files)
-2. Use standard slide dimensions (10x7.5 inches for PPTX, A4 for PDF)
-3. If the user reports formatting issues, iterate and fix — do not suggest manual workarounds
-4. Aim for a polished experience: clean layouts, proper spacing, consistent styling
+For PPTX, DOCX, XLSX: ALWAYS use the dedicated built-in tools (create_pptx, create_docx, create_xlsx).
+These tools produce professional output with auto-layout — do NOT use the sandbox for these formats.
+For PDF: use workspace:export-pdf (Tier 1) or pandoc-pdf recipe (Tier 2).
+If the user reports formatting issues, iterate and fix — do not suggest manual workarounds.
 
 ## Skills with code modules
 

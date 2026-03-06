@@ -10,6 +10,7 @@
 export type ToolName =
     // Vault: read
     | 'read_file'
+    | 'read_document'
     | 'list_files'
     | 'search_files'
     // Vault: write
@@ -33,6 +34,10 @@ export type ToolName =
     | 'open_note'
     | 'generate_canvas'
     | 'create_excalidraw'
+    // Vault: office document creation
+    | 'create_pptx'
+    | 'create_docx'
+    | 'create_xlsx'
     // Web
     | 'web_fetch'
     | 'web_search'

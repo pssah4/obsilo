@@ -1,8 +1,8 @@
 # arc42 — Obsidian Agent Architecture
 
-**Version:** 3.4
-**Stand:** 2026-03-02
-**Status:** Aktuell — alle Features implementiert, Dokumentation vollstaendig
+**Version:** 3.6
+**Stand:** 2026-03-06
+**Status:** Aktuell — alle Features implementiert, alle bekannten Bugs resolved, AUDIT-003 abgeglichen
 
 ---
 
@@ -108,6 +108,16 @@ Obsidian Agent ist ein Obsidian-Plugin, das einen vollständigen KI-Agenten dire
 
 11. **Agent Skill Mastery (3-Ebenen)** — A) Rich Tool Descriptions mit Examples/When-to-use in ToolMeta [ADR-016](ADR-016-rich-tool-descriptions.md). B) Procedural Recipes: Schritt-fuer-Schritt Rezepte fuer bekannte Tasks, keyword-first Matching, 2000 chars Budget [ADR-017](ADR-017-procedural-recipes.md). C) Episodic Task Memory: Aufzeichnung erfolgreicher Ausfuehrungen ohne extra API-Call, Auto-Promotion zu Rezepten bei 3+ Erfolgen [ADR-018](ADR-018-episodic-task-memory.md).
 
+12. **Chat-Linking (Pipeline Post-Write Hook)** — Nach jeder erfolgreichen Write-Operation auf `.md`-Dateien wird die aktuelle Conversation-ID als `obsidian://obsilo-chat?id={id}` Deep-Link im YAML-Frontmatter gespeichert. Hook sitzt in der Pipeline (konsistent mit Checkpoint, Cache, Audit). Nutzer kann aus jeder Note direkt in den Chat-Kontext zurueckspringen. [ADR-022](ADR-022-chat-linking.md)
+
+13. **Document Parser als wiederverwendbare Tools (Hybrid)** — Parsing-Logik in `DocumentParserRegistry` (Service-Kern), Chat-Attachments rufen Service direkt auf (Performance), Agent nutzt Tool-Wrapper (`read_document`, `extract_document_images`) in ToolRegistry. Neue Formate ohne Architekturaenderung. [ADR-023](ADR-023-document-parser-tools.md)
+
+14. **Leichtgewicht-Parsing (JSZip + Custom OOXML)** — JSZip (~30 KB) als einzige neue Dependency fuer OOXML-Formate (PPTX, XLSX, DOCX). Eigene Parser navigieren ZIP-Struktur + DOMParser fuer XML. PDF via pdfjs-dist (bestehend). JSON/XML/CSV nativ. [ADR-024](ADR-024-parsing-library-selection.md)
+
+15. **On-Demand Bild-Nachlade (Lazy Extraction)** — Beim Parsing nur Bild-Metadaten erfasst, Bilder erst bei Agent-Tool-Aufruf extrahiert. Vision-Gate prueft Model-Capability. System Prompt steuert Agent-Entscheidung. [ADR-025](ADR-025-on-demand-image-strategy.md)
+
+16. **Deterministische Task Extraction (Post-Processing Hook)** — Nach Agent-Completion scannt ein Regex-basierter `TaskExtractor` den Antworttext auf `- [ ]` Items. Gefundene Tasks werden im `TaskSelectionModal` praesentiert. Ausgewaehlte Items werden als eigenstaendige Notes mit 10-Property-Frontmatter-Schema (Kategorie, Status, Zusammenfassung, Eisenhower-Felder, Quelle, Assignee) erstellt. Iconic-Integration und Base-Erstellung sind als Erweiterung geplant (ADR-028), aber noch nicht implementiert. Kein AI-Inferenzaufwand — gesamter Flow deterministisch. [ADR-026](ADR-026-post-processing-hook.md), [ADR-027](ADR-027-task-note-schema.md), [ADR-028](ADR-028-base-plugin-integration.md)
+
 ---
 
 ## 5. Bausteinsicht
@@ -168,37 +178,104 @@ AgentTask.run()
   │           │     └── ApproveEditModal (Diff-View für edit_file)
   │           ├── 3. GitCheckpointService.snapshot()
   │           ├── 4. tool.execute()
-  │           └── 5. OperationLogger.log()
+  │           ├── 5. OperationLogger.log()
+  │           └── 6. stampChatLink() [.md + chatLinking enabled]
   │
   └── Context Condensing (wenn threshold erreicht)
 ```
 
-### 5.3 Ebene 2: Tool Registry (42 Tools, 8 Gruppen)
+### 5.3 Ebene 2: Tool Registry (46+ Tools, 7 Gruppen)
 
 ```
 ToolRegistry
-  ├── read group (3):  read_file, list_files, search_files
-  ├── vault group (8): get_frontmatter, search_by_tag, get_vault_stats,
-  │                    get_linked_notes, get_daily_note, open_note,
-  │                    semantic_search, query_base
-  ├── edit group (11): write_file, edit_file, append_to_file, create_folder,
-  │                    delete_file, move_file, update_frontmatter,
-  │                    generate_canvas, create_excalidraw,
-  │                    create_base, update_base
-  ├── web group (2):   web_fetch, web_search
-  ├── agent group (7): ask_followup_question, attempt_completion,
-  │                    update_todo_list, new_task, switch_mode,
-  │                    update_settings, configure_model
-  ├── sandbox group (2): evaluate_expression, create_dynamic_tool
-  ├── skill group (5): execute_command, execute_recipe, call_plugin_api,
-  │                    resolve_capability_gap, enable_plugin
-  ├── self-modify group (3): manage_skill, manage_source, manage_mcp_server
-  └── mcp group (1):   use_mcp_tool
+  ├── read group (4):   read_file, read_document, list_files, search_files
+  ├── vault group (8):  get_frontmatter, search_by_tag, get_vault_stats,
+  │                     get_linked_notes, get_daily_note, open_note,
+  │                     semantic_search, query_base
+  ├── edit group (14):  write_file, edit_file, append_to_file, create_folder,
+  │                     delete_file, move_file, update_frontmatter,
+  │                     generate_canvas, create_excalidraw,
+  │                     create_base, update_base,
+  │                     create_docx, create_pptx, create_xlsx
+  ├── web group (2):    web_fetch, web_search
+  ├── agent group (12): ask_followup_question, attempt_completion,
+  │                     update_todo_list, new_task, switch_mode,
+  │                     update_settings, configure_model,
+  │                     read_agent_logs, manage_mcp_server,
+  │                     manage_skill, evaluate_expression, manage_source
+  ├── skill group (5):  execute_command, execute_recipe, call_plugin_api,
+  │                     resolve_capability_gap, enable_plugin
+  └── mcp group (1):    use_mcp_tool
+  + DynamicToolFactory (runtime-registered custom tools)
 ```
 
-Tool-Beschreibungen kommen aus `toolMetadata.ts` (Single Source of Truth fuer Prompt und UI). Feature-Spec: `FEATURE-tool-metadata-registry.md`. ADR: [ADR-008](ADR-008-modular-prompt-sections.md).
+### 5.4 Ebene 2: Document Parser Pipeline (EPIC-006)
 
-### 5.4 Ebene 2: Semantic Search Pipeline
+```
+DocumentParserRegistry (Service-Kern)
+  ├── register(extensions, parser)   -- Extension -> IDocumentParser
+  ├── parse(path, data, options?)    -- Dispatcher
+  └── canParse(extension)            -- Format-Check
+
+Registrierte Parser:
+  ├── PptxParser   (.pptx)  -- JSZip + DOMParser, Folien-Text + Bild-Metadaten
+  ├── XlsxParser   (.xlsx)  -- JSZip + DOMParser, Sheet-Tab-Struktur
+  ├── DocxParser   (.docx)  -- JSZip + DOMParser, Absaetze + Ueberschriften
+  ├── PdfParser    (.pdf)   -- pdfjs-dist v4.4.168 (Refactoring aus SemanticIndexService)
+  └── DataFormatParser (.json, .xml, .csv)  -- Native APIs
+
+Aufrufwege:
+  1. Chat-Attachment:  AttachmentHandler -> DocumentParserRegistry.parse() (direkt, kein Tool-Overhead)
+  2. Agent-initiiert:  Agent -> ReadDocumentTool -> DocumentParserRegistry.parse() (via Tool-Pipeline)
+  3. Bild-Nachlade:    Agent -> ExtractDocumentImagesTool -> JSZip (erneutes Oeffnen, Lazy Extraction)
+  4. Semantic Index:   SemanticIndexService -> PdfParser.parse() (Refactoring, keine Duplikation)
+```
+
+ADR: [ADR-023](ADR-023-document-parser-tools.md), [ADR-024](ADR-024-parsing-library-selection.md), [ADR-025](ADR-025-on-demand-image-strategy.md).
+
+### 5.7 Ebene 2: Task Extraction Pipeline (FEATURE-0801)
+
+```
+AgentSidebarView.onComplete()
+  │
+  └── maybeExtractTasks(accumulatedText)
+        │
+        ├── TaskExtractor.scan(text)           # Pure: Regex → TaskItem[]
+        │     └── Pattern: /^\s*- \[ \]\s+(.+)$/gm
+        │
+        ├── if items.length === 0 → return
+        │
+        └── new TaskSelectionModal(items)
+              │
+              └── onConfirm(selectedItems)
+                    │
+                    ├── TaskNoteCreator.createNotes(items, settings, sourceNote)
+                    │     ├── Frontmatter: 10 Properties (Schema ADR-027, implementiertes Schema)
+                    │     ├── Vault.create() pro Note
+                    │     └── Fehler: partial success (bereits erstellte Notes bleiben)
+```
+
+ADR: [ADR-026](ADR-026-post-processing-hook.md), [ADR-027](ADR-027-task-note-schema.md), [ADR-028](ADR-028-base-plugin-integration.md). Feature-Spec: `FEATURE-0801-task-extraction.md`.
+
+### 5.8 Ebene 2: Office Document Creation (EPIC-010)
+
+```
+CreateDocxTool / CreatePptxTool / CreateXlsxTool
+  │
+  ├── Input: Strukturiertes Schema (Sections/Slides/Sheets mit Inhalt, Styling)
+  ├── Library: docx (DOCX), pptxgenjs (PPTX), ExcelJS (XLSX)
+  ├── Output: ArrayBuffer → writeBinaryToVault()
+  │     ├── Path-Traversal-Schutz (../, absolute Pfade)
+  │     ├── Extension-Validierung (erzwungen)
+  │     └── Ordner-Erstellung (automatisch)
+  └── Limits: max 100 Sections (DOCX), 50 Slides (PPTX), 20 Sheets (XLSX)
+```
+
+ADR: [ADR-029](ADR-029-office-tool-input-schema.md), [ADR-030](ADR-030-office-library-selection.md), [ADR-031](ADR-031-binary-write-pattern.md).
+
+Tool-Beschreibungen kommen aus `toolMetadata.ts` (Single Source of Truth fuer Prompt und UI). Feature-Spec: `FEATURE-0506-tool-metadata-registry.md`. ADR: [ADR-008](ADR-008-modular-prompt-sections.md).
+
+### 5.5 Ebene 2: Semantic Search Pipeline
 
 ```
 SemanticSearchTool.execute()
@@ -236,7 +313,7 @@ Asynchrone Verarbeitung:
     └── LongTermExtractor -> LLM call -> update memory files
 ```
 
-ADR: [ADR-013](ADR-013-memory-architecture.md). Feature-Spec: `FEATURE-memory-personalization.md`.
+ADR: [ADR-013](ADR-013-memory-architecture.md). Feature-Spec: `FEATURE-0304-memory-personalization.md`.
 
 ### 5.6 Ebene 2: VaultDNA / Plugin Skills
 
@@ -258,7 +335,7 @@ Agent-Nutzung:
   └── call_plugin_api(plugin_id, method, args)
 ```
 
-ADR: [ADR-014](ADR-014-vault-dna-plugin-discovery.md). Feature-Spec: `FEATURE-local-skills.md`.
+ADR: [ADR-014](ADR-014-vault-dna-plugin-discovery.md). Feature-Spec: `FEATURE-0204-local-skills.md`.
 
 ---
 
@@ -343,19 +420,21 @@ AgentTask Iteration N (nach Tool-Result)
   │     └── Nein → weiter mit naechster Iteration
   │
   └── Ja → condenseHistory()
+        ├── onPreCompactionFlush(history) — Facts sichern vor Komprimierung
         ├── Behalte: erste User-Nachricht (Original-Aufgabe)
-        ├── Behalte: letzte 4 Nachrichten (aktueller Kontext)
-        ├── Komprimiere: mittlerer Teil via LLM-Call
-        └── Ersetze History: [erste, Zusammenfassung, letzte 4]
+        ├── Smart Tail: letzte N Nachrichten (bis 10k Tokens, min 2)
+        ├── Komprimiere: mittlerer Teil via LLM-Call (mit Tool-Call-Ledger)
+        ├── Ersetze History: [erste, Zusammenfassung, ...tail]
+        └── Multi-Pass: bis zu 2 Retries wenn immer noch ueber Threshold
 
-Emergency Condensing (Catch-Block):
+Emergency Condensing (Catch-Block, Auto-Retry):
   API-Call schlaegt mit 400 fehl (context_length_exceeded / prompt too long)
   │
-  ├── history.length >= 7?
+  ├── history.length >= 7 && !emergencyRetried?
   │     └── Nein → normaler Fehler
   │
-  └── Ja → condenseHistory() (Notfall)
-        ├── Erfolg → User wird informiert ("Konversation wurde komprimiert")
+  └── Ja → onPreCompactionFlush + condenseHistory() (Notfall)
+        ├── Erfolg → emergencyRetried=true, `continue` (auto-retry, kein User-Eingriff)
         └── Fehlschlag → normaler Fehler-Handler
 ```
 
@@ -431,13 +510,13 @@ Nutzer-Gerät:
 
 ### 8.3 Context Management
 
-- **System Prompt** wird pro Task einmalig aufgebaut (nicht pro Iteration). Modulare Architektur: 15 Sections als Pure Functions in `src/core/prompts/sections/`, orchestriert von `buildSystemPromptForMode()`. Tool-Beschreibungen kommen aus der zentralen `toolMetadata.ts` (Single Source of Truth fuer Prompt und UI). Feature-Specs: `FEATURE-modular-system-prompt.md`, `FEATURE-tool-metadata-registry.md`. ADR: [ADR-008](ADR-008-modular-prompt-sections.md).
+- **System Prompt** wird pro Task einmalig aufgebaut (nicht pro Iteration). Modulare Architektur: 15 Sections als Pure Functions in `src/core/prompts/sections/`, orchestriert von `buildSystemPromptForMode()`. Tool-Beschreibungen kommen aus der zentralen `toolMetadata.ts` (Single Source of Truth fuer Prompt und UI). Feature-Specs: `FEATURE-0312-modular-system-prompt.md`, `FEATURE-0506-tool-metadata-registry.md`. ADR: [ADR-008](ADR-008-modular-prompt-sections.md).
 - **Context Condensing** — wenn Kontext-Schätzung den `condensingThreshold` überschreitet: erste + letzte 4 Nachrichten behalten, Rest via LLM-Komprimierung. Standardmaessig aktiviert (`condensingEnabled: true`). Zusaetzlich: Emergency Condensing im Catch-Block bei 400 "context too long" Fehlern.
 - **Power Steering** — alle `powerSteeringFrequency` Iterationen wird der Mode-Reminder erneut injiziert.
 
 ### 8.4 Chat History & Memory System
 
-Persistentes Memory-System mit drei Säulen: Chat History, Short/Long-Term Memory, Onboarding. Alle Daten liegen im Plugin-Verzeichnis (`.obsidian/plugins/obsidian-agent/`). Feature-Spec: `FEATURE-memory-personalization.md`. ADR: [ADR-007](ADR-007-event-separation.md).
+Persistentes Memory-System mit drei Säulen: Chat History, Short/Long-Term Memory, Onboarding. Alle Daten liegen im Plugin-Verzeichnis (`.obsidian/plugins/obsidian-agent/`). Feature-Spec: `FEATURE-0304-memory-personalization.md`. ADR: [ADR-007](ADR-007-event-separation.md).
 
 #### Storage Layout
 
@@ -497,6 +576,20 @@ Total budget: ~1200 tokens. Knowledge memory is retrieved on demand via `semanti
 #### Event Separation (ADR-007)
 
 `attempt_completion` result is an internal signal, not user-facing text. `AgentTask` tracks `hasStreamedText` — completion result only rendered as fallback when no text was streamed. System prompt rules ensure attempt_completion is only called after multi-step tool workflows.
+
+#### Chat-Linking (ADR-022)
+
+Automatische Traceability zwischen Chats und Notes. Wenn der Agent eine `.md`-Datei schreibt, wird der aktuelle Chat als Deep-Link im Frontmatter gespeichert:
+
+```yaml
+obsilo-chats:
+  - obsidian://obsilo-chat?id=2026-03-05-a1b2c3
+```
+
+- **Hook:** `ToolExecutionPipeline.stampChatLink()` — nach erfolgreicher Write-Op auf `.md`-Dateien
+- **Deep-Link:** `obsidian://obsilo-chat?id={id}` — oeffnet Chat in der Sidebar via Protocol Handler
+- **Setting:** `chatLinking` (boolean, default: true)
+- **Frontmatter-API:** `app.fileManager.processFrontMatter()` (atomare Updates, Duplikat-safe)
 
 #### Key Files
 
@@ -590,6 +683,16 @@ Siehe einzelne ADRs in `_devprocess/architecture/`:
 | [ADR-019](ADR-019-electron-safestorage.md) | Electron SafeStorage (OS Keychain fuer API-Keys) |
 | [ADR-020](ADR-020-global-storage.md) | Global Storage Architecture (cross-vault Settings) |
 | [ADR-021](ADR-021-sandbox-os-isolation.md) | OS-Level Sandbox via child_process.fork() (Hybrid Desktop/Mobile) |
+| [ADR-022](ADR-022-chat-linking.md) | Chat-Linking via Pipeline Post-Write Hook (Frontmatter Deep-Links) |
+| [ADR-023](ADR-023-document-parser-tools.md) | Document Parser als wiederverwendbare Tools (Service-Kern + Tool-Wrapper) |
+| [ADR-024](ADR-024-parsing-library-selection.md) | Parsing-Library-Auswahl: JSZip + Custom OOXML + pdfjs-dist + Native APIs |
+| [ADR-025](ADR-025-on-demand-image-strategy.md) | On-Demand Bild-Nachlade via Lazy Extraction + Vision-Gate |
+| [ADR-026](ADR-026-post-processing-hook.md) | Direkter Post-Processing Hook in onComplete fuer Task Extraction |
+| [ADR-027](ADR-027-task-note-schema.md) | Task-Note Frontmatter Schema (10 Properties, deutsch, Eisenhower-kompatibel) |
+| [ADR-028](ADR-028-base-plugin-integration.md) | Eigene Base-YAML-Generierung + Iconic-Detection via direkte Obsidian-API |
+| [ADR-029](ADR-029-office-tool-input-schema.md) | Office-Tool Input-Schema (strukturierte Slides/Sections/Sheets statt Freitext) |
+| [ADR-030](ADR-030-office-library-selection.md) | Office-Library-Auswahl: pptxgenjs + docx + ExcelJS fuer native Dokumenterzeugung |
+| [ADR-031](ADR-031-binary-write-pattern.md) | Binary-Write-Pattern: Shared writeBinaryToVault() mit Path-Traversal-Schutz |
 
 ---
 
@@ -609,10 +712,11 @@ Siehe einzelne ADRs in `_devprocess/architecture/`:
 
 ## 11. Risiken und technische Schulden
 
+### Aktive Risiken
+
 | Risiko | Auswirkung | Mitigation |
 |--------|-----------|-----------|
 | vectra lädt gesamten Index in RAM | Hohe RAM-Nutzung bei >10k Notizen | Chunked loading (future) |
-| `search_files` nutzt Node.js `fs` direkt | Nicht kompatibel mit Obsidian Mobile | Obsidian-API-Fallback (future) |
 | `query_base` nutzt Regex-YAML-Parser | Komplexe Filterausdrücke können falsch geparst werden | Echter YAML-Parser (future) |
 | `update_base` erkennt View-Blöcke via Regex | Fragil bei unerwarteter YAML-Formatierung | Vollständiger YAML-Parser (future) |
 | Keyword-Suche (BM25) ist ein Live-Scan | Linear mit Vault-Groesse | Vorkompilierter BM25-Index (future) |
@@ -620,6 +724,18 @@ Siehe einzelne ADRs in `_devprocess/architecture/`:
 | Memory-Extraktion basiert auf LLM-Qualitaet | Ungenaue Fakten bei schwachen Modellen | Separate memoryModelKey-Einstellung |
 | VaultDNA Reflection kann bei Plugins fehlschlagen | Unvollstaendige Skill-Files | Nutzer kann Skill-Files manuell anpassen |
 | MCP stdio spawnt Subprozesse | Sicherheitsrisiko bei boeswilligen Configs | Shell-Metacharacter-Validation |
+
+### Technische Schulden
+
+| Bereich | Beschreibung | Status |
+|---------|-------------|--------|
+| UI Modularisierung | `AgentSidebarView.ts` (~3500 LOC) -- Split in Unterkomponenten | Offen |
+| Virtual Scrolling | Lange Chat-Historien verursachen UI-Lag | Offen |
+| Token-Estimation | ~4 chars/token Schätzung -- genauer mit js-tiktoken | Niedrige Prio |
+
+### Security (AUDIT-003, Stand 2026-03-06)
+
+Risikoprofil: 0 Critical, 1 High (by design), 4 Medium (3 by design), 3 Low, 2 Info. Alle bekannten Bugs (FIX-01 bis FIX-06) resolved. Details: `_devprocess/analysis/security/AUDIT-003-obsilo-2026-03-06.md`
 
 ---
 
@@ -668,3 +784,20 @@ Siehe einzelne ADRs in `_devprocess/architecture/`:
 | **RecipePromotionService** | Promoviert haeufig erfolgreiche Episoden (3+ Erfolge) automatisch zu wiederverwendbaren Rezepten |
 | **ISandboxExecutor** | Interface fuer Sandbox-Backends. Desktop: ProcessSandboxExecutor (child_process.fork, OS-Level), Mobile: IframeSandboxExecutor (iframe, V8-Level). ADR-021 |
 | **ProcessSandboxExecutor** | Desktop-Sandbox-Backend. Startet eigenstaendigen Node.js-Prozess via child_process.fork() mit ELECTRON_RUN_AS_NODE=1. OS-Level Prozess-Isolation |
+| **Chat-Linking** | Automatische Verlinkung von Agent-Chats im YAML-Frontmatter bearbeiteter Notes. Pipeline Post-Write Hook fuegt `obsidian://obsilo-chat?id={id}` Deep-Links ein. ADR-022 |
+| **stampChatLink** | Pipeline-Methode die nach erfolgreichen Write-Ops auf .md-Dateien den Chat-Link im Frontmatter einfuegt. Nutzt `processFrontMatter()` fuer atomare Updates |
+| **DocumentParserRegistry** | Service-Registry die Dateiendungen auf Parser-Implementierungen mappt. Zentraler Dispatcher fuer alle Dokument-Parsing-Aufrufe (ADR-023) |
+| **IDocumentParser** | Interface fuer Document Parser: `parse(data: ArrayBuffer, options?): Promise<ParseResult>`. Jeder Parser (PPTX, XLSX, DOCX, PDF, Datenformate) implementiert dieses Interface |
+| **ParseResult** | Ergebnis eines Parser-Aufrufs: strukturierter Text, Bild-Metadaten (Anzahl, Positionen, Dateinamen), Dokument-Metadaten (Seitenanzahl, Sheets, etc.) |
+| **ReadDocumentTool** | Tool-Wrapper (`read_document`) ueber den der Agent Dokumente aus dem Vault lesen und parsen kann. Delegiert an DocumentParserRegistry |
+| **ExtractDocumentImagesTool** | Tool-Wrapper (`extract_document_images`) fuer On-Demand Bild-Extraktion aus OOXML-Dokumenten. Prueft Vision-Capability des Modells (Vision-Gate). ADR-025 |
+| **Lazy Extraction** | Bild-Nachlade-Strategie: Beim initialen Parsing werden nur Metadaten erfasst. Bilder werden erst aus dem OOXML-Archiv extrahiert wenn der Agent das Tool aufruft (ADR-025) |
+| **Vision-Gate** | Pruefung ob das aktuelle LLM-Modell Vision (Bildanalyse) unterstuetzt. ExtractDocumentImagesTool liefert erklaerenden Fehler bei Modellen ohne Vision |
+| **OOXML** | Office Open XML -- ZIP-basiertes Dateiformat von Microsoft Office (PPTX, XLSX, DOCX). Enthaelt XML-Dateien fuer Inhalte und Media-Ordner fuer Bilder |
+| **JSZip** | Leichtgewichtige JavaScript-Library (~30 KB) zum Lesen und Schreiben von ZIP-Archiven. Basis fuer alle OOXML-Parser (ADR-024) |
+| **Task Extraction** | Deterministischer Post-Processing Hook: Regex-Scan auf `- [ ]` Items in Agent-Antworten, TaskSelectionModal zur Auswahl, Task-Notes mit strukturiertem Frontmatter. Kein LLM-Call im Flow (ADR-026) |
+| **TaskExtractor** | Pure Function die Agent-Antworttext nach `- [ ]` Markdown-Patterns scannt und `TaskItem[]` zurueckgibt. Liegt in `src/core/tasks/` |
+| **TaskSelectionModal** | Obsidian Modal mit Checkbox-Liste aller erkannten Tasks. Nutzer waehlt welche Items als Task-Notes erstellt werden |
+| **TaskNoteCreator** | Service der ausgewaehlte Tasks als eigenstaendige Notes mit 10-Property-Frontmatter erstellt und die Task-Base (3 Views) generiert |
+| **Task-Frontmatter-Schema** | 10 Properties: Kategorie, Zusammenfassung, Status, Dringend, Wichtig, Faelligkeit, Assignee, Quelle, created, Notizen. Implementiertes Schema weicht vom ADR-027-Vorschlag ab (siehe ADR-027 "Implementiertes Schema") |
+| **Graceful Degradation** | Pattern fuer optionale Plugin-Integration: Feature funktioniert vollstaendig ohne externe Plugins (Iconic, Bases). Fehlende Plugins fuehren zu reduziertem (aber funktionalem) Feature-Set, nicht zu Fehlern |

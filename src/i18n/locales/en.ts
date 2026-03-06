@@ -83,8 +83,8 @@ export const en: Translations = {
     'settings.embeddings.autoIndexDisabled': 'Auto-index on change disabled. Reload Obsidian to deactivate.',
     'settings.embeddings.enableIndex': 'Enable semantic index',
     'settings.embeddings.enableIndexDesc': 'Lets the agent find relevant notes by meaning, not just exact keywords. Requires an embedding model. First build may take a few minutes for large vaults.',
-    'settings.embeddings.indexPdfs': 'Index PDF attachments',
-    'settings.embeddings.indexPdfsDesc': 'Also index PDF files in your vault. Text is extracted from PDFs and indexed alongside your notes. Image-only (scanned) PDFs are skipped automatically.',
+    'settings.embeddings.indexPdfs': 'Index documents (PDF, Office)',
+    'settings.embeddings.indexPdfsDesc': 'Also index PDF, PPTX, XLSX, and DOCX files in your vault. Text is extracted and indexed alongside your notes. Image-only (scanned) PDFs are skipped automatically.',
     'settings.embeddings.buildIndexName': 'Build index',
     'settings.embeddings.buildIndexDesc': 'Index new and modified notes. Already-indexed notes are skipped. Use "force rebuild" to reindex everything from scratch.',
     'settings.embeddings.cancelIndexing': 'Cancel indexing',
@@ -440,11 +440,11 @@ export const en: Translations = {
     // =========================================================================
     // Settings — Skills Tab
     // =========================================================================
-    'settings.skills.introTitle': 'What are Skills?',
-    'settings.skills.introDesc': 'Skills are reusable behaviors that the agent automatically applies when they match the request. They extend the agent\'s capabilities with specific knowledge and guidance for particular tasks.',
-    'settings.skills.introDiff': 'Difference: Tools execute concrete actions (read files, API calls). Workflows define fixed sequences. Skills are flexible instructions that the agent combines and adapts as needed.',
-    'settings.skills.headingManual': 'Manual skills',
-    'settings.skills.headingPlugin': 'Obsidian plugin skills',
+    'settings.skills.introTitle': 'Skills vs Tools',
+    'settings.skills.introDesc': 'Skills are instruction sets (Markdown) that guide the agent for specific task types. They are automatically matched by keywords and injected into the system prompt when relevant.',
+    'settings.skills.introDiff': 'Key difference: Tools execute actions (read files, search, edit). Skills provide instructions (how to approach meeting notes, project planning, etc.). Workflows define fixed step-by-step sequences.',
+    'settings.skills.headingManual': 'User skills',
+    'settings.skills.headingPlugin': 'Plugin skills',
     'settings.skills.desc': "Skills are automatically injected into the system prompt when relevant to the user's message. Each skill lives in a subfolder at .obsidian-agent/skills/{name}/SKILL.md with frontmatter: name, description.",
     'settings.skills.pluginDisabled': 'Plugin skills are disabled. Enable "VaultDNA" in the advanced settings to auto-discover Obsidian plugins as agent skills.',
     'settings.skills.pluginStats': 'Auto-discovered from installed Obsidian plugins. Active: {{active}} | disabled: {{disabled}} | total: {{total}}',
@@ -534,6 +534,13 @@ export const en: Translations = {
     'settings.interface.skipSetup': 'Skip setup',
     'settings.interface.historyPlaceholder': 'agent/history',
     'settings.interface.setupSkipped': 'Setup skipped. You can restart it anytime from settings.',
+    'settings.interface.headingChatLinking': 'Chat Linking',
+    'settings.interface.chatLinkingToggle': 'Auto-link chats in frontmatter',
+    'settings.interface.chatLinkingToggleDesc': 'Automatically add a clickable chat reference to the frontmatter of every note the agent creates or edits. Disable to keep frontmatter clean.',
+    'settings.interface.chatLinkingModel': 'Titling model',
+    'settings.interface.chatLinkingModelDesc': 'Select a small, fast model (e.g., Haiku, Flash) for cost-efficient semantic title generation. Leave empty to use the first 60 characters as title.',
+    'settings.interface.chatLinkingNoModels': 'No models configured. Add and enable a model in providers first.',
+    'settings.interface.chatLinkingSelectModel': '-- no semantic titling --',
 
     // =========================================================================
     // Settings — Shell Tab
@@ -841,6 +848,29 @@ export const en: Translations = {
     'ui.approval.allowOnce': 'Allow once',
     'ui.approval.enableInSettings': 'Always allow',
     'ui.approval.configDirWarning': 'Write access to protected directory: {{path}}. Files in this directory control plugins, themes, and Obsidian settings. Unintended changes can alter Obsidian behavior or install malicious code as a plugin.',
+    'ui.approval.explain.writeFile': 'The agent wants to create a new file:',
+    'ui.approval.explain.editFile': 'The agent wants to edit an existing file:',
+    'ui.approval.explain.appendFile': 'The agent wants to append text to a file:',
+    'ui.approval.explain.deleteFile': 'The agent wants to move a file to the trash:',
+    'ui.approval.explain.moveFile': 'The agent wants to move a file:',
+    'ui.approval.explain.moveFileTo': 'to',
+    'ui.approval.explain.createFolder': 'The agent wants to create a new folder:',
+    'ui.approval.explain.sandbox': 'The agent wants to run a script to process data in your vault.',
+    'ui.approval.explain.webFetch': 'The agent wants to fetch a web page:',
+    'ui.approval.explain.webSearch': 'The agent wants to search the internet for:',
+    'ui.approval.explain.newTask': 'The agent wants to start a sub-agent for a subtask.',
+    'ui.approval.explain.mcpTool': 'The agent wants to use an external tool:',
+    'ui.approval.explain.pluginApi': 'The agent wants to access a plugin:',
+    'ui.approval.explain.command': 'The agent wants to run an Obsidian command:',
+    'ui.approval.explain.recipe': 'The agent wants to run a recipe:',
+    'ui.approval.explain.switchMode': 'The agent wants to switch to a different mode.',
+    'ui.approval.explain.frontmatter': 'The agent wants to change the metadata of a note:',
+    'ui.approval.explain.canvas': 'The agent wants to create a canvas visualization:',
+    'ui.approval.explain.excalidraw': 'The agent wants to create an Excalidraw drawing:',
+    'ui.approval.explain.selfModify': 'The agent wants to change its own configuration.',
+    'ui.approval.explain.fallback': 'The agent wants to perform the following action:',
+    'ui.approval.explain.showDetails': 'Show details',
+    'ui.approval.explain.hideDetails': 'Hide details',
 
     // =========================================================================
     // Chat UI — Checkpoint
@@ -884,6 +914,7 @@ export const en: Translations = {
     'notice.modeSwitched': 'Switched to {{mode}} mode',
     'notice.taskComplete': 'Agent task complete',
     'notice.loadConversationFailed': 'Could not load conversation',
+    'notice.conversationNotFound': 'This conversation no longer exists. It may have been deleted from history.',
     'notice.copied': 'Copied.',
     'notice.insertedAtCursor': 'Inserted at cursor.',
     'notice.noOpenNote': 'No open note found \u2014 open a note in the editor first.',
@@ -902,15 +933,15 @@ export const en: Translations = {
     // =========================================================================
     // ToolPicker Popover
     // =========================================================================
-    'ui.toolPicker.title': 'Configure tools',
+    'ui.toolPicker.title': 'Tools & Skills',
     'ui.toolPicker.selected': '{{count}} selected',
-    'ui.toolPicker.filter': 'Filter tools\u2026',
-    'ui.toolPicker.builtIn': 'Built-in',
+    'ui.toolPicker.filter': 'Filter\u2026',
+    'ui.toolPicker.builtIn': 'Built-in tools',
     'ui.toolPicker.mcpServers': 'MCP servers',
     'ui.toolPicker.noMcpServers': 'No MCP servers configured.',
-    'ui.toolPicker.skills': 'Skills',
+    'ui.toolPicker.skills': 'User skills',
     'ui.toolPicker.loading': 'Loading\u2026',
-    'ui.toolPicker.noSkills': 'No skills found.',
+    'ui.toolPicker.noSkills': 'No user skills found.',
     'ui.toolPicker.errorSkills': 'Error loading skills.',
     'ui.toolPicker.workflows': 'Workflows',
     'ui.toolPicker.noWorkflows': 'No workflows found.',
@@ -937,13 +968,21 @@ export const en: Translations = {
     'ui.history.thisWeek': 'This week',
     'ui.history.older': 'Older',
     'ui.history.messageCount': '{{count}} msgs',
+    'ui.history.copyLink': 'Copy chat link',
+    'ui.history.linkCopied': 'Chat link copied',
+    'ui.history.addToNote': 'Add link to active note',
+    'ui.history.linkAdded': 'Chat link added to note',
+    'ui.history.linkAlreadyExists': 'Link already exists in note',
+    'ui.history.linkAddFailed': 'Failed to add link',
+    'ui.history.noActiveNote': 'No active Markdown note',
 
     // =========================================================================
     // Attachment Handler
     // =========================================================================
-    'ui.attachment.tooLarge': '"{{name}}" exceeds the 10 MB limit.',
-    'ui.attachment.unsupported': '"{{name}}" is not supported. Use images (PNG/JPG/GIF/WebP) or text files.',
+    'ui.attachment.tooLarge': '"{{name}}" exceeds the 50 MB limit.',
+    'ui.attachment.unsupported': '"{{name}}" is not supported. Use images, Office documents (PPTX/XLSX/DOCX/PDF), or text files.',
     'ui.attachment.readFailed': 'Could not read "{{path}}"',
+    'ui.attachment.largeDocument': '"{{name}}" is very large. Content may be condensed during the conversation.',
 
     // =========================================================================
     // Modal — New Mode

@@ -2,7 +2,7 @@
 
 **Status**: Accepted
 **Date**: 2026-02-25
-**Feature**: FEATURE-skill-mastery (Phase 1)
+**Feature**: FEATURE-0407-skill-mastery (Phase 1)
 
 ## Context
 

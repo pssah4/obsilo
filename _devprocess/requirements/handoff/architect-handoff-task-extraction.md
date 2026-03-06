@@ -1,7 +1,7 @@
 # Architect Handoff: Task Extraction & Management
 
-> **Source**: FEATURE-100-task-extraction.md
-> **BA Reference**: BA-task-extraction.md
+> **Source**: FEATURE-0801-task-extraction.md
+> **BA Reference**: BA-003-task-extraction.md
 > **Date**: 2026-03-03
 > **Status**: Ready for Architecture
 

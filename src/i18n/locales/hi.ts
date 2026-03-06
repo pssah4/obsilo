@@ -317,6 +317,7 @@ export const hi: Translations = {
     'settings.permissions.sandboxConfirmMessage': 'यह एजेंट को बिना आपकी समीक्षा के कोड चलाने की अनुमति देता है। सैंडबॉक्स बुनियादी सुरक्षा प्रदान करता है लेकिन पूरी तरह अलग नहीं है। भ्रामक सामग्री (जैसे वेब पेज या vault नोट्स से) बिना समीक्षा के कोड चलने का कारण बन सकती है। क्या आप वाकई इसे सक्षम करना चाहते हैं?',
     'settings.permissions.sandboxConfirmCancel': 'रद्द करें',
     'settings.permissions.sandboxConfirmAccept': 'मैं जोखिम समझता/समझती हूं -- सक्षम करें',
+    'settings.permissions.permissiveWarning': 'अनुमेय मोड: वेब एक्सेस और लेखन कार्य दोनों स्वतः स्वीकृत हैं। अविश्वसनीय वेब पेजों या वॉल्ट नोट्स की सामग्री एजेंट को बिना समीक्षा के आपके वॉल्ट को संशोधित करने के लिए धोखा दे सकती है। यह सबसे उच्च-जोखिम कॉन्फ़िगरेशन है। वेब एक्सेस या लेखन कार्यों के लिए स्वतः स्वीकृति अक्षम करने पर विचार करें।',
 
     // =========================================================================
     // Settings — Loop Tab
@@ -531,6 +532,13 @@ export const hi: Translations = {
     'settings.interface.skipSetup': 'सेटअप छोड़ें',
     'settings.interface.historyPlaceholder': 'agent/history',
     'settings.interface.setupSkipped': 'सेटअप छोड़ दिया गया। आप सेटिंग्स से कभी भी पुनः प्रारंभ कर सकते हैं।',
+    'settings.interface.headingChatLinking': 'चैट लिंकिंग',
+    'settings.interface.chatLinkingToggle': 'फ्रंटमैटर में चैट स्वचालित रूप से लिंक करें',
+    'settings.interface.chatLinkingToggleDesc': 'एजेंट द्वारा बनाई या संपादित प्रत्येक नोट के फ्रंटमैटर में क्लिक करने योग्य चैट संदर्भ स्वचालित रूप से जोड़ें।',
+    'settings.interface.chatLinkingModel': 'शीर्षक मॉडल',
+    'settings.interface.chatLinkingModelDesc': 'सिमैंटिक शीर्षक के लिए छोटा, तेज मॉडल (जैसे Haiku, Flash) चुनें। खाली छोड़ें तो पहले 60 अक्षर शीर्षक के रूप में उपयोग होंगे।',
+    'settings.interface.chatLinkingNoModels': 'कोई मॉडल कॉन्फ़िगर नहीं है। पहले प्रदाताओं में एक मॉडल जोड़ें।',
+    'settings.interface.chatLinkingSelectModel': '-- कोई सिमैंटिक शीर्षक नहीं --',
 
     // =========================================================================
     // Settings — Shell Tab
@@ -838,6 +846,29 @@ export const hi: Translations = {
     'ui.approval.allowOnce': 'एक बार अनुमति दें',
     'ui.approval.enableInSettings': 'हमेशा अनुमति दें',
     'ui.approval.configDirWarning': 'संरक्षित डायरेक्टरी में लेखन पहुंच: {{path}}। इस डायरेक्टरी की फ़ाइलें प्लगइन, थीम, और Obsidian सेटिंग्स नियंत्रित करती हैं। अनजाने परिवर्तन Obsidian व्यवहार बदल सकते हैं या दुर्भावनापूर्ण कोड प्लगइन के रूप में स्थापित कर सकते हैं।',
+    'ui.approval.explain.writeFile': 'एजेंट एक नई फ़ाइल बनाना चाहता है:',
+    'ui.approval.explain.editFile': 'एजेंट एक मौजूदा फ़ाइल संपादित करना चाहता है:',
+    'ui.approval.explain.appendFile': 'एजेंट एक फ़ाइल में टेक्स्ट जोड़ना चाहता है:',
+    'ui.approval.explain.deleteFile': 'एजेंट एक फ़ाइल को ट्रैश में ले जाना चाहता है:',
+    'ui.approval.explain.moveFile': 'एजेंट एक फ़ाइल स्थानांतरित करना चाहता है:',
+    'ui.approval.explain.moveFileTo': 'को',
+    'ui.approval.explain.createFolder': 'एजेंट एक नया फ़ोल्डर बनाना चाहता है:',
+    'ui.approval.explain.sandbox': 'एजेंट आपके वॉल्ट में डेटा प्रोसेस करने के लिए एक स्क्रिप्ट चलाना चाहता है।',
+    'ui.approval.explain.webFetch': 'एजेंट एक वेब पेज प्राप्त करना चाहता है:',
+    'ui.approval.explain.webSearch': 'एजेंट इंटरनेट पर खोजना चाहता है:',
+    'ui.approval.explain.newTask': 'एजेंट एक उप-कार्य के लिए उप-एजेंट शुरू करना चाहता है।',
+    'ui.approval.explain.mcpTool': 'एजेंट एक बाहरी टूल का उपयोग करना चाहता है:',
+    'ui.approval.explain.pluginApi': 'एजेंट एक प्लगइन तक पहुंचना चाहता है:',
+    'ui.approval.explain.command': 'एजेंट एक Obsidian कमांड चलाना चाहता है:',
+    'ui.approval.explain.recipe': 'एजेंट एक रेसिपी चलाना चाहता है:',
+    'ui.approval.explain.switchMode': 'एजेंट एक अलग मोड में स्विच करना चाहता है।',
+    'ui.approval.explain.frontmatter': 'एजेंट एक नोट का मेटाडेटा बदलना चाहता है:',
+    'ui.approval.explain.canvas': 'एजेंट एक कैनवास विज़ुअलाइज़ेशन बनाना चाहता है:',
+    'ui.approval.explain.excalidraw': 'एजेंट एक Excalidraw ड्रॉइंग बनाना चाहता है:',
+    'ui.approval.explain.selfModify': 'एजेंट अपना कॉन्फ़िगरेशन बदलना चाहता है।',
+    'ui.approval.explain.fallback': 'एजेंट निम्नलिखित कार्य करना चाहता है:',
+    'ui.approval.explain.showDetails': 'विवरण दिखाएं',
+    'ui.approval.explain.hideDetails': 'विवरण छिपाएं',
 
     // =========================================================================
     // Chat UI — Checkpoint
@@ -881,6 +912,7 @@ export const hi: Translations = {
     'notice.modeSwitched': '{{mode}} मोड में स्विच किया',
     'notice.taskComplete': 'एजेंट कार्य पूर्ण',
     'notice.loadConversationFailed': 'बातचीत लोड नहीं हो सकी',
+    'notice.conversationNotFound': 'यह बातचीत अब मौजूद नहीं है। इसे इतिहास से हटा दिया गया हो सकता है।',
     'notice.copied': 'कॉपी हो गया।',
     'notice.insertedAtCursor': 'कर्सर पर डाला गया।',
     'notice.noOpenNote': 'कोई खुला नोट नहीं मिला -- पहले संपादक में एक नोट खोलें।',
@@ -934,6 +966,13 @@ export const hi: Translations = {
     'ui.history.thisWeek': 'इस सप्ताह',
     'ui.history.older': 'पुराने',
     'ui.history.messageCount': '{{count}} संदेश',
+    'ui.history.copyLink': 'चैट लिंक कॉपी करें',
+    'ui.history.linkCopied': 'चैट लिंक कॉपी हो गया',
+    'ui.history.addToNote': 'सक्रिय नोट में लिंक जोड़ें',
+    'ui.history.linkAdded': 'चैट लिंक नोट में जोड़ा गया',
+    'ui.history.linkAlreadyExists': 'लिंक पहले से नोट में मौजूद है',
+    'ui.history.linkAddFailed': 'लिंक जोड़ने में विफल',
+    'ui.history.noActiveNote': 'कोई सक्रिय Markdown नोट नहीं',
 
     // =========================================================================
     // Attachment Handler
@@ -941,6 +980,7 @@ export const hi: Translations = {
     'ui.attachment.tooLarge': '"{{name}}" 10 MB सीमा से अधिक है।',
     'ui.attachment.unsupported': '"{{name}}" समर्थित नहीं है। छवियां (PNG/JPG/GIF/WebP) या टेक्स्ट फ़ाइलें उपयोग करें।',
     'ui.attachment.readFailed': '"{{path}}" पढ़ा नहीं जा सका',
+    'ui.attachment.largeDocument': '"{{name}}" बहुत बड़ा है। बातचीत के दौरान सामग्री संक्षिप्त की जा सकती है।',
 
     // =========================================================================
     // Modal — New Mode

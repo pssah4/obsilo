@@ -32,7 +32,7 @@ import type { ApiHandler } from './api/types';
 import type { ToolUse, ToolCallbacks } from './core/tools/types';
 import { BUILT_IN_MODES } from './core/modes/builtinModes';
 import { mergeDefaultPrompts } from './core/prompts/defaultPrompts';
-import { initI18n } from './i18n';
+import { initI18n, t } from './i18n';
 import { SafeStorageService } from './core/security/SafeStorageService';
 import { setGlobalModeStoreFs } from './core/modes/GlobalModeStore';
 import { RecipeStore } from './core/mastery/RecipeStore';
@@ -104,6 +104,61 @@ export default class ObsidianAgentPlugin extends Plugin {
     embeddedSourceManager: EmbeddedSourceManager | null = null;
     pluginBuilder: PluginBuilder | null = null;
     pluginReloader: PluginReloader | null = null;
+
+    // ── Chat-Linking: deferred frontmatter stamping (ADR-022) ────────────
+    /** Paths written by the agent, grouped by conversationId. Flushed on conversation end. */
+    pendingChatLinks = new Map<string, Set<string>>();
+
+    /** Track a written .md path for deferred chat-link stamping. */
+    trackChatLinkPath(conversationId: string, path: string): void {
+        if (!path.endsWith('.md')) return;
+        let paths = this.pendingChatLinks.get(conversationId);
+        if (!paths) {
+            paths = new Set();
+            this.pendingChatLinks.set(conversationId, paths);
+        }
+        paths.add(path);
+    }
+
+    /**
+     * Stamp chat-links into frontmatter for all pending paths of a conversation.
+     * Idempotent: can be called multiple times (e.g. after fallback title, then again after semantic title).
+     * Does NOT clear pending paths — call clearPendingChatLinks() for that.
+     */
+    async flushPendingChatLinks(conversationId: string): Promise<void> {
+        const paths = this.pendingChatLinks.get(conversationId);
+        if (!paths || paths.size === 0 || !this.settings.chatLinking?.enabled) return;
+
+        const store = this.conversationStore;
+        const meta = store?.list().find((m: { id: string }) => m.id === conversationId);
+        const title = meta?.title || 'Chat';
+        const uri = `obsidian://obsilo-chat?id=${encodeURIComponent(conversationId)}`;
+        const link = `[${title}](${uri})`;
+
+        for (const p of paths) {
+            const file = this.app.vault.getAbstractFileByPath(p);
+            if (!(file instanceof TFile) || file.extension !== 'md') continue;
+            try {
+                await this.app.fileManager.processFrontMatter(file, (fm) => {
+                    const links: string[] = fm['chats'] ?? [];
+                    const idx = links.findIndex((l: string) => l.includes(conversationId));
+                    if (idx >= 0) {
+                        links[idx] = link;
+                    } else {
+                        links.push(link);
+                    }
+                    fm['chats'] = links;
+                });
+            } catch (e) {
+                console.warn(`[ChatLink] Failed to stamp ${p}:`, e);
+            }
+        }
+    }
+
+    /** Remove pending chat-link paths for a conversation (called on conversation clear/switch). */
+    clearPendingChatLinks(conversationId: string): void {
+        this.pendingChatLinks.delete(conversationId);
+    }
 
     /**
      * Plugin initialization
@@ -287,24 +342,23 @@ export default class ObsidianAgentPlugin extends Plugin {
         // Auto-index: keep semantic index current as vault files change.
         // Only enabled when semanticAutoIndexOnChange is explicitly set.
         if (this.settings.enableSemanticIndex && this.semanticIndex && this.settings.semanticAutoIndexOnChange) {
+            const DOCUMENT_EXTENSIONS = new Set(['pdf', 'pptx', 'xlsx', 'docx']);
+            const isIndexable = (f: TFile): boolean =>
+                f.extension === 'md' || (this.settings.semanticIndexPdfs && DOCUMENT_EXTENSIONS.has(f.extension));
             this.registerEvent(this.app.vault.on('modify', (file) => {
-                if (!(file instanceof TFile)) return;
-                if (file.extension !== 'md' && !(this.settings.semanticIndexPdfs && file.extension === 'pdf')) return;
+                if (!(file instanceof TFile) || !isIndexable(file)) return;
                 this.scheduleFileIndex(file.path);
             }));
             this.registerEvent(this.app.vault.on('create', (file) => {
-                if (!(file instanceof TFile)) return;
-                if (file.extension !== 'md' && !(this.settings.semanticIndexPdfs && file.extension === 'pdf')) return;
+                if (!(file instanceof TFile) || !isIndexable(file)) return;
                 this.scheduleFileIndex(file.path);
             }));
             this.registerEvent(this.app.vault.on('delete', (file) => {
-                if (!(file instanceof TFile)) return;
-                if (file.extension !== 'md' && !(this.settings.semanticIndexPdfs && file.extension === 'pdf')) return;
+                if (!(file instanceof TFile) || !isIndexable(file)) return;
                 void this.semanticIndex?.removeFile(file.path);
             }));
             this.registerEvent(this.app.vault.on('rename', (file, oldPath) => {
-                if (!(file instanceof TFile)) return;
-                if (file.extension !== 'md' && !(this.settings.semanticIndexPdfs && file.extension === 'pdf')) return;
+                if (!(file instanceof TFile) || !isIndexable(file)) return;
                 void this.semanticIndex?.removeFile(oldPath);
                 this.scheduleFileIndex(file.path);
             }));
@@ -410,6 +464,16 @@ export default class ObsidianAgentPlugin extends Plugin {
             void this.activateView();
         });
 
+        // Protocol handler: deep-link into a specific conversation (ADR-022)
+        this.registerObsidianProtocolHandler('obsilo-chat', (params) => {
+            const id = params.id;
+            if (!id || typeof id !== 'string') return;
+            void this.openChatById(id);
+        });
+
+        // Register 'Chats' property as list type so Properties view shows individual items
+        this.app.metadataTypeManager.setType('chats', 'multitext');
+
         // Auto-open sidebar when Obsidian starts
         this.app.workspace.onLayoutReady(() => {
             void this.activateView();
@@ -453,6 +517,11 @@ export default class ObsidianAgentPlugin extends Plugin {
      */
     async onunload() {
         console.debug('Unloading Obsilo Agent plugin');
+        // Flush any pending chat-links before shutdown
+        for (const convId of [...this.pendingChatLinks.keys()]) {
+            await this.flushPendingChatLinks(convId).catch(() => {});
+        }
+        this.pendingChatLinks.clear();
         // Push global data back to vault plugin dir for Obsidian Sync (ADR-020)
         await this.syncBridge?.pushToVault().catch((e) =>
             console.warn('[Plugin] SyncBridge push failed (non-fatal):', e)
@@ -553,6 +622,12 @@ export default class ObsidianAgentPlugin extends Plugin {
         this.settings.memory.autoUpdateLongTerm = this.settings.memory.autoUpdateLongTerm ?? memDefaults.autoUpdateLongTerm;
         this.settings.memory.memoryModelKey = this.settings.memory.memoryModelKey ?? memDefaults.memoryModelKey;
         this.settings.memory.extractionThreshold = this.settings.memory.extractionThreshold ?? memDefaults.extractionThreshold;
+
+        // Deep-merge chat-linking settings (ADR-022)
+        const clDefaults = DEFAULT_SETTINGS.chatLinking;
+        this.settings.chatLinking = this.settings.chatLinking ?? clDefaults;
+        this.settings.chatLinking.enabled = this.settings.chatLinking.enabled ?? clDefaults.enabled;
+        this.settings.chatLinking.titlingModelKey = this.settings.chatLinking.titlingModelKey ?? clDefaults.titlingModelKey;
 
         // Seed / update built-in default prompts (preserves user enabled state)
         this.settings.customPrompts = mergeDefaultPrompts(this.settings.customPrompts ?? []);
@@ -866,15 +941,35 @@ export default class ObsidianAgentPlugin extends Plugin {
             }
         }
 
-        // Reveal the view and set sidebar width to 28.5% of window
+        // Reveal the view and set sidebar width to 30% of window
         if (leaf) {
             void workspace.revealLeaf(leaf);
 
             const rightSplit = workspace.rightSplit;
             if (rightSplit && typeof rightSplit.setSize === 'function') {
-                const targetWidth = Math.round(window.innerWidth * 0.285);
+                const targetWidth = Math.round(window.innerWidth * 0.30);
                 rightSplit.setSize(targetWidth);
             }
+        }
+    }
+
+    /**
+     * Open a conversation by ID via deep-link (ADR-022, FEATURE-300).
+     * Activates the sidebar and loads the conversation if it exists.
+     */
+    async openChatById(id: string): Promise<void> {
+        await this.activateView();
+        const store = this.conversationStore;
+        if (!store) return;
+        const meta = store.list().find((m) => m.id === id);
+        if (!meta) {
+            new Notice(t('notice.conversationNotFound'));
+            return;
+        }
+        const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_AGENT_SIDEBAR);
+        if (leaves.length > 0) {
+            const view = leaves[0].view as AgentSidebarView;
+            void view.loadConversationById(id);
         }
     }
 

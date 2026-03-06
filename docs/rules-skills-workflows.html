@@ -83,7 +83,7 @@
       </div>
 
       <h1 data-i18n="pages.rulesSkillsWorkflows.title">Rules, Skills &amp; Workflows</h1>
-      <p data-i18n="pages.rulesSkillsWorkflows.subtitle">Tailor Obsilo to your vault, writing style, and daily routines. Set permanent conventions the agent always follows, activate context-specific instructions for particular task types, and invoke step-by-step procedures on demand — all without touching the agent's core settings.</p>
+      <p data-i18n="pages.rulesSkillsWorkflows.subtitle">Customize the agent's behavior with rules, skills, and workflows. Rules are always-on conventions. Skills are instruction sets matched by keywords. Workflows are step-by-step procedures invoked on demand.</p>
 
       <table data-i18n-html="pages.rulesSkillsWorkflows.overview.table">
         <thead><tr><th>Mechanism</th><th>When it applies</th><th>Best for</th></tr></thead>
@@ -138,7 +138,7 @@ existing note content is in another language.</code></pre>
 
       <!-- SKILLS -->
       <h2 id="skills" data-i18n="pages.rulesSkillsWorkflows.skills">Skills</h2>
-      <p data-i18n-html="pages.rulesSkillsWorkflows.skills.text">Skills are modular instruction sets that the agent can apply for specific task types. Unlike rules (which are always active), skills are <strong>automatically matched</strong> to each message by keyword overlap.</p>
+      <p data-i18n-html="pages.rulesSkillsWorkflows.skills.text">Skills are instruction sets (Markdown) that guide the agent for specific task types. Unlike rules (always active) and tools (executable functions), skills provide context-specific instructions that are <strong>automatically matched</strong> by keyword overlap. Skills do not execute code.</p>
 
       <h3 id="skills-location" data-i18n="pages.rulesSkillsWorkflows.skillsLocation">Location</h3>
       <pre><code>&lt;vault&gt;/.obsidian-agent/skills/
@@ -188,7 +188,7 @@ Create a separate action item note if there are 5+ action items.</code></pre>
       <p data-i18n="pages.rulesSkillsWorkflows.vaultdnaSkills.text2">The scanner runs automatically when plugins change and classifies each plugin as FULL (3+ commands), PARTIAL (1-2 commands), or NONE (no agentifiable commands). You don't need to configure anything — plugin skills appear automatically.</p>
 
       <h3 id="recipes" data-i18n="pages.rulesSkillsWorkflows.recipes">Recipes</h3>
-      <p data-i18n-html="pages.rulesSkillsWorkflows.recipes.text">Recipes are predefined multi-step procedures that combine multiple plugin commands into a single action. They are invoked via the <code>execute_recipe</code> tool. Examples include Pandoc export pipelines, Dataview query workflows, or complex plugin integrations. Recipes can be auto-promoted from episodic memory when the agent repeatedly performs the same sequence of steps.</p>
+      <p data-i18n-html="pages.rulesSkillsWorkflows.recipes.text">Recipes are predefined shell command templates for external tools like Pandoc. They are invoked via the <code>execute_recipe</code> tool and run outside the sandbox in the plugin context. Examples include Pandoc PDF/DOCX export.</p>
 
       <h3 id="skills-management" data-i18n="pages.rulesSkillsWorkflows.skillsManagement">Managing Skills</h3>
       <p data-i18n-html="pages.rulesSkillsWorkflows.skillsManagement.text">Go to Settings → Agent Behaviour → <strong>Skills</strong> to view, edit, and manage your skills. You can also create skill files directly in your vault.</p>
@@ -259,6 +259,54 @@ Format as:
 
       <h3 id="prompts-management" data-i18n="pages.rulesSkillsWorkflows.promptsManagement">Managing Prompts</h3>
       <p data-i18n-html="pages.rulesSkillsWorkflows.promptsManagement.text">Go to Settings → Agent Behaviour → <strong>Prompts</strong>. Create, edit, enable/disable, and delete prompts. You can optionally restrict a prompt to a specific mode (it only shows in autocomplete and works in that mode).</p>
+
+      <h2 id="task-extraction">Task Extraction</h2>
+      <p>When the agent completes a task, Obsilo automatically scans the response for unchecked task items (<code>- [ ]</code> Markdown pattern). If tasks are found, a selection modal appears where you can choose which items to convert into standalone task notes.</p>
+
+      <h3 id="task-flow">How It Works</h3>
+      <ol>
+        <li><strong>Detection</strong> &mdash; After the agent finishes, a regex-based <code>TaskExtractor</code> scans the accumulated response text for <code>- [ ]</code> items. No LLM call is needed &mdash; the entire flow is deterministic.</li>
+        <li><strong>Selection</strong> &mdash; A <code>TaskSelectionModal</code> presents all detected tasks with checkboxes. You pick which ones to create as notes.</li>
+        <li><strong>Note Creation</strong> &mdash; Each selected task becomes a standalone note with a structured 10-property frontmatter schema: category, summary, status, urgent, important, due date, assignee, source, created, and notes.</li>
+      </ol>
+
+      <h3 id="task-frontmatter">Frontmatter Schema</h3>
+      <p>Every task note is created with an Eisenhower-compatible frontmatter that works well with Obsidian Bases and Dataview:</p>
+      <pre><code>---
+Kategorie: ""
+Zusammenfassung: "Review Q1 sales report"
+Status: "offen"
+Dringend: false
+Wichtig: true
+Faelligkeit: ""
+Assignee: ""
+Quelle: "Meeting Notes/2026-03-06"
+created: "2026-03-06T14:30:00"
+Notizen: ""
+---</code></pre>
+
+      <h3 id="task-settings">Settings</h3>
+      <p>Task extraction is enabled by default. You can configure the target folder for task notes and the frontmatter defaults in Settings → Agent Behaviour → Task Extraction.</p>
+
+      <h2 id="chat-linking">Chat-Linking</h2>
+      <p>Obsilo automatically creates traceability links between agent chats and the notes they modify. When the agent writes to a <code>.md</code> file, a deep link to the current conversation is added to the note's YAML frontmatter.</p>
+
+      <h3 id="chat-linking-how">How It Works</h3>
+      <p>After every successful write operation on a Markdown file, the <code>ToolExecutionPipeline</code> runs a post-write hook (<code>stampChatLink</code>) that adds the conversation ID as an <code>obsidian://</code> protocol link:</p>
+      <pre><code>---
+obsilo-chats:
+  - obsidian://obsilo-chat?id=2026-03-06-a1b2c3
+---</code></pre>
+      <p>Clicking the link in any note opens the corresponding chat in the Obsilo sidebar. The frontmatter update uses <code>processFrontMatter()</code> for atomic, duplicate-safe writes.</p>
+
+      <h3 id="chat-linking-features">Features</h3>
+      <ul>
+        <li><strong>Automatic</strong> &mdash; No manual action needed. Links are added transparently after every write.</li>
+        <li><strong>Semantic Titles</strong> &mdash; Chat titles are generated automatically based on the conversation content.</li>
+        <li><strong>Deep Links</strong> &mdash; <code>obsidian://obsilo-chat?id=...</code> protocol links open the chat directly.</li>
+        <li><strong>Duplicate-safe</strong> &mdash; The same chat link is never added twice to a note.</li>
+        <li><strong>Configurable</strong> &mdash; Can be disabled in Settings → Agent Behaviour → Chat-Linking.</li>
+      </ul>
 
       <div class="page-nav">
         <a href="permissions.html" class="page-nav-item">

@@ -186,6 +186,7 @@ function getToolGroupMeta(): Record<string, { label: string; desc: string; tools
  */
 const PROVIDER_LABELS: Record<string, string> = new Proxy({} as Record<string, string>, {
     get(_target, prop: string) { return getProviderLabels()[prop]; },
+    has(_target, prop: string) { return prop in getProviderLabels(); },
     ownKeys() { return Object.keys(getProviderLabels()); },
     getOwnPropertyDescriptor(_target, prop: string) {
         const labels = getProviderLabels();
@@ -196,6 +197,7 @@ const PROVIDER_LABELS: Record<string, string> = new Proxy({} as Record<string, s
 
 const TOOL_LABEL_MAP: Record<string, { label: string; desc: string }> = new Proxy({} as Record<string, { label: string; desc: string }>, {
     get(_target, prop: string) { return getToolLabelMap()[prop]; },
+    has(_target, prop: string) { return prop in getToolLabelMap(); },
     ownKeys() { return Object.keys(getToolLabelMap()); },
     getOwnPropertyDescriptor(_target, prop: string) {
         const map = getToolLabelMap();
@@ -206,6 +208,7 @@ const TOOL_LABEL_MAP: Record<string, { label: string; desc: string }> = new Prox
 
 const TOOL_GROUP_META: Record<string, { label: string; desc: string; tools: string[] }> = new Proxy({} as Record<string, { label: string; desc: string; tools: string[] }>, {
     get(_target, prop: string) { return getToolGroupMeta()[prop]; },
+    has(_target, prop: string) { return prop in getToolGroupMeta(); },
     ownKeys() { return Object.keys(getToolGroupMeta()); },
     getOwnPropertyDescriptor(_target, prop: string) {
         const map = getToolGroupMeta();

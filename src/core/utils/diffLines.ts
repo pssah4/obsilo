@@ -1,8 +1,10 @@
 /**
- * Simple line-level diff using the Myers diff algorithm.
+ * Line-level diff using the optimized `diff` npm package (Myers algorithm).
  * Returns an array of DiffLine objects describing which lines were added,
  * removed, or unchanged between oldText and newText.
  */
+
+import { diffLines as jsDiffLines } from 'diff';
 
 export interface DiffLine {
     type: 'added' | 'removed' | 'unchanged';
@@ -15,12 +17,20 @@ export interface DiffStats {
 }
 
 export function diffLines(oldText: string, newText: string): DiffLine[] {
-    const oldLines = oldText.split('\n');
-    const newLines = newText.split('\n');
-
-    // Myers shortest-edit-script via dynamic-programming LCS table
-    const lcs = buildLCS(oldLines, newLines);
-    return buildDiff(oldLines, newLines, lcs);
+    const changes = jsDiffLines(oldText, newText);
+    const result: DiffLine[] = [];
+    for (const change of changes) {
+        // diff package appends trailing \n — strip it to get clean line array
+        const raw = change.value.endsWith('\n')
+            ? change.value.slice(0, -1)
+            : change.value;
+        const lines = raw.split('\n');
+        const type: DiffLine['type'] = change.added ? 'added' : change.removed ? 'removed' : 'unchanged';
+        for (const content of lines) {
+            result.push({ type, content });
+        }
+    }
+    return result;
 }
 
 export function getDiffStats(lines: DiffLine[]): DiffStats {
@@ -31,46 +41,4 @@ export function getDiffStats(lines: DiffLine[]): DiffStats {
         else if (l.type === 'removed') removed++;
     }
     return { added, removed };
-}
-
-// ---------------------------------------------------------------------------
-// Private helpers
-// ---------------------------------------------------------------------------
-
-function buildLCS(a: string[], b: string[]): number[][] {
-    const m = a.length;
-    const n = b.length;
-    const dp: number[][] = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
-    for (let i = 1; i <= m; i++) {
-        for (let j = 1; j <= n; j++) {
-            if (a[i - 1] === b[j - 1]) {
-                dp[i][j] = dp[i - 1][j - 1] + 1;
-            } else {
-                dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
-            }
-        }
-    }
-    return dp;
-}
-
-function buildDiff(a: string[], b: string[], dp: number[][]): DiffLine[] {
-    const result: DiffLine[] = [];
-    let i = a.length;
-    let j = b.length;
-
-    while (i > 0 || j > 0) {
-        if (i > 0 && j > 0 && a[i - 1] === b[j - 1]) {
-            result.unshift({ type: 'unchanged', content: a[i - 1] });
-            i--;
-            j--;
-        } else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) {
-            result.unshift({ type: 'added', content: b[j - 1] });
-            j--;
-        } else {
-            result.unshift({ type: 'removed', content: a[i - 1] });
-            i--;
-        }
-    }
-
-    return result;
 }
