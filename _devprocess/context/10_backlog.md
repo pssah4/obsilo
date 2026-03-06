@@ -157,62 +157,69 @@ Branch: `feature/task-management`
 
 ### Bekannte Bugs (aus Codebase-Analyse)
 
-| ID | Prio | Beschreibung | Datei |
-|----|------|-------------|-------|
-| FIX-01 | P0 | Tool JSON-Parse Error wird verschluckt statt propagiert | `src/api/providers/*.ts` |
-| FIX-02 | P0 | EditFileTool.tryNormalizedMatch() Inkonsistenz (trim vs normalize) | `src/core/tools/vault/EditFileTool.ts` |
-| FIX-03 | P0 | Checkpoint-Snapshot Race Condition bei concurrent Writes | `src/core/checkpoints/GitCheckpointService.ts` |
-| FIX-04 | P1 | Tool-Picker Event-Listener Memory Leak | `src/ui/sidebar/ToolPickerPopover.ts` |
-| FIX-05 | P1 | SearchFilesTool Regex lastIndex Bug (global Flag) | `src/core/tools/vault/SearchFilesTool.ts` |
-| FIX-06 | P2 | Consecutive-Mistake-Counter Reset bei Mode-Switch fehlt | `src/core/AgentTask.ts` |
+| ID | Prio | Beschreibung | Datei | Status |
+|----|------|-------------|-------|--------|
+| FIX-01 | P0 | Tool JSON-Parse Error wird verschluckt statt propagiert | `src/api/providers/*.ts` | Resolved -- Error als tool_error/text-chunk propagiert |
+| FIX-02 | P0 | EditFileTool.tryNormalizedMatch() Inkonsistenz (trim vs normalize) | `src/core/tools/vault/EditFileTool.ts` | Resolved -- konsistente normalize()-Funktion |
+| FIX-03 | P0 | Checkpoint-Snapshot Race Condition bei concurrent Writes | `src/core/checkpoints/GitCheckpointService.ts` | Resolved -- serielle Commits, in-memory Map |
+| FIX-04 | P1 | Tool-Picker Event-Listener Memory Leak | `src/ui/sidebar/ToolPickerPopover.ts` | Resolved -- close() entfernt alle Listener |
+| FIX-05 | P1 | SearchFilesTool Regex lastIndex Bug (global Flag) | `src/core/tools/vault/SearchFilesTool.ts` | Resolved -- safeRegex() ohne global Flag |
+| FIX-06 | P2 | Consecutive-Mistake-Counter Reset bei Mode-Switch fehlt | `src/core/AgentTask.ts` | Resolved -- consecutiveMistakes + repetitionDetector Reset |
 
-### Security Findings (aus Scan 2026-03-01)
+### Security Findings (abgeglichen mit AUDIT-003 vom 2026-03-06)
 
-| ID | Severity | Finding | Status |
-|----|----------|---------|--------|
-| H-1 | High | `new Function()` in EsbuildWasmManager (CWE-94) | Mitigiert (ProcessSandboxExecutor auf Desktop, SHA-256) |
-| H-2 | High | PostMessage Origin-Validierung Luecken | Mitigiert (IframeSandboxExecutor nur Mobile-Fallback) |
-| H-3 | High | iframe Sandbox Effektivitaet in Electron | Geloest: ProcessSandboxExecutor auf Desktop (OS-Level Isolation) |
-| M-1 | Medium | User-controlled Regex ReDoS in SearchFilesTool | Mitigiert (safeRegex) |
-| M-2 | Medium | IgnoreService Glob-to-Regex ReDoS | Mitigiert (Length Guard) |
-| M-3 | Medium | SelfAuthoredSkillLoader Regex ReDoS | Offen |
-| M-4 | Medium | Plugin API Allowlist Bypass (dynamic require) | Audit noetig |
-| M-5 | Medium | Path Traversal in GlobalFileService | Normalisierung noetig |
+Referenz: `_devprocess/analysis/security/AUDIT-003-obsilo-2026-03-06.md`
+
+| ID (AUDIT-003) | Severity | Finding | Status |
+|-----------------|----------|---------|--------|
+| H-1 | High | Prompt Injection bei permissive Auto-Approval (CWE-77) | By Design -- UI-Warning implementiert (`PermissionsTab.ts:196-212`), Checkpoint-Rollback vorhanden |
+| M-1 | Medium | npm-Packages in Sandbox ohne Integritaetspruefung (CWE-494) | Confirmed -- SandboxBridge mitigiert. Known-Good-Hashes mittelfristig |
+| M-2 | Medium | Vault-Inhalte (PII) an Cloud-LLMs (CWE-200) | By Design -- Ollama/LM Studio als lokale Alternative, .obsidian-agentignore |
+| M-3 | Medium | manage_source Excessive Agency (CWE-269) | By Design -- IMMER manuell genehmigt (self-modify Klassifikation) |
+| M-4 | Medium | DNS-Rebinding-Restrisiko in SSRF-Schutz (CWE-918) | Improved -- Zweiphasige Validierung, TOCTOU dokumentiert |
+| L-1 | Low | PostMessage targetOrigin '*' in IframeSandboxExecutor (CWE-345) | Known Limitation -- event.source-Pruefung vorhanden |
+| L-2 | Low | SelfAuthoredSkillLoader new RegExp() (CWE-1333) | Low Risk -- nur hardcoded Literals als field-Parameter |
+| L-3 | Low | MCP-Verbindungen ohne Mutual TLS (CWE-295) | Confirmed -- lokale MCP-Server |
+
+**Ehemalige Findings (aus Scan 2026-03-01, nicht mehr in AUDIT-003):**
+
+| ID (alt) | Finding | Status |
+|----------|---------|--------|
+| H-1 (alt) | `new Function()` in EsbuildWasmManager (CWE-94) | Resolved -- ProcessSandboxExecutor + SHA-256 |
+| H-2 (alt) | PostMessage Origin-Validierung | Resolved -- event.source-Pruefung (jetzt L-1) |
+| H-3 (alt) | iframe Sandbox in Electron | Resolved -- ProcessSandboxExecutor auf Desktop |
+| M-1 (alt) | User-controlled Regex ReDoS in SearchFilesTool | Resolved -- safeRegex() |
+| M-2 (alt) | IgnoreService Glob-to-Regex ReDoS | Resolved -- Length Guard |
+| M-4 (alt) | Plugin API Allowlist Bypass (dynamic require) | Resolved -- kein require(), Property-Lookup + Allowlist |
+| M-5 (alt) | Path Traversal in GlobalFileService | Resolved -- resolvePath() mit Prefix-Check |
 
 ### Technische Schulden
 
-| Bereich | Beschreibung | Aufwand |
-|---------|-------------|---------|
-| UI Modularisierung | `AgentSidebarView.ts` monolithisch (~2500 LOC) -- Split in ChatRenderer, ToolPickerPopover, etc. | 4-6h |
-| Error-Format | `<tool_error>` Tags nicht standardisiert ueber alle 43+ Tools | 2-3h |
-| Token-Estimation | Grobe ~4 chars/token Schaetzung -- genauer mit js-tiktoken | 2h |
-| Virtual Scrolling | Lange Chat-Historien verursachen UI-Lag | 4h |
-| Semantic Index Trigger | Kein Auto-Index bei Vault-Aenderungen, nur manueller Rebuild | 2h |
+| Bereich | Beschreibung | Aufwand | Status |
+|---------|-------------|---------|--------|
+| UI Modularisierung | `AgentSidebarView.ts` monolithisch (~3500 LOC) -- Split in ChatRenderer, etc. | 4-6h | Offen |
+| Virtual Scrolling | Lange Chat-Historien verursachen UI-Lag | 4h | Offen |
+| Token-Estimation | Grobe ~4 chars/token Schaetzung -- genauer mit js-tiktoken | 2h | Niedrige Prio (funktioniert konsistent) |
+| ~~Semantic Index Trigger~~ | ~~Kein Auto-Index bei Vault-Aenderungen~~ | -- | Resolved -- `main.ts:348-363` (vault events + debounce) |
+| ~~Error-Format~~ | ~~`<tool_error>` Tags nicht standardisiert~~ | -- | Resolved -- Tools nutzen einheitlich `is_error` Flag |
 
 ---
 
 ## Naechste Prioritaeten
-
-### Sofort (aktueller Sprint)
-
-1. Security Bug Fixes (FIX-01 bis FIX-03) -- P0
-2. Security Findings Triage (M-3, M-4, M-5 -- offene Medium-Findings)
-3. Dokumentation vollstaendig aktualisieren (laufend)
 
 ### Kurzfristig (2-4 Wochen)
 
 1. Token Budget Management (FEATURE-0603) -- limitiert Kontext-Ueberladung
 2. On-Demand Image Extraction (FEATURE-0604) -- komplettiert Document Parsing
 3. Model Compatibility Check (FEATURE-0605) -- verhindert Feature-Fehlkonfiguration
-4. UI Event-Listener Cleanup (FIX-04)
 
 ### Mittelfristig (4-8 Wochen)
 
-1. UI Refactoring (SidebarView Split)
+1. UI Refactoring (SidebarView Split, ~3500 LOC -> Unterkomponenten)
 2. Virtual Scrolling fuer lange Chats
-3. Semantic Index Auto-Trigger bei Vault-Aenderungen
+3. npm-Package Integrity (Known-Good-Hashes fuer Sandbox-CDN-Pakete)
 
 ### Langfristig
 
 1. Obsilo Gateway MVP (Monetarisierung)
-2. Performance-Optimierung (Token-Estimation, Index-Rebuild)
+2. Token-Estimation mit js-tiktoken (Verbesserung, nicht kritisch)

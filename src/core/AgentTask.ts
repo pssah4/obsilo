@@ -348,6 +348,7 @@ export class AgentTask {
                     }
                     pendingModeSwitch = null;
                     repetitionDetector.reset();
+                    consecutiveMistakes = 0;
                 }
 
                 this.taskCallbacks.onIterationStart?.(iteration);
