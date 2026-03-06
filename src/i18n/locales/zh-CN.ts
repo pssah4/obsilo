@@ -270,6 +270,7 @@ export const zhCN: Translations = {
     'settings.permissions.headingSandbox': '沙箱代码执行',
     'settings.permissions.sandbox': '自动批准沙箱执行',
     'settings.permissions.sandboxConfirmAccept': '我了解风险 — 启用',
+    'settings.permissions.permissiveWarning': '宽松模式：Web 访问和写入操作均已自动批准。来自不受信任的网页或 Vault 笔记的内容可能会欺骗代理在未经审查的情况下修改您的 Vault。这是风险最高的配置。请考虑禁用 Web 访问或写入操作的自动批准。',
     'settings.permissions.sandboxConfirmCancel': '取消',
     'settings.permissions.sandboxConfirmMessage': '这允许代理在未经您审查的情况下运行代码。沙箱提供基本保护，但并非完全隔离。误导性内容（如来自网页或Vault笔记）可能导致未经审查的代码运行。您确定要启用吗？',
     'settings.permissions.sandboxConfirmTitle': '启用沙箱自动批准？',
@@ -843,6 +844,29 @@ export const zhCN: Translations = {
     'ui.approval.notEnabled': '{{tool}} \u2014 {{group}} 未启用',
     'ui.approval.allowOnce': '允许一次',
     'ui.approval.enableInSettings': '在设置中启用',
+    'ui.approval.explain.writeFile': '代理想要创建一个新文件：',
+    'ui.approval.explain.editFile': '代理想要编辑一个现有文件：',
+    'ui.approval.explain.appendFile': '代理想要向文件追加文本：',
+    'ui.approval.explain.deleteFile': '代理想要将文件移至回收站：',
+    'ui.approval.explain.moveFile': '代理想要移动一个文件：',
+    'ui.approval.explain.moveFileTo': '至',
+    'ui.approval.explain.createFolder': '代理想要创建一个新文件夹：',
+    'ui.approval.explain.sandbox': '代理想要运行脚本来处理您 Vault 中的数据。',
+    'ui.approval.explain.webFetch': '代理想要获取一个网页：',
+    'ui.approval.explain.webSearch': '代理想要在互联网上搜索：',
+    'ui.approval.explain.newTask': '代理想要为子任务启动一个子代理。',
+    'ui.approval.explain.mcpTool': '代理想要使用一个外部工具：',
+    'ui.approval.explain.pluginApi': '代理想要访问一个插件：',
+    'ui.approval.explain.command': '代理想要执行一个 Obsidian 命令：',
+    'ui.approval.explain.recipe': '代理想要执行一个配方：',
+    'ui.approval.explain.switchMode': '代理想要切换到不同的模式。',
+    'ui.approval.explain.frontmatter': '代理想要更改笔记的元数据：',
+    'ui.approval.explain.canvas': '代理想要创建画布可视化：',
+    'ui.approval.explain.excalidraw': '代理想要创建 Excalidraw 绘图：',
+    'ui.approval.explain.selfModify': '代理想要更改自身的配置。',
+    'ui.approval.explain.fallback': '代理想要执行以下操作：',
+    'ui.approval.explain.showDetails': '显示详情',
+    'ui.approval.explain.hideDetails': '隐藏详情',
 
     // =========================================================================
     // Chat UI — Checkpoint
@@ -940,6 +964,13 @@ export const zhCN: Translations = {
     'ui.history.thisWeek': '本周',
     'ui.history.older': '更早',
     'ui.history.messageCount': '{{count}} 条消息',
+    'ui.history.copyLink': '复制聊天链接',
+    'ui.history.linkCopied': '聊天链接已复制',
+    'ui.history.addToNote': '将链接添加到活动笔记',
+    'ui.history.linkAdded': '聊天链接已添加到笔记',
+    'ui.history.linkAlreadyExists': '链接已存在于笔记中',
+    'ui.history.linkAddFailed': '添加链接失败',
+    'ui.history.noActiveNote': '没有活动的 Markdown 笔记',
 
     // =========================================================================
     // Attachment Handler
@@ -947,6 +978,7 @@ export const zhCN: Translations = {
     'ui.attachment.tooLarge': '"{{name}}" 超过 10 MB 限制。',
     'ui.attachment.unsupported': '"{{name}}" 不受支持。请使用图片（PNG/JPG/GIF/WebP）或文本文件。',
     'ui.attachment.readFailed': '无法读取"{{path}}"',
+    'ui.attachment.largeDocument': '"{{name}}" 文件非常大。对话过程中内容可能会被压缩。',
 
     // =========================================================================
     // Modal — New Mode

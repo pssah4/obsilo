@@ -317,6 +317,7 @@ export const de: Translations = {
     'settings.permissions.sandboxConfirmMessage': 'Dies erlaubt dem Agenten, beliebigen JavaScript/TypeScript-Code ohne Ihre Prüfung auszuführen. Die Sandbox bietet V8-Origin-Isolation, aber KEINE OS-Level-Prozessisolation in Electron. Prompt-injizierter Inhalt (z.\u00A0B. aus Webseiten oder Vault-Notizen) könnte ungeprüfte Code-Ausführung auslösen. Sind Sie sicher?',
     'settings.permissions.sandboxConfirmCancel': 'Abbrechen',
     'settings.permissions.sandboxConfirmAccept': 'Ich verstehe das Risiko — aktivieren',
+    'settings.permissions.permissiveWarning': 'Permissiver Modus: Webzugriff und Schreiboperationen werden beide automatisch genehmigt. Inhalte von nicht vertrauenswürdigen Webseiten oder Vault-Notizen könnten den Agenten dazu bringen, Ihr Vault ohne Überprüfung zu ändern. Dies ist die Konfiguration mit dem höchsten Risiko. Erwägen Sie, die automatische Genehmigung für Webzugriff oder Schreiboperationen zu deaktivieren.',
 
     // =========================================================================
     // Settings — Loop Tab

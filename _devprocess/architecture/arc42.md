@@ -1,8 +1,8 @@
 # arc42 — Obsidian Agent Architecture
 
-**Version:** 3.5
-**Stand:** 2026-03-05
-**Status:** Aktuell — alle Features implementiert, Dokumentation vollstaendig
+**Version:** 3.6
+**Stand:** 2026-03-06
+**Status:** Aktuell — alle Features implementiert, alle bekannten Bugs resolved, AUDIT-003 abgeglichen
 
 ---
 
@@ -184,7 +184,7 @@ AgentTask.run()
   └── Context Condensing (wenn threshold erreicht)
 ```
 
-### 5.3 Ebene 2: Tool Registry (43+ Tools, 7 Gruppen)
+### 5.3 Ebene 2: Tool Registry (46+ Tools, 7 Gruppen)
 
 ```
 ToolRegistry
@@ -192,10 +192,11 @@ ToolRegistry
   ├── vault group (8):  get_frontmatter, search_by_tag, get_vault_stats,
   │                     get_linked_notes, get_daily_note, open_note,
   │                     semantic_search, query_base
-  ├── edit group (11):  write_file, edit_file, append_to_file, create_folder,
+  ├── edit group (14):  write_file, edit_file, append_to_file, create_folder,
   │                     delete_file, move_file, update_frontmatter,
   │                     generate_canvas, create_excalidraw,
-  │                     create_base, update_base
+  │                     create_base, update_base,
+  │                     create_docx, create_pptx, create_xlsx
   ├── web group (2):    web_fetch, web_search
   ├── agent group (12): ask_followup_question, attempt_completion,
   │                     update_todo_list, new_task, switch_mode,
@@ -255,6 +256,22 @@ AgentSidebarView.onComplete()
 ```
 
 ADR: [ADR-026](ADR-026-post-processing-hook.md), [ADR-027](ADR-027-task-note-schema.md), [ADR-028](ADR-028-base-plugin-integration.md). Feature-Spec: `FEATURE-0801-task-extraction.md`.
+
+### 5.8 Ebene 2: Office Document Creation (EPIC-010)
+
+```
+CreateDocxTool / CreatePptxTool / CreateXlsxTool
+  │
+  ├── Input: Strukturiertes Schema (Sections/Slides/Sheets mit Inhalt, Styling)
+  ├── Library: docx (DOCX), pptxgenjs (PPTX), ExcelJS (XLSX)
+  ├── Output: ArrayBuffer → writeBinaryToVault()
+  │     ├── Path-Traversal-Schutz (../, absolute Pfade)
+  │     ├── Extension-Validierung (erzwungen)
+  │     └── Ordner-Erstellung (automatisch)
+  └── Limits: max 100 Sections (DOCX), 50 Slides (PPTX), 20 Sheets (XLSX)
+```
+
+ADR: [ADR-029](ADR-029-office-tool-input-schema.md), [ADR-030](ADR-030-office-library-selection.md), [ADR-031](ADR-031-binary-write-pattern.md).
 
 Tool-Beschreibungen kommen aus `toolMetadata.ts` (Single Source of Truth fuer Prompt und UI). Feature-Spec: `FEATURE-0506-tool-metadata-registry.md`. ADR: [ADR-008](ADR-008-modular-prompt-sections.md).
 
@@ -673,6 +690,9 @@ Siehe einzelne ADRs in `_devprocess/architecture/`:
 | [ADR-026](ADR-026-post-processing-hook.md) | Direkter Post-Processing Hook in onComplete fuer Task Extraction |
 | [ADR-027](ADR-027-task-note-schema.md) | Task-Note Frontmatter Schema (10 Properties, deutsch, Eisenhower-kompatibel) |
 | [ADR-028](ADR-028-base-plugin-integration.md) | Eigene Base-YAML-Generierung + Iconic-Detection via direkte Obsidian-API |
+| [ADR-029](ADR-029-office-tool-input-schema.md) | Office-Tool Input-Schema (strukturierte Slides/Sections/Sheets statt Freitext) |
+| [ADR-030](ADR-030-office-library-selection.md) | Office-Library-Auswahl: pptxgenjs + docx + ExcelJS fuer native Dokumenterzeugung |
+| [ADR-031](ADR-031-binary-write-pattern.md) | Binary-Write-Pattern: Shared writeBinaryToVault() mit Path-Traversal-Schutz |
 
 ---
 
@@ -692,10 +712,11 @@ Siehe einzelne ADRs in `_devprocess/architecture/`:
 
 ## 11. Risiken und technische Schulden
 
+### Aktive Risiken
+
 | Risiko | Auswirkung | Mitigation |
 |--------|-----------|-----------|
 | vectra lädt gesamten Index in RAM | Hohe RAM-Nutzung bei >10k Notizen | Chunked loading (future) |
-| `search_files` nutzt Node.js `fs` direkt | Nicht kompatibel mit Obsidian Mobile | Obsidian-API-Fallback (future) |
 | `query_base` nutzt Regex-YAML-Parser | Komplexe Filterausdrücke können falsch geparst werden | Echter YAML-Parser (future) |
 | `update_base` erkennt View-Blöcke via Regex | Fragil bei unerwarteter YAML-Formatierung | Vollständiger YAML-Parser (future) |
 | Keyword-Suche (BM25) ist ein Live-Scan | Linear mit Vault-Groesse | Vorkompilierter BM25-Index (future) |
@@ -703,6 +724,18 @@ Siehe einzelne ADRs in `_devprocess/architecture/`:
 | Memory-Extraktion basiert auf LLM-Qualitaet | Ungenaue Fakten bei schwachen Modellen | Separate memoryModelKey-Einstellung |
 | VaultDNA Reflection kann bei Plugins fehlschlagen | Unvollstaendige Skill-Files | Nutzer kann Skill-Files manuell anpassen |
 | MCP stdio spawnt Subprozesse | Sicherheitsrisiko bei boeswilligen Configs | Shell-Metacharacter-Validation |
+
+### Technische Schulden
+
+| Bereich | Beschreibung | Status |
+|---------|-------------|--------|
+| UI Modularisierung | `AgentSidebarView.ts` (~3500 LOC) -- Split in Unterkomponenten | Offen |
+| Virtual Scrolling | Lange Chat-Historien verursachen UI-Lag | Offen |
+| Token-Estimation | ~4 chars/token Schätzung -- genauer mit js-tiktoken | Niedrige Prio |
+
+### Security (AUDIT-003, Stand 2026-03-06)
+
+Risikoprofil: 0 Critical, 1 High (by design), 4 Medium (3 by design), 3 Low, 2 Info. Alle bekannten Bugs (FIX-01 bis FIX-06) resolved. Details: `_devprocess/analysis/security/AUDIT-003-obsilo-2026-03-06.md`
 
 ---
 

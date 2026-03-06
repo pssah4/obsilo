@@ -105,6 +105,11 @@
           <div class="tool-name">search_files</div>
           <div class="tool-desc" data-i18n="pages.tools.searchFiles.desc">Full-text and regex search across files. Returns matching lines with file path and line number. Supports file_pattern glob filter.</div>
         </div>
+        <div class="tool-card">
+          <span class="tool-group-badge badge-read">read</span>
+          <div class="tool-name">read_document</div>
+          <div class="tool-desc">Parses and extracts text content from office documents (PPTX, XLSX, DOCX), PDFs, and data formats (JSON, XML, CSV). Returns structured text with metadata. Supports all common document formats in the vault.</div>
+        </div>
       </div>
 
       <h3 data-i18n-html="pages.tools.readFile.paramsHeading">Parameters: read_file</h3>
@@ -238,6 +243,21 @@
           <div class="tool-name">create_excalidraw</div>
           <div class="tool-desc">Create an Excalidraw drawing (.excalidraw.md) with specified elements. Requires the Excalidraw plugin to be installed.</div>
         </div>
+        <div class="tool-card">
+          <span class="tool-group-badge badge-edit">edit</span>
+          <div class="tool-name">create_docx</div>
+          <div class="tool-desc">Creates Word documents (.docx) with structured sections, headings, paragraphs, bullet lists, and styling options (fonts, colors, spacing). Up to 100 sections per document.</div>
+        </div>
+        <div class="tool-card">
+          <span class="tool-group-badge badge-edit">edit</span>
+          <div class="tool-name">create_pptx</div>
+          <div class="tool-desc">Creates PowerPoint presentations (.pptx) with slides, titles, body text, speaker notes, and theme colors. Supports custom slide layouts and formatting. Up to 50 slides per presentation.</div>
+        </div>
+        <div class="tool-card">
+          <span class="tool-group-badge badge-edit">edit</span>
+          <div class="tool-name">create_xlsx</div>
+          <div class="tool-desc">Creates Excel spreadsheets (.xlsx) with multiple sheets, headers, data rows, column widths, and basic formatting. Up to 20 sheets per workbook.</div>
+        </div>
       </div>
 
       <h3 data-i18n-html="pages.tools.editFile.paramsHeading">Parameters: edit_file</h3>
@@ -248,6 +268,57 @@
           <tr><td><code>old_str</code></td><td>string</td><td>yes</td><td>Exact string to replace (including whitespace). Must match exactly.</td></tr>
           <tr><td><code>new_str</code></td><td>string</td><td>yes</td><td>Replacement string</td></tr>
           <tr><td><code>expected_replacements</code></td><td>number</td><td>no</td><td>If set, fails if the count of replacements doesn't match (safety check)</td></tr>
+        </tbody>
+      </table>
+
+      <!-- OFFICE DOCUMENT CREATION -->
+      <h2 id="office">Office Document Creation</h2>
+      <p>These tools create binary office documents directly in the vault. In the <code>edit</code> tool group. Require approval.</p>
+
+      <div class="tool-grid">
+        <div class="tool-card">
+          <span class="tool-group-badge badge-edit">edit</span>
+          <div class="tool-name">create_docx</div>
+          <div class="tool-desc">Creates Word documents (.docx) with structured sections, headings, paragraphs, bullet lists, and styling options (fonts, colors, spacing). Up to 100 sections per document.</div>
+        </div>
+        <div class="tool-card">
+          <span class="tool-group-badge badge-edit">edit</span>
+          <div class="tool-name">create_pptx</div>
+          <div class="tool-desc">Creates PowerPoint presentations (.pptx) with slides, titles, body text, speaker notes, and theme colors. Supports custom slide layouts and formatting. Up to 50 slides per presentation.</div>
+        </div>
+        <div class="tool-card">
+          <span class="tool-group-badge badge-edit">edit</span>
+          <div class="tool-name">create_xlsx</div>
+          <div class="tool-desc">Creates Excel spreadsheets (.xlsx) with multiple sheets, headers, data rows, column widths, and basic formatting. Up to 20 sheets per workbook.</div>
+        </div>
+      </div>
+
+      <h3>Parameters: create_docx</h3>
+      <table>
+        <thead><tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>path</code></td><td>string</td><td>yes</td><td>Vault-relative output path (e.g., "Reports/quarterly.docx")</td></tr>
+          <tr><td><code>sections</code></td><td>array</td><td>yes</td><td>Array of section objects with heading, body, and bullet list content. Up to 100 sections.</td></tr>
+          <tr><td><code>style</code></td><td>object</td><td>no</td><td>Document styling: font family, font size, colors, spacing</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Parameters: create_pptx</h3>
+      <table>
+        <thead><tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>path</code></td><td>string</td><td>yes</td><td>Vault-relative output path (e.g., "Presentations/demo.pptx")</td></tr>
+          <tr><td><code>slides</code></td><td>array</td><td>yes</td><td>Array of slide objects with title, body, and speaker notes. Up to 50 slides.</td></tr>
+          <tr><td><code>theme</code></td><td>object</td><td>no</td><td>Theme colors and layout options</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Parameters: create_xlsx</h3>
+      <table>
+        <thead><tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>path</code></td><td>string</td><td>yes</td><td>Vault-relative output path (e.g., "Data/budget.xlsx")</td></tr>
+          <tr><td><code>sheets</code></td><td>array</td><td>yes</td><td>Array of sheet objects with name, headers, rows, and column widths. Up to 20 sheets.</td></tr>
         </tbody>
       </table>
 

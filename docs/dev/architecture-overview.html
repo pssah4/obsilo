@@ -114,11 +114,11 @@
      IgnoreService  |  CheckpointService      Anthropic   OpenAI   Ollama ...
               ApprovalSystem
                     |
-            ToolRegistry (42 tools, 7 groups)
+            ToolRegistry (46+ tools, 7 groups)
                     |
     +-------+-------+-------+-------+-------+
     | read  | vault | edit  | web   | agent |
-    | (3)   | (8)   | (11)  | (2)   | (12)  |
+    | (4)   | (8)   | (14)  | (2)   | (12)  |
     +-------+-------+-------+-------+-------+
     | skill | mcp   |
     | (5)   | (1)   |
@@ -160,7 +160,7 @@
           <tr><td><code>AgentTask</code></td><td>src/core/AgentTask.ts</td><td>Main agent loop, iteration management, streaming</td></tr>
           <tr><td><code>ToolExecutionPipeline</code></td><td>src/core/tool-execution/ToolExecutionPipeline.ts</td><td>6-step governance for every tool call</td></tr>
           <tr><td><code>SystemPrompt</code></td><td>src/core/systemPrompt.ts</td><td>Assembles 16 modular prompt sections</td></tr>
-          <tr><td><code>ToolRegistry</code></td><td>src/core/tools/ToolRegistry.ts</td><td>Central Map&lt;name, BaseTool&gt; with 42 tools in 7 groups</td></tr>
+          <tr><td><code>ToolRegistry</code></td><td>src/core/tools/ToolRegistry.ts</td><td>Central Map&lt;name, BaseTool&gt; with 46+ tools in 7 groups</td></tr>
           <tr><td><code>ModeService</code></td><td>src/core/modes/ModeService.ts</td><td>Mode resolution, tool group filtering</td></tr>
         </tbody>
       </table>
@@ -211,6 +211,110 @@
           <tr><td><code>isomorphic-git</code></td><td>Pure-JS git for checkpoints</td></tr>
         </tbody>
       </table>
+
+      <h2 id="document-parser-pipeline">Document Parser Pipeline</h2>
+      <p>A unified entry point (<code>parseDocument()</code>) routes binary file data to format-specific parsers based on file extension. Used by both the chat attachment handler (drag-and-drop) and the <code>read_document</code> tool.</p>
+
+      <div class="arch-diagram">Binary Data + Extension
+    |
+    parseDocument()   [src/core/document-parsers/parseDocument.ts]
+    |
+    +--- .pptx ---> PptxParser   (JSZip + OOXML slide extraction)
+    +--- .xlsx ---> XlsxParser   (JSZip + OOXML sheet/cell extraction)
+    +--- .docx ---> DocxParser   (JSZip + OOXML paragraph extraction)
+    +--- .pdf  ---> PdfParser    (pdf-parse text extraction)
+    +--- .csv  ---> CsvParser    (row/column parsing)
+    +--- .json ---> inline       (JSON.parse + formatting)
+    +--- .xml  ---> inline       (TextDecoder)
+    |
+    v
+ParseResult { text, summary, metadata }</div>
+
+      <table>
+        <thead><tr><th>Component</th><th>File</th><th>Responsibility</th></tr></thead>
+        <tbody>
+          <tr><td><code>parseDocument()</code></td><td>src/core/document-parsers/parseDocument.ts</td><td>Extension-based router, inline parsers for JSON/XML</td></tr>
+          <tr><td><code>PptxParser</code></td><td>src/core/document-parsers/parsers/PptxParser.ts</td><td>PPTX slide text extraction via OOXML</td></tr>
+          <tr><td><code>XlsxParser</code></td><td>src/core/document-parsers/parsers/XlsxParser.ts</td><td>XLSX sheet and cell extraction via OOXML</td></tr>
+          <tr><td><code>DocxParser</code></td><td>src/core/document-parsers/parsers/DocxParser.ts</td><td>DOCX paragraph extraction via OOXML</td></tr>
+          <tr><td><code>PdfParser</code></td><td>src/core/document-parsers/parsers/PdfParser.ts</td><td>PDF text extraction via pdf-parse</td></tr>
+          <tr><td><code>CsvParser</code></td><td>src/core/document-parsers/parsers/CsvParser.ts</td><td>CSV row/column parsing</td></tr>
+          <tr><td><code>ooxmlHelpers</code></td><td>src/core/document-parsers/parsers/ooxmlHelpers.ts</td><td>Shared JSZip OOXML utilities</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="office-document-creation">Office Document Creation</h2>
+      <p>Three built-in tools generate binary Office documents directly in the vault, bypassing the sandbox which cannot handle binary formats. All share a common <code>writeBinaryToVault()</code> utility for path validation, folder creation, and create-vs-modify logic.</p>
+
+      <table>
+        <thead><tr><th>Tool</th><th>File</th><th>Library</th><th>Capabilities</th></tr></thead>
+        <tbody>
+          <tr><td><code>create_pptx</code></td><td>src/core/tools/vault/CreatePptxTool.ts</td><td>pptxgenjs</td><td>Slides, text, images, tables, charts, shapes, speaker notes</td></tr>
+          <tr><td><code>create_docx</code></td><td>src/core/tools/vault/CreateDocxTool.ts</td><td>docx</td><td>Headings, paragraphs, tables, lists, images, page breaks</td></tr>
+          <tr><td><code>create_xlsx</code></td><td>src/core/tools/vault/CreateXlsxTool.ts</td><td>ExcelJS</td><td>Sheets, cells, formulas, styles, column widths, freeze panes</td></tr>
+        </tbody>
+      </table>
+
+      <div class="arch-diagram">Agent (JSON definition)
+    |
+    CreatePptxTool / CreateDocxTool / CreateXlsxTool
+    |
+    Library (pptxgenjs / docx / ExcelJS)
+    |    generates ArrayBuffer
+    v
+writeBinaryToVault()   [src/core/tools/vault/writeBinaryToVault.ts]
+    |  path validation, folder creation, create-vs-modify
+    v
+Vault binary file (.pptx / .docx / .xlsx)</div>
+
+      <h2 id="task-extraction">Task Extraction Pipeline</h2>
+      <p>A deterministic, regex-based post-processing pipeline that scans agent responses for unchecked markdown checkboxes (<code>- [ ]</code>) and converts them into structured task notes with frontmatter. ADR-026/027.</p>
+
+      <div class="arch-diagram">Agent Response Text
+    |
+    TaskExtractor.scan()     [src/core/tasks/TaskExtractor.ts]
+    |  regex: /^[\t ]*[-*]\s\[ \]\s+(.+)$/gm
+    |  extracts: text, @assignee, due: YYYY-MM-DD
+    v
+TaskItem[] (parsed tasks)
+    |
+    TaskSelectionModal        [src/ui/TaskSelectionModal.ts]
+    |  user selects which tasks to create
+    v
+TaskNoteCreator.createNotes() [src/core/tasks/TaskNoteCreator.ts]
+    |  smart title generation (natural break points)
+    |  10-property YAML frontmatter
+    |  unique path generation (slug + dedup)
+    v
+Task notes in configurable folder</div>
+
+      <h3>Frontmatter Schema</h3>
+      <table>
+        <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>Kategorie</code></td><td>list</td><td>Always <code>[Task]</code></td></tr>
+          <tr><td><code>Zusammenfassung</code></td><td>string</td><td>Smart-truncated title (max 8 words, natural break points)</td></tr>
+          <tr><td><code>Status</code></td><td>string</td><td>Initial value: <code>Todo</code></td></tr>
+          <tr><td><code>Dringend</code></td><td>boolean</td><td>Urgency flag</td></tr>
+          <tr><td><code>Wichtig</code></td><td>boolean</td><td>Importance flag</td></tr>
+          <tr><td><code>F&auml;lligkeit</code></td><td>date</td><td>Parsed from <code>due: YYYY-MM-DD</code> in task text</td></tr>
+          <tr><td><code>Assignee</code></td><td>string</td><td>Parsed from <code>@Person</code> prefix</td></tr>
+          <tr><td><code>Quelle</code></td><td>wikilink</td><td>Link to source note</td></tr>
+          <tr><td><code>created</code></td><td>date</td><td>Creation date</td></tr>
+          <tr><td><code>Notizen</code></td><td>list</td><td>Empty, for user annotations</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="chat-linking">Chat-Linking</h2>
+      <p>Bidirectional linking between vault notes and agent conversations. Two mechanisms:</p>
+      <ol>
+        <li><strong>Manual link</strong> &mdash; User clicks the link button in chat history to stamp the active note's frontmatter with a <code>Chats</code> array entry containing an <code>obsidian://obsilo-chat?id=...</code> deep link.</li>
+        <li><strong>Auto-link on finalize</strong> &mdash; When a conversation ends, <code>finalizeConversation()</code> generates a semantic title (via configurable LLM model) and stamps any notes that were actively edited during the session.</li>
+      </ol>
+      <p>Frontmatter format:</p>
+      <pre><code>Chats:
+  - "[Conversation Title](obsidian://obsilo-chat?id=abc123)"</code></pre>
+      <p>Duplicate detection prevents the same conversation from being linked twice. Deep links open directly in the Obsilo sidebar.</p>
 
       <div class="callout callout-crosslink">
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14L21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>

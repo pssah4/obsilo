@@ -123,7 +123,7 @@
 
       <p>The set of tools included is determined at prompt assembly time by <code>ModeService.getEffectiveToolNames()</code>. This method resolves the active mode's <code>toolGroups</code> array (e.g., <code>["edit", "web", "agent"]</code>) into a flat list of individual tool names using <code>expandToolGroups()</code>, then filters the ToolRegistry to only include matching tools. Custom modes can also specify <code>customTools</code> to add or remove individual tools beyond their group defaults.</p>
 
-      <p>With all 42 tools enabled (as in Agent mode), this section alone can consume <strong>8,000-12,000 tokens</strong>. Read-only modes like Ask mode include only the <code>read</code> and <code>agent</code> groups, reducing this significantly.</p>
+      <p>With all 46+ tools enabled (as in Agent mode), this section alone can consume <strong>8,000-12,000 tokens</strong>. Read-only modes like Ask mode include only the <code>read</code> and <code>agent</code> groups, reducing this significantly.</p>
 
       <h3 id="section-pluginskills">6. pluginSkills</h3>
       <p>Compact listing of VaultDNA-discovered plugin skills. One line per plugin with available commands and API methods.</p>

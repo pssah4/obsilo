@@ -318,6 +318,8 @@ export const es: Translations = {
     'settings.permissions.sandboxConfirmCancel': 'Cancelar',
     'settings.permissions.sandboxConfirmAccept': 'Entiendo el riesgo — habilitar',
 
+    'settings.permissions.permissiveWarning': 'Modo permisivo: El acceso web y las operaciones de escritura se aprueban automaticamente. Contenido de paginas web no confiables o notas del vault podria engañar al agente para modificar tu vault sin revision. Esta es la configuracion de mayor riesgo. Considera desactivar la aprobacion automatica para el acceso web o las operaciones de escritura.',
+
     // =========================================================================
     // Settings — Loop Tab
     // =========================================================================
@@ -846,6 +848,30 @@ export const es: Translations = {
     'ui.approval.allowOnce': 'Permitir una vez',
     'ui.approval.enableInSettings': 'Activar en Configuracion',
 
+    'ui.approval.explain.writeFile': 'El agente quiere crear un archivo nuevo:',
+    'ui.approval.explain.editFile': 'El agente quiere editar un archivo existente:',
+    'ui.approval.explain.appendFile': 'El agente quiere añadir texto a un archivo:',
+    'ui.approval.explain.deleteFile': 'El agente quiere mover un archivo a la papelera:',
+    'ui.approval.explain.moveFile': 'El agente quiere mover un archivo:',
+    'ui.approval.explain.moveFileTo': 'a',
+    'ui.approval.explain.createFolder': 'El agente quiere crear una carpeta nueva:',
+    'ui.approval.explain.sandbox': 'El agente quiere ejecutar un script para procesar datos en tu vault.',
+    'ui.approval.explain.webFetch': 'El agente quiere obtener una pagina web:',
+    'ui.approval.explain.webSearch': 'El agente quiere buscar en internet:',
+    'ui.approval.explain.newTask': 'El agente quiere iniciar un sub-agente para una subtarea.',
+    'ui.approval.explain.mcpTool': 'El agente quiere usar una herramienta externa:',
+    'ui.approval.explain.pluginApi': 'El agente quiere acceder a un plugin:',
+    'ui.approval.explain.command': 'El agente quiere ejecutar un comando de Obsidian:',
+    'ui.approval.explain.recipe': 'El agente quiere ejecutar una receta:',
+    'ui.approval.explain.switchMode': 'El agente quiere cambiar a un modo diferente.',
+    'ui.approval.explain.frontmatter': 'El agente quiere cambiar los metadatos de una nota:',
+    'ui.approval.explain.canvas': 'El agente quiere crear una visualizacion canvas:',
+    'ui.approval.explain.excalidraw': 'El agente quiere crear un dibujo Excalidraw:',
+    'ui.approval.explain.selfModify': 'El agente quiere cambiar su propia configuracion.',
+    'ui.approval.explain.fallback': 'El agente quiere realizar la siguiente accion:',
+    'ui.approval.explain.showDetails': 'Mostrar detalles',
+    'ui.approval.explain.hideDetails': 'Ocultar detalles',
+
     // =========================================================================
     // Chat UI — Checkpoint
     // =========================================================================
@@ -943,12 +969,21 @@ export const es: Translations = {
     'ui.history.older': 'Anteriores',
     'ui.history.messageCount': '{{count}} msgs',
 
+    'ui.history.copyLink': 'Copiar enlace del chat',
+    'ui.history.linkCopied': 'Enlace del chat copiado',
+    'ui.history.addToNote': 'Añadir enlace a la nota activa',
+    'ui.history.linkAdded': 'Enlace del chat añadido a la nota',
+    'ui.history.linkAlreadyExists': 'El enlace ya existe en la nota',
+    'ui.history.linkAddFailed': 'No se pudo añadir el enlace',
+    'ui.history.noActiveNote': 'No hay nota Markdown activa',
+
     // =========================================================================
     // Attachment Handler
     // =========================================================================
     'ui.attachment.tooLarge': '"{{name}}" supera el limite de 10 MB.',
     'ui.attachment.unsupported': '"{{name}}" no es compatible. Usa imagenes (PNG/JPG/GIF/WebP) o archivos de texto.',
     'ui.attachment.readFailed': 'No se pudo leer "{{path}}"',
+    'ui.attachment.largeDocument': '"{{name}}" es muy grande. El contenido puede condensarse durante la conversacion.',
 
     // =========================================================================
     // Modal — New Mode

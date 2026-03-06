@@ -260,6 +260,54 @@ Format as:
       <h3 id="prompts-management" data-i18n="pages.rulesSkillsWorkflows.promptsManagement">Managing Prompts</h3>
       <p data-i18n-html="pages.rulesSkillsWorkflows.promptsManagement.text">Go to Settings → Agent Behaviour → <strong>Prompts</strong>. Create, edit, enable/disable, and delete prompts. You can optionally restrict a prompt to a specific mode (it only shows in autocomplete and works in that mode).</p>
 
+      <h2 id="task-extraction">Task Extraction</h2>
+      <p>When the agent completes a task, Obsilo automatically scans the response for unchecked task items (<code>- [ ]</code> Markdown pattern). If tasks are found, a selection modal appears where you can choose which items to convert into standalone task notes.</p>
+
+      <h3 id="task-flow">How It Works</h3>
+      <ol>
+        <li><strong>Detection</strong> &mdash; After the agent finishes, a regex-based <code>TaskExtractor</code> scans the accumulated response text for <code>- [ ]</code> items. No LLM call is needed &mdash; the entire flow is deterministic.</li>
+        <li><strong>Selection</strong> &mdash; A <code>TaskSelectionModal</code> presents all detected tasks with checkboxes. You pick which ones to create as notes.</li>
+        <li><strong>Note Creation</strong> &mdash; Each selected task becomes a standalone note with a structured 10-property frontmatter schema: category, summary, status, urgent, important, due date, assignee, source, created, and notes.</li>
+      </ol>
+
+      <h3 id="task-frontmatter">Frontmatter Schema</h3>
+      <p>Every task note is created with an Eisenhower-compatible frontmatter that works well with Obsidian Bases and Dataview:</p>
+      <pre><code>---
+Kategorie: ""
+Zusammenfassung: "Review Q1 sales report"
+Status: "offen"
+Dringend: false
+Wichtig: true
+Faelligkeit: ""
+Assignee: ""
+Quelle: "Meeting Notes/2026-03-06"
+created: "2026-03-06T14:30:00"
+Notizen: ""
+---</code></pre>
+
+      <h3 id="task-settings">Settings</h3>
+      <p>Task extraction is enabled by default. You can configure the target folder for task notes and the frontmatter defaults in Settings → Agent Behaviour → Task Extraction.</p>
+
+      <h2 id="chat-linking">Chat-Linking</h2>
+      <p>Obsilo automatically creates traceability links between agent chats and the notes they modify. When the agent writes to a <code>.md</code> file, a deep link to the current conversation is added to the note's YAML frontmatter.</p>
+
+      <h3 id="chat-linking-how">How It Works</h3>
+      <p>After every successful write operation on a Markdown file, the <code>ToolExecutionPipeline</code> runs a post-write hook (<code>stampChatLink</code>) that adds the conversation ID as an <code>obsidian://</code> protocol link:</p>
+      <pre><code>---
+obsilo-chats:
+  - obsidian://obsilo-chat?id=2026-03-06-a1b2c3
+---</code></pre>
+      <p>Clicking the link in any note opens the corresponding chat in the Obsilo sidebar. The frontmatter update uses <code>processFrontMatter()</code> for atomic, duplicate-safe writes.</p>
+
+      <h3 id="chat-linking-features">Features</h3>
+      <ul>
+        <li><strong>Automatic</strong> &mdash; No manual action needed. Links are added transparently after every write.</li>
+        <li><strong>Semantic Titles</strong> &mdash; Chat titles are generated automatically based on the conversation content.</li>
+        <li><strong>Deep Links</strong> &mdash; <code>obsidian://obsilo-chat?id=...</code> protocol links open the chat directly.</li>
+        <li><strong>Duplicate-safe</strong> &mdash; The same chat link is never added twice to a note.</li>
+        <li><strong>Configurable</strong> &mdash; Can be disabled in Settings → Agent Behaviour → Chat-Linking.</li>
+      </ul>
+
       <div class="page-nav">
         <a href="permissions.html" class="page-nav-item">
           <span class="page-nav-label" data-i18n="nav.previous">Previous</span>

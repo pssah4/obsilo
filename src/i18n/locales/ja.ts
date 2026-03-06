@@ -317,6 +317,7 @@ export const ja: Translations = {
     'settings.permissions.sandboxConfirmMessage': 'これにより、エージェントはあなたの確認なしに任意のJavaScript/TypeScriptコードを実行できます。サンドボックスはV8オリジン分離を提供しますが、ElectronではOSレベルのプロセス分離は提供しません。プロンプトインジェクションされたコンテンツ（例：Webページやノート）が未確認のコード実行をトリガーする可能性があります。本当に有効にしますか？',
     'settings.permissions.sandboxConfirmCancel': 'キャンセル',
     'settings.permissions.sandboxConfirmAccept': 'リスクを理解しました — 有効にする',
+    'settings.permissions.permissiveWarning': 'パーミッシブモード: Webアクセスと書き込み操作の両方が自動承認されます。信頼できないWebページやVaultノートのコンテンツがエージェントを騙してVaultを確認なしに変更させる可能性があります。これは最もリスクの高い設定です。Webアクセスまたは書き込み操作の自動承認を無効にすることを検討してください。',
 
     // =========================================================================
     // Settings — Loop Tab
@@ -845,6 +846,29 @@ export const ja: Translations = {
     'ui.approval.enableInSettings': '設定で有効にする',
     'ui.approval.configDirWarning': '保護されたディレクトリへの書き込みアクセス: {{path}}。このディレクトリのファイルはプラグイン、テーマ、Obsidianの設定を制御します。意図しない変更はObsidianの動作を変更したり、悪意のあるコードをプラグインとしてインストールする可能性があります。',
     'ui.approval.sandbox': 'サンドボックス実行',
+    'ui.approval.explain.writeFile': 'エージェントが新しいファイルを作成しようとしています:',
+    'ui.approval.explain.editFile': 'エージェントが既存のファイルを編集しようとしています:',
+    'ui.approval.explain.appendFile': 'エージェントがファイルにテキストを追加しようとしています:',
+    'ui.approval.explain.deleteFile': 'エージェントがファイルをゴミ箱に移動しようとしています:',
+    'ui.approval.explain.moveFile': 'エージェントがファイルを移動しようとしています:',
+    'ui.approval.explain.moveFileTo': '移動先',
+    'ui.approval.explain.createFolder': 'エージェントが新しいフォルダを作成しようとしています:',
+    'ui.approval.explain.sandbox': 'エージェントがVault内のデータを処理するスクリプトを実行しようとしています。',
+    'ui.approval.explain.webFetch': 'エージェントがWebページを取得しようとしています:',
+    'ui.approval.explain.webSearch': 'エージェントがインターネットで検索しようとしています:',
+    'ui.approval.explain.newTask': 'エージェントがサブタスクのためにサブエージェントを開始しようとしています。',
+    'ui.approval.explain.mcpTool': 'エージェントが外部ツールを使用しようとしています:',
+    'ui.approval.explain.pluginApi': 'エージェントがプラグインにアクセスしようとしています:',
+    'ui.approval.explain.command': 'エージェントがObsidianコマンドを実行しようとしています:',
+    'ui.approval.explain.recipe': 'エージェントがレシピを実行しようとしています:',
+    'ui.approval.explain.switchMode': 'エージェントが別のモードに切り替えようとしています。',
+    'ui.approval.explain.frontmatter': 'エージェントがノートのメタデータを変更しようとしています:',
+    'ui.approval.explain.canvas': 'エージェントがキャンバスビジュアライゼーションを作成しようとしています:',
+    'ui.approval.explain.excalidraw': 'エージェントがExcalidraw図を作成しようとしています:',
+    'ui.approval.explain.selfModify': 'エージェントが自身の設定を変更しようとしています。',
+    'ui.approval.explain.fallback': 'エージェントが次のアクションを実行しようとしています:',
+    'ui.approval.explain.showDetails': '詳細を表示',
+    'ui.approval.explain.hideDetails': '詳細を非表示',
 
     // =========================================================================
     // Chat UI — Checkpoint
@@ -942,6 +966,13 @@ export const ja: Translations = {
     'ui.history.thisWeek': '今週',
     'ui.history.older': 'それ以前',
     'ui.history.messageCount': '{{count}} 件のメッセージ',
+    'ui.history.copyLink': 'チャットリンクをコピー',
+    'ui.history.linkCopied': 'チャットリンクをコピーしました',
+    'ui.history.addToNote': 'アクティブなノートにリンクを追加',
+    'ui.history.linkAdded': 'チャットリンクをノートに追加しました',
+    'ui.history.linkAlreadyExists': 'リンクは既にノートに存在します',
+    'ui.history.linkAddFailed': 'リンクの追加に失敗しました',
+    'ui.history.noActiveNote': 'アクティブなMarkdownノートがありません',
 
     // =========================================================================
     // Attachment Handler
@@ -949,6 +980,7 @@ export const ja: Translations = {
     'ui.attachment.tooLarge': '「{{name}}」は10 MBの上限を超えています。',
     'ui.attachment.unsupported': '「{{name}}」はサポートされていません。画像（PNG/JPG/GIF/WebP）またはテキストファイルを使用してください。',
     'ui.attachment.readFailed': '「{{path}}」を読み取れませんでした',
+    'ui.attachment.largeDocument': '"{{name}}" は非常に大きいファイルです。会話中にコンテンツが要約される場合があります。',
 
     // =========================================================================
     // Modal — New Mode

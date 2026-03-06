@@ -193,6 +193,41 @@
       <h3>Auto-Update Queue</h3>
       <p>File modifications detected by Obsidian's vault events are pushed into an auto-update queue backed by a <code>Set&lt;string&gt;</code> for path deduplication. The queue processes files one at a time (concurrency of 1) with a 2-second pause between files to avoid starving the main thread. Rapid successive edits to the same file are naturally deduplicated by the Set.</p>
 
+      <h2 id="auto-trigger">Auto-Trigger Mechanism</h2>
+      <p>When <code>semanticAutoIndexOnChange</code> is enabled in settings, the plugin registers four Obsidian vault event listeners that keep the index current in real time:</p>
+
+      <table>
+        <thead><tr><th>Vault Event</th><th>Action</th></tr></thead>
+        <tbody>
+          <tr><td><code>modify</code></td><td>Schedule file for re-indexing (2s debounce)</td></tr>
+          <tr><td><code>create</code></td><td>Schedule file for indexing (2s debounce)</td></tr>
+          <tr><td><code>delete</code></td><td>Remove file from index immediately</td></tr>
+          <tr><td><code>rename</code></td><td>Remove old path, schedule new path for indexing</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Debounce Strategy</h3>
+      <p>Each file path gets its own debounce timer (2 seconds) stored in a <code>Map&lt;string, Timer&gt;</code>. This prevents thrashing while the user is actively typing. When the timer fires, the file is pushed into the auto-update queue (<code>queueAutoUpdate</code>) rather than indexed directly, ensuring concurrency of 1 and preventing concurrent embedding API calls from freezing the main thread.</p>
+
+      <div class="arch-diagram">Vault Event (modify/create/rename)
+    |
+    scheduleFileIndex()       [src/main.ts]
+    |  per-file debounce timer (2s)
+    |  excluded folders filtered out
+    v
+queueAutoUpdate()             [SemanticIndexService]
+    |  Set&lt;string&gt; for path dedup
+    |  concurrency: 1
+    |  2s pause between files
+    v
+updateFile()
+    |  delete old chunks -> re-chunk -> embed -> insert
+    v
+Index updated</div>
+
+      <h3>Indexable File Types</h3>
+      <p>Markdown files (<code>.md</code>) are always indexed. When <code>indexPdfs</code> is enabled, document files (<code>.pdf</code>, <code>.pptx</code>, <code>.xlsx</code>, <code>.docx</code>) are also indexed using the Document Parser Pipeline.</p>
+
       <h2 id="configuration">Configuration</h2>
       <p>The following parameters control index behavior. All are set in the plugin settings under the Semantic Search section.</p>
       <table>
