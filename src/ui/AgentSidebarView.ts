@@ -351,7 +351,7 @@ export class AgentSidebarView extends ItemView {
         });
         setIcon(vaultBtn.createSpan('toolbar-icon'), 'at-sign');
         vaultBtn.addEventListener('click', () => {
-            this.vaultFilePicker.show(vaultBtn);
+            this.vaultFilePicker.show(vaultBtn, this.containerEl);
         });
 
         // Ellipsis options menu button
@@ -1716,7 +1716,7 @@ export class AgentSidebarView extends ItemView {
                         const firstUserMsg = this.uiMessages.find((m) => m.role === 'user');
                         if (firstUserMsg) {
                             const fallback = firstUserMsg.text.slice(0, 60).replace(/\n/g, ' ').trim() || t('ui.sidebar.newConversation');
-                            this.plugin.conversationStore.updateMeta(this.activeConversationId, { title: fallback }).catch(() => {});
+                            void this.plugin.conversationStore.updateMeta(this.activeConversationId, { title: fallback }).catch(() => {});
                             this.generateSemanticTitle(this.activeConversationId);
                         }
                     }
@@ -1941,6 +1941,10 @@ export class AgentSidebarView extends ItemView {
         this.saveCurrentConversation();
         // Enqueue memory extraction (fire-and-forget, threshold-gated)
         this.enqueueMemoryExtraction();
+        // Flush deferred chat-links (ADR-022) — title is available by now
+        if (this.activeConversationId) {
+            void this.plugin.flushPendingChatLinks(this.activeConversationId);
+        }
         this.activeConversationId = null;
         this.uiMessages = [];
         this.conversationHistory = [];
@@ -2000,17 +2004,28 @@ export class AgentSidebarView extends ItemView {
      */
     private generateSemanticTitle(conversationId: string): void {
         const settings = this.plugin.settings;
-        if (!settings.chatLinking?.enabled) return;
+        if (!settings.chatLinking?.enabled) {
+            console.debug('[Titling] Skipped: chatLinking disabled');
+            return;
+        }
 
         const modelKey = settings.chatLinking.titlingModelKey;
-        if (!modelKey) return;
+        if (!modelKey) {
+            console.debug('[Titling] Skipped: no titlingModelKey configured');
+            return;
+        }
 
         const model = settings.activeModels.find((m) => getModelKey(m) === modelKey);
-        if (!model || !model.enabled) return;
+        if (!model || !model.enabled) {
+            console.debug(`[Titling] Skipped: model "${modelKey}" not found or disabled`);
+            return;
+        }
 
         const userMsg = this.uiMessages.find((m) => m.role === 'user')?.text ?? '';
         const assistantMsg = this.uiMessages.find((m) => m.role === 'assistant')?.text ?? '';
         if (!userMsg) return;
+
+        console.debug(`[Titling] Starting semantic title generation with model "${modelKey}"`);
 
         void (async () => {
             try {
@@ -2031,6 +2046,7 @@ export class AgentSidebarView extends ItemView {
                 title = title.trim().replace(/^["']|["']$/g, '');
 
                 if (title && this.plugin.conversationStore) {
+                    console.debug(`[Titling] Generated title: "${title}"`);
                     await this.plugin.conversationStore.updateMeta(conversationId, { title });
                     this.historyPanel?.refresh();
                 }
@@ -2058,6 +2074,10 @@ export class AgentSidebarView extends ItemView {
 
         // Save current conversation before switching
         this.saveCurrentConversation();
+        // Flush deferred chat-links for the outgoing conversation (ADR-022)
+        if (this.activeConversationId) {
+            void this.plugin.flushPendingChatLinks(this.activeConversationId);
+        }
 
         // Reset state
         this.conversationHistory = data.messages;

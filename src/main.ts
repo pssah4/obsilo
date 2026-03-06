@@ -105,6 +105,53 @@ export default class ObsidianAgentPlugin extends Plugin {
     pluginBuilder: PluginBuilder | null = null;
     pluginReloader: PluginReloader | null = null;
 
+    // ── Chat-Linking: deferred frontmatter stamping (ADR-022) ────────────
+    /** Paths written by the agent, grouped by conversationId. Flushed on conversation end. */
+    pendingChatLinks = new Map<string, Set<string>>();
+
+    /** Track a written .md path for deferred chat-link stamping. */
+    trackChatLinkPath(conversationId: string, path: string): void {
+        if (!path.endsWith('.md')) return;
+        let paths = this.pendingChatLinks.get(conversationId);
+        if (!paths) {
+            paths = new Set();
+            this.pendingChatLinks.set(conversationId, paths);
+        }
+        paths.add(path);
+    }
+
+    /** Stamp chat-links into frontmatter for all pending paths of a conversation. */
+    async flushPendingChatLinks(conversationId: string): Promise<void> {
+        const paths = this.pendingChatLinks.get(conversationId);
+        if (!paths || paths.size === 0 || !this.settings.chatLinking?.enabled) return;
+
+        const store = this.conversationStore;
+        const meta = store?.list().find((m: { id: string }) => m.id === conversationId);
+        const title = meta?.title || 'Chat';
+        const uri = `obsidian://obsilo-chat?id=${conversationId}`;
+        const entry = `[${title}](${uri})`;
+
+        for (const p of paths) {
+            const file = this.app.vault.getAbstractFileByPath(p);
+            if (!(file instanceof TFile) || file.extension !== 'md') continue;
+            try {
+                await this.app.fileManager.processFrontMatter(file, (fm) => {
+                    const links: string[] = fm['obsilo-chats'] ?? [];
+                    const idx = links.findIndex((l: string) => l.includes(conversationId));
+                    if (idx >= 0) {
+                        links[idx] = entry;
+                    } else {
+                        links.push(entry);
+                    }
+                    fm['obsilo-chats'] = links;
+                });
+            } catch (e) {
+                console.warn(`[ChatLink] Failed to stamp ${p}:`, e);
+            }
+        }
+        this.pendingChatLinks.delete(conversationId);
+    }
+
     /**
      * Plugin initialization
      *
@@ -459,6 +506,10 @@ export default class ObsidianAgentPlugin extends Plugin {
      */
     async onunload() {
         console.debug('Unloading Obsilo Agent plugin');
+        // Flush any pending chat-links before shutdown
+        for (const convId of this.pendingChatLinks.keys()) {
+            await this.flushPendingChatLinks(convId).catch(() => {});
+        }
         // Push global data back to vault plugin dir for Obsidian Sync (ADR-020)
         await this.syncBridge?.pushToVault().catch((e) =>
             console.warn('[Plugin] SyncBridge push failed (non-fatal):', e)

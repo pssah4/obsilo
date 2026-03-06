@@ -20,13 +20,14 @@ export class VaultFilePicker {
     private selected = new Set<string>(); // file paths
     private filtered: Array<{ file: TFile; label: string }> = [];
     private activeIdx = 0;
+    private resizeHandler: (() => void) | null = null;
 
     constructor(
         private app: App,
         private onConfirm: (files: TFile[]) => Promise<void>,
     ) {}
 
-    show(anchor: HTMLElement): void {
+    show(anchor: HTMLElement, parentContainerEl?: HTMLElement): void {
         this.hide();
         this.selected.clear();
         this.activeIdx = 0;
@@ -34,15 +35,44 @@ export class VaultFilePicker {
         // ── Container ────────────────────────────────────────────────
         this.containerEl = document.body.createDiv('vault-file-picker');
 
-        const rect = anchor.getBoundingClientRect();
-        const popoverHeight = 320;
-        const spaceBelow = window.innerHeight - rect.bottom;
-        if (spaceBelow >= popoverHeight || spaceBelow >= 180) {
-            this.containerEl.style.setProperty('top', `${rect.bottom + 4}px`);
-        } else {
-            this.containerEl.style.setProperty('bottom', `${window.innerHeight - rect.top + 4}px`);
-        }
-        this.containerEl.style.setProperty('left', `${Math.max(8, rect.left)}px`);
+        const positionPopover = () => {
+            if (!this.containerEl) return;
+            const br = anchor.getBoundingClientRect();
+            const cr = parentContainerEl
+                ? parentContainerEl.getBoundingClientRect()
+                : { top: 0, bottom: window.innerHeight, left: 0, right: window.innerWidth, width: window.innerWidth };
+            const pad = 8;
+
+            this.containerEl.style.setProperty('position', 'fixed');
+
+            // Constrain width to container
+            const popWidth = Math.min(320, cr.width - pad * 2);
+            this.containerEl.style.setProperty('width', `${popWidth}px`);
+
+            // Prefer opening upward; fall back to downward
+            const spaceAbove = br.top - cr.top - pad;
+            const spaceBelow = cr.bottom - br.bottom - pad;
+
+            if (spaceAbove >= spaceBelow) {
+                this.containerEl.style.setProperty('bottom', (window.innerHeight - br.top + 4) + 'px');
+                this.containerEl.style.setProperty('top', '');
+                this.containerEl.style.setProperty('max-height', `${Math.max(spaceAbove, 200)}px`);
+            } else {
+                this.containerEl.style.setProperty('top', (br.bottom + 4) + 'px');
+                this.containerEl.style.setProperty('bottom', '');
+                this.containerEl.style.setProperty('max-height', `${Math.max(spaceBelow, 200)}px`);
+            }
+
+            // Horizontal: keep inside container
+            let left = Math.max(br.left, cr.left + pad);
+            if (left + popWidth > cr.right - pad) left = cr.right - pad - popWidth;
+            left = Math.max(left, cr.left + pad);
+            this.containerEl.style.setProperty('left', `${left}px`);
+        };
+        positionPopover();
+
+        this.resizeHandler = positionPopover;
+        window.addEventListener('resize', this.resizeHandler);
 
         // ── Search row ───────────────────────────────────────────────
         const searchRow = this.containerEl.createDiv('vfp-search-row');
@@ -117,6 +147,10 @@ export class VaultFilePicker {
     }
 
     hide(): void {
+        if (this.resizeHandler) {
+            window.removeEventListener('resize', this.resizeHandler);
+            this.resizeHandler = null;
+        }
         this.containerEl?.remove();
         this.containerEl = null;
         this.searchInput = null;

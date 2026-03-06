@@ -172,7 +172,7 @@ For reusable capabilities: create a skill with code_modules via manage_skill.
 
 ## Output quality for generated files
 
-After generating binary files (PPTX, XLSX, PDF, images):
+After generating files with npm packages in the sandbox (PPTX via pptxgenjs, XLSX via xlsx, PDF via pdf-lib):
 1. Check the file was written successfully (no empty or near-empty files)
 2. Use standard slide dimensions (10x7.5 inches for PPTX, A4 for PDF)
 3. If the user reports formatting issues, iterate and fix — do not suggest manual workarounds

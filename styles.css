@@ -4613,15 +4613,17 @@
 .vault-file-picker {
     position: fixed;
     z-index: 1000;
-    width: 320px;
+    min-width: 280px;
+    max-width: 320px;
     max-height: 360px;
     display: flex;
     flex-direction: column;
     background: var(--background-primary);
-    border: 1px solid var(--background-modifier-border);
+    border: none;
     border-radius: 8px;
-    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.22);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.22);
     overflow: hidden;
+    padding: 0;
 }
 
 .vfp-search-row {
