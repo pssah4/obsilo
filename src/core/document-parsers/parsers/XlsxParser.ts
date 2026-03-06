@@ -132,7 +132,7 @@ export async function parseXlsx(data: ArrayBuffer): Promise<ParseResult> {
             if (!rowData) continue; // skip fully empty rows
             const cells: string[] = [];
             for (let c = 0; c <= maxCol; c++) {
-                cells.push((rowData.get(c) ?? '').replace(/\|/g, '\\|').replace(/\n/g, ' '));
+                cells.push((rowData.get(c) ?? '').replace(/\\/g, '\\\\').replace(/\|/g, '\\|').replace(/\n/g, ' '));
             }
             // Skip rows where all cells are empty
             if (cells.every(c => c === '')) continue;
