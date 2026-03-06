@@ -312,10 +312,10 @@ export const TOOL_METADATA: Record<string, ToolMeta> = {
     evaluate_expression: {
         group: 'agent', label: 'Sandbox Code', icon: 'code-2',
         signature: 'evaluate_expression(expression, context?, dependencies?)',
-        description: 'Execute TypeScript in an isolated sandbox. Provides ctx.vault (read, readBinary, write, writeBinary, list) and ctx.requestUrl. Best for: text/JSON processing, vault batch operations (iterate files, transform content), computations, HTTP API calls. NOT for: binary file generation (DOCX, PPTX, XLSX, PDF) — these need Node.js APIs unavailable in the sandbox.',
+        description: 'Execute TypeScript in an isolated sandbox. Provides ctx.vault (read, readBinary, write, writeBinary, list) and ctx.requestUrl. For: batch operations across many files (5+), computations, data transforms, HTTP API calls, npm packages. NOT for: single-file edits (use read_file + edit_file/write_file instead) or binary file generation (DOCX, PPTX, XLSX, PDF).',
         example: 'evaluate_expression("const files = await ctx.vault.list(\'Projects/\'); let count = 0; for (const f of files) { const c = await ctx.vault.read(f); count += (c.match(/- \\\\[ \\\\]/g) || []).length; } return `${count} open tasks`")',
-        whenToUse: 'For batch text processing, data transformation, or computations that would require many tool calls. NOT for binary file formats.',
-        commonMistakes: 'Attempting DOCX/PPTX/XLSX generation (needs Buffer/JSZip, unavailable). Writing Python. Using require()/fetch()/Blob/Buffer (not available).',
+        whenToUse: 'ONLY when built-in tools cannot do the job: batch processing across 5+ files, computations, complex data transforms, HTTP requests, npm packages. NEVER for single-file operations — use read_file + edit_file/write_file instead.',
+        commonMistakes: 'Using sandbox for single-file edits instead of read_file + edit_file/write_file. Attempting DOCX/PPTX/XLSX generation (needs Buffer/JSZip, unavailable). Writing Python. Using require()/fetch()/Blob/Buffer (not available).',
     },
     manage_skill: {
         group: 'agent', label: 'Manage Skill', icon: 'bookmark-plus',
