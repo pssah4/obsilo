@@ -1,6 +1,6 @@
 # ADR-025: On-Demand Bild-Nachlade-Strategie
 
-**Status:** Proposed
+**Status:** Akzeptiert, geplant
 **Date:** 2026-03-05
 **Deciders:** Sebastian (Owner), Claude Code (Implementierung)
 
@@ -8,7 +8,7 @@
 
 Unternehmens-Praesentationen transportieren wesentliche Informationen ueber Grafiken (Diagramme, Prozessbilder, Screenshots). Ein reiner Text-Extrakt erfasst nur ca. 70% des Informationsgehalts. Gleichzeitig sind Bilder token-intensiv (ein base64-Image Block kann 1.000-10.000 Token verbrauchen).
 
-**Zwei-Stufen-Anforderung aus FEATURE-203:**
+**Zwei-Stufen-Anforderung aus FEATURE-0604:**
 1. Stufe: Parser extrahiert Text + Bild-Metadaten (Platzhalter wie "[Bild 1: chart.png auf Folie 3]")
 2. Stufe: Agent entscheidet autonom, ob er Bilder nachlaedt -- ueber ein Tool
 
@@ -19,8 +19,8 @@ Unternehmens-Praesentationen transportieren wesentliche Informationen ueber Graf
 - Soll das Tool auch fuer DOCX-Bilder funktionieren?
 
 **Triggering ASRs:**
-- ASR-1 (FEATURE-203): Text-first mit Bild-Nachlade (Critical)
-- ASR-2 (FEATURE-203): Vision-Capability-Check (Moderate)
+- ASR-1 (FEATURE-0604): Text-first mit Bild-Nachlade (Critical)
+- ASR-2 (FEATURE-0604): Vision-Capability-Check (Moderate)
 
 ## Decision Drivers
 
@@ -136,7 +136,7 @@ Wenn du ein Dokument mit Bild-Platzhaltern analysierst:
 - Abhaengigkeit von Provider-seitigem Vision-Support (nicht alle Modelle)
 
 ### Risks
-- **Risk:** Agent laedt zu oft/zu viele Bilder nach -> **Mitigation:** maxImages-Limit (Default 10), System Prompt Steering, Token-Budget aus FEATURE-202
+- **Risk:** Agent laedt zu oft/zu viele Bilder nach -> **Mitigation:** maxImages-Limit (Default 10), System Prompt Steering, Token-Budget aus FEATURE-0603
 - **Risk:** Bild-Skalierung verzerrt Diagramme -> **Mitigation:** Proportionales Downscaling, nur bei Ueberschreitung von 2048px Kantenlaenge
 - **Risk:** PPTX-Datei wurde zwischen Parsing und Nachlade geaendert -> **Mitigation:** Warnung wenn mtime differiert, kein harter Fehler
 
@@ -154,5 +154,5 @@ Wenn du ein Dokument mit Bild-Platzhaltern analysierst:
 
 - ADR-023: Document Parser als wiederverwendbare Tools (Service-Kern + Tool-Wrapper)
 - ADR-024: Parsing Library Selection (JSZip fuer OOXML-Zugriff)
-- FEATURE-203: On-Demand Bild-Extraktion (Requirements)
-- FEATURE-204: Model Compatibility Check (Vision-Gate)
+- FEATURE-0604: On-Demand Bild-Extraktion (Requirements)
+- FEATURE-0605: Model Compatibility Check (Vision-Gate)

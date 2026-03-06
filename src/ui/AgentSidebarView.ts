@@ -1031,10 +1031,13 @@ export class AgentSidebarView extends ItemView {
             messageToSend = textWithContext;
         }
 
-        // Process slash commands (Sprint 3.3) — if text starts with /workflow-slug,
-        // replace with workflow content as explicit instructions (plain string only;
+        // Process slash commands (Sprint 3.3) — if text starts with /workflow-slug or /prompt-slug,
+        // replace with workflow/prompt content as explicit instructions (plain string only;
         // attachment blocks are passed through unchanged).
         if (typeof messageToSend === 'string' && text.startsWith('/')) {
+            let slashResolved = false;
+
+            // 1. Try workflows first
             const workflowLoader = this.plugin.workflowLoader;
             if (workflowLoader) {
                 const processedText = await workflowLoader.processSlashCommand(
@@ -1042,8 +1045,30 @@ export class AgentSidebarView extends ItemView {
                     this.plugin.settings.workflowToggles ?? {},
                 );
                 if (processedText !== text) {
-                    // Re-add active file context after workflow expansion
                     messageToSend = processedText + (activeFile
+                        ? `\n\n<context>\nActive file in editor: ${activeFile.path}\n</context>`
+                        : '');
+                    slashResolved = true;
+                }
+            }
+
+            // 2. If no workflow matched, try custom prompts
+            if (!slashResolved) {
+                const spaceIdx = text.indexOf(' ');
+                const slug = spaceIdx === -1 ? text.slice(1) : text.slice(1, spaceIdx);
+                const rest = spaceIdx === -1 ? '' : text.slice(spaceIdx + 1).trim();
+
+                const prompt = (this.plugin.settings.customPrompts ?? []).find(
+                    (p) => p.slug === slug && p.enabled !== false,
+                );
+                if (prompt) {
+                    const activeFileName = activeFile?.name;
+                    const { resolvePromptContent } = await import('../core/context/SupportPrompts');
+                    const resolved = resolvePromptContent(prompt.content, {
+                        userInput: rest,
+                        activeFile: activeFileName,
+                    });
+                    messageToSend = resolved + (activeFile
                         ? `\n\n<context>\nActive file in editor: ${activeFile.path}\n</context>`
                         : '');
                 }
@@ -2954,6 +2979,89 @@ export class AgentSidebarView extends ItemView {
         this.chatContainer.scrollTo({ top: this.chatContainer.scrollHeight });
     }
 
+    /**
+     * Build a human-readable explanation for a tool call.
+     * Returns { text, target? } where text is the explanation sentence
+     * and target is the highlighted value (path, URL, query etc.).
+     */
+    private buildHumanReadableExplanation(
+        toolName: string,
+        input: Record<string, unknown>,
+    ): { text: string; target?: string } {
+        const str = (key: string): string => typeof input[key] === 'string' ? input[key] as string : '';
+
+        switch (toolName) {
+            case 'write_file':
+                return { text: t('ui.approval.explain.writeFile'), target: str('path') };
+            case 'edit_file':
+                return { text: t('ui.approval.explain.editFile'), target: str('path') };
+            case 'append_to_file':
+                return { text: t('ui.approval.explain.appendFile'), target: str('path') };
+            case 'update_frontmatter':
+                return { text: t('ui.approval.explain.frontmatter'), target: str('path') };
+            case 'delete_file':
+                return { text: t('ui.approval.explain.deleteFile'), target: str('path') };
+            case 'move_file': {
+                const from = str('source');
+                const to = str('destination');
+                return { text: t('ui.approval.explain.moveFile'), target: to ? `${from} ${t('ui.approval.explain.moveFileTo')} ${to}` : from };
+            }
+            case 'create_folder':
+                return { text: t('ui.approval.explain.createFolder'), target: str('path') };
+            case 'generate_canvas':
+                return { text: t('ui.approval.explain.canvas'), target: str('output_path') };
+            case 'create_excalidraw':
+                return { text: t('ui.approval.explain.excalidraw'), target: str('output_path') };
+            case 'evaluate_expression':
+                return { text: t('ui.approval.explain.sandbox') };
+            case 'web_fetch':
+                return { text: t('ui.approval.explain.webFetch'), target: str('url') };
+            case 'web_search':
+                return { text: t('ui.approval.explain.webSearch'), target: str('query') };
+            case 'new_task':
+                return { text: t('ui.approval.explain.newTask') };
+            case 'use_mcp_tool': {
+                const server = str('server_name');
+                const tool = str('tool_name');
+                return { text: t('ui.approval.explain.mcpTool'), target: tool ? `${tool} (${server})` : server };
+            }
+            case 'call_plugin_api':
+                return { text: t('ui.approval.explain.pluginApi'), target: str('plugin_id') };
+            case 'execute_command':
+                return { text: t('ui.approval.explain.command'), target: str('command_id') };
+            case 'execute_recipe':
+                return { text: t('ui.approval.explain.recipe'), target: str('recipe_id') };
+            case 'switch_mode':
+                return { text: t('ui.approval.explain.switchMode') };
+            case 'manage_skill':
+            case 'manage_source':
+                return { text: t('ui.approval.explain.selfModify') };
+            default:
+                return { text: t('ui.approval.explain.fallback'), target: this.formatToolLabel(toolName) };
+        }
+    }
+
+    /**
+     * Truncate a string to maxLen characters, appending "..." if truncated.
+     */
+    private truncateForApproval(value: string, maxLen: number): string {
+        if (value.length <= maxLen) return value;
+        return value.slice(0, maxLen) + '...';
+    }
+
+    /**
+     * Format the raw tool input as a readable string for the details section.
+     */
+    private formatInputForDetails(input: Record<string, unknown>): string {
+        const MAX_VALUE_LEN = 500;
+        const lines: string[] = [];
+        for (const [key, value] of Object.entries(input)) {
+            const strVal = typeof value === 'string' ? value : JSON.stringify(value, null, 2);
+            lines.push(`${key}: ${this.truncateForApproval(strVal, MAX_VALUE_LEN)}`);
+        }
+        return lines.join('\n');
+    }
+
     private async showApprovalCard(
         toolName: string,
         input: Record<string, unknown>,
@@ -2982,6 +3090,43 @@ export class AgentSidebarView extends ItemView {
             row.createSpan('tool-approval-text').setText(
                 t('ui.approval.notEnabled', { tool: this.formatToolLabel(toolName), group: groupLabels[group] ?? group })
             );
+
+            // Human-readable explanation
+            const { text: explanationText, target } = this.buildHumanReadableExplanation(toolName, input);
+            const explanationEl = row.createDiv('tool-approval-explanation');
+            explanationEl.createSpan().setText(explanationText);
+            if (target) {
+                explanationEl.createSpan('tool-approval-target').setText(target);
+            }
+
+            // For sandbox: show code preview (first 3 lines)
+            if (toolName === 'evaluate_expression' && typeof input['expression'] === 'string') {
+                const expr = input['expression'] as string;
+                const previewLines = expr.split('\n').slice(0, 3);
+                const preview = previewLines.join('\n') + (expr.split('\n').length > 3 ? '\n...' : '');
+                const codePreview = row.createDiv('tool-approval-code-preview');
+                codePreview.createEl('code').setText(preview);
+            }
+
+            // Collapsible details for power users
+            const detailsToggle = row.createEl('span', {
+                cls: 'tool-approval-details-toggle',
+                text: t('ui.approval.explain.showDetails'),
+            });
+            const detailsContainer = row.createDiv('tool-approval-details');
+            detailsContainer.createEl('pre', { cls: 'tool-approval-details-content' })
+                .setText(this.formatInputForDetails(input));
+
+            detailsToggle.addEventListener('click', () => {
+                const isVisible = detailsContainer.hasClass('is-visible');
+                if (isVisible) {
+                    detailsContainer.removeClass('is-visible');
+                    detailsToggle.setText(t('ui.approval.explain.showDetails'));
+                } else {
+                    detailsContainer.addClass('is-visible');
+                    detailsToggle.setText(t('ui.approval.explain.hideDetails'));
+                }
+            });
 
             // Shai Hulud Mitigation: warn when writing to configDir (plugins/themes/settings)
             const inputPath = typeof input['path'] === 'string' ? input['path'] : '';

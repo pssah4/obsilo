@@ -17,7 +17,7 @@ Alles was der Agent als Funktion aufrufen kann. Tools haben ein Input-Schema, fu
 | **MCP Tools** | Von externen MCP-Servern | Externer Prozess | use_mcp_tool |
 
 ### Skills
-Anleitungen in Markdown, die den Agent bei bestimmten Aufgabentypen steuern. Skills fuehren keinen Code aus -- sie werden per Keyword-Matching ins System Prompt injiziert.
+Anleitungen in Markdown, die den Agent bei bestimmten Aufgabentypen steuern. Skills fuehren keinen Code aus -- sie werden per Keyword-Matching ins System Prompt injiziert. Skills koennen auch ueber das `/`-Autocomplete im Chat aufgerufen werden.
 
 | Typ | Quelle | Speicherort |
 |-----|--------|-------------|
@@ -42,7 +42,7 @@ Isolierte Laufzeitumgebung fuer Agent-generierten Code. Zwei Implementierungen:
 - Aus der Isolation ausbrechen -- die Bridge ist der einzige Kommunikationskanal
 
 ### Workflows
-Feste Schritt-fuer-Schritt-Anleitungen als Markdown-Dateien. Werden per /slash-command ausgeloest. Keine Code-Ausfuehrung.
+Feste Schritt-fuer-Schritt-Anleitungen als Markdown-Dateien. Werden per `/`-Autocomplete im Chat ausgeloest. Keine Code-Ausfuehrung.
 
 ---
 
@@ -74,7 +74,7 @@ Agent-generierter Code laeuft **immer** in Schicht 3 (Sandbox). Er kann nicht in
 ## Referenzen
 
 - ADR-021: Sandbox OS-Level Process Isolation
-- FEATURE-sandbox-os-isolation.md
+- FEATURE-0502-sandbox-os-isolation.md
 - src/core/sandbox/ (IframeSandboxExecutor, ProcessSandboxExecutor, SandboxBridge)
 - src/core/tools/toolMetadata.ts (Single Source of Truth fuer Tool-Metadaten)
 - src/core/skills/ (SelfAuthoredSkillLoader, VaultDNAScanner)

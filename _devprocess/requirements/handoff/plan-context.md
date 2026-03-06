@@ -3,7 +3,7 @@
 > **Purpose:** Technische Zusammenfassung fuer Claude Code
 > **Created by:** Architect Agent
 > **Date:** 2026-03-05
-> **Epic:** EPIC-002
+> **Epic:** EPIC-006
 
 ---
 
@@ -129,7 +129,7 @@ Der bestehende Code in `SemanticIndexService.ts:963-1023` muss in einen eigensta
 
 ## Performance & Security
 
-**Performance (NFR-Targets aus FEATURE-200):**
+**Performance (NFR-Targets aus FEATURE-0601):**
 - PPTX-Parsing (30 Folien): < 5.000ms (Ziel < 1.000ms)
 - XLSX-Parsing (10 Sheets, je 1.000 Zeilen): < 3.000ms
 - DOCX-Parsing (100 Seiten): < 2.000ms
@@ -165,9 +165,9 @@ Neue Module folgen das bestehende Wiring-Pattern:
 
 | Phase | Features | Abhaengigkeiten |
 |-------|----------|-----------------|
-| 1 | FEATURE-200 (Parser Pipeline) + FEATURE-201 (File Picker) | Keine -- Basis fuer alles |
-| 2 | FEATURE-202 (Token-Budget) + FEATURE-204 (Model-Compat) | Phase 1 |
-| 3 | FEATURE-203 (Bild-Extraktion) | Phase 1 + Phase 2 (supportsVision) |
+| 1 | FEATURE-0601 (Parser Pipeline) + FEATURE-0602 (File Picker) | Keine -- Basis fuer alles |
+| 2 | FEATURE-0603 (Token-Budget) + FEATURE-0605 (Model-Compat) | Phase 1 |
+| 3 | FEATURE-0604 (Bild-Extraktion) | Phase 1 + Phase 2 (supportsVision) |
 
 ---
 
@@ -178,12 +178,12 @@ Claude Code sollte folgende Dokumente als Kontext lesen:
 1. `_devprocess/architecture/ADR-023-document-parser-tools.md` (Service-Kern + Tool-Wrapper)
 2. `_devprocess/architecture/ADR-024-parsing-library-selection.md` (Library-Auswahl)
 3. `_devprocess/architecture/ADR-025-on-demand-image-strategy.md` (Bild-Nachlade)
-4. `_devprocess/requirements/features/FEATURE-200-document-parsing-pipeline.md` (P0)
-5. `_devprocess/requirements/features/FEATURE-201-file-picker-extension.md` (P0)
-6. `_devprocess/requirements/features/FEATURE-202-token-budget-management.md` (P1)
-7. `_devprocess/requirements/features/FEATURE-203-on-demand-image-extraction.md` (P1)
-8. `_devprocess/requirements/features/FEATURE-204-model-compatibility-check.md` (P1)
-9. `_devprocess/requirements/epics/EPIC-002-files-to-chat.md`
+4. `_devprocess/requirements/features/FEATURE-0601-document-parsing-pipeline.md` (P0)
+5. `_devprocess/requirements/features/FEATURE-0602-file-picker-extension.md` (P0)
+6. `_devprocess/requirements/features/FEATURE-0603-token-budget-management.md` (P1)
+7. `_devprocess/requirements/features/FEATURE-0604-on-demand-image-extraction.md` (P1)
+8. `_devprocess/requirements/features/FEATURE-0605-model-compatibility-check.md` (P1)
+9. `_devprocess/requirements/epics/EPIC-006-files-to-chat.md`
 
 **Bestehende Code-Referenzen (zum Lesen VOR Implementierung):**
 - `src/ui/sidebar/AttachmentHandler.ts` (Integrationspunkt File Picker)

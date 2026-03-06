@@ -1,10 +1,10 @@
 import type { App, TFile } from 'obsidian';
 import type ObsidianAgentPlugin from '../../main';
-import { resolvePromptContent } from '../../core/context/SupportPrompts';
 
 interface AutocompleteItem {
     label: string;
     sub?: string;
+    tag?: string;
     onSelect: () => void;
 }
 
@@ -45,6 +45,7 @@ export class AutocompleteHandler {
                 .map((w) => ({
                     label: w.displayName,
                     sub: `/${w.slug}`,
+                    tag: 'Workflow',
                     onSelect: () => {
                         const ta = this.getTextarea();
                         if (!ta) return;
@@ -54,16 +55,6 @@ export class AutocompleteHandler {
                         ta.focus();
                     },
                 }));
-
-            const makePromptSelector = (content: string) => () => {
-                const ta = this.getTextarea();
-                if (!ta) return;
-                const userInput = value.includes(' ') ? value.slice(value.indexOf(' ') + 1) : '';
-                const activeFile = this.app.workspace.getActiveFile()?.name;
-                ta.value = resolvePromptContent(content, { userInput, activeFile });
-                this.hide();
-                ta.focus();
-            };
 
             const activeMode = this.plugin.settings.currentMode;
             const customItems = (this.plugin.settings.customPrompts ?? [])
@@ -75,7 +66,15 @@ export class AutocompleteHandler {
                 .map((p) => ({
                     label: p.name,
                     sub: `/${p.slug}`,
-                    onSelect: makePromptSelector(p.content),
+                    tag: 'Prompt',
+                    onSelect: () => {
+                        const ta = this.getTextarea();
+                        if (!ta) return;
+                        const rest = value.includes(' ') ? value.slice(value.indexOf(' ') + 1) : '';
+                        ta.value = `/${p.slug}${rest ? ' ' + rest : ''}`;
+                        this.hide();
+                        ta.focus();
+                    },
                 }));
 
             this.items = [...workflowItems, ...customItems];
@@ -180,6 +179,7 @@ export class AutocompleteHandler {
                 cls: `autocomplete-item${idx === this.selectedIndex ? ' active' : ''}`,
             });
             row.createSpan({ cls: 'autocomplete-label', text: item.label });
+            if (item.tag) row.createSpan({ cls: 'autocomplete-tag', text: item.tag });
             if (item.sub) row.createSpan({ cls: 'autocomplete-sub', text: item.sub });
             row.addEventListener('mousedown', (e) => {
                 e.preventDefault();

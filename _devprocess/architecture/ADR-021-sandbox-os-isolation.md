@@ -204,5 +204,5 @@ Falls Crash-Rate >10% in 24h: Notice an User mit Empfehlung zu `mode: 'iframe'`.
 
 - `_devprocess/analysis/security/AUDIT-obsilo-2026-03-01.md` -- Security Audit, Finding H-1
 - `_devprocess/analysis/security/ANALYSE-electron-browserwindow-sandbox-2026-03-02.md` -- Detaillierte Optionen-Analyse
-- `_devprocess/requirements/features/FEATURE-sandbox-os-isolation.md` -- Feature-Spezifikation
-- `_devprocess/requirements/features/FEATURE-self-development.md` -- Urspruengliche Sandbox-Spezifikation (Phase 3)
+- `_devprocess/requirements/features/FEATURE-0502-sandbox-os-isolation.md` -- Feature-Spezifikation
+- `_devprocess/requirements/features/FEATURE-0501-self-development.md` -- Urspruengliche Sandbox-Spezifikation (Phase 3)

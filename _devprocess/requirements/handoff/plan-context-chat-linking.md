@@ -1,4 +1,4 @@
-# Plan Context: Chat-Linking (EPIC-003)
+# Plan Context: Chat-Linking (EPIC-007)
 
 > **Purpose:** Technische Zusammenfassung fuer Claude Code
 > **Created by:** Architect Agent
@@ -36,7 +36,7 @@
 
 ## Implementierungs-Komponenten
 
-### Komponente 1: Protocol Handler (FEATURE-300, P0)
+### Komponente 1: Protocol Handler (FEATURE-0702, P0)
 
 **Wo:** `src/main.ts` -- `onload()`
 
@@ -64,7 +64,7 @@ this.registerObsidianProtocolHandler('obsilo-chat', (params) => {
 - `src/main.ts` -- Protocol Handler registrieren
 - `src/ui/AgentSidebarView.ts` -- `loadConversationById()` public Methode
 
-### Komponente 2: Auto-Frontmatter-Linking (FEATURE-301, P0)
+### Komponente 2: Auto-Frontmatter-Linking (FEATURE-0703, P0)
 
 **Wo:** `src/core/tool-execution/ToolExecutionPipeline.ts` -- `executeTool()`, nach Schritt 6 (Log + Cache), vor Return
 
@@ -166,7 +166,7 @@ await task.run({
 - `src/core/AgentTask.ts` -- AgentTaskRunConfig erweitern, Destructuring, Extension-Weitergabe
 - `src/ui/AgentSidebarView.ts` -- conversationId bei task.run() mitgeben
 
-### Komponente 3: Semantisches Chat-Titling (FEATURE-302, P1)
+### Komponente 3: Semantisches Chat-Titling (FEATURE-0704, P1)
 
 **Wo:** `src/ui/AgentSidebarView.ts`
 
@@ -211,7 +211,7 @@ private async generateSemanticTitle(conversationId: string, userMsg: string, ass
 - `src/api/types.ts` -- generateSimpleCompletion() im Handler-Interface (wenn nicht vorhanden)
 - Provider-Handler (Anthropic, OpenAI, etc.) -- Implementierung von generateSimpleCompletion()
 
-### Komponente 4: Settings (FEATURE-303, P2)
+### Komponente 4: Settings (FEATURE-0705, P2)
 
 **Wo:** `src/types/settings.ts`, `src/ui/settings/InterfaceTab.ts`
 
@@ -252,13 +252,13 @@ ui.sidebar.chatNotFound
 ## Implementierungs-Reihenfolge
 
 ```
-Phase 1: Infrastruktur (FEATURE-303 teilweise + FEATURE-300)
+Phase 1: Infrastruktur (FEATURE-0705 teilweise + FEATURE-0702)
   1. Settings: chatLinking + titlingModelKey in settings.ts + Defaults
   2. Protocol Handler: main.ts registrieren
   3. loadConversationById(): AgentSidebarView
   -> Build + Test
 
-Phase 2: Pipeline Hook (FEATURE-301)
+Phase 2: Pipeline Hook (FEATURE-0703)
   4. ContextExtensions.conversationId
   5. AgentTaskRunConfig.conversationId
   6. AgentTask.run() Destructuring + Extension-Weitergabe
@@ -267,13 +267,13 @@ Phase 2: Pipeline Hook (FEATURE-301)
   9. Hook in executeTool() (Schritt 7)
   -> Build + Test
 
-Phase 3: Titling (FEATURE-302)
+Phase 3: Titling (FEATURE-0704)
   10. generateSimpleCompletion() im API-Handler
   11. generateSemanticTitle() in SidebarView
   12. Trigger im Streaming-Callback
   -> Build + Test
 
-Phase 4: UI (FEATURE-303 Rest)
+Phase 4: UI (FEATURE-0705 Rest)
   13. InterfaceTab: Toggle + Dropdown
   14. i18n: 6 Locale-Dateien
   -> Build + Test
@@ -300,10 +300,10 @@ Phase 4: UI (FEATURE-303 Rest)
 Claude Code sollte folgende Dokumente als Kontext lesen:
 
 1. `_devprocess/architecture/ADR-022-chat-linking.md` (aktualisierter ADR)
-2. `_devprocess/requirements/features/FEATURE-300-protocol-handler.md`
-3. `_devprocess/requirements/features/FEATURE-301-auto-frontmatter-linking.md`
-4. `_devprocess/requirements/features/FEATURE-302-semantic-chat-titling.md`
-5. `_devprocess/requirements/features/FEATURE-303-chat-linking-setting.md`
+2. `_devprocess/requirements/features/FEATURE-0702-protocol-handler.md`
+3. `_devprocess/requirements/features/FEATURE-0703-auto-frontmatter-linking.md`
+4. `_devprocess/requirements/features/FEATURE-0704-semantic-chat-titling.md`
+5. `_devprocess/requirements/features/FEATURE-0705-chat-linking-setting.md`
 6. `src/core/tool-execution/ToolExecutionPipeline.ts` (Hook-Point)
 7. `src/core/AgentTask.ts` (AgentTaskRunConfig, run())
 8. `src/ui/AgentSidebarView.ts` (Streaming-Callback, loadConversation)

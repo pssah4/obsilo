@@ -1,9 +1,9 @@
 # ADR-026: Post-Processing Hook fuer Task Extraction
 
-**Status:** Proposed
+**Status:** Akzeptiert, implementiert
 **Date:** 2026-03-06
 **Deciders:** Architect Agent, Claude Code
-**Feature:** FEATURE-100 Task Extraction & Management
+**Feature:** FEATURE-0801 Task Extraction & Management
 
 ## Context
 
@@ -17,7 +17,7 @@ Aktuell endet der Agent-Zyklus in `AgentSidebarView.onComplete()` (ca. Zeile 160
 
 Ein neuer Hook muss sich in diesen Flow einfuegen, ohne das Rendering zu blockieren oder die bestehende Logik zu verkomplizieren.
 
-**Triggering ASR:** CRITICAL ASR #1 aus FEATURE-100
+**Triggering ASR:** CRITICAL ASR #1 aus FEATURE-0801
 **Quality Attribute:** Extensibility, Performance
 
 ## Decision Drivers
@@ -141,5 +141,5 @@ if (this.plugin.settings.taskExtraction?.enabled && accumulatedText) {
 
 ## References
 
-- FEATURE-100: Task Extraction & Management
+- FEATURE-0801: Task Extraction & Management
 - `src/ui/AgentSidebarView.ts`: onComplete Callback (~Zeile 1604)

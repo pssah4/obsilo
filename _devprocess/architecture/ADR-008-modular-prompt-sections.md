@@ -2,7 +2,7 @@
 
 **Status:** Accepted
 **Date:** 2026-02-21
-**Context:** System Prompt Refactoring (FEATURE-modular-system-prompt.md, FEATURE-tool-metadata-registry.md)
+**Context:** System Prompt Refactoring (FEATURE-0312-modular-system-prompt.md, FEATURE-0506-tool-metadata-registry.md)
 
 ---
 
@@ -64,6 +64,6 @@ Move display metadata (label, icon, description) into each `*Tool.ts` class alon
 ## References
 
 - Kilo Code: `forked-kilocode/src/core/prompts/` — modular sections architecture (adopted pattern)
-- FEATURE-modular-system-prompt.md — full feature spec
-- FEATURE-tool-metadata-registry.md — tool metadata spec
+- FEATURE-0312-modular-system-prompt.md — full feature spec
+- FEATURE-0506-tool-metadata-registry.md — tool metadata spec
 - ADR-004-mode-based-tool-filtering.md — related: tool groups filter which tools appear in the prompt

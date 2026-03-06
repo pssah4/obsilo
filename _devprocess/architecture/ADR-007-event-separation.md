@@ -2,7 +2,7 @@
 
 **Status:** Accepted
 **Date:** 2026-02-20
-**Context:** Memory & Chat History Feature (FEATURE-memory-personalization.md)
+**Context:** Memory & Chat History Feature (FEATURE-0304-memory-personalization.md)
 
 ---
 
@@ -55,4 +55,4 @@ Always discard the attempt_completion result text. Simple but loses the fallback
 
 - Kilo Code: `src/core/assistant-message/presentAssistantMessage.ts` — tool-owned completion UI
 - OpenClaw: Event-driven architecture with `message_*` / `tool_execution_*` / `agent_end` events
-- Feature Spec: `devprocess/requirements/features/FEATURE-memory-personalization.md`
+- Feature Spec: `devprocess/requirements/features/FEATURE-0304-memory-personalization.md`

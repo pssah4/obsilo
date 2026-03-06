@@ -165,9 +165,9 @@ Muster:  fire-and-forget (void) -- blockiert weder Chat noch UI
 
 ## Referenzen
 
-- Business Analysis: [BA-chat-linking.md](../analysis/BA-chat-linking.md)
-- Epic: [EPIC-003-chat-linking.md](../requirements/epics/EPIC-003-chat-linking.md)
-- Features: FEATURE-300 bis FEATURE-303
+- Business Analysis: [BA-001-chat-linking.md](../analysis/BA-001-chat-linking.md)
+- Epic: [EPIC-007-chat-linking.md](../requirements/epics/EPIC-007-chat-linking.md)
+- Features: FEATURE-0702 bis FEATURE-0705
 - ADR-001: Central Tool Execution Pipeline (bestehendes Pattern)
 - `src/core/tool-execution/ToolExecutionPipeline.ts` (Hook-Point: nach Schritt 6, vor Return)
 - `src/core/history/ConversationStore.ts` (Conversation-ID-Format, getMeta)

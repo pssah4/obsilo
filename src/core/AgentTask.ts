@@ -117,7 +117,7 @@ export class AgentTask {
         consecutiveMistakeLimit = 0,
         rateLimitMs = 0,
         condensingEnabled = true,
-        condensingThreshold = 65,  // Was 80% - lowered for more safety
+        condensingThreshold = 70,
         powerSteeringFrequency = 0,
         maxIterations = 25,
         depth = 0,
@@ -311,6 +311,12 @@ export class AgentTask {
         /** Called by UpdateSettingsTool when settings that affect tool availability change */
         const invalidateToolCache = () => { cacheInvalidated = true; };
 
+        // Emergency condensing retry: if the API rejects with context overflow,
+        // condense and retry the entire loop once instead of aborting.
+        let emergencyRetried = false;
+
+        // eslint-disable-next-line no-constant-condition -- emergency condensing retry loop
+        while (true) {
         try {
             for (let iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
                 // Early exit if task was cancelled between iterations
@@ -707,6 +713,7 @@ export class AgentTask {
             }
 
             this.taskCallbacks.onComplete();
+            return;  // Success — exit the emergency retry loop
         } catch (error) {
             // AbortError is expected when user cancels — not a real error.
             // Also: when the abort signal is already triggered, ANY error
@@ -743,15 +750,18 @@ export class AgentTask {
             const isContextOverflow =
                 /context.?length|too.?long|too.?many.?tokens|max.?tokens|token.?limit|prompt.?too|content.?size|request.?too.?large/i
                     .test(err.message);
-            if (isContextOverflow && history.length >= 7) {
+            if (isContextOverflow && history.length >= 7 && !emergencyRetried) {
                 console.warn('[AgentTask] Context overflow detected — attempting emergency condensing');
                 try {
+                    // 6B: Pre-compaction memory flush before emergency condensing
+                    await this.taskCallbacks.onPreCompactionFlush?.(history).catch((e) =>
+                        console.warn('[AgentTask] Pre-compaction flush failed (non-fatal):', e)
+                    );
                     await this.condenseHistory(history, cachedSystemPrompt, abortSignal);
                     // onContextCondensed is called inside condenseHistory with token counts
-                    this.taskCallbacks.onError(new Error(
-                        'Context was too large. The conversation has been condensed — please resend your last message.',
-                    ));
-                    return;
+                    emergencyRetried = true;
+                    console.debug('[AgentTask] Emergency condensing succeeded — retrying agent loop');
+                    continue;  // 6A: Retry the agent loop with condensed history
                 } catch {
                     // Condensing itself failed — fall through to normal error handling
                     console.warn('[AgentTask] Emergency condensing failed');
@@ -770,7 +780,9 @@ export class AgentTask {
                 console.error('[AgentTask] Task failed:', err);
                 this.taskCallbacks.onError(err);
             }
+            return;  // Error — exit the emergency retry loop
         }
+        } // while (true) — emergency condensing retry loop
     }
 
     // -------------------------------------------------------------------------

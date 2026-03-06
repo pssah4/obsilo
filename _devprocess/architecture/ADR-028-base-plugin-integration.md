@@ -1,13 +1,13 @@
 # ADR-028: Base-Erstellung und optionale Plugin-Integration fuer Task Extraction
 
-**Status:** Proposed
+**Status:** Akzeptiert, teilweise implementiert (Task-Notes ja, Base-Erstellung und Iconic-Integration ausstehend)
 **Date:** 2026-03-06
 **Deciders:** Architect Agent, Claude Code
-**Feature:** FEATURE-100 Task Extraction & Management
+**Feature:** FEATURE-0801 Task Extraction & Management
 
 ## Context
 
-Task Extraction (FEATURE-100) braucht zwei Integrations-Entscheidungen:
+Task Extraction (FEATURE-0801) braucht zwei Integrations-Entscheidungen:
 
 1. **Base-Erstellung**: Eine `.base`-Datei mit 3 Views (Offen, Erledigt, Alle) muss erstellt werden. Die Logik dafuer existiert bereits in `CreateBaseTool` — aber dieses Tool erstellt nur eine View pro Aufruf und ist als Agent-Tool (mit Pipeline, Approval, Checkpoint) konzipiert. Task Extraction braucht die YAML-Generierung ohne den Tool-Overhead.
 
@@ -15,7 +15,7 @@ Task Extraction (FEATURE-100) braucht zwei Integrations-Entscheidungen:
 
 Beide Entscheidungen definieren Patterns fuer zukuenftige Feature-Plugin-Interaktionen.
 
-**Triggering ASR:** MODERATE ASR #3 (Optional Plugin Integration) + MODERATE ASR #4 (Base Code-Reuse) aus FEATURE-100
+**Triggering ASR:** MODERATE ASR #3 (Optional Plugin Integration) + MODERATE ASR #4 (Base Code-Reuse) aus FEATURE-0801
 **Quality Attribute:** Reusability, Resilience, Architecture Clarity
 
 ## Decision Drivers
@@ -228,7 +228,7 @@ Einordnung in `AgentSettingsTab` als eigener Abschnitt, nicht unter Tool-Setting
 
 ## References
 
-- FEATURE-100: Task Extraction & Management
+- FEATURE-0801: Task Extraction & Management
 - `src/core/tools/vault/CreateBaseTool.ts`: Bestehende Base-Erstellungslogik (wird nicht wiederverwendet)
 - Obsidian Bases YAML-Format: `views` Array mit `type`, `name`, `filters`, `order`, `sort`
 - Iconic Plugin: liest `icon` und `iconColor` aus Note-Frontmatter

@@ -1,9 +1,9 @@
 # Architect Handoff: Files-to-Chat (Office-Format-Support)
 
-> **Epic**: EPIC-002 - Files-to-Chat
+> **Epic**: EPIC-006 - Files-to-Chat
 > **Erstellt**: 2026-03-05
 > **Status**: Ready for Architect
-> **BA-Referenz**: _devprocess/analysis/BA-files-to-chat.md
+> **BA-Referenz**: _devprocess/analysis/BA-002-files-to-chat.md
 
 ---
 
@@ -25,17 +25,17 @@ Obsilo benötigt eine lokale Parsing-Pipeline für Office- und Datenformate (PPT
 
 | ID | ASR | Feature | Quality Attribute | Impact |
 |----|-----|---------|-------------------|--------|
-| ASR-1 | **Sandbox-Kompatibilität**: Alle Parsing-Libraries müssen ohne native Binaries, ohne `require()`, ohne `fetch()` in der Electron-Sandbox laufen | FEATURE-200 | Compatibility | Schränkt Library-Wahl massiv ein; ggf. eigenes Parsing auf ZIP+XML-Basis |
-| ASR-2 | **Parser-Erweiterbarkeit**: Neue Formate ohne Architekturänderung hinzufügbar | FEATURE-200 | Extensibility | Plugin-artiges Parser-Interface mit Registry nötig |
-| ASR-3 | **Text-first mit Bild-Nachlade**: Zweistufige Verarbeitung (Text sofort, Bilder on-demand via Tool) | FEATURE-203 | Performance | Neues Tool nötig; System Prompt muss Agent-Verhalten definieren; Bild-Cache-Strategie |
+| ASR-1 | **Sandbox-Kompatibilität**: Alle Parsing-Libraries müssen ohne native Binaries, ohne `require()`, ohne `fetch()` in der Electron-Sandbox laufen | FEATURE-0601 | Compatibility | Schränkt Library-Wahl massiv ein; ggf. eigenes Parsing auf ZIP+XML-Basis |
+| ASR-2 | **Parser-Erweiterbarkeit**: Neue Formate ohne Architekturänderung hinzufügbar | FEATURE-0601 | Extensibility | Plugin-artiges Parser-Interface mit Registry nötig |
+| ASR-3 | **Text-first mit Bild-Nachlade**: Zweistufige Verarbeitung (Text sofort, Bilder on-demand via Tool) | FEATURE-0604 | Performance | Neues Tool nötig; System Prompt muss Agent-Verhalten definieren; Bild-Cache-Strategie |
 
 ### MODERATE
 
 | ID | ASR | Feature | Quality Attribute | Impact |
 |----|-----|---------|-------------------|--------|
-| ASR-4 | **Performance bei großen Dateien**: 100-Seiten PDF / 10k-Zeilen XLSX dürfen UI nicht blockieren | FEATURE-200 | Responsiveness | Ggf. Web Worker oder chunked Processing |
-| ASR-5 | **Provider-Capability-Registry**: Vision-Support pro Modell ohne hardcoded Listen | FEATURE-204 | Extensibility | Neues Feld in ModelInfo oder separate Registry |
-| ASR-6 | **Vault File Picker Performance**: Alle Dateitypen anzeigen, performant bei 10k+ Dateien | FEATURE-201 | Performance | getMarkdownFiles() -> getFiles() mit effizientem Filtern |
+| ASR-4 | **Performance bei großen Dateien**: 100-Seiten PDF / 10k-Zeilen XLSX dürfen UI nicht blockieren | FEATURE-0601 | Responsiveness | Ggf. Web Worker oder chunked Processing |
+| ASR-5 | **Provider-Capability-Registry**: Vision-Support pro Modell ohne hardcoded Listen | FEATURE-0605 | Extensibility | Neues Feld in ModelInfo oder separate Registry |
+| ASR-6 | **Vault File Picker Performance**: Alle Dateitypen anzeigen, performant bei 10k+ Dateien | FEATURE-0602 | Performance | getMarkdownFiles() -> getFiles() mit effizientem Filtern |
 
 ---
 
@@ -45,34 +45,34 @@ Obsilo benötigt eine lokale Parsing-Pipeline für Office- und Datenformate (PPT
 
 | Metrik | Target | Feature |
 |--------|--------|---------|
-| PPTX-Parsing (30 Folien) | < 5.000ms (Ziel < 1.000ms) | FEATURE-200 |
-| XLSX-Parsing (10 Sheets, je 1000 Zeilen) | < 3.000ms | FEATURE-200 |
-| DOCX-Parsing (100 Seiten) | < 2.000ms | FEATURE-200 |
-| PDF-Parsing (100 Seiten, text-basiert) | < 5.000ms | FEATURE-200 |
-| Bild-Extraktion (einzeln) | < 500ms | FEATURE-203 |
-| Bild-Extraktion (alle, 30-Folien PPTX) | < 5.000ms | FEATURE-203 |
-| Token-Schätzung | < 100ms | FEATURE-202 |
-| Modell-Capability-Check | < 10ms | FEATURE-204 |
-| Vault Picker Filterung | < 200ms bei 10k+ Dateien | FEATURE-201 |
-| Memory Peak während Parsing | < 200 MB zusätzlich | FEATURE-200 |
+| PPTX-Parsing (30 Folien) | < 5.000ms (Ziel < 1.000ms) | FEATURE-0601 |
+| XLSX-Parsing (10 Sheets, je 1000 Zeilen) | < 3.000ms | FEATURE-0601 |
+| DOCX-Parsing (100 Seiten) | < 2.000ms | FEATURE-0601 |
+| PDF-Parsing (100 Seiten, text-basiert) | < 5.000ms | FEATURE-0601 |
+| Bild-Extraktion (einzeln) | < 500ms | FEATURE-0604 |
+| Bild-Extraktion (alle, 30-Folien PPTX) | < 5.000ms | FEATURE-0604 |
+| Token-Schätzung | < 100ms | FEATURE-0603 |
+| Modell-Capability-Check | < 10ms | FEATURE-0605 |
+| Vault Picker Filterung | < 200ms bei 10k+ Dateien | FEATURE-0602 |
+| Memory Peak während Parsing | < 200 MB zusätzlich | FEATURE-0601 |
 
 ### Security
 
 | Anforderung | Detail | Feature |
 |-------------|--------|---------|
-| Lokale Verarbeitung | Keine Rohdateien an externe Services | FEATURE-200 |
-| ZIP-Bomb-Protection | Max. Decompressed Size prüfen für OOXML | FEATURE-200 |
-| Path Traversal | Schutz gegen bösartige Pfade in ZIP-Archiven | FEATURE-200 |
-| Input Validation | Dateityp-Prüfung vor Parsing | FEATURE-200 |
+| Lokale Verarbeitung | Keine Rohdateien an externe Services | FEATURE-0601 |
+| ZIP-Bomb-Protection | Max. Decompressed Size prüfen für OOXML | FEATURE-0601 |
+| Path Traversal | Schutz gegen bösartige Pfade in ZIP-Archiven | FEATURE-0601 |
+| Input Validation | Dateityp-Prüfung vor Parsing | FEATURE-0601 |
 
 ### Compliance
 
 | Anforderung | Detail | Alle Features |
 |-------------|--------|---------------|
 | Obsidian Review-Bot | Kein `fetch()`, kein `innerHTML`, kein `console.log`, kein `require()`, keine `any`-Types | Alle |
-| Sandbox | Keine nativen Binaries, keine Systemtools | FEATURE-200 |
-| Bundlegröße | Zusätzliche Dependencies < 5 MB (komprimiert) | FEATURE-200 |
-| DOM API | Obsidian `createEl`/`createDiv`, CSS-Klassen statt `element.style` | FEATURE-201 |
+| Sandbox | Keine nativen Binaries, keine Systemtools | FEATURE-0601 |
+| Bundlegröße | Zusätzliche Dependencies < 5 MB (komprimiert) | FEATURE-0601 |
+| DOM API | Obsidian `createEl`/`createDiv`, CSS-Klassen statt `element.style` | FEATURE-0602 |
 
 ---
 
@@ -140,11 +140,11 @@ Obsilo benötigt eine lokale Parsing-Pipeline für Office- und Datenformate (PPT
 
 | ID | Feature | Priority | Effort | Architektur-Relevanz |
 |----|---------|----------|--------|---------------------|
-| FEATURE-200 | Document Parsing Pipeline | P0 | L | HOCH -- Library-Wahl, Parser-Interface, Sandbox-Kompatibilität |
-| FEATURE-201 | File Picker Erweiterung | P0 | S | NIEDRIG -- primär UI-Änderungen |
-| FEATURE-202 | Token-Budget-Management | P1 | M | MITTEL -- Integration in Send-Pipeline |
-| FEATURE-203 | On-Demand Bild-Extraktion | P1 | M | HOCH -- Neues Tool, Cache-Strategie, System Prompt |
-| FEATURE-204 | Modell-Kompatibilitäts-Check | P1 | S | MITTEL -- Provider-Capability-Registry |
+| FEATURE-0601 | Document Parsing Pipeline | P0 | L | HOCH -- Library-Wahl, Parser-Interface, Sandbox-Kompatibilität |
+| FEATURE-0602 | File Picker Erweiterung | P0 | S | NIEDRIG -- primär UI-Änderungen |
+| FEATURE-0603 | Token-Budget-Management | P1 | M | MITTEL -- Integration in Send-Pipeline |
+| FEATURE-0604 | On-Demand Bild-Extraktion | P1 | M | HOCH -- Neues Tool, Cache-Strategie, System Prompt |
+| FEATURE-0605 | Modell-Kompatibilitäts-Check | P1 | S | MITTEL -- Provider-Capability-Registry |
 
 ---
 

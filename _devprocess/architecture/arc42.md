@@ -116,7 +116,7 @@ Obsidian Agent ist ein Obsidian-Plugin, das einen vollständigen KI-Agenten dire
 
 15. **On-Demand Bild-Nachlade (Lazy Extraction)** — Beim Parsing nur Bild-Metadaten erfasst, Bilder erst bei Agent-Tool-Aufruf extrahiert. Vision-Gate prueft Model-Capability. System Prompt steuert Agent-Entscheidung. [ADR-025](ADR-025-on-demand-image-strategy.md)
 
-16. **Deterministische Task Extraction (Post-Processing Hook)** — Nach Agent-Completion scannt ein Regex-basierter `TaskExtractor` den Antworttext auf `- [ ]` Items. Gefundene Tasks werden im `TaskSelectionModal` praesentiert. Ausgewaehlte Items werden als eigenstaendige Notes mit 10-Property-Frontmatter-Schema (deutsch, Eisenhower-kompatibel) erstellt. Optionale Iconic-Integration fuer visuelle Differenzierung. Eine 3-View-Base (Offen/Erledigt/Alle) bietet die zentrale Uebersicht. Kein AI-Inferenzaufwand — gesamter Flow deterministisch. [ADR-026](ADR-026-post-processing-hook.md), [ADR-027](ADR-027-task-note-schema.md), [ADR-028](ADR-028-base-plugin-integration.md)
+16. **Deterministische Task Extraction (Post-Processing Hook)** — Nach Agent-Completion scannt ein Regex-basierter `TaskExtractor` den Antworttext auf `- [ ]` Items. Gefundene Tasks werden im `TaskSelectionModal` praesentiert. Ausgewaehlte Items werden als eigenstaendige Notes mit 10-Property-Frontmatter-Schema (Kategorie, Status, Zusammenfassung, Eisenhower-Felder, Quelle, Assignee) erstellt. Iconic-Integration und Base-Erstellung sind als Erweiterung geplant (ADR-028), aber noch nicht implementiert. Kein AI-Inferenzaufwand — gesamter Flow deterministisch. [ADR-026](ADR-026-post-processing-hook.md), [ADR-027](ADR-027-task-note-schema.md), [ADR-028](ADR-028-base-plugin-integration.md)
 
 ---
 
@@ -184,30 +184,31 @@ AgentTask.run()
   └── Context Condensing (wenn threshold erreicht)
 ```
 
-### 5.3 Ebene 2: Tool Registry (42 Tools, 8 Gruppen)
+### 5.3 Ebene 2: Tool Registry (43+ Tools, 7 Gruppen)
 
 ```
 ToolRegistry
-  ├── read group (3):  read_file, list_files, search_files
-  ├── vault group (8): get_frontmatter, search_by_tag, get_vault_stats,
-  │                    get_linked_notes, get_daily_note, open_note,
-  │                    semantic_search, query_base
-  ├── edit group (11): write_file, edit_file, append_to_file, create_folder,
-  │                    delete_file, move_file, update_frontmatter,
-  │                    generate_canvas, create_excalidraw,
-  │                    create_base, update_base
-  ├── web group (2):   web_fetch, web_search
-  ├── agent group (7): ask_followup_question, attempt_completion,
-  │                    update_todo_list, new_task, switch_mode,
-  │                    update_settings, configure_model
-  ├── sandbox group (2): evaluate_expression, create_dynamic_tool
-  ├── skill group (5): execute_command, execute_recipe, call_plugin_api,
-  │                    resolve_capability_gap, enable_plugin
-  ├── self-modify group (3): manage_skill, manage_source, manage_mcp_server
-  └── mcp group (1):   use_mcp_tool
+  ├── read group (4):   read_file, read_document, list_files, search_files
+  ├── vault group (8):  get_frontmatter, search_by_tag, get_vault_stats,
+  │                     get_linked_notes, get_daily_note, open_note,
+  │                     semantic_search, query_base
+  ├── edit group (11):  write_file, edit_file, append_to_file, create_folder,
+  │                     delete_file, move_file, update_frontmatter,
+  │                     generate_canvas, create_excalidraw,
+  │                     create_base, update_base
+  ├── web group (2):    web_fetch, web_search
+  ├── agent group (12): ask_followup_question, attempt_completion,
+  │                     update_todo_list, new_task, switch_mode,
+  │                     update_settings, configure_model,
+  │                     read_agent_logs, manage_mcp_server,
+  │                     manage_skill, evaluate_expression, manage_source
+  ├── skill group (5):  execute_command, execute_recipe, call_plugin_api,
+  │                     resolve_capability_gap, enable_plugin
+  └── mcp group (1):    use_mcp_tool
+  + DynamicToolFactory (runtime-registered custom tools)
 ```
 
-### 5.4 Ebene 2: Document Parser Pipeline (EPIC-002)
+### 5.4 Ebene 2: Document Parser Pipeline (EPIC-006)
 
 ```
 DocumentParserRegistry (Service-Kern)
@@ -231,7 +232,7 @@ Aufrufwege:
 
 ADR: [ADR-023](ADR-023-document-parser-tools.md), [ADR-024](ADR-024-parsing-library-selection.md), [ADR-025](ADR-025-on-demand-image-strategy.md).
 
-### 5.7 Ebene 2: Task Extraction Pipeline (FEATURE-100)
+### 5.7 Ebene 2: Task Extraction Pipeline (FEATURE-0801)
 
 ```
 AgentSidebarView.onComplete()
@@ -247,20 +248,15 @@ AgentSidebarView.onComplete()
               │
               └── onConfirm(selectedItems)
                     │
-                    ├── TaskNoteCreator.createNotes(items, settings)
-                    │     ├── Frontmatter: 10 Properties (Schema ADR-027)
-                    │     ├── Iconic: icon/iconColor wenn Plugin aktiv
+                    ├── TaskNoteCreator.createNotes(items, settings, sourceNote)
+                    │     ├── Frontmatter: 10 Properties (Schema ADR-027, implementiertes Schema)
                     │     ├── Vault.create() pro Note
                     │     └── Fehler: partial success (bereits erstellte Notes bleiben)
-                    │
-                    └── TaskNoteCreator.ensureTaskBase(settings)
-                          ├── Pruefe ob Base existiert
-                          └── Erstelle 3-View Base (Offen/Erledigt/Alle)
 ```
 
-ADR: [ADR-026](ADR-026-post-processing-hook.md), [ADR-027](ADR-027-task-note-schema.md), [ADR-028](ADR-028-base-plugin-integration.md). Feature-Spec: `FEATURE-100-task-extraction.md`.
+ADR: [ADR-026](ADR-026-post-processing-hook.md), [ADR-027](ADR-027-task-note-schema.md), [ADR-028](ADR-028-base-plugin-integration.md). Feature-Spec: `FEATURE-0801-task-extraction.md`.
 
-Tool-Beschreibungen kommen aus `toolMetadata.ts` (Single Source of Truth fuer Prompt und UI). Feature-Spec: `FEATURE-tool-metadata-registry.md`. ADR: [ADR-008](ADR-008-modular-prompt-sections.md).
+Tool-Beschreibungen kommen aus `toolMetadata.ts` (Single Source of Truth fuer Prompt und UI). Feature-Spec: `FEATURE-0506-tool-metadata-registry.md`. ADR: [ADR-008](ADR-008-modular-prompt-sections.md).
 
 ### 5.5 Ebene 2: Semantic Search Pipeline
 
@@ -300,7 +296,7 @@ Asynchrone Verarbeitung:
     └── LongTermExtractor -> LLM call -> update memory files
 ```
 
-ADR: [ADR-013](ADR-013-memory-architecture.md). Feature-Spec: `FEATURE-memory-personalization.md`.
+ADR: [ADR-013](ADR-013-memory-architecture.md). Feature-Spec: `FEATURE-0304-memory-personalization.md`.
 
 ### 5.6 Ebene 2: VaultDNA / Plugin Skills
 
@@ -322,7 +318,7 @@ Agent-Nutzung:
   └── call_plugin_api(plugin_id, method, args)
 ```
 
-ADR: [ADR-014](ADR-014-vault-dna-plugin-discovery.md). Feature-Spec: `FEATURE-local-skills.md`.
+ADR: [ADR-014](ADR-014-vault-dna-plugin-discovery.md). Feature-Spec: `FEATURE-0204-local-skills.md`.
 
 ---
 
@@ -407,19 +403,21 @@ AgentTask Iteration N (nach Tool-Result)
   │     └── Nein → weiter mit naechster Iteration
   │
   └── Ja → condenseHistory()
+        ├── onPreCompactionFlush(history) — Facts sichern vor Komprimierung
         ├── Behalte: erste User-Nachricht (Original-Aufgabe)
-        ├── Behalte: letzte 4 Nachrichten (aktueller Kontext)
-        ├── Komprimiere: mittlerer Teil via LLM-Call
-        └── Ersetze History: [erste, Zusammenfassung, letzte 4]
+        ├── Smart Tail: letzte N Nachrichten (bis 10k Tokens, min 2)
+        ├── Komprimiere: mittlerer Teil via LLM-Call (mit Tool-Call-Ledger)
+        ├── Ersetze History: [erste, Zusammenfassung, ...tail]
+        └── Multi-Pass: bis zu 2 Retries wenn immer noch ueber Threshold
 
-Emergency Condensing (Catch-Block):
+Emergency Condensing (Catch-Block, Auto-Retry):
   API-Call schlaegt mit 400 fehl (context_length_exceeded / prompt too long)
   │
-  ├── history.length >= 7?
+  ├── history.length >= 7 && !emergencyRetried?
   │     └── Nein → normaler Fehler
   │
-  └── Ja → condenseHistory() (Notfall)
-        ├── Erfolg → User wird informiert ("Konversation wurde komprimiert")
+  └── Ja → onPreCompactionFlush + condenseHistory() (Notfall)
+        ├── Erfolg → emergencyRetried=true, `continue` (auto-retry, kein User-Eingriff)
         └── Fehlschlag → normaler Fehler-Handler
 ```
 
@@ -495,13 +493,13 @@ Nutzer-Gerät:
 
 ### 8.3 Context Management
 
-- **System Prompt** wird pro Task einmalig aufgebaut (nicht pro Iteration). Modulare Architektur: 15 Sections als Pure Functions in `src/core/prompts/sections/`, orchestriert von `buildSystemPromptForMode()`. Tool-Beschreibungen kommen aus der zentralen `toolMetadata.ts` (Single Source of Truth fuer Prompt und UI). Feature-Specs: `FEATURE-modular-system-prompt.md`, `FEATURE-tool-metadata-registry.md`. ADR: [ADR-008](ADR-008-modular-prompt-sections.md).
+- **System Prompt** wird pro Task einmalig aufgebaut (nicht pro Iteration). Modulare Architektur: 15 Sections als Pure Functions in `src/core/prompts/sections/`, orchestriert von `buildSystemPromptForMode()`. Tool-Beschreibungen kommen aus der zentralen `toolMetadata.ts` (Single Source of Truth fuer Prompt und UI). Feature-Specs: `FEATURE-0312-modular-system-prompt.md`, `FEATURE-0506-tool-metadata-registry.md`. ADR: [ADR-008](ADR-008-modular-prompt-sections.md).
 - **Context Condensing** — wenn Kontext-Schätzung den `condensingThreshold` überschreitet: erste + letzte 4 Nachrichten behalten, Rest via LLM-Komprimierung. Standardmaessig aktiviert (`condensingEnabled: true`). Zusaetzlich: Emergency Condensing im Catch-Block bei 400 "context too long" Fehlern.
 - **Power Steering** — alle `powerSteeringFrequency` Iterationen wird der Mode-Reminder erneut injiziert.
 
 ### 8.4 Chat History & Memory System
 
-Persistentes Memory-System mit drei Säulen: Chat History, Short/Long-Term Memory, Onboarding. Alle Daten liegen im Plugin-Verzeichnis (`.obsidian/plugins/obsidian-agent/`). Feature-Spec: `FEATURE-memory-personalization.md`. ADR: [ADR-007](ADR-007-event-separation.md).
+Persistentes Memory-System mit drei Säulen: Chat History, Short/Long-Term Memory, Onboarding. Alle Daten liegen im Plugin-Verzeichnis (`.obsidian/plugins/obsidian-agent/`). Feature-Spec: `FEATURE-0304-memory-personalization.md`. ADR: [ADR-007](ADR-007-event-separation.md).
 
 #### Storage Layout
 
@@ -768,5 +766,5 @@ Siehe einzelne ADRs in `_devprocess/architecture/`:
 | **TaskExtractor** | Pure Function die Agent-Antworttext nach `- [ ]` Markdown-Patterns scannt und `TaskItem[]` zurueckgibt. Liegt in `src/core/tasks/` |
 | **TaskSelectionModal** | Obsidian Modal mit Checkbox-Liste aller erkannten Tasks. Nutzer waehlt welche Items als Task-Notes erstellt werden |
 | **TaskNoteCreator** | Service der ausgewaehlte Tasks als eigenstaendige Notes mit 10-Property-Frontmatter erstellt und die Task-Base (3 Views) generiert |
-| **Task-Frontmatter-Schema** | 10 Properties (deutsch): Typ, Status, Zusammenfassung, Erstellt, Faelligkeit, Dringend, Wichtig, Quelle, Kontext + optionale Iconic-Properties (icon, iconColor). ADR-027 |
+| **Task-Frontmatter-Schema** | 10 Properties: Kategorie, Zusammenfassung, Status, Dringend, Wichtig, Faelligkeit, Assignee, Quelle, created, Notizen. Implementiertes Schema weicht vom ADR-027-Vorschlag ab (siehe ADR-027 "Implementiertes Schema") |
 | **Graceful Degradation** | Pattern fuer optionale Plugin-Integration: Feature funktioniert vollstaendig ohne externe Plugins (Iconic, Bases). Fehlende Plugins fuehren zu reduziertem (aber funktionalem) Feature-Set, nicht zu Fehlern |
