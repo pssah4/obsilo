@@ -344,6 +344,12 @@ export interface ContextExtensions {
         spec: import('../assets/OptionalAssetManager').AssetSpec,
         toolName: string,
     ) => Promise<OptionalAssetInstallResult>;
+    /**
+     * FIX-24-05-09 (D10): channel for a tool's own LLM spend. Threaded into the
+     * tool as `context.reportAuxUsage`; the owning task folds it into the run
+     * totals so the footer and tasks.jsonl include tool-made calls.
+     */
+    reportAuxUsage?: import('../pricing/meteredCall').UsageSink;
     /** Publish the current todo list to the UI */
     updateTodos?: (items: import('../tools/agent/UpdateTodoListTool').TodoItem[]) => void;
     /** Switch the active mode (called by switch_mode tool) */
@@ -850,6 +856,9 @@ export class ToolExecutionPipeline {
                 callbacks: wrappedCallbacks,
                 askQuestion: extensions?.askQuestion,
                 onOptionalAssetRequired: extensions?.onOptionalAssetRequired,
+                // FIX-24-05-09 (D10): a tool that makes its own LLM call can
+                // report it. Absent on the headless surfaces, which own no task.
+                reportAuxUsage: extensions?.reportAuxUsage,
                 signalCompletion: extensions?.signalCompletion,
                 updateTodos: extensions?.updateTodos,
                 switchMode: extensions?.switchMode,
@@ -1141,7 +1150,25 @@ export class ToolExecutionPipeline {
      */
     private validatePaths(toolCall: ToolUse, isWrite: boolean): ValidationResult {
         const ignoreService: IgnoreService | undefined = this.plugin.ignoreService;
-        if (!ignoreService) return { allowed: true };
+        // AUDIT 2026-08-27 I-4 (CWE-636): this used to `return { allowed: true }`,
+        // so a missing governance service permitted every path. That is the
+        // opposite direction from IgnoreService itself, whose isIgnored and
+        // isProtected both deny while the rules are unloaded, and from
+        // safeFs.assertAllowed, which throws on an uninitialised allowlist.
+        // Boot order makes it unreachable today (main.ts constructs and awaits
+        // IgnoreService before the ToolRegistry exists), so nothing changes for a
+        // running plugin; what changes is what a future refactor gets when it
+        // moves the pipeline ahead of the service. The service is a required
+        // collaborator, so its absence is the verdict: a call carrying no path
+        // is not evidence that governance was consulted.
+        if (!ignoreService) {
+            console.error(
+                `[Pipeline] No ignoreService on the plugin -- refusing "${toolCall.name}" fail-closed. `
+                + 'Path governance (.obsidian-agentignore, .obsidian-agentprotected, the configDir and '
+                + 'agent-secret deny zones) cannot be evaluated.',
+            );
+            return { allowed: false, reason: 'path governance unavailable' };
+        }
 
         const keys = ToolExecutionPipeline.PATH_INPUT_KEYS[toolCall.name];
         if (keys && keys.length > 0) {

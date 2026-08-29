@@ -45,6 +45,7 @@ import {
     resolveTierSlotView,
 } from './manualModelEntry';
 import { buildEffortOptInView, type EffortOptInView } from './effortOptIn';
+import { requiresRequestMarkers } from '../../api/capabilities';
 
 const TIER_ORDER: ModelTier[] = ['fast', 'mid', 'flagship'];
 
@@ -101,6 +102,11 @@ export class ProviderDetailModal extends Modal {
      * serve the freshness verifier's frontier-tier escalations.
      */
     private formZdrCapable: boolean;
+    /**
+     * D3: prompt-caching opt-out for this provider. Undefined in the stored
+     * config means "on" (ADR-111 default-switch), so the form seeds to true.
+     */
+    private formPromptCachingEnabled: boolean;
 
     /**
      * Per-tier flag: the user picked "enter id manually" for a slot whose
@@ -146,6 +152,7 @@ export class ProviderDetailModal extends Modal {
         this.tierOverrides = { ...(seed.tierOverrides ?? {}) };
         this.effortOptIn = { ...(seed.effortOptIn ?? {}) };
         this.formZdrCapable = seed.zdrCapable ?? false;
+        this.formPromptCachingEnabled = seed.promptCachingEnabled !== false;
     }
 
     private defaultDraftProvider(): ProviderConfig {
@@ -385,6 +392,23 @@ export class ProviderDetailModal extends Modal {
                 this.renderEffortOptInSection(form, effortView);
             }
 
+            // D3: prompt-caching switch on the path that is actually in use.
+            // Only rendered when at least one tier model of this provider needs
+            // markers FROM US: where a provider caches implicitly there is
+            // nothing a switch could change, and a placebo control is what made
+            // the old per-model toggle misleading in the first place.
+            if (this.providerNeedsCacheMarkers()) {
+                this.mkSection(form, t('settings.providers.modal.section.caching'));
+                this.compactRow(form, {
+                    label: t('settings.providers.promptCaching'),
+                    desc: t('settings.providers.promptCachingDesc'),
+                    build: (ctrl) => this.compactToggle(ctrl, {
+                        value: this.formPromptCachingEnabled,
+                        onChange: (v) => { this.formPromptCachingEnabled = v; },
+                    }),
+                });
+            }
+
             // IMP-20-06-01 W4-T2: ZDR affirmation. Single toggle inside
             // a labelled sub-section. Frontier escalation for the
             // freshness verifier needs at least one provider with this
@@ -528,6 +552,10 @@ export class ProviderDetailModal extends Modal {
             tierOverrides: this.tierOverrides,
             effortOptIn: Object.keys(this.effortOptIn).length > 0 ? this.effortOptIn : undefined,
             zdrCapable: this.formZdrCapable || undefined,
+            // D3: only an explicit OFF is stored. Writing `true` would be
+            // indistinguishable from the ADR-111 default and would grow every
+            // config by a field that changes nothing.
+            promptCachingEnabled: this.formPromptCachingEnabled ? undefined : false,
         };
         this.plugin.settings.providerConfigs = list;
         await this.plugin.saveSettings();
@@ -1210,6 +1238,26 @@ export class ProviderDetailModal extends Modal {
     // ── Reasoning-effort opt-in (IMP-54-05b, existing providers only) ──
 
     /** Assemble the current draft into the shape the pure view helper reads. */
+    /**
+     * D3: whether a prompt-caching switch would do anything for this provider.
+     *
+     * True when any model in the three tier slots needs cache markers from us
+     * (`requiresRequestMarkers`). A provider that caches implicitly server-side
+     * is deliberately excluded: `supportsPromptCache` is true for it, but no
+     * request field changes, so a switch would be a control with no effect.
+     * Falls back to the discovered models when no tier slot is filled yet, so a
+     * freshly refreshed provider already offers the switch.
+     */
+    private providerNeedsCacheMarkers(): boolean {
+        const tierIds = TIER_ORDER
+            .map((tier) => this.resolveDraftTierSlot(tier))
+            .filter((id): id is string => typeof id === 'string' && id.length > 0);
+        const candidates = tierIds.length > 0
+            ? tierIds
+            : this.discoveredModels.map((m) => m.id);
+        return candidates.some((id) => requiresRequestMarkers(this.formType, id));
+    }
+
     private buildEffortOptInDraftView(): EffortOptInView | null {
         return buildEffortOptInView({
             id: this.originalId ?? 'draft',

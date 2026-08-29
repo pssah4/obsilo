@@ -23,6 +23,7 @@
 
 import type { ApiHandler, ApiStream, MessageParam } from '../../api/types';
 import type { ToolDefinition, ToolName } from '../tools/types';
+import { runMeteredCall } from '../pricing/meteredCall';
 import type { FactKind } from './FactStore';
 
 export type FactRelation = 'new' | 'update' | 'extend' | 'derive';
@@ -82,8 +83,15 @@ export interface ExtractionResult {
     rejected: Array<{ raw: unknown; reason: string }>;
     /** Last message index processed in this run; caller persists for next delta. */
     lastMessageIndex: number;
-    /** Token usage if the provider surfaces it; null otherwise. */
-    usage: { inputTokens: number; outputTokens: number } | null;
+    /**
+     * Token usage if the provider surfaces it; null otherwise.
+     *
+     * FIX-24-05-09 (D10): `modelId` names the model that served the call. The
+     * Memory-v2 budget and MemoryV2Telemetry are a second ledger, and without
+     * the id neither of them could price what they were counting -- an
+     * extraction on the flagship model and one on a local model read the same.
+     */
+    usage: { inputTokens: number; outputTokens: number; modelId: string } | null;
 }
 
 const ALLOWED_KINDS: ReadonlySet<FactKind> = new Set(['fact', 'preference', 'identity', 'event']);
@@ -219,12 +227,16 @@ export class SingleCallExtractor {
             content: this.renderUserMessage(input, slice),
         };
 
-        const stream: ApiStream = this.api.createMessage(
-            SYSTEM_PROMPT,
-            [userMessage],
-            [TOOL_SCHEMA],
-            input.abortSignal,
-        );
+        // FIX-24-05-09 (D10): the extraction was already counted, but only into
+        // the Memory-v2 budget. Routing it through the shared helper puts it in
+        // the same ledger as every other non-loop call, and the helper is where
+        // the model id comes from.
+        const stream: ApiStream = runMeteredCall(this.api, 'memory-extract', {
+            systemPrompt: SYSTEM_PROMPT,
+            messages: [userMessage],
+            tools: [TOOL_SCHEMA],
+            abortSignal: input.abortSignal,
+        });
 
         let toolInput: Record<string, unknown> | null = null;
         let usage: ExtractionResult['usage'] = null;
@@ -237,6 +249,10 @@ export class SingleCallExtractor {
                 usage = {
                     inputTokens: chunk.inputTokens,
                     outputTokens: chunk.outputTokens,
+                    // Same precedence the rest of the codebase uses since
+                    // FIX-24-05-08: the producer's stamp wins, the handler is
+                    // the fallback for a handler built outside the factory.
+                    modelId: chunk.modelId ?? this.api.getModel().id,
                 };
             }
         }

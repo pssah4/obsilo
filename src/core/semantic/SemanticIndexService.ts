@@ -23,6 +23,7 @@ import type { CustomModel } from '../../types/settings';
 import type { KnowledgeDB } from '../knowledge/KnowledgeDB';
 import type { VectorStore } from '../knowledge/VectorStore';
 import type { ApiHandler } from '../../api/types';
+import { runMeteredCall } from '../pricing/meteredCall';
 import type ObsidianAgentPlugin from '../../main';
 import * as path from 'path';
 import * as fs from '../security/safeFs';
@@ -30,6 +31,7 @@ import { sanitizeWithDetails } from '../memory/sanitizeVaultContentForLLM';
 import { Semaphore, mapWithConcurrency } from '../utils/asyncPool';
 import { stripAllAutoBlocks } from '../ingest/MOCMaintainer';
 import { createNodeFetch } from '../../api/providers/openai';
+import { validateProviderUrl } from '../../api/providers/providerUrlGuard';
 import { normalizeKeepAlive, parseOllamaNativeEmbeddings } from './ollamaKeepAlive';
 
 /**
@@ -1596,11 +1598,19 @@ export class SemanticIndexService {
                 try {
                     const resultPromise = (async () => {
                         let result = '';
-                        for await (const chunk of this.contextualApiHandler!.createMessage(
-                            'You generate short context descriptions for document chunks. Answer only with the context, no preamble.',
-                            [{ role: 'user', content: prompt }],
-                            [],
-                            callAbort.signal,
+                        // FIX-24-05-09 (D10): one call PER CHUNK of every
+                        // enriched note. This is the single largest unreported
+                        // spend in the plugin, and the 2026-08 audit missed it
+                        // because a NUL byte in this file (the query-cache key
+                        // separator) makes grep treat it as binary and skip it.
+                        for await (const chunk of runMeteredCall(
+                            this.contextualApiHandler!,
+                            'semantic-context-prefix',
+                            {
+                                systemPrompt: 'You generate short context descriptions for document chunks. Answer only with the context, no preamble.',
+                                messages: [{ role: 'user', content: prompt }],
+                                abortSignal: callAbort.signal,
+                            },
                         )) {
                             if (this.cancelled || callAbort.signal.aborted) break;
                             if (chunk.type === 'text') result += chunk.text;
@@ -1801,6 +1811,31 @@ export class SemanticIndexService {
     }
 
     /**
+     * AUDIT 2026-08-27 L-5 (CWE-918): SSRF / credential-exfiltration guard for
+     * the embedding senders.
+     *
+     * Every chat path has run the configured endpoint through
+     * validateProviderUrl since AUDIT-037 H-1 (openai.ts, anthropic.ts,
+     * bedrock.ts), and so does the agent-driven settings write in
+     * ConfigureModelTool. The three embedding senders below built their URL
+     * straight from `model.baseUrl` and then attached `model.apiKey`, so a
+     * baseUrl that reached that field by a route other than the guarded ones
+     * (a tampered data.json in the plugin folder, carried by sync) sent the
+     * credential to an arbitrary host, to 169.254.169.254, or over plain HTTP.
+     *
+     * Called with the RESOLVED base, i.e. the string the request is actually
+     * built from, and only from the senders that use it: `openai` and
+     * `openrouter` pin their own host and ignore model.baseUrl, so judging them
+     * on that field would reject a run that works today over a stale value
+     * nobody reads. Throws validateProviderUrl's own message, exactly as the
+     * chat providers do; embedBatchViaApiWithRetry does not retry it, so the
+     * build surfaces the reason instead of looping.
+     */
+    private assertEmbeddingEndpointAllowed(model: CustomModel, resolvedBaseUrl: string): void {
+        validateProviderUrl(model.provider, resolvedBaseUrl);
+    }
+
+    /**
      * Issue #62: embed via Ollama's native /api/embed so a keep_alive value is
      * actually honoured (the OpenAI-compatible /v1 path drops it). requestUrl
      * runs Node-side, so localhost Ollama answers without the renderer CORS
@@ -1816,6 +1851,7 @@ export class SemanticIndexService {
         const base = (model.baseUrl || 'http://localhost:11434')
             .replace(/\/v1\/?$/, '')
             .replace(/\/+$/, '');
+        this.assertEmbeddingEndpointAllowed(model, base);
         const url = `${base}/api/embed`;
         const body = { model: model.name, input: texts, keep_alive: keepAlive };
 
@@ -1858,9 +1894,11 @@ export class SemanticIndexService {
                 model.baseUrl ||
                 (model.provider === 'lmstudio' ? 'http://localhost:1234' : 'http://localhost:11434')
             ).replace(/\/v1\/?$/, '').replace(/\/+$/, '');
+            this.assertEmbeddingEndpointAllowed(model, base);
             baseURL = `${base}/v1`;
         } else {
             const base = (model.baseUrl ?? '').replace(/\/+$/, '');
+            this.assertEmbeddingEndpointAllowed(model, base);
             baseURL = base.endsWith('/v1') ? base : `${base}/v1`;
         }
 
@@ -1901,6 +1939,7 @@ export class SemanticIndexService {
      */
     private async embedBatchViaRequestUrl(texts: string[], model: CustomModel): Promise<Float32Array[]> {
         const base = (model.baseUrl ?? '').replace(/\/+$/, '');
+        this.assertEmbeddingEndpointAllowed(model, base);
         const apiVersion = model.apiVersion ?? '2024-10-21';
         const url = `${base}/deployments/${model.name}/embeddings?api-version=${apiVersion}`;
         const headers: Record<string, string> = { 'Content-Type': 'application/json' };

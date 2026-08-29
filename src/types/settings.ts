@@ -655,6 +655,28 @@ export interface AdvancedApiSettings {
      */
     costWarnThresholdEur?: number;
     /**
+     * FEAT-24-12: USD to EUR rate the cost footer converts with. Unset (or any
+     * implausible value) means the documented default in
+     * core/pricing/ModelPricing, which is the single home of that number.
+     *
+     * A setting rather than a fetch on purpose: a background FX refresh would
+     * overwrite the rate the user typed. Card and corporate rates differ from
+     * mid-market anyway, so only the user knows which one their invoice uses.
+     */
+    usdToEurRate?: number;
+    /**
+     * FEAT-24-12: per-model price overrides as the user writes them, one
+     * `model-id = input/output[/cacheRead/cacheWrite]` per line in USD per
+     * million tokens. Parsed by ModelPricing.parsePriceOverrideText.
+     *
+     * Stored as text, not as a parsed map, so a typo stays visible where the
+     * user can fix it. This is also where a regional rate (Bedrock EU and
+     * friends) belongs: the pricing table stays region-free because the base
+     * rates are disputed, and the fetched catalog structurally cannot carry a
+     * region (it strips the vendor prefix from every key).
+     */
+    priceOverridesText?: string;
+    /**
      * Telemetry opt-in: persist a 200-char preview of the user's message
      * with each task's telemetry entry (.obsidian-agent/telemetry/tasks.jsonl).
      * AUDIT-013 M-2: defaults to false because the telemetry file lives
@@ -829,6 +851,20 @@ export interface ProviderConfig {
     useGateway?: boolean;
     /** Auth: OAuth bearer token (chatgpt-oauth, github-copilot). */
     oauthToken?: string;
+
+    /**
+     * D3: prompt-caching opt-out for this provider, per ADR-111's default-switch
+     * (undefined acts as true at the wire layer).
+     *
+     * Lives on the provider rather than per model because the marker decision is
+     * made per (provider, model) pair by the capability table anyway; what the
+     * user needs is one place to shut a provider's marker path off. Before this
+     * field existed, `providerConfigToCustomModel` had nothing to copy, so the
+     * runtime value on this path was unconditionally undefined -> enabled, and
+     * the switch in ModelConfigModal only reached the legacy `activeModels`
+     * path, which is empty on a migrated install.
+     */
+    promptCachingEnabled?: boolean;
 
     /** Discovered models from the last refresh. Empty until first refresh. */
     discoveredModels: DiscoveredModel[];

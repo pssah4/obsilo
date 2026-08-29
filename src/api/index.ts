@@ -12,7 +12,7 @@ import { GitHubCopilotProvider } from './providers/github-copilot';
 import { KiloGatewayProvider } from './providers/kilo-gateway';
 import { BedrockProvider } from './providers/bedrock';
 import { ChatGptOAuthProvider } from './providers/chatgpt-oauth';
-import type { ApiHandler, ApiStream, MessageParam } from './types';
+import type { ApiHandler, ApiStream, ApiStreamChunk, MessageParam } from './types';
 import type { ToolDefinition } from '../core/tools/types';
 import { RequestRateLimiter, requestRateLimiter } from './RequestRateLimiter';
 import { ProviderHealth, providerHealth } from './ProviderHealth';
@@ -104,6 +104,99 @@ export function withCircuitBreaker(
     return wrapped;
 }
 
+type UsageChunk = Extract<ApiStreamChunk, { type: 'usage' }>;
+
+/** A token count, or 0 for anything that is not one. */
+function tokenCount(value: number | undefined): number {
+    if (typeof value !== 'number' || !Number.isFinite(value)) return 0;
+    return value > 0 ? value : 0;
+}
+
+/**
+ * AUDIT-2026-08-27 L-2: a token count that is not a finite, non-negative number
+ * becomes 0 before it leaves the provider.
+ *
+ * An OpenAI-compatible endpoint that answers with `usage: {}` (several local and
+ * self-hosted servers do) makes the provider compute
+ * `Math.max(0, undefined - cachedIn)`, i.e. NaN. Every consumer downstream only
+ * does `+=`, so the NaN spreads into the run totals, renders as a literal NaN in
+ * the cost footer, and reaches the crash-recovery snapshot -- where it
+ * serialises to null, fails the ledger record guard, and costs the task its
+ * whole recovery point on the next load.
+ *
+ * Seven places read this chunk (main loop, hard-limit recovery, condensing, the
+ * FastPath planner, tool-reported usage, the metered out-of-loop ledger, the
+ * memory extractor). buildApiHandler is the one place every provider passes
+ * through, so the check belongs here: it holds for consumers nobody enumerated
+ * and cannot be forgotten by the next one. The log line names the provider type
+ * only -- AUDIT 2026-07-18 L-1: the model id is sensitive for custom endpoints.
+ */
+function sanitiseUsageChunk(chunk: UsageChunk, providerType: string | undefined): UsageChunk {
+    const inputTokens = tokenCount(chunk.inputTokens);
+    const outputTokens = tokenCount(chunk.outputTokens);
+    // An absent cache count stays absent: it means "this provider does not
+    // report caching", which is not the same statement as "zero cache hits".
+    const cacheReadTokens = chunk.cacheReadTokens === undefined
+        ? undefined : tokenCount(chunk.cacheReadTokens);
+    const cacheCreationTokens = chunk.cacheCreationTokens === undefined
+        ? undefined : tokenCount(chunk.cacheCreationTokens);
+    if (inputTokens === chunk.inputTokens && outputTokens === chunk.outputTokens
+        && cacheReadTokens === chunk.cacheReadTokens
+        && cacheCreationTokens === chunk.cacheCreationTokens) {
+        return chunk;
+    }
+    console.warn(
+        `[ApiHandler] ${providerType ?? 'unknown'} reported a usage block with a token count that is `
+        + 'not a number (a partial or empty usage object); the affected counts are booked as 0. '
+        + 'The run\'s cost line understates this call.',
+    );
+    return { ...chunk, inputTokens, outputTokens, cacheReadTokens, cacheCreationTokens };
+}
+
+/**
+ * FIX-24-05-08 (R1): stamp the serving model id onto every usage chunk.
+ *
+ * The consumer used to attribute usage by asking whatever handler was current
+ * at fold time (`this.api.getModel().id` in AgentTask). That is a different
+ * object than the one that produced the chunk whenever the run swapped handlers
+ * mid-flight -- TaskRouter escalation, advisor consult, helper-model condensing
+ * -- so the tokens landed in the wrong bucket and were billed at the wrong rate.
+ * Attribution belongs to the producer, which is the only place that cannot be
+ * wrong about it.
+ *
+ * A modelId the inner handler already set is left alone: a provider that reads
+ * the model off its own response knows more than this decorator does.
+ */
+export function withUsageAttribution(handler: ApiHandler): ApiHandler {
+    const wrapped: ApiHandler = Object.create(handler) as ApiHandler;
+    wrapped.createMessage = function (
+        systemPrompt: string,
+        messages: MessageParam[],
+        tools: ToolDefinition[],
+        abortSignal?: AbortSignal,
+    ): ApiStream {
+        return (async function* () {
+            for await (const chunk of handler.createMessage(systemPrompt, messages, tools, abortSignal)) {
+                if (chunk.type !== 'usage') {
+                    yield chunk;
+                    continue;
+                }
+                // AUDIT-2026-08-27 L-2: the numbers are checked for EVERY usage
+                // chunk, including one that already names its model. Doing it
+                // inside the attribution branch would mean a provider that
+                // stamps its own id buys itself an unchecked token count.
+                const usage = sanitiseUsageChunk(chunk, handler.providerType);
+                if (usage.modelId !== undefined) {
+                    yield usage;
+                    continue;
+                }
+                yield { ...usage, modelId: handler.getModel().id, idOrigin: 'served' };
+            }
+        })();
+    };
+    return wrapped;
+}
+
 /**
  * Build an ApiHandler from a CustomModel (new path)
  */
@@ -156,12 +249,20 @@ export function buildApiHandler(config: LLMProvider) {
     // Unconfigured keys resolve instantly, so this is a no-op until a rate
     // is set (rateLimitMs mapping or future per-provider settings).
     handler.providerType = providerType;
-    if (UNLIMITED_PROVIDER_TYPES.has(providerType)) return handler;
+    // FIX-24-05-08: attribution goes on FIRST -- closest to the producer, so
+    // every decorator further out re-yields an already-stamped chunk -- and
+    // BEFORE the local-provider early return. ollama and lmstudio skip the
+    // resilience decorators, and they are exactly the providers whose usage
+    // must not be priced as somebody's cloud model, so a decorator applied
+    // after the return would leave the broken case broken.
+    // providerType resolves through the prototype chain (Object.create).
+    const attributed = withUsageAttribution(handler);
+    if (UNLIMITED_PROVIDER_TYPES.has(providerType)) return attributed;
     // Composition order: breaker OUTERMOST so an open circuit fails fast
     // without first waiting on (and consuming) a rate-limit token; the
     // limiter then paces only requests that are actually going out. Both
     // are no-ops until configured / until failures accumulate.
-    const limited = withRateLimit(handler, providerType);
+    const limited = withRateLimit(attributed, providerType);
     const wrapped = withCircuitBreaker(limited, providerType);
     wrapped.providerType = providerType;
     return wrapped;

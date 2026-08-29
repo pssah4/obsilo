@@ -1,7 +1,13 @@
-import { App, Setting, setIcon } from 'obsidian';
+import { App, Notice, Setting, setIcon } from 'obsidian';
 import type ObsidianAgentPlugin from '../../main';
 import { t } from '../../i18n';
 import { DEFAULT_CONDENSING_ENABLED } from '../../core/condensingDefaults';
+import {
+    DEFAULT_USD_TO_EUR,
+    USD_TO_EUR_LAST_UPDATED,
+    getUsdToEur,
+    isPlausibleUsdToEur,
+} from '../../core/pricing/ModelPricing';
 import { addInfoButton, addSectionHeading, addSliderInput } from './utils';
 
 export class LoopTab {
@@ -148,5 +154,112 @@ export class LoopTab {
                     await this.plugin.saveSettings();
                 }),
         );
+
+        this.buildCostSection(containerEl);
+    }
+
+    /**
+     * FEAT-24-12: the numbers behind the euro amount in the chat footer.
+     *
+     * All three were unreachable before: the conversion rate was a module
+     * constant with a comment claiming it was configurable, the override map had
+     * a setter with no caller, and the fetched catalog carried a timestamp
+     * nothing displayed, so no part of the UI said how old the prices were.
+     */
+    private buildCostSection(containerEl: HTMLElement): void {
+        this.section(containerEl, 'settings.loop.headingCost', 'settings.loop.sectionCostDesc');
+
+        const advanced = this.plugin.settings.advancedApi;
+
+        // ── USD to EUR ───────────────────────────────────────────────────
+        const rateSetting = new Setting(containerEl)
+            .setName(t('settings.loop.usdToEur'))
+            .setDesc(t('settings.loop.usdToEurDesc', {
+                rate: String(DEFAULT_USD_TO_EUR),
+                date: USD_TO_EUR_LAST_UPDATED,
+            }));
+        addInfoButton(rateSetting, t('settings.loop.usdToEur'), t('settings.loop.usdToEurInfo'));
+        // A stored value outside the band (hand-edited data.json, or the
+        // cross-vault settings file) is NOT the rate the footer converts with.
+        // Flag it on render rather than showing it as if it were in effect.
+        rateSetting.settingEl.classList.toggle('agent-settings-invalid',
+            advanced.usdToEurRate !== undefined && !isPlausibleUsdToEur(advanced.usdToEurRate));
+        rateSetting.addText((text) => {
+            text.setPlaceholder(String(DEFAULT_USD_TO_EUR))
+                .setValue(String(advanced.usdToEurRate ?? getUsdToEur()))
+                .onChange(async (raw) => {
+                    const trimmed = raw.trim();
+                    // Empty means "use the documented default", which is a
+                    // valid answer and must clear the stored value.
+                    const parsed = trimmed === '' ? undefined : Number(trimmed);
+                    if (parsed !== undefined && !isPlausibleUsdToEur(parsed)) {
+                        // Mid-typing states ('0.', '') and slipped decimal
+                        // points land here. Flag the field and keep the last
+                        // good value; never persist a NaN into the money math.
+                        rateSetting.settingEl.classList.add('agent-settings-invalid');
+                        return;
+                    }
+                    rateSetting.settingEl.classList.remove('agent-settings-invalid');
+                    advanced.usdToEurRate = parsed;
+                    await this.plugin.saveSettings();
+                    // saveSettings applies the config too. Stated again here so
+                    // the tab does not depend on that detail staying true: an
+                    // unapplied rate is invisible until the next reload.
+                    this.plugin.applyPricingSettings();
+                });
+        });
+
+        // ── Per-model overrides ──────────────────────────────────────────
+        const overrideSetting = new Setting(containerEl)
+            .setName(t('settings.loop.priceOverrides'))
+            .setDesc(t('settings.loop.priceOverridesDesc'));
+        addInfoButton(overrideSetting, t('settings.loop.priceOverrides'), t('settings.loop.priceOverridesInfo'));
+        const overrideStatus = containerEl.createEl('p', { cls: 'agent-settings-desc' });
+        const showInvalid = (invalidLines: string[]): void => {
+            overrideStatus.setText(invalidLines.length === 0
+                ? ''
+                : t('settings.loop.priceOverridesInvalid', { lines: invalidLines.join(' | ') }));
+            overrideStatus.classList.toggle('agent-settings-invalid', invalidLines.length > 0);
+        };
+        // No placeholder here on purpose: an example model id is lowercase by
+        // nature and the sentence-case lint rule (rightly) cannot tell that
+        // from a badly capitalised label. The format is in the description and
+        // the info popover instead.
+        overrideSetting.addTextArea((text) => {
+            text.setValue(advanced.priceOverridesText ?? '')
+                .onChange(async (raw) => {
+                    advanced.priceOverridesText = raw;
+                    await this.plugin.saveSettings();
+                    // saveSettings applies the config too; the return value is
+                    // what the user needs, so read it here.
+                    showInvalid(this.plugin.applyPricingSettings());
+                });
+        });
+        showInvalid(this.plugin.applyPricingSettings());
+
+        // ── Fetched catalog: age plus a manual refresh ───────────────────
+        const fetchedAt = this.plugin.priceCatalog?.getLastFetchedAt() ?? null;
+        const catalogSetting = new Setting(containerEl)
+            .setName(t('settings.loop.priceCatalog'))
+            .setDesc(fetchedAt === null
+                ? t('settings.loop.priceCatalogNever')
+                : t('settings.loop.priceCatalogUpdated', { when: new Date(fetchedAt).toLocaleString() }));
+        catalogSetting.addButton((btn) =>
+            btn.setButtonText(t('settings.loop.priceCatalogRefresh'))
+                .onClick(() => { void this.refreshPriceCatalog(); }),
+        );
+    }
+
+    /**
+     * Force a catalog fetch, TTL be damned: the boot refresh is capped at once
+     * per 24h, and a user who presses a button now wants prices now. The
+     * outcome is reported either way, so a silent failure cannot look like a
+     * successful update.
+     */
+    private async refreshPriceCatalog(): Promise<void> {
+        const ok = await this.plugin.priceCatalog?.refresh({ force: true });
+        new Notice(ok ? t('notice.priceCatalogRefreshed') : t('notice.priceCatalogRefreshFailed'));
+        // Re-render so the timestamp above reflects the fetch.
+        this.rerender();
     }
 }

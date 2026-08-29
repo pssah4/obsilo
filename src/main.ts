@@ -5,7 +5,7 @@ import { preWarmProviderConnection } from './api/warmup';
 import { scheduleRecurring } from './util/scheduleRecurring';
 import { ObsidianAgentSettings, DEFAULT_SETTINGS, BUILTIN_MCP_SERVERS, getModelKey, modelToLLMProvider, OKF_DEFAULTS, INCOMING_LINKS_DEFAULT_THRESHOLD } from './types/settings';
 import type { CustomModel, ModelTier, ProviderConfig } from './types/settings';
-import { resolveActiveProvider, resolveAdvisorModel, resolveTierModel } from './core/routing/tierResolution';
+import { resolveActiveModel, resolveActiveProvider, resolveAdvisorModel, resolveTierModel } from './core/routing/tierResolution';
 import { migrateActiveModelsToProviders, type MigrationSummary } from './core/settings/migrations/activeModelsToProviders';
 import {
     encryptProviderCredentialsInPlace,
@@ -13,7 +13,8 @@ import {
 } from './core/security/providerCredentialCrypto';
 import { ModelDiscoveryService, type RawDiscoveredModel } from './core/routing/ModelDiscoveryService';
 import { PriceCatalogService } from './core/pricing/PriceCatalogService';
-import { computeCost } from './core/pricing/ModelPricing';
+import { estimateSpendUsd, setPricingConfig } from './core/pricing/ModelPricing';
+import { resetUsageLedger } from './core/pricing/meteredCall';
 import { InflightStore } from './core/agent/InflightStore';
 import { LearnedCapsStore, registerLearnedCapsStore } from './core/agent/LearnedCapsStore';
 import { BackgroundTaskRunner } from './core/background/BackgroundTaskRunner';
@@ -365,6 +366,12 @@ export default class ObsidianAgentPlugin extends Plugin {
     }
     /** ADR-148: output caps learned from provider max_tokens rejections. */
     learnedCapsStore: LearnedCapsStore | null = null;
+    /**
+     * FEAT-24-12: live price catalog. A field, not a boot-local const: the
+     * settings tab shows when it was last fetched and offers a manual refresh,
+     * and both need the instance that actually holds the catalog.
+     */
+    priceCatalog: PriceCatalogService | null = null;
     /** IMP-41-03-05: single-slot background research task runner. */
     backgroundTaskRunner: BackgroundTaskRunner | null = null;
     globalSettingsService: GlobalSettingsService | null = null;
@@ -2124,11 +2131,17 @@ export default class ObsidianAgentPlugin extends Plugin {
                         // input-lastiger 85/15-Aufteilung. Die alte Haiku-
                         // Konstante hat einen 149-Cluster-Lauf als 0,0137 USD
                         // verbucht.
-                        estimateUsd: (tokens: number) => computeCost(
+                        //
+                        // FIX-24-05-07: estimateSpendUsd statt computeCost.
+                        // Ohne Preis liefert computeCost jetzt 0, und die 0
+                        // kommt durch das `est >= 0`-Gate in spendTokens: das
+                        // Wochenbudget stünde für immer bei null Ausgaben.
+                        // estimateSpendUsd gibt NaN und fällt damit in den
+                        // tokensPerUsd-Fallback.
+                        estimateUsd: (tokens: number) => estimateSpendUsd(
                             this.apiHandler?.getModel?.()?.id,
-                            Math.round(tokens * 0.85),
-                            Math.round(tokens * 0.15),
-                        ).totalUsd,
+                            tokens,
+                        ),
                     },
                     undefined,
                     budgetExceededSink,
@@ -2591,12 +2604,26 @@ export default class ObsidianAgentPlugin extends Plugin {
             }
         }
 
+        // FEAT-24-12: the two pricing settings, before any task can report a
+        // cost. Unset values fall back to the documented defaults, so a fresh
+        // install needs no settings at all. Repeated in saveSettings, because
+        // a setting that only takes effect after a reload reads as broken.
+        this.applyPricingSettings();
+
+        // FIX-24-05-09 (D10): the usage ledger counts THIS session's calls that
+        // no task claimed. Module state can outlive a plugin reload (the module
+        // is only re-evaluated on a full disable/enable), so without this the
+        // totals would silently span sessions and read as one very expensive one.
+        resetUsageLedger();
+
         // IMP-24-05-02: live price catalog (OpenRouter) for the cost footer.
         // Persisted snapshot applies immediately; refresh is non-blocking
         // and capped at once per 24h. Offline behavior: static table.
-        const priceCatalog = new PriceCatalogService(this.globalFs);
-        void priceCatalog.load()
-            .then(() => priceCatalog.refreshIfStale())
+        // FEAT-24-12: kept as a field, not a local. The settings tab needs the
+        // same instance to force a refresh and to read its timestamp.
+        this.priceCatalog = new PriceCatalogService(this.globalFs);
+        void this.priceCatalog.load()
+            .then(() => this.priceCatalog?.refreshIfStale())
             .catch((e) => console.warn('[PriceCatalog] init failed (non-fatal):', e));
 
         // ADR-148: learned output caps — load persisted caps and inject them
@@ -3734,12 +3761,19 @@ export default class ObsidianAgentPlugin extends Plugin {
         }
     }
 
-    /** Return the currently active CustomModel, or null if none configured or disabled */
+    /**
+     * Return the currently active CustomModel, or null if none configured or
+     * disabled.
+     *
+     * FIX-24-05-08: the lookup itself lives in
+     * `src/core/routing/tierResolution.ts` (resolveActiveModel), like every
+     * other resolver on this class, so the model pill and this method cannot
+     * answer differently. Only the one-time privacy notice stays here, because
+     * it is a side effect and the resolvers are pure.
+     */
     getActiveModel(): CustomModel | null {
-        const key = this.settings.activeModelKey;
-        if (!key) return null;
-        const model = this.settings.activeModels.find((m) => getModelKey(m) === key);
-        if (!model || !model.enabled) return null;
+        const model = resolveActiveModel(this.settings);
+        if (!model) return null;
 
         // M-6: One-time privacy notice when using a cloud provider
         if (!this.cloudProviderWarningShown) {
@@ -4056,6 +4090,24 @@ export default class ObsidianAgentPlugin extends Plugin {
     }
 
     /**
+     * FEAT-24-12: push the pricing settings into the ModelPricing module.
+     *
+     * Called at boot and from saveSettings, because the module holds the rate
+     * and the override map in module state: without the save-time call the
+     * user's new rate would only reach the footer after a plugin reload, which
+     * is indistinguishable from the setting not working at all.
+     *
+     * Returns the override lines that could not be parsed, so the settings tab
+     * can name them instead of dropping them silently.
+     */
+    applyPricingSettings(): string[] {
+        return setPricingConfig({
+            usdToEur: this.settings.advancedApi?.usdToEurRate,
+            priceOverridesText: this.settings.advancedApi?.priceOverridesText,
+        }).invalidLines;
+    }
+
+    /**
      * Save plugin settings to disk and reinitialize API handler
      */
     async saveSettings() {
@@ -4070,6 +4122,9 @@ export default class ObsidianAgentPlugin extends Plugin {
             }
         }
         this.initApiHandler();
+        // FEAT-24-12: the cost footer converts with module state, so a saved
+        // rate has to be applied here and not only at boot.
+        this.applyPricingSettings();
         this.settingsDirty = false;
     }
 

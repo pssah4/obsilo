@@ -15,6 +15,7 @@ import type { ApiStreamChunk, MessageParam } from '../types';
 import { truncatedToolInputError } from '../types';
 import type { ToolDefinition } from '../../core/tools/types';
 import { modelSupportsTemperature } from '../../types/model-registry';
+import { stripCacheBreakpointMarker } from '../../core/systemPrompt';
 import { createLogger } from '../../core/observability/log';
 
 const log = createLogger('Responses');
@@ -45,7 +46,11 @@ export interface ResponsesFunctionCall {
 export type ResponsesInputItem = ResponsesInputMessage | ResponsesFunctionCallOutput | ResponsesFunctionCall;
 
 export type ResponsesContentBlock =
-    | { type: 'input_text'; text: string }
+    // IMP-18-01-04: `prompt_cache_breakpoint` marks the end of a reusable prompt
+    // prefix on the Responses API. Copilot and Bedrock-hosted GPT-5.6 read it;
+    // every other provider ignores an unknown field. Typed rather than cast so
+    // the marker code stays free of `any` and the name cannot be misspelled.
+    | { type: 'input_text'; text: string; prompt_cache_breakpoint?: { mode: 'explicit' } }
     | { type: 'output_text'; text: string }
     // FIX-04-03-11: Responses API image input. detail defaults to 'auto' so
     // the upload tokens stay bounded for OCR-style screenshots.
@@ -237,7 +242,10 @@ export function prepareResponsesRequest(
 ): ResponsesRequestBody {
     const body: ResponsesRequestBody = {
         model: config.model,
-        instructions: systemPrompt,
+        // D1: `instructions` is plain text with no marker slot. This path serves
+        // chatgpt-oauth AND Copilot's /responses route (the gpt-5.6 lineup),
+        // which together carried the sentinel on most of the logged traffic.
+        instructions: stripCacheBreakpointMarker(systemPrompt),
         input: convertToResponsesInput(messages),
         stream: true,
         store: false,

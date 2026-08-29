@@ -29,8 +29,20 @@ export interface StreamPorts {
     onToolStart(name: string, input: Record<string, unknown>): void;
     /** Fired for tool_error chunks (isError=true), mirroring the legacy loop. */
     onToolResult(name: string, content: string, isError: boolean): void;
-    /** Raw usage numbers of this turn (state totals are updated by the engine). */
-    onUsage(inputTokens: number, outputTokens: number, cacheRead: number, cacheCreation: number): void;
+    /**
+     * Raw usage numbers of this turn (state totals are updated by the engine).
+     *
+     * FIX-24-05-08: `modelId` is the serving model the chunk names, forwarded
+     * verbatim. undefined means the producer did not stamp one and the host
+     * falls back to its own current handler.
+     */
+    onUsage(
+        inputTokens: number,
+        outputTokens: number,
+        cacheRead: number,
+        cacheCreation: number,
+        modelId?: string,
+    ): void;
 }
 
 /** Classified result of one streamed assistant turn. */
@@ -273,6 +285,8 @@ export class AgentLoopEngine {
                     chunk.outputTokens,
                     chunk.cacheReadTokens ?? 0,
                     chunk.cacheCreationTokens ?? 0,
+                    // FIX-24-05-08: attribution travels with the numbers.
+                    chunk.modelId,
                 );
             }
         }

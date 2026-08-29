@@ -44,8 +44,15 @@ export const WRITABLE_PATHS = new Set([
     'advancedApi.subtaskTokenBudget',
     // FEAT-24-07 / ADR-115: helper-model routing for internal LLM calls
     'helperModelKey',
-    // FEAT-24-05: sidebar cost warning threshold (in EUR)
-    'costWarnThresholdEur',
+    // FEAT-24-05: sidebar cost warning threshold (in EUR).
+    // FEAT-24-12: the parent prefix is load-bearing. This entry used to be the
+    // bare key while the setting lives under advancedApi, so handleSet wrote a
+    // dead top-level property, reported success, and the threshold never moved.
+    'advancedApi.costWarnThresholdEur',
+    // The FEAT-24-12 pricing knobs (advancedApi.usdToEurRate,
+    // advancedApi.priceOverridesText) are deliberately NOT writable here: they
+    // decide what the cost footer claims a run cost, and an agent that can
+    // rewrite its own price tag is the opposite of the point.
     // Semantic Index
     'enableSemanticIndex',
     'semanticAutoIndex',

@@ -74,6 +74,12 @@ export class MemoryV2Telemetry {
         topicDriftDetected: boolean;
         inputTokens: number | null;
         outputTokens: number | null;
+        /**
+         * FIX-24-05-09 (D10): which model served the extraction. Without it a
+         * token count in this file cannot be priced at all, and an extraction
+         * on the flagship reads exactly like one on a local model.
+         */
+        modelId?: string | null;
         durationMs: number;
     }) {
         return this.record({ kind: 'single_call', payload });

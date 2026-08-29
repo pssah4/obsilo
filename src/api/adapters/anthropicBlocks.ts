@@ -22,7 +22,7 @@ import type { ApiStream, ApiStreamChunk, ContentBlock, MessageParam } from '../t
 import { truncatedToolInputError } from '../types';
 import type { ToolDefinition } from '../../core/tools/types';
 import { resolveOutputBudget, estimatePromptTokens, modelSupportsTemperature, modelUsesBudgetTokensThinking } from '../../types/model-registry';
-import { splitSystemPromptAtCacheBreakpoint } from '../../core/systemPrompt';
+import { splitSystemPromptAtCacheBreakpoint, stripCacheBreakpointMarker } from '../../core/systemPrompt';
 import { logCacheStat } from '../logCacheStat';
 import { stripThinkingBlocks, prepareThinkingForPassback, repairEmptyWireMessages } from '../../core/utils/stripThinkingBlocks';
 
@@ -206,7 +206,9 @@ export function prepareAnthropicRequest(
               ]
             : [{ type: 'text' as const, text: stable, cache_control: { type: 'ephemeral' as const } }];
     } else {
-        systemParam = systemPrompt;
+        // D1: with caching off nothing splits the prompt, so the sentinel has to
+        // be removed here or it reaches the model.
+        systemParam = stripCacheBreakpointMarker(systemPrompt);
     }
 
     // Extended thinking: when enabled, temperature MUST be 1.

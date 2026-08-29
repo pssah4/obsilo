@@ -521,6 +521,22 @@ export const en = {
     'settings.loop.leanSystemPromptName': 'Lean system prompt',
     'settings.loop.leanSystemPromptDesc': 'Always use the compact prompt variants to save tokens. May slightly reduce plugin-skill awareness until a skill is mentioned. Default: off.',
 
+    // Cost display (FEAT-24-12)
+    'settings.loop.headingCost': 'Cost display',
+    'settings.loop.sectionCostDesc': 'The euro amount in the chat footer is an estimate built from published rates. These three fields are how you make it match your own bill: the conversion rate, your own rates where they differ, and how fresh the fetched rate card is.',
+    'settings.loop.usdToEur': 'USD to EUR rate',
+    'settings.loop.usdToEurDesc': 'Model prices are published in USD. Default: {{rate}}, checked {{date}}. Leave empty to use the default.',
+    'settings.loop.usdToEurInfo': 'Vault Operator never fetches an exchange rate on its own, because a background refresh would overwrite the value you typed. Enter the rate that matches how you actually pay: a card rate and a corporate rate both differ from the mid-market rate, sometimes by several percent. The field accepts values between 0.5 and 2.',
+    'settings.loop.priceOverrides': 'Your own model rates',
+    'settings.loop.priceOverridesDesc': 'One rate per line: the model ID, an equals sign, then the input and output price in USD per million tokens separated by a slash. Two more numbers can follow, for cache reads and cache writes.',
+    'settings.loop.priceOverridesInfo': 'Anything you enter here wins over both the fetched rate card and the built-in table, and a rate-card refresh will not overwrite it. This is also the place for a regional or contract rate: the fetched card carries one price per model with no region, and the built-in table deliberately does not invent regional numbers. Example: "claude-opus-5 = 5/25". Lines starting with # are ignored.',
+    'settings.loop.priceOverridesInvalid': 'Not applied, could not be read: {{lines}}',
+    'settings.loop.priceCatalog': 'Fetched rate card',
+    'settings.loop.priceCatalogDesc': 'Current model prices, fetched once a day.',
+    'settings.loop.priceCatalogUpdated': 'Last fetched {{when}}. Refreshes by itself once a day.',
+    'settings.loop.priceCatalogNever': 'Never fetched. Amounts come from the built-in table, which ages.',
+    'settings.loop.priceCatalogRefresh': 'Refresh now',
+
     // =========================================================================
     // Settings -- Memory Tab
     // =========================================================================
@@ -1011,6 +1027,20 @@ export const en = {
     'ui.sidebar.stopping': 'Stopping the task. You can resume it afterwards.',
     'ui.sidebar.stoppingWaiting': 'Stopping: waiting for the current step to finish. You can resume afterwards.',
 
+    // Cost footer markers (FIX-24-05-07). They say how much of the amount is
+    // real: which model has no rate at all, when a rate is extrapolated from a
+    // model family, and when the model ran locally and cost nothing.
+    'ui.cost.moreModels': '+{{count}} more',
+    'ui.cost.unpriced': 'No price for {{model}}',
+    'ui.cost.unpricedMore': 'No price for {{model}} and {{count}} more',
+    'ui.cost.estimatedRate': 'Estimated rate',
+    'ui.cost.localUnpriced': 'Local model, no price',
+    // AUDIT-2026-08-27 I-5: the total is a sum of per-model buckets, so a rate
+    // that only applies to a single long request cannot be in it. These two say
+    // the amount is a floor for that model, not the invoice.
+    'ui.cost.tierBlind': 'Excludes long-context rate for {{model}}',
+    'ui.cost.tierBlindMore': 'Excludes long-context rate for {{model}} and {{count}} more',
+
     // =========================================================================
     // UI -- Inline Chat (FIX-42-01-02)
     // =========================================================================
@@ -1430,6 +1460,10 @@ export const en = {
     'notice.backfill.done': 'Backfill finished: {{processed}} notes, {{summaries}} summaries, {{mirrors}} property mirrors, {{errors}} errors.',
     'notice.stufe3.updates': 'Freshness check: {{count}} update hints found (see console).',
     'notice.stufe3.budget': 'Freshness check budget at {{percent}}%.',
+    // FEAT-24-12: a manual price refresh reports both outcomes. A silent
+    // failure would leave the user believing the amounts were just updated.
+    'notice.priceCatalogRefreshed': 'Model prices updated.',
+    'notice.priceCatalogRefreshFailed': 'Could not fetch model prices. Amounts keep using the last known rates.',
 
     // =========================================================================
     // ToolPicker Popover
@@ -1557,6 +1591,7 @@ export const en = {
     'modal.modelConfig.save': 'Save',
     'modal.modelConfig.cancel': 'Cancel',
     'modal.modelConfig.modelIdRequired': 'Model ID is required',
+    'modal.modelConfig.baseUrlRejected': 'Base URL rejected: {{message}}',
     'modal.modelConfig.enterModelIdFirst': 'Enter a model ID first',
     'modal.modelConfig.browseInstalled': 'Browse installed models',
     'modal.modelConfig.browseAvailable': 'Browse available models',
@@ -1924,6 +1959,10 @@ export const en = {
     // EPIC-26 / FEAT-26-05 -- chat-header model dropdown
     'ui.sidebar.modelAuto': 'Auto',
     'ui.sidebar.modelAutoTitle': 'Advisor pattern: main loop on the mid tier, on-demand flagship escalation.',
+    // FIX-24-05-08 (D7): "Auto" alone names a routing rule, not the model that
+    // gets billed. The pill resolves the rule; the tooltip carries the full id.
+    'ui.sidebar.modelAutoResolved': 'Auto ({{model}})',
+    'ui.sidebar.modelAutoResolvedTitle': 'Auto currently resolves to {{model}}. Advisor pattern: main loop on the mid tier, on-demand flagship escalation.',
     'ui.sidebar.modelOverrideTitle': 'Override: this turn runs on {{label}}. consult_flagship is disabled.',
     'ui.sidebar.modelAdvisorDisabled': 'Advisor pattern disabled',
     'ui.sidebar.modelPickerTitle': '{{provider}} models',
@@ -2754,12 +2793,15 @@ export const en = {
     'settings.providers.effortOptInDesc': 'Offer the reasoning effort slider for models on this endpoint. The plugin cannot detect support automatically; enable it only for models whose endpoint accepts a reasoning_effort field.',
     'settings.providers.effortOptInSelect': 'Select a model',
     'settings.providers.modal.infoAria': '{{label}}: info',
+    'settings.providers.modal.section.caching': 'Prompt caching',
     'settings.providers.modal.section.effort': 'Reasoning effort',
     'settings.providers.modal.section.privacy': 'Privacy',
     'settings.providers.plaintextAcknowledged': 'Warning acknowledged. The banner stays visible so the state remains clear.',
     'settings.providers.plaintextBody': 'The OS keychain is unavailable on this device, so Vault Operator cannot encrypt API keys, OAUTH tokens, or MCP secrets. These values are written as plain strings to data.json and are visible to any process that can read the vault. Common cause: Linux installs without libsecret. Install libsecret-1-0 and restart Obsidian to enable encryption.',
     'settings.providers.plaintextDismiss': 'I understand, dismiss this warning',
     'settings.providers.plaintextTitle': 'API keys stored as plaintext',
+    'settings.providers.promptCaching': 'Send cache markers',
+    'settings.providers.promptCachingDesc': 'Mark the stable part of each request so this provider can serve it from its prompt cache instead of charging full price. On by default. Switch it off to send plain requests, for example while diagnosing a provider that rejects the markers.',
     'settings.providers.tier.badgeAria': 'Tier: {{label}}',
     'settings.providers.zdrConfirmed': 'Zero-data-retention (zdr) confirmed',
     'settings.providers.zdrConfirmedDesc': 'I have confirmed with this provider that prompts and completions are not retained or used for training. Required before the freshness verifier may escalate to the flagship tier on this provider.',

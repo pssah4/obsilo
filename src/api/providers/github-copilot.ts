@@ -26,6 +26,14 @@ import { logCacheStat } from '../logCacheStat';
 import { normalizeDeltaContent } from './utils/openAiContent';
 import { flushToolCallAccumulators, type ToolCallAccumulator } from './utils/toolCallFlush';
 import { convertToOpenAiChatMessages, convertToOpenAiChatTools } from '../adapters/openaiChat';
+import { markCopilotChatCacheBreakpoints } from '../adapters/openaiShapeCacheMarkers';
+import {
+    markCopilotResponsesCacheBreakpoints,
+    type CopilotResponsesBodyParts,
+} from '../adapters/copilotResponsesCacheMarkers';
+import { readOpenAiShapeCacheUsage } from '../adapters/openaiShapeCacheUsage';
+import { getCacheCapability } from '../capabilities';
+import { stripCacheBreakpointMarker } from '../../core/systemPrompt';
 import {
     convertToResponsesInput,
     convertToResponsesTools,
@@ -198,6 +206,13 @@ export class GitHubCopilotProvider implements ApiHandler {
         const openAiMessages = convertToOpenAiChatMessages(systemPrompt, messages, 'github-copilot');
         const openAiTools = tools.length > 0 ? convertToOpenAiChatTools(tools) : undefined;
 
+        // IMP-18-01-04: Copilot's own marker form on this route. Gated on the
+        // capability table AND the user switch, so a `false` restores the exact
+        // pre-marker request (D3 made that switch reach this path).
+        if (this.cacheMarkersSent()) {
+            markCopilotChatCacheBreakpoints(openAiMessages, systemPrompt);
+        }
+
         // Extended thinking for Claude models via Copilot
         const isClaude = /^claude/i.test(this.config.model);
         const thinkingEnabled = isClaude && (this.config.thinkingEnabled ?? false);
@@ -300,23 +315,30 @@ export class GitHubCopilotProvider implements ApiHandler {
         for await (const chunk of stream) {
             // Usage (sent at end with stream_options)
             if (chunk.usage) {
-                const cachedIn = (chunk.usage as { prompt_tokens_details?: { cached_tokens?: number } })
-                    .prompt_tokens_details?.cached_tokens ?? 0;
+                // AP3: shared reader instead of a third copy of the same
+                // extraction (ADR-150 anti-drift). 'auto' stays correct here:
+                // Copilot caches server-side without markers from us, measured at
+                // a 51-58% hit rate on the gpt-5.6 lineup in 2026-08 telemetry.
+                const cacheUsage = readOpenAiShapeCacheUsage(chunk.usage, 'github-copilot');
                 logCacheStat({
                     provider: 'github-copilot',
                     model: this.config.model,
                     caching: 'auto',
-                    nonCachedInputTokens: Math.max(0, chunk.usage.prompt_tokens - cachedIn),
-                    cacheReadTokens: cachedIn,
-                    outputTokens: chunk.usage.completion_tokens,
+                    nonCachedInputTokens: cacheUsage.inputTokens,
+                    cacheReadTokens: cacheUsage.cacheReadTokens,
+                    cacheCreationTokens: cacheUsage.cacheCreationTokens,
+                    outputTokens: cacheUsage.outputTokens,
                 });
                 yield {
                     type: 'usage',
                     // IMP-18-01-02: prompt_tokens is the total; report non-cached as
                     // inputTokens + cached separately so cost bills the cached prefix cheap.
-                    inputTokens: Math.max(0, chunk.usage.prompt_tokens - cachedIn),
-                    outputTokens: chunk.usage.completion_tokens,
-                    cacheReadTokens: cachedIn > 0 ? cachedIn : undefined,
+                    inputTokens: cacheUsage.inputTokens,
+                    outputTokens: cacheUsage.outputTokens,
+                    cacheReadTokens: cacheUsage.cacheReadTokens > 0 ? cacheUsage.cacheReadTokens : undefined,
+                    cacheCreationTokens: cacheUsage.cacheCreationTokens > 0
+                        ? cacheUsage.cacheCreationTokens
+                        : undefined,
                 } satisfies ApiStreamChunk;
             }
 
@@ -377,6 +399,19 @@ export class GitHubCopilotProvider implements ApiHandler {
     // ---------------------------------------------------------------------------
 
     /**
+     * Whether this request carries Copilot's cache markers.
+     *
+     * One decision for both routes: the capability style says "Copilot's own
+     * marker forms", each route then writes its own field. Reading it in one
+     * place keeps the two routes from disagreeing about whether caching is on.
+     */
+    private cacheMarkersSent(): boolean {
+        if (!(this.config.promptCachingEnabled ?? false)) return false;
+        return getCacheCapability('github-copilot', this.config.model).cacheStyle
+            === 'copilot-cache-control';
+    }
+
+    /**
      * Whether this model has to go through /responses.
      *
      * Deliberately narrower than the Copilot Chat extension, which prefers
@@ -418,7 +453,11 @@ export class GitHubCopilotProvider implements ApiHandler {
 
         const body: Record<string, unknown> = {
             model: this.config.model,
-            instructions: systemPrompt,
+            // D1: this route builds its own body and never passed through
+            // prepareResponsesRequest, so the strip added there (openaiResponses.ts)
+            // missed it. The gpt-5.6 lineup routes here, which is most of the
+            // logged Copilot traffic, and it kept sending the sentinel.
+            instructions: stripCacheBreakpointMarker(systemPrompt),
             input: convertToResponsesInput(messages),
             stream: true,
             max_output_tokens: effectiveMaxTokens,
@@ -438,6 +477,18 @@ export class GitHubCopilotProvider implements ApiHandler {
 
         if (this.config.temperature !== undefined && modelSupportsTemperature(this.config.model)) {
             body.temperature = Math.min(this.config.temperature, 2.0);
+        }
+
+        // IMP-18-01-04: Copilot's Responses marker form. Restructures the system
+        // prompt out of `instructions` and into input[0] so the marker has a
+        // content part to sit on, and keeps the volatile tail behind it. Gated,
+        // so promptCachingEnabled=false leaves this body byte-identical to the
+        // pre-marker one -- the safety valve for the riskiest change here.
+        if (this.cacheMarkersSent()) {
+            markCopilotResponsesCacheBreakpoints(
+                body as unknown as CopilotResponsesBodyParts,
+                systemPrompt,
+            );
         }
 
         return body;

@@ -30,6 +30,30 @@ function minCacheablePrefixTokens(model: string): number {
     return /haiku/i.test(model) ? 2048 : 1024;
 }
 
+/**
+ * AUDIT-2026-08-28 L-2 (CWE-532): providers whose model id is a private endpoint
+ * detail rather than a public product name.
+ *
+ * `src/api/index.ts` already states the rule ("never log the model id, it is
+ * sensitive for custom endpoints. Provider type + source suffice") and this
+ * logger broke it. The consequence is not confined to a local console line:
+ * ConsoleRingBuffer captures debug output and ReadAgentLogsTool hands it to the
+ * model on request, where sanitizeErrorMessage filters secret patterns but not
+ * model ids. A prompt injection could therefore read and exfiltrate a private
+ * deployment name.
+ */
+const PRIVATE_MODEL_ID_PROVIDERS = new Set(['custom', 'ollama', 'lmstudio']);
+
+/**
+ * The model label for the log line. Withheld, not hashed: FNV-1a over a short
+ * id is brute-forceable with a candidate list, so a hash would be obfuscation
+ * sold as protection. The aggregation key below keeps the real id, so two
+ * private models stay in separate suppression buckets.
+ */
+function modelLabel(provider: string, model: string): string {
+    return PRIVATE_MODEL_ID_PROVIDERS.has(provider) ? '<withheld>' : model;
+}
+
 const AGGREGATE_EVERY = 20;
 const suppressed = new Map<string, { count: number; in: number; out: number }>();
 
@@ -67,7 +91,7 @@ export function logCacheStat(opts: {
             const avgIn = Math.round(bucket.in / bucket.count);
             const avgOut = Math.round(bucket.out / bucket.count);
             console.debug(
-                `[CacheStat:${opts.provider}] model=${opts.model} ${bucket.count} sub-minimum calls aggregated: ` +
+                `[CacheStat:${opts.provider}] model=${modelLabel(opts.provider, opts.model)} ${bucket.count} sub-minimum calls aggregated: ` +
                 `avgIn=${avgIn}t avgOut=${avgOut}t (prefix below cacheable minimum, cache markers ignored by provider)`,
             );
             suppressed.delete(key);
@@ -78,7 +102,7 @@ export function logCacheStat(opts: {
     }
 
     console.debug(
-        `[CacheStat:${opts.provider}] model=${opts.model} caching=${opts.caching} ` +
+        `[CacheStat:${opts.provider}] model=${modelLabel(opts.provider, opts.model)} caching=${opts.caching} ` +
         `nonCachedIn=${opts.nonCachedInputTokens}t cacheRead=${opts.cacheReadTokens}t ` +
         `cacheCreate=${create}t out=${opts.outputTokens}t totalIn=${total}t hitRate=${hitRate}%`,
     );

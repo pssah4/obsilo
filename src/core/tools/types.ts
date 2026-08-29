@@ -227,6 +227,21 @@ export interface ToolExecutionContext {
     apiHandler?: import('../../api/types').ApiHandler;
 
     /**
+     * FIX-24-05-09 (D10): report an LLM call the tool made itself.
+     *
+     * Three tools spend tokens of their own (plan_presentation's deck planner,
+     * semantic_search's HyDE rewrite, configure_model's connectivity probe) and
+     * until now had no way to say so, so the footer and tasks.jsonl booked them
+     * as free. The owning task folds what arrives here into the same totals the
+     * condensing pass and the FastPath planner feed.
+     *
+     * Undefined on the headless surfaces (MCP execute_vault_op, the editor
+     * quick-action dispatch), where no task owns the call. runMeteredCall then
+     * still counts it in the usage ledger, so it is unattributed, not invisible.
+     */
+    reportAuxUsage?: import('../pricing/meteredCall').UsageSink;
+
+    /**
      * Current task ID
      */
     taskId: string;

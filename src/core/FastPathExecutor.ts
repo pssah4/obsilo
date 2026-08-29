@@ -153,6 +153,14 @@ export class FastPathExecutor {
         // FIX-44-44: recipe writes that were not individually diff-approved
         // count toward the post-task review, same as model dispatches.
         if (this.gate?.onUnreviewedWrite) ext.onUnreviewedWrite = this.gate.onUnreviewedWrite;
+        // FIX-24-05-09 (D10): a recipe step can dispatch a tool that makes its
+        // own LLM call. Route it into the same report the planner call uses, so
+        // the FastPath route is not the one that stays free.
+        if (this.onUsage) {
+            ext.reportAuxUsage = (u) => this.onUsage?.(
+                u.inputTokens, u.outputTokens, u.cacheReadTokens, u.cacheCreationTokens, u.modelId,
+            );
+        }
         return Object.keys(ext).length > 0 ? ext : undefined;
     }
 
@@ -378,8 +386,10 @@ export class FastPathExecutor {
                 if (chunk.type === 'text') responseText += chunk.text;
                 // FIX-24-05-04: planner tokens cost money too.
                 else if (chunk.type === 'usage') {
+                    // FIX-24-05-08: the chunk's own id wins; the handler lookup
+                    // is the fallback for a handler built outside the factory.
                     this.onUsage?.(chunk.inputTokens, chunk.outputTokens, chunk.cacheReadTokens, chunk.cacheCreationTokens,
-                        internalApi.getModel().id);
+                        chunk.modelId ?? internalApi.getModel().id);
                 }
             }
 

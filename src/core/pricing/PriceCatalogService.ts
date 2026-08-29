@@ -72,9 +72,16 @@ export function parseOpenRouterCatalog(json: unknown): Record<string, ModelPrice
         if (!Number.isFinite(n) || n <= 0 || n > MAX_PLAUSIBLE_PER_MILLION) return undefined;
         return n;
     };
+    // AUDIT-2026-07-02 I-1 bound, counted incrementally. FIX-24-05-10: this used
+    // to read `Object.keys(catalog).length` per iteration, which allocates the
+    // whole key array every time -- quadratic in accepted entries, so the guard
+    // against an oversized catalog was itself the expensive part of parsing one.
+    // Measured 2.9s for 10k accepted entries on the boot path (refreshIfStale).
+    // The counter tracks DISTINCT keys, exactly like Object.keys did, so a
+    // catalog with repeated ids keeps the same entries as before.
+    let distinctKeys = 0;
     for (const entry of data) {
-        // AUDIT-2026-07-02 I-1: bound the work a hostile catalog can cause.
-        if (Object.keys(catalog).length >= MAX_CATALOG_ENTRIES) break;
+        if (distinctKeys >= MAX_CATALOG_ENTRIES) break;
         const e = entry as { id?: unknown; pricing?: Record<string, unknown> };
         if (typeof e.id !== 'string' || !e.pricing) continue;
         const key = normalizeCatalogKey(e.id);
@@ -87,6 +94,12 @@ export function parseOpenRouterCatalog(json: unknown): Record<string, ModelPrice
         const cacheWrite = perMillion(e.pricing.input_cache_write, false);
         if (cacheRead !== undefined) price.cacheReadPerMillionUsd = cacheRead;
         if (cacheWrite !== undefined) price.cacheWritePerMillionUsd = cacheWrite;
+        // hasOwnProperty rather than `key in catalog`, which walks the prototype
+        // chain. `in` happens to be safe here only by coincidence: the key is
+        // lowercased and every Object.prototype member is camelCase, so
+        // 'constructor' is the single possible collision and UNSAFE_KEYS already
+        // drops it. This form does not depend on that holding.
+        if (!Object.prototype.hasOwnProperty.call(catalog, key)) distinctKeys++;
         catalog[key] = price;
     }
     return catalog;
@@ -151,22 +164,45 @@ export class PriceCatalogService {
     }
 
     /**
-     * Fetch a fresh catalog when the current one is older than 24h.
-     * Best-effort: failures leave the current pricing (persisted snapshot
-     * or static table) untouched.
+     * FEAT-24-12: when the catalog on screen was fetched, or null when this
+     * session has never applied one. The settings UI shows it so a price the
+     * user is looking at carries its own age; before this getter the private
+     * stamp had no reader and the age was invisible.
      */
-    async refreshIfStale(): Promise<void> {
-        if (Date.now() - this.fetchedAt < TTL_MS) return;
+    getLastFetchedAt(): number | null {
+        return this.fetchedAt === 0 ? null : this.fetchedAt;
+    }
+
+    /**
+     * Fetch a fresh catalog. The 24h TTL gate is right for the boot refresh
+     * and wrong for a user who just pressed a button, so `force` skips it
+     * (FEAT-24-12): without a force path the only ways to refetch were to
+     * wait a day or delete the snapshot file.
+     *
+     * Returns true when a new catalog was applied and persisted. Best-effort
+     * either way: failures leave the current pricing (persisted snapshot or
+     * static table) untouched, and the boolean is what lets a manual refresh
+     * tell the user it did not work instead of looking successful.
+     */
+    async refresh(options: { force?: boolean } = {}): Promise<boolean> {
+        if (!options.force && Date.now() - this.fetchedAt < TTL_MS) return false;
         try {
             const json = await this.fetchJson();
             const catalog = parseOpenRouterCatalog(json);
             // Defensive: never replace a working catalog with an empty one.
-            if (Object.keys(catalog).length === 0) return;
+            if (Object.keys(catalog).length === 0) return false;
             this.fetchedAt = Date.now();
             setLivePriceCatalog(catalog);
             await this.fs.write(PRICE_CATALOG_FILE, JSON.stringify({ fetchedAt: this.fetchedAt, catalog } satisfies PersistedCatalog));
+            return true;
         } catch (e) {
             console.warn('[PriceCatalog] refresh failed (non-fatal):', e);
+            return false;
         }
+    }
+
+    /** Boot path: refresh only when the current catalog is older than 24h. */
+    async refreshIfStale(): Promise<boolean> {
+        return this.refresh();
     }
 }

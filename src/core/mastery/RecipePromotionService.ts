@@ -19,6 +19,7 @@ import type {
 } from './EpisodicExtractor';
 import type { ProceduralRecipe } from './types';
 import type { ApiHandler } from '../../api/types';
+import { runMeteredCall } from '../pricing/meteredCall';
 import { SCHEMA_VERSION } from './staticRecipes';
 
 /** Minimum similar successful episodes before promotion. */
@@ -160,9 +161,13 @@ Generate a JSON object with:
 - "steps": Array of {tool, note} objects for the recommended tool sequence (use the most common tools)`;
 
             let responseText = '';
-            for await (const chunk of api.createMessage(systemPrompt, [
-                { role: 'user', content: userPrompt },
-            ], [], undefined)) {
+            // FIX-24-05-09 (D10): promotion fires from the episode recorder
+            // after a task has already reported its usage, so this call had
+            // nowhere to land and was dropped.
+            for await (const chunk of runMeteredCall(api, 'recipe-promotion', {
+                systemPrompt,
+                messages: [{ role: 'user', content: userPrompt }],
+            })) {
                 if (chunk.type === 'text') responseText += chunk.text;
             }
 

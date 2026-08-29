@@ -15,9 +15,14 @@ import { getSubagentProfile } from '../agent/subagent-profiles';
 import { getHelperApi } from '../helper-api';
 import type { MessageParam } from '../../api/types';
 import type { BackgroundTaskExecutor } from './BackgroundTaskRunner';
+import { TaskMonitor } from '../../ui/sidebar/TaskMonitor';
+import { getModelKey } from '../../types/settings';
 import { t } from '../../i18n';
 
 const BACKGROUND_MAX_ITERATIONS = 15;
+
+/** First chars of the request, for the telemetry row. Same cap the sidebar uses. */
+const PROMPT_PREVIEW_CHARS = 200;
 
 export function createBackgroundTaskExecutor(plugin: ObsidianAgentPlugin): BackgroundTaskExecutor {
     return async ({ taskId, message, abortSignal }) => {
@@ -30,6 +35,23 @@ export function createBackgroundTaskExecutor(plugin: ObsidianAgentPlugin): Backg
 
         const textParts: string[] = [];
         const history: MessageParam[] = [];
+
+        // FIX-24-05-09 (D10): a background task runs up to 15 iterations of the
+        // real loop and used to report none of it. No footer element is passed:
+        // this surface is headless, so the monitor's job here is the priced
+        // [Cost] console line plus the tasks.jsonl and requests.jsonl records.
+        const monitor = new TaskMonitor({
+            plugin,
+            app: plugin.app,
+            apiHandler: api,
+            getEffectiveModelKey: () => {
+                const model = plugin.getHelperModel?.() ?? plugin.getActiveModel?.() ?? null;
+                return model ? getModelKey(model) : '';
+            },
+            promptPreview: message.slice(0, PROMPT_PREVIEW_CHARS),
+            mode: 'background',
+        });
+
         const runner = new AgentTaskRunner({
             api,
             toolRegistry: plugin.toolRegistry,
@@ -48,6 +70,15 @@ export function createBackgroundTaskExecutor(plugin: ObsidianAgentPlugin): Backg
                 onError: (err) => {
                     textParts.push(`\n\n[Background task error] ${err.message}`);
                 },
+                // FIX-24-05-09 (D10): the three reporting hooks. Same monitor
+                // methods the sidebar uses, so a background run is priced and
+                // persisted by exactly the same code as a foreground one.
+                onUsage: (i, o, cr, cc, modelId, routingMode, usageByModel, longContextIds) => {
+                    monitor.onUsage(i, o, cr, cc, modelId, routingMode, usageByModel, longContextIds);
+                },
+                onTaskTelemetry: (data) => { monitor.onTaskTelemetry(data); },
+                onRequestTelemetry: (data) => { monitor.onRequestTelemetry(data); },
+                onCondenseTelemetry: (event) => { monitor.onCondenseTelemetry(event); },
             },
         });
 

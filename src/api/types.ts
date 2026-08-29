@@ -25,8 +25,25 @@ export type ApiStreamChunk =
     | { type: 'thinking_signature'; signature: string }
     | { type: 'tool_use'; id: string; name: string; input: Record<string, unknown> }
     | { type: 'tool_error'; id: string; name: string; error: string }
+    // FIX-24-05-08 (R1): the usage chunk names the model it belongs to, so the
+    // code that PRICES a call reads the same id as the code that SERVED it.
+    // Without this the consumer had to ask some other object which model was
+    // current, and every mid-run swap (TaskRouter escalation, advisor consult,
+    // helper-model condensing) billed the tokens to the wrong model.
+    //
+    // idOrigin says how much to trust the id:
+    //  - 'served'    stamped by the handler that produced this stream, from its
+    //                own configured model id (withUsageAttribution, or a
+    //                provider that knows better). This is NOT "echoed by the
+    //                endpoint": reading the model back off the wire would let a
+    //                server's own spelling replace the configured id, which is a
+    //                separate decision because the id doubles as the lookup key
+    //                into the user's model settings.
+    //  - 'requested' the id a caller asked for or assumed, for a consumer that
+    //                has to fill the field in because no producer stamped one.
     | { type: 'usage'; inputTokens: number; outputTokens: number;
-        cacheReadTokens?: number; cacheCreationTokens?: number };
+        cacheReadTokens?: number; cacheCreationTokens?: number;
+        modelId?: string; idOrigin?: 'requested' | 'served' };
 
 export type ApiStream = AsyncIterable<ApiStreamChunk>;
 

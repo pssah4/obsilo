@@ -33,6 +33,7 @@
 import type ObsidianAgentPlugin from '../../main';
 import { buildApiHandlerForModel } from '../../api/index';
 import { getModelKey } from '../../types/settings';
+import { runMeteredCall } from '../pricing/meteredCall';
 import { resolveTierModel } from '../routing/tierResolution';
 
 /** AUDIT-024 M-1: hard cap on bytes shipped to the external provider. */
@@ -75,7 +76,12 @@ export function makeTemplateTranslator(plugin: ObsidianAgentPlugin) {
                 const out = await handler.classifyText(prompt);
                 return cleanResponse(out, sourceContent);
             }
-            const stream = handler.createMessage(prompt, [{ role: 'user', content: 'Translate now.' }], []);
+            // FIX-24-05-09 (D10): once per bundled template, so a first run in
+            // a non-English vault is a small burst of calls nobody counted.
+            const stream = runMeteredCall(handler, 'template-translation', {
+                systemPrompt: prompt,
+                messages: [{ role: 'user', content: 'Translate now.' }],
+            });
             let text = '';
             for await (const chunk of stream) {
                 if (chunk.type === 'text') text += chunk.text;

@@ -147,6 +147,7 @@ export class TextComponent {
     static reset(): void { TextComponent.instances = []; }
     value = '';
     inputEl: { readOnly: boolean; type: string; value: string; addClass: (...c: string[]) => void };
+    protected changeCb: ((v: string) => void | Promise<void>) | null = null;
     constructor(public containerEl: SettingHost) {
         this.inputEl = { readOnly: false, type: 'text', value: '', addClass: () => { /* no-op */ } };
         TextComponent.instances.push(this);
@@ -154,7 +155,31 @@ export class TextComponent {
     setValue(v: string): this { this.value = v; this.inputEl.value = v; return this; }
     getValue(): string { return this.value; }
     setPlaceholder(_p: string): this { return this; }
-    onChange(_cb: (v: string) => void): this { return this; }
+    /**
+     * Records the callback (same contract as ToggleComponent): setValue never
+     * fires it, only a simulated edit does. FEAT-24-12 needs this to drive the
+     * FX-rate field, which validates what the user types.
+     */
+    onChange(cb: (v: string) => void | Promise<void>): this { this.changeCb = cb; return this; }
+    /** Test helper: simulate the user typing. Awaitable for async handlers. */
+    async simulateChange(v: string): Promise<void> {
+        this.setValue(v);
+        await this.changeCb?.(v);
+    }
+}
+
+/**
+ * Minimal TextAreaComponent stub (FEAT-24-12: the price-override map is a
+ * multi-line text field). Same registry/simulateChange contract as
+ * TextComponent, which is also what the real class extends.
+ */
+export class TextAreaComponent extends TextComponent {
+    static instances: TextAreaComponent[] = [];
+    static reset(): void { TextAreaComponent.instances = []; }
+    constructor(containerEl: SettingHost) {
+        super(containerEl);
+        TextAreaComponent.instances.push(this);
+    }
 }
 
 /**
@@ -197,6 +222,10 @@ export class Setting {
     }
     addText(cb: (t: TextComponent) => void): this {
         cb(new TextComponent(this.controlEl));
+        return this;
+    }
+    addTextArea(cb: (t: TextAreaComponent) => void): this {
+        cb(new TextAreaComponent(this.controlEl));
         return this;
     }
     addExtraButton(cb: (b: ExtraButtonComponent) => void): this {

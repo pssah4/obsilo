@@ -76,11 +76,71 @@ export const CACHE_BREAKPOINT_MARKER = '<<<OBSILO_CACHE_BREAKPOINT>>>';
  * `volatile` is empty — callers then fall back to marking the whole thing.
  */
 export function splitSystemPromptAtCacheBreakpoint(prompt: string): { stable: string; volatile: string } {
-    const idx = prompt.indexOf(CACHE_BREAKPOINT_MARKER);
-    if (idx < 0) return { stable: prompt, volatile: '' };
-    const stable = prompt.slice(0, idx).replace(/\n+$/, '\n');
-    const volatile = prompt.slice(idx + CACHE_BREAKPOINT_MARKER.length).replace(/^\n+/, '\n');
+    // AUDIT-2026-08-28 L-1 (CWE-74, OWASP LLM01:2025): match the sentinel as a
+    // full LINE, and clean any remaining occurrence out of both halves.
+    //
+    // This used to be a plain indexOf, which let untrusted content decide where
+    // the cache boundary sits. Traced path: a skill name/description is
+    // untrusted (AgentSidebarView marks it so), `sanitizeDirectoryEntry` only
+    // defangs its BOUNDARY_TAG_RE allowlist and lets this sentinel through, and
+    // the skill directory renders ABOVE the real marker -- so an injected copy
+    // was found first and moved the split.
+    //
+    // Line anchoring closes that vector completely rather than narrowing it:
+    // `sanitizeDirectoryEntry` collapses newlines to spaces, so an injected
+    // marker can never occupy a line of its own. The extra strip covers the
+    // leftovers, so no consumer has to think about it -- this one function is
+    // the choke point all five provider paths go through.
+    const match = markerLineRe().exec(prompt);
+    if (!match) return { stable: stripAllMarkers(prompt), volatile: '' };
+    const stable = stripAllMarkers(prompt.slice(0, match.index)).replace(/\n+$/, '\n');
+    const volatile = stripAllMarkers(prompt.slice(match.index + match[0].length)).replace(/^\n+/, '\n');
     return { stable, volatile };
+}
+
+/** Escape the marker for use inside a RegExp, so the constant stays the source. */
+function escapeForRegExp(literal: string): string {
+    return literal.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * The sentinel as its own line, which is exactly how the section list emits it
+ * (own array element, joined by newlines). Built fresh per call because a shared
+ * global-flagged RegExp carries lastIndex between calls.
+ */
+function markerLineRe(): RegExp {
+    return new RegExp(`^[ \\t]*${escapeForRegExp(CACHE_BREAKPOINT_MARKER)}[ \\t]*$`, 'm');
+}
+
+/** Remove every occurrence of the sentinel, line-anchored or inline. */
+function stripAllMarkers(text: string): string {
+    if (!text.includes(CACHE_BREAKPOINT_MARKER)) return text;
+    return text.split(CACHE_BREAKPOINT_MARKER).join('');
+}
+
+/**
+ * D1: remove the sentinel for a wire that has no marker slot for it.
+ *
+ * The comment above {@link CACHE_BREAKPOINT_MARKER} promised the line is
+ * stripped before send, but only the two caching branches that call
+ * {@link splitSystemPromptAtCacheBreakpoint} ever removed it. Every other path
+ * forwarded it verbatim: the OpenAI-shape system message, the Responses-API
+ * `instructions` field, and both adapters whenever prompt caching was off. A
+ * sentinel the format cannot carry is a stray instruction to the model.
+ *
+ * Use this wherever the prompt goes out WITHOUT being split. Where it is
+ * split, the split already removed the marker and this must not run again.
+ */
+export function stripCacheBreakpointMarker(prompt: string): string {
+    if (!prompt.includes(CACHE_BREAKPOINT_MARKER)) return prompt;
+    // AUDIT-2026-08-28 L-1: EVERY occurrence, not just the first. The old
+    // version removed one and reported success, so a second (injected) copy
+    // reached the model while the marker-absence suite stayed green on its clean
+    // fixture. The split below already strips both halves; deriving from it
+    // keeps the two functions from drifting apart on the edge cases (trailing
+    // newlines, an empty volatile tail).
+    const { stable, volatile } = splitSystemPromptAtCacheBreakpoint(prompt);
+    return volatile.trim().length > 0 ? `${stable}${volatile}` : stable.replace(/\n+$/, '\n');
 }
 
 /**

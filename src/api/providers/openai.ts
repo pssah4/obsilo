@@ -13,6 +13,7 @@ import type { ToolDefinition } from '../../core/tools/types';
 import type { IncomingMessage } from 'http';
 import { getModelContextWindow, resolveOutputBudget, estimatePromptTokens, modelSupportsTemperature, resolveEffortLevels, modelUsesBudgetTokensThinking, isEffortWithToolsUnsupported } from '../../types/model-registry';
 import { validateProviderUrl } from './providerUrlGuard';
+import { getCacheCapability } from '../capabilities';
 import { logCacheStat } from '../logCacheStat';
 import { flushToolCallAccumulators, type ToolCallAccumulator } from './utils/toolCallFlush';
 
@@ -21,6 +22,8 @@ import { flushToolCallAccumulators, type ToolCallAccumulator } from './utils/too
 // ---------------------------------------------------------------------------
 
 import { convertToOpenAiChatMessages, convertToOpenAiChatTools } from '../adapters/openaiChat';
+import { markOpenAiShapeCacheBreakpoints } from '../adapters/openaiShapeCacheMarkers';
+import { readOpenAiShapeCacheUsage } from '../adapters/openaiShapeCacheUsage';
 
 // IMP-41-03-03 / ADR-150: message/tool types and the conversion itself live
 // in the shared openai-chat wire adapter (../adapters/openaiChat) — one
@@ -241,6 +244,23 @@ export class OpenAiProvider implements ApiHandler {
         const openAiMessages = convertToOpenAiChatMessages(effectiveSystemPrompt, messages, this.config.type);
         const openAiTools = tools.length > 0 ? convertToOpenAiChatTools(tools) : undefined;
 
+        // ADR-111: the capability table is the single source of truth for what
+        // this (provider, model) pair does about caching. Read once per request
+        // and used both for the marker decision and the diagnostic line, so the
+        // log can never describe a different decision than the one taken.
+        const cacheCapability = getCacheCapability(this.config.type, this.config.model);
+        // AP3: the passthrough style is the only one this class can produce.
+        // Gated on the user switch as well, so a misbehaving gateway can be put
+        // back on plain requests without a downgrade (D3 made that switch real).
+        const cacheMarkersSent = (this.config.promptCachingEnabled ?? false)
+            && cacheCapability.cacheStyle === 'passthrough';
+        if (cacheMarkersSent) {
+            // The ORIGINAL prompt goes in: convertToOpenAiChatMessages already
+            // stripped the sentinel (D1), and the split point can only be read
+            // from the unstripped string.
+            markOpenAiShapeCacheBreakpoints(openAiMessages, effectiveSystemPrompt);
+        }
+
         // Temperature handling — four cases:
         // 1. o-series (o1, o3, o4-mini, etc.) enforce temperature=1 API-side -> omit entirely
         // 2. FIX-04-03-02: GPT-5.x and other default-only models reject any
@@ -418,15 +438,32 @@ export class OpenAiProvider implements ApiHandler {
         for await (const chunk of stream) {
             // Usage (sent at end with stream_options)
             if (chunk.usage) {
-                const cachedIn = (chunk.usage as { prompt_tokens_details?: { cached_tokens?: number } })
-                    .prompt_tokens_details?.cached_tokens ?? 0;
+                // AP3: one shared reader for cached_tokens AND cache_write_tokens.
+                // The write count was never read on this wire, so a cache fill was
+                // billed as ordinary input at 1x instead of 1.25x.
+                const cacheUsage = readOpenAiShapeCacheUsage(chunk.usage, this.config.type);
                 logCacheStat({
-                    provider: 'openai',
+                    // D2: this class serves seven provider types. A hardcoded
+                    // 'openai' made an OpenRouter run log as [CacheStat:openai],
+                    // so no measurement was attributable to the provider that
+                    // produced it -- and the cost investigation runs on these
+                    // lines. config.type is the value src/api/index.ts stamps as
+                    // handler.providerType, available here since construction.
+                    provider: this.config.type,
                     model: this.config.model,
-                    caching: 'auto', // OpenAI-compatible APIs cache automatically, no toggle
-                    nonCachedInputTokens: Math.max(0, chunk.usage.prompt_tokens - cachedIn),
-                    cacheReadTokens: cachedIn,
-                    outputTokens: chunk.usage.completion_tokens,
+                    // D2: 'auto' was asserted for everyone. It is wrong twice:
+                    // local inference does not cache at all, and OpenRouter with
+                    // an Anthropic model upstream caches only when we send
+                    // markers. Follow the capability table instead of guessing.
+                    // AP3: 'on' once we actually send markers, so the log states the
+                    // decision this request took rather than a property of the model.
+                    caching: cacheMarkersSent
+                        ? 'on'
+                        : (cacheCapability.supportsPromptCache ? 'auto' : 'OFF'),
+                    nonCachedInputTokens: cacheUsage.inputTokens,
+                    cacheReadTokens: cacheUsage.cacheReadTokens,
+                    cacheCreationTokens: cacheUsage.cacheCreationTokens,
+                    outputTokens: cacheUsage.outputTokens,
                 });
                 yield {
                     type: 'usage',
@@ -434,9 +471,15 @@ export class OpenAiProvider implements ApiHandler {
                     // Report the non-cached part as inputTokens and the cached part
                     // separately, matching the Anthropic convention, so the cost calc
                     // bills the cached prefix at the cache-read rate instead of full price.
-                    inputTokens: Math.max(0, chunk.usage.prompt_tokens - cachedIn),
-                    outputTokens: chunk.usage.completion_tokens,
-                    cacheReadTokens: cachedIn > 0 ? cachedIn : undefined,
+                    inputTokens: cacheUsage.inputTokens,
+                    outputTokens: cacheUsage.outputTokens,
+                    cacheReadTokens: cacheUsage.cacheReadTokens > 0 ? cacheUsage.cacheReadTokens : undefined,
+                    // AP3: an absent count stays absent. index.ts treats undefined as
+                    // "this provider does not report caching", which is a different
+                    // statement from "zero cache writes".
+                    cacheCreationTokens: cacheUsage.cacheCreationTokens > 0
+                        ? cacheUsage.cacheCreationTokens
+                        : undefined,
                 } satisfies ApiStreamChunk;
             }
 

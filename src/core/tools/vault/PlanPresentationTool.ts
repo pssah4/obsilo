@@ -20,6 +20,7 @@ import type ObsidianAgentPlugin from '../../../main';
 import { TemplateCatalogLoader } from '../../office/pptx/TemplateCatalog';
 import type { DeckPlan, TemplateCatalog, SlideType } from '../../office/pptx/types';
 import { getHelperApi } from '../../helper-api';
+import { runMeteredCall } from '../../pricing/meteredCall';
 
 export class PlanPresentationTool extends BaseTool<'plan_presentation'> {
     readonly name = 'plan_presentation' as const;
@@ -113,7 +114,7 @@ export class PlanPresentationTool extends BaseTool<'plan_presentation'> {
             callbacks.log('Planning presentation (internal LLM call)...');
             const plan = await this.callPlanningLLM(sourceContent, guide, {
                 deckMode, goal, audience, slideCount,
-            });
+            }, context.reportAuxUsage);
 
             // 4. Validate plan against catalog
             const warnings = this.validatePlan(plan, resolved.catalog);
@@ -157,6 +158,13 @@ export class PlanPresentationTool extends BaseTool<'plan_presentation'> {
         sourceContent: string,
         guide: string,
         options: { deckMode: string; goal: string; audience: string; slideCount?: number },
+        /**
+         * FIX-24-05-09 (D10): the owning task's aux-usage channel. The planning
+         * call ships the whole source note plus the template guide, so it is one
+         * of the more expensive single calls in the plugin, and it reported
+         * nothing. Undefined on a headless dispatch, which the helper handles.
+         */
+        reportAuxUsage?: import('../../pricing/meteredCall').UsageSink,
     ): Promise<DeckPlan> {
         const { buildApiHandlerForModel } = await import('../../../api');
         const model = this.plugin.getActiveModel();
@@ -180,11 +188,11 @@ export class PlanPresentationTool extends BaseTool<'plan_presentation'> {
             'slide_type_id, purpose, key_message, content (ALL non-decorative shapes filled), ' +
             'remove (if needed), and notes.';
 
-        const stream = api.createMessage(
-            PLANNING_SYSTEM_PROMPT,
-            [{ role: 'user', content: userPrompt }],
-            [], // no tools for the planning call
-        );
+        const stream = runMeteredCall(api, 'plan-presentation', {
+            systemPrompt: PLANNING_SYSTEM_PROMPT,
+            messages: [{ role: 'user', content: userPrompt }],
+            // no tools for the planning call
+        }, reportAuxUsage);
 
         let responseText = '';
         for await (const chunk of stream) {

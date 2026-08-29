@@ -18,7 +18,7 @@ import { ToolExecutionPipeline } from './tool-execution/ToolExecutionPipeline';
 import { ToolRepetitionDetector } from './tool-execution/ToolRepetitionDetector';
 import { summarizeForLedger } from './tool-execution/summarizeForLedger';
 import { buildSystemPromptForMode, splitSystemPromptAtCacheBreakpoint } from './systemPrompt';
-import { hashForTelemetry, type RequestTelemetryEntry } from './telemetry/TaskTelemetry';
+import { hashForTelemetry, type RequestTelemetryEntry, type RoutingMode } from './telemetry/TaskTelemetry';
 import type { ModeService } from './modes/ModeService';
 import type { ModeConfig, CustomModel } from '../types/settings';
 import type { McpClient } from './mcp/McpClient';
@@ -38,7 +38,19 @@ import { filterShadowedBuiltins } from './tools/shadowedByPlugin';
 import { isDeferredTool } from './tools/toolMetadata';
 import { getSubagentProfile } from './agent/subagent-profiles';
 import { decideLoopErrorAction } from './agent/loopErrorPolicy';
-import { initLoopStateForRun } from './agent/LoopState';
+import {
+    appendUsageRecord,
+    bookUsage,
+    cloneLoopState,
+    initLoopStateForRun,
+    ledgerDivergence,
+    longContextRequestModelIds,
+    usageByModelFromLedger,
+    type AgentLoopState,
+    type UsageOrigin,
+    type UsageRecord,
+    type UsageTotals,
+} from './agent/LoopState';
 import { AgentLoopEngine, type CondensePorts } from './agent/AgentLoopEngine';
 import { TodoAnchorInterceptor } from './agent/interceptors/TodoAnchorInterceptor';
 import { RouterEscalationInterceptor } from './agent/interceptors/RouterEscalationInterceptor';
@@ -50,7 +62,7 @@ import { resolveOutputBudget, getModelContextWindow as registryContextWindow, co
 import { learnOutputCap, learnEffortToolsUnsupported } from './agent/LearnedCapsStore';
 import { requestRateLimiter } from '../api/RequestRateLimiter';
 import { getHelperApi } from './helper-api';
-import { addUsage, mergeUsageByModel, type UsageByModel } from './pricing/ModelPricing';
+import type { UsageByModel } from './pricing/ModelPricing';
 import { shouldRunTaskRouter } from './routing/TaskRouter';
 import { resolveLeanFlags } from './prompts/leanFlags';
 import { buildApiHandlerForModel } from '../api';
@@ -116,11 +128,9 @@ export interface AgentTaskCallbacks {
      * Called with cumulative token usage just before onComplete (Feature 6).
      *
      * EPIC-26 / FEAT-26-01 / ADR-120: optional `routingMode` tags WHY this
-     * call ran on the reported `modelId`:
-     *  - `auto`     (default): main loop on the resolved tier
-     *  - `override` (Welle 2): user-pinned per-turn model
-     *  - `advisor`           : consult_flagship escalation subagent
-     *  - `subagent`          : research / other profile-spawned subagent
+     * call ran on the reported `modelId`. FIX-24-11-02 moved the union and its
+     * four meanings to `RoutingMode` in telemetry/TaskTelemetry, so the callback,
+     * the request row and the task row cannot drift apart.
      */
     onUsage?: (
         inputTokens: number,
@@ -128,7 +138,7 @@ export interface AgentTaskCallbacks {
         cacheReadTokens?: number,
         cacheCreationTokens?: number,
         modelId?: string,
-        routingMode?: 'auto' | 'override' | 'advisor' | 'subagent',
+        routingMode?: RoutingMode,
         /**
          * FIX-24-05-05: per-model breakdown of the reported totals. Mixed
          * tasks (advisor, subagents, escalation, helper condensing) carry
@@ -136,6 +146,18 @@ export interface AgentTaskCallbacks {
          * billing the whole sum at `modelId` rates.
          */
         usageByModel?: UsageByModel,
+        /**
+         * AUDIT-2026-08-27 I-5: models with at least one request that a
+         * long-context tier bills above the base rate.
+         *
+         * The buckets above are sums, so a consumer pricing them gets the base
+         * rate for every token, which is below the invoice for those requests.
+         * Only the run's ledger still knows the request boundary, so the answer
+         * travels with the numbers. It is a disclosure, not a re-pricing: a
+         * tier-aware total is a separate read over the ledger (backlog
+         * IMP-SEC-27-02) and would replace this argument.
+         */
+        longContextRequestModelIds?: string[],
     ) => void;
     /**
      * Live progress tally, fired after EVERY usage chunk (roughly once per API
@@ -258,6 +280,18 @@ export interface AgentTaskCallbacks {
      * receiver decides where to persist (typically TaskTelemetry.record).
      */
     onTaskTelemetry?: (data: {
+        /**
+         * FIX-24-11-01: the run's id, from AgentTaskRunConfig.taskId, i.e. the
+         * same value emitRequestTelemetry stamps on every request row. This is
+         * what makes tasks.jsonl and requests.jsonl joinable.
+         */
+        taskId: string;
+        /**
+         * FIX-24-11-02: why this run's model was chosen, from the same binding
+         * the request rows get it from. The receiver forwards it into the task
+         * record; before this, the record said which model ran and never why.
+         */
+        routingMode: RoutingMode;
         inputTokens: number;
         outputTokens: number;
         cacheReadTokens: number;
@@ -390,6 +424,71 @@ export function shouldForwardSubtaskUsage(depth: number): boolean {
     return depth === 0;
 }
 
+/**
+ * FIX-24-11-02: the label on a forwarded child usage report, i.e. why that
+ * report names a model the main loop is not running.
+ *
+ * `ranOnItsOwnModel` is the fact that matters and it is not derivable from the
+ * profile: `new_task` with an explicit `model_key` (Issue #54.4.1) builds its own
+ * handler without any profile, and a profile whose tier slot is unconfigured
+ * falls back to the parent's handler. The old expression looked at the profile
+ * alone, so the model_key case reported no mode and the cost line printed
+ * `mode=auto` beside a foreign model id, which reads as a mid-run model switch
+ * in the main loop.
+ *
+ * `undefined` stays meaningful: a child that inherited the parent's handler spent
+ * the parent's model at the parent's rate, so it needs no separate explanation.
+ */
+export function spawnRoutingMode(
+    profileName: string | undefined,
+    ranOnItsOwnModel: boolean,
+): 'advisor' | 'subagent' | undefined {
+    if (profileName === 'advisor') return 'advisor';
+    if (profileName !== undefined || ranOnItsOwnModel) return 'subagent';
+    return undefined;
+}
+
+/**
+ * FEAT-24-13 (D4): the child's report as ledger records for the parent.
+ *
+ * The child reports twice over: its token counts and its own per-model split.
+ * The split is the better source, because a child that ran several models is
+ * only priceable per model, but it can be absent (a hand-built handler, an
+ * intermediate level that reported nothing) or empty. It used to be chosen by
+ * `if (childUsageByModel)`, which is true for `{}`, so the else-branch never
+ * ran: an empty split meant the tokens reached the parent's counts and never
+ * reached the split that prices them.
+ *
+ * Choosing by how many records the split actually yields removes that class of
+ * mistake. Whatever the input, the returned records sum to `scalars`.
+ */
+export function subtaskUsageRecords(
+    scalars: UsageTotals,
+    childUsageByModel: UsageByModel | undefined,
+    reportedModelId: string | undefined,
+    iteration: number,
+): UsageRecord[] {
+    const records: UsageRecord[] = Object.entries(childUsageByModel ?? {}).map(([modelId, u]) => ({
+        modelId,
+        input: u.input,
+        output: u.output,
+        cacheRead: u.cacheRead,
+        cacheCreation: u.cacheCreation,
+        source: 'subtask' as const,
+        iteration,
+    }));
+    if (records.length > 0) return records;
+    return [{
+        modelId: reportedModelId ?? '',
+        input: scalars.input,
+        output: scalars.output,
+        cacheRead: scalars.cacheRead,
+        cacheCreation: scalars.cacheCreation,
+        source: 'subtask',
+        iteration,
+    }];
+}
+
 export class AgentTask {
     private api: ApiHandler;
     private toolRegistry: ToolRegistry;
@@ -415,12 +514,54 @@ export class AgentTask {
     /** Maximum allowed sub-agent nesting depth. Children at this depth cannot spawn further. */
     private maxSubtaskDepth: number;
     /**
-     * FIX-24-05-04: tokens spent by auxiliary LLM calls (context condensing,
-     * FastPath planner) that stream outside the main loop. Drained into the
-     * run() totals at every usage-report site so footer and telemetry
+     * FIX-24-05-04: spend by auxiliary LLM calls (context condensing, FastPath
+     * planner, FIX-24-05-09: tool-made calls) that stream outside the main
+     * loop. Drained into the run's ledger at the exit, so footer and telemetry
      * include them.
+     *
+     * FEAT-24-13: one buffer of records instead of a scalar quadruple plus a
+     * bucket map. Condensing is reachable outside run() (the emergency pass and
+     * the focused tests call the method directly), so the aux channel cannot
+     * write straight into the loop state; it buffers here and reportFinalUsage
+     * books it. Both halves therefore still move at the same instant, which is
+     * what kept them consistent before and what keeps them consistent now.
      */
-    private auxUsage = { input: 0, output: 0, cacheRead: 0, cacheCreation: 0 };
+    private auxRecords: UsageRecord[] = [];
+
+    /**
+     * FIX-24-05-09 (D10): the single fold for every auxiliary LLM call of this
+     * run -- condensing, the FastPath planner, and anything a tool reports
+     * through `ToolExecutionContext.reportAuxUsage`.
+     *
+     * FEAT-24-13: it books ONE record. There used to be two accumulators to
+     * keep in step (the scalar totals the footer counts and the per-model
+     * buckets that price them), so every new aux path was a fresh chance to
+     * update one and forget the other. A record carries both halves at once.
+     *
+     * `iteration` is -1 when no numbered main-loop iteration is in scope, which
+     * is the case for condensing (a method, callable outside run()).
+     */
+    private foldAuxUsage(
+        u: {
+            modelId: string;
+            inputTokens: number;
+            outputTokens: number;
+            cacheReadTokens: number;
+            cacheCreationTokens: number;
+        },
+        source: UsageOrigin = 'tool',
+        iteration = -1,
+    ): void {
+        this.auxRecords.push({
+            modelId: u.modelId,
+            input: u.inputTokens,
+            output: u.outputTokens,
+            cacheRead: u.cacheReadTokens,
+            cacheCreation: u.cacheCreationTokens,
+            source,
+            iteration,
+        });
+    }
 
     /**
      * IMP-41-01-04 / ADR-148: per-task calibrated chars-per-token factor.
@@ -478,20 +619,106 @@ export class AgentTask {
         this.inflightStore = store;
     }
 
-    /**
-     * FIX-24-05-05: usage attributed to the model that actually served each
-     * call (main loop at chunk time, condensing/FastPath on the helper,
-     * subtasks merged from their own breakdowns). Reported alongside the
-     * totals so cost is computed per model.
-     */
-    private usageByModel: UsageByModel = {};
-
     /** FIX-24-05-04: hand out the collected auxiliary usage exactly once. */
-    private drainAuxUsage(): { input: number; output: number; cacheRead: number; cacheCreation: number } {
-        const aux = this.auxUsage;
-        this.auxUsage = { input: 0, output: 0, cacheRead: 0, cacheCreation: 0 };
-        return aux;
+    private drainAuxUsage(): UsageRecord[] {
+        const records = this.auxRecords;
+        this.auxRecords = [];
+        return records;
     }
+
+    /**
+     * FEAT-24-13: the invariant that replaces the six parallel running totals.
+     *
+     * The ledger and the scalars are two views of the same spend, so their sums
+     * are equal or one of the booking sites is broken. Checked at every exit, on
+     * the run's own numbers, before anything is displayed. It warns rather than
+     * throws: a wrong cost display is not worth losing a finished run over, and
+     * the test suite asserts the same predicate (ledgerDivergence) so a
+     * regression fails there instead of only in a log.
+     */
+    private checkUsageLedger(loopState: AgentLoopState, exit: string): void {
+        const drift = ledgerDivergence(loopState);
+        if (!drift) return;
+        console.warn(
+            `[AgentTask] usage ledger disagrees with the totals at the ${exit} exit `
+            + `(scalars minus ledger: in=${drift.input} out=${drift.output} `
+            + `cacheR=${drift.cacheRead} cacheW=${drift.cacheCreation}). `
+            + 'The per-model split prices less (or more) than the token counts show.',
+        );
+    }
+
+    /**
+     * FIX-24-11-02: why THIS run's model was chosen. The single source for all
+     * three channels that state it (the usage report, every request row, every
+     * task row), so a reader cannot find two answers for one run.
+     *
+     * Only the two main-loop labels can come out of here. `advisor` and
+     * `subagent` describe a spawned child and are attached where the child's
+     * usage is forwarded, not to the run's own decision.
+     */
+    private routingModeForRun(): RoutingMode {
+        // EPIC-26 / FEAT-26-05: an explicit chat-header pin switches the tier
+        // resolver off, which is exactly the difference the label carries.
+        return this.modelOverrideActive ? 'override' : 'auto';
+    }
+
+    /**
+     * FIX-24-05-06: the single writer of the cost line, called at EVERY exit
+     * of run() -- success, abort, error, and the abort during a retry wait.
+     * Before this, abort and error exits reported only telemetry, so the
+     * footer kept whatever was reported last (typically an inner subagent's
+     * tokens under that subagent's model name) and the persisted record kept
+     * that model id too.
+     *
+     * The auxiliary usage (helper-model condensing, FastPath planner, tool
+     * calls) is booked into the run's ledger HERE, before the report. Every
+     * consumer after this call -- footer and telemetry line alike -- then reads
+     * the same numbers off loopState, so the two can no longer disagree about
+     * which half of the run they describe.
+     *
+     * Two of the four callers sit inside the catch block, where the run still
+     * owes the UI an onError / onComplete. A throwing cost display must not
+     * take that teardown down with it, so the hook is guarded the same way
+     * onEpisodeData is.
+     */
+    private reportFinalUsage(loopState: AgentLoopState, exit = 'success'): void {
+        // FEAT-24-13: one call books both halves, so the drained records cannot
+        // reach the totals without reaching the per-model split too.
+        for (const record of this.drainAuxUsage()) bookUsage(loopState, record);
+        this.checkUsageLedger(loopState, exit);
+        if (loopState.totalInputTokens <= 0 && loopState.totalOutputTokens <= 0) return;
+        try {
+            this.taskCallbacks.onUsage?.(
+                loopState.totalInputTokens,
+                loopState.totalOutputTokens,
+                loopState.totalCacheReadTokens > 0 ? loopState.totalCacheReadTokens : undefined,
+                loopState.totalCacheCreationTokens > 0 ? loopState.totalCacheCreationTokens : undefined,
+                // v2.10.2: the model id from the api that actually served this
+                // task, so the footer prices the call correctly even when
+                // TaskRouter routed it onto the helper model.
+                this.api.getModel().id,
+                // EPIC-26 / FEAT-26-05: cost-log mode-tag at the root-task
+                // boundary. Subtask onUsage already tags advisor/subagent calls
+                // separately; here we mark whether the main loop ran on the
+                // chat-override path or the default tier-resolved path.
+                // FIX-24-11-02: one producer for it, shared with both logs.
+                this.routingModeForRun(),
+                // FIX-24-05-05: per-model breakdown for correct pricing of
+                // mixed-model tasks.
+                // FEAT-24-13: derived from the ledger, not accumulated beside
+                // it. A resumed run's earlier legs are in the ledger, so they
+                // are in the split the footer prices (D2).
+                usageByModelFromLedger(loopState.usage),
+                // AUDIT-2026-08-27 I-5: and what those sums cannot express. Read
+                // from the same ledger, so the disclosure and the number it
+                // qualifies can never describe different halves of the run.
+                longContextRequestModelIds(loopState.usage),
+            );
+        } catch (e) {
+            console.warn('[AgentTask] onUsage hook failed (non-fatal):', e);
+        }
+    }
+
     /**
      * FEAT-24-02 (ADR-12 amendment): prune old tool_result contents to skeletons
      * at turn boundaries. Additive to the keep-first-last full condensing.
@@ -631,6 +858,10 @@ export class AgentTask {
                 taskId: args.taskId,
                 iteration: args.iteration,
                 modelId: this.api.getModel().id,
+                // FIX-24-11-02: which model served this request was already
+                // here; why it did was not, so the per-request table could not
+                // tell a pinned model from a resolved one.
+                routingMode: this.routingModeForRun(),
                 inputTokens: args.delta.input,
                 outputTokens: args.delta.output,
                 cacheReadTokens: args.delta.cacheRead,
@@ -781,7 +1012,12 @@ export class AgentTask {
 
         // IMP-41-02-01a / ADR-145: explicit serializable loop state replaces
         // the ~20 closure variables this function previously accumulated.
-        const loopState = initLoopStateForRun(config.resumeState);
+        // AUDIT-2026-08-27 L-6: the loop bound goes in, so a resume that would
+        // start at or past it is clamped instead of running zero iterations and
+        // reporting a completed run. The sidebar has already consumed the
+        // snapshot by the time we get here, so there is nothing left to refuse
+        // in favour of.
+        const loopState = initLoopStateForRun(config.resumeState, this.maxIterations);
 
         // FEAT-32-02 PR 2.2: hoisted detector so FastPath can feed it via
         // `recordForEpisodeOnly` BEFORE the main loop opens. Originally
@@ -859,13 +1095,17 @@ export class AgentTask {
                 // FIX-24-05-04: collect planner-call usage so it lands
                 // in the task totals (footer + telemetry).
                 const fastPath = new FastPathExecutor(this.api, pipeline, (i, o, cr, cc, servingModelId) => {
-                    this.auxUsage.input += i;
-                    this.auxUsage.output += o;
-                    this.auxUsage.cacheRead += cr ?? 0;
-                    this.auxUsage.cacheCreation += cc ?? 0;
                     // FIX-24-05-05: the planner may run on the helper model.
-                    addUsage(this.usageByModel, servingModelId ?? this.api.getModel().id,
-                        i, o, cr ?? 0, cc ?? 0);
+                    this.foldAuxUsage({
+                        // FIX-24-05-09: one fold for every auxiliary call.
+                        modelId: servingModelId ?? this.api.getModel().id,
+                        inputTokens: i, outputTokens: o,
+                        cacheReadTokens: cr ?? 0, cacheCreationTokens: cc ?? 0,
+                        // FEAT-24-13: the ledger says which part of the run
+                        // spent this. FastPath runs before the loop's first
+                        // iteration, so the iteration is the one it will start
+                        // with (0, or the resumed one).
+                    }, 'fastpath', loopState.iteration);
                 });
                 const fpCallbacks = {
                     pushToolResult: () => {},
@@ -925,6 +1165,10 @@ export class AgentTask {
         loopState.fastPathFired = loopState.fastPathFired || fastPathInterceptor.fired();
 
         const MAX_ITERATIONS = this.maxIterations;
+        // AUDIT-2026-08-27 L-6: telemetryIterations is cumulative across resumes,
+        // so "did THIS run do anything" needs the value it started with. The
+        // success exit uses it to tell a finished run from an empty one.
+        const iterationsBeforeRun = loopState.telemetryIterations;
 
         // Tools that are safe to execute in parallel (pure reads, no side-effects).
         // Write tools and control-flow tools always run sequentially.
@@ -935,9 +1179,12 @@ export class AgentTask {
             'semantic_search', 'query_base', 'open_note',
         ]);
 
-        // Feature 6: Accumulate token usage across all iterations
-        // FIX-24-05-05: fresh per-model breakdown per run.
-        this.usageByModel = {};
+        // Feature 6: token usage accumulates in loopState -- the four scalars
+        // and, since FEAT-24-13, the ledger they sum from. There is nothing to
+        // reset here any more: the per-model breakdown used to be a task field
+        // that this line cleared on entry, which is precisely how a resumed run
+        // ended up displaying the whole conversation's tokens while pricing the
+        // last leg only (D2). initLoopStateForRun owns what carries over.
         // attempt_completion signal
         // Track whether the model streamed any text across all iterations.
         // Used to decide if the completion result should be rendered as fallback.
@@ -1002,6 +1249,12 @@ export class AgentTask {
             // configured yet), fall back to the parent's api handler so the
             // pre-migration code path keeps working unchanged.
             let childApi: ApiHandler = this.api;
+            // FIX-24-11-02: did the child end up on a model of its own? Only the
+            // branches that actually built a handler set this, because an
+            // unresolvable key or an unconfigured tier slot leaves the child on
+            // the parent's model, and the label has to say what happened rather
+            // than what was asked for.
+            let childRanOnItsOwnModel = false;
             if (overrides?.modelKey) {
                 // Issue #54.4.1: an explicit per-spawn model wins over the
                 // profile tier. The key is validated in NewTaskTool.execute;
@@ -1010,7 +1263,10 @@ export class AgentTask {
                     this.toolRegistry.plugin.settings.providerConfigs ?? [],
                 );
                 const picked = configured.find((m) => getModelKey(m) === overrides.modelKey);
-                if (picked) childApi = buildApiHandlerForModel(picked);
+                if (picked) {
+                    childApi = buildApiHandlerForModel(picked);
+                    childRanOnItsOwnModel = true;
+                }
             } else if (profile?.tierOverride) {
                 const pluginAny = this.toolRegistry.plugin as unknown as {
                     getTierModel?: (t: 'fast' | 'mid' | 'flagship') => CustomModel | null;
@@ -1021,6 +1277,7 @@ export class AgentTask {
                         ? { ...tierModel, maxTokens: profile.maxOutputTokens }
                         : tierModel;
                     childApi = buildApiHandlerForModel(capped);
+                    childRanOnItsOwnModel = true;
                 }
             }
 
@@ -1037,37 +1294,44 @@ export class AgentTask {
                     },
                     onComplete: () => { /* handled via Promise resolution */ },
                     onError: (err) => { throw err; },
-                    onUsage: (i, o, cr, cc, mid, _rm, childUsageByModel) => {
-                        // Akkumuliere Subtask-Tokens in Parent-Totals
-                        loopState.totalInputTokens += i;
-                        loopState.totalOutputTokens += o;
-                        loopState.totalCacheReadTokens += cr ?? 0;
-                        loopState.totalCacheCreationTokens += cc ?? 0;
-                        // FIX-24-05-05: merge the child's per-model breakdown;
-                        // fall back to attributing everything to the child's
-                        // reported model when no breakdown is available.
-                        if (childUsageByModel) {
-                            mergeUsageByModel(this.usageByModel, childUsageByModel);
-                        } else {
-                            addUsage(this.usageByModel, mid ?? '', i, o, cr ?? 0, cc ?? 0);
+                    onUsage: (i, o, cr, cc, mid, _rm, childUsageByModel, childLongContextIds) => {
+                        // FEAT-24-13: the child's spend enters the parent's
+                        // ledger, which is what the parent's totals sum from --
+                        // one booking, both halves. The old shape added the
+                        // scalars here and merged the split under a
+                        // `if (childUsageByModel)` guard whose else-branch was
+                        // dead code, because `{}` is truthy: a child that
+                        // reported an empty split added tokens to the count and
+                        // nothing to the split that prices them (D4).
+                        for (const record of subtaskUsageRecords(
+                            { input: i, output: o, cacheRead: cr ?? 0, cacheCreation: cc ?? 0 },
+                            childUsageByModel, mid, loopState.iteration,
+                        )) {
+                            bookUsage(loopState, record);
                         }
                         // EPIC-26: tag the forwarded usage so the parent's
                         // cost log shows WHY this call ran on the reported
                         // model. `advisor` for the consult_flagship profile,
-                        // `subagent` for everything else profile-driven (eg
-                        // research). Non-profile new_task spawns inherit the
-                        // parent api and are accounted as part of the main
-                        // loop's `auto` mode.
-                        const routingMode: 'advisor' | 'subagent' | undefined =
-                            profile?.name === 'advisor' ? 'advisor'
-                            : profile ? 'subagent'
-                            : undefined;
+                        // `subagent` for every other child that ran on a model
+                        // of its own. A child that inherited the parent api is
+                        // accounted as part of the main loop's own mode.
+                        // FIX-24-11-02: the decision moved into a named
+                        // function, because it now depends on the handler that
+                        // was actually built and not on the profile alone.
+                        const routingMode = spawnRoutingMode(profile?.name, childRanOnItsOwnModel);
                         // FIX-24-05-03: forward only at the root, where the
                         // receiver is the UI (renders, does not accumulate).
                         // Intermediate levels would double-count: their own
                         // final report already includes these tokens.
                         if (shouldForwardSubtaskUsage(this.depth)) {
-                            this.taskCallbacks.onUsage?.(i, o, cr, cc, mid, routingMode, childUsageByModel);
+                            // AUDIT-2026-08-27 I-5: the child's crossings travel
+                            // with the child's numbers. The parent books this
+                            // report as ONE aggregate record, so its own ledger
+                            // cannot rediscover them, and a task that delegates
+                            // its long request would show an undisclosed total.
+                            this.taskCallbacks.onUsage?.(
+                                i, o, cr, cc, mid, routingMode, childUsageByModel, childLongContextIds,
+                            );
                         }
                     },
                     // K-1: Forward parent approval callback so subtask write ops are not
@@ -1530,15 +1794,29 @@ export class AgentTask {
                     onThinking: (text) => this.taskCallbacks.onThinking?.(text),
                     onToolStart: (name, input) => this.taskCallbacks.onToolStart(name, input),
                     onToolResult: (name, content, isError) => this.taskCallbacks.onToolResult(name, content, isError),
-                    onUsage: (inputTokens, outputTokens, cacheRead, cacheCreation) => {
+                    onUsage: (inputTokens, outputTokens, cacheRead, cacheCreation, servingModelId) => {
                         // IMP-41-01-04: calibrate chars-per-token from the real
                         // prompt size (input + cache segments = full prompt).
                         this.tokenEstimator.recordUsage(requestChars, inputTokens + cacheRead + cacheCreation);
                         // FIX-24-05-05: attribute at chunk time -- TaskRouter
                         // escalation swaps this.api mid-loop, so the model
                         // serving THIS iteration is the one to bill.
-                        addUsage(this.usageByModel, this.api.getModel().id,
-                            inputTokens, outputTokens, cacheRead, cacheCreation);
+                        // FIX-24-05-08: the chunk itself names that model now
+                        // (withUsageAttribution stamps it at the producer).
+                        // this.api is the fallback for a hand-built handler that
+                        // does not go through buildApiHandler.
+                        // FEAT-24-13: the ledger only -- the engine has already
+                        // added this chunk to the scalars (see below), so
+                        // bookUsage here would count it twice.
+                        appendUsageRecord(loopState, {
+                            modelId: servingModelId ?? this.api.getModel().id,
+                            input: inputTokens,
+                            output: outputTokens,
+                            cacheRead,
+                            cacheCreation,
+                            source: 'main',
+                            iteration,
+                        });
                         // Live tally for the UI. The engine has already folded
                         // this chunk into loopState (AgentLoopEngine updates the
                         // state totals before invoking this port), so these are
@@ -1554,7 +1832,9 @@ export class AgentTask {
                 const { textParts, toolUses, toolErrors, thinking: thinkingCollector } = streamResult;
                 // FEAT-24-11: one telemetry line per request.
                 this.emitRequestTelemetry({
-                    taskId: config.taskId,
+                    // FIX-24-11-01: the same binding the task record uses, so
+                    // the two logs cannot drift onto two different ids.
+                    taskId,
                     iteration,
                     systemPrompt,
                     historyMessages: safeHistory.length,
@@ -1686,6 +1966,9 @@ export class AgentTask {
                         consumeAdvisorSlot,
                         onApprovalRequired: this.taskCallbacks.onApprovalRequired,
                         onOptionalAssetRequired: this.taskCallbacks.onOptionalAssetRequired,
+                        // FIX-24-05-09 (D10): a tool's own LLM call lands in
+                        // this run's totals instead of nowhere.
+                        reportAuxUsage: (u) => this.foldAuxUsage(u, 'tool', loopState.iteration),
                         updateTodos: todoUpdateForTools,
                         onCheckpoint: this.taskCallbacks.onCheckpoint,
                         onUnreviewedWrite: this.taskCallbacks.onUnreviewedWrite,
@@ -1743,7 +2026,17 @@ export class AgentTask {
                                 conversationId: conversationId ?? '',
                                 mode: activeMode.slug,
                                 savedAt: Date.now(),
-                                state: { ...loopState },
+                                // AUDIT-2026-08-27 L-3: the store serialises this
+                                // object up to two seconds later, so it has to
+                                // stop tracking the live run now -- ledger
+                                // included. A spread copies the token scalars by
+                                // value and shares the ledger array, which put a
+                                // booking made after this line into the persisted
+                                // ledger while the persisted scalars stayed
+                                // behind; the resumed run then priced more tokens
+                                // than it displayed. Same reason the history is
+                                // copied on the next line.
+                                state: cloneLoopState(loopState),
                                 history: JSON.parse(JSON.stringify(history)) as typeof history,
                             });
                         }
@@ -1823,14 +2116,20 @@ export class AgentTask {
                                 loopState.hasStreamedText = true;
                                 this.taskCallbacks.onText(chunk.text);
                             } else if (chunk.type === 'usage') {
-                                loopState.totalInputTokens += chunk.inputTokens;
-                                loopState.totalOutputTokens += chunk.outputTokens;
-                                loopState.totalCacheReadTokens += chunk.cacheReadTokens ?? 0;
-                                loopState.totalCacheCreationTokens += chunk.cacheCreationTokens ?? 0;
                                 // FIX-24-05-05: recovery call runs on this.api too.
-                                addUsage(this.usageByModel, this.api.getModel().id,
-                                    chunk.inputTokens, chunk.outputTokens,
-                                    chunk.cacheReadTokens ?? 0, chunk.cacheCreationTokens ?? 0);
+                                // FIX-24-05-08: unless the chunk says otherwise.
+                                // FEAT-24-13: one booking for the counts and the
+                                // split. This call is outside the engine, so it
+                                // owns its scalars.
+                                bookUsage(loopState, {
+                                    modelId: chunk.modelId ?? this.api.getModel().id,
+                                    input: chunk.inputTokens,
+                                    output: chunk.outputTokens,
+                                    cacheRead: chunk.cacheReadTokens ?? 0,
+                                    cacheCreation: chunk.cacheCreationTokens ?? 0,
+                                    source: 'recovery',
+                                    iteration: loopState.iteration,
+                                });
                             }
                         }
                     } catch (e) {
@@ -1840,35 +2139,10 @@ export class AgentTask {
             }
 
             // Feature 6: Report total token usage before completing.
-            // v2.10.2: pass the model id from the api that actually served
-            // this task so TaskMonitor can price the call correctly even
-            // when TaskRouter routed it onto the helper model.
-            // FIX-24-05-04: merge auxiliary usage (condensing, FastPath)
-            // into the totals so footer and telemetry include it.
-            {
-                const aux = this.drainAuxUsage();
-                loopState.totalInputTokens += aux.input;
-                loopState.totalOutputTokens += aux.output;
-                loopState.totalCacheReadTokens += aux.cacheRead;
-                loopState.totalCacheCreationTokens += aux.cacheCreation;
-            }
-            if (loopState.totalInputTokens > 0 || loopState.totalOutputTokens > 0) {
-                this.taskCallbacks.onUsage?.(
-                    loopState.totalInputTokens,
-                    loopState.totalOutputTokens,
-                    loopState.totalCacheReadTokens > 0 ? loopState.totalCacheReadTokens : undefined,
-                    loopState.totalCacheCreationTokens > 0 ? loopState.totalCacheCreationTokens : undefined,
-                    this.api.getModel().id,
-                    // EPIC-26 / FEAT-26-05: cost-log mode-tag at the root-task
-                    // boundary. Subtask onUsage already tags advisor/subagent
-                    // calls separately; here we mark whether the main loop ran
-                    // on the chat-override path or the default tier-resolved path.
-                    this.modelOverrideActive ? 'override' : 'auto',
-                    // FIX-24-05-05: per-model breakdown for correct pricing
-                    // of mixed-model tasks.
-                    this.usageByModel,
-                );
-            }
+            // FIX-24-05-04: the auxiliary usage (condensing, FastPath) is
+            // folded into the totals inside reportFinalUsage, so the
+            // telemetry literal below sees the same numbers as the footer.
+            this.reportFinalUsage(loopState);
 
             // FEAT-32-02 PR 2.2 / ADR-133: episode recording moved into the
             // finally block at the end of run() so iteration-cap and error
@@ -1884,16 +2158,43 @@ export class AgentTask {
             // it loses nothing.
             void pipeline.cleanupExternalized();
 
+            // AUDIT-2026-08-27 L-6: a run that executed no iteration completed
+            // nothing, and this exit is the one that files it. A user Stop at the
+            // loop boundary also runs zero iterations and leaves through here
+            // (the check is signal-based, same as the snapshot keep-decision in
+            // the finally), and that is a stop, not a failure -- so it stays out.
+            // What is left is a loop that could not start: a resume with no room
+            // that the clamp did not catch, or an iteration limit of zero, which
+            // the settings file and update_settings accept even though the
+            // slider does not offer it.
+            const ranNoIteration = loopState.telemetryIterations <= iterationsBeforeRun
+                && abortSignal?.aborted !== true;
             // ADR-090 Lever 10: emit telemetry before completing
             this.taskCallbacks.onTaskTelemetry?.({
+                taskId,
+                // FIX-24-11-02: the same producer the request rows read, so the
+                // two files cannot state two reasons for one run.
+                routingMode: this.routingModeForRun(),
                 inputTokens: loopState.totalInputTokens,
                 outputTokens: loopState.totalOutputTokens,
                 cacheReadTokens: loopState.totalCacheReadTokens,
                 cacheCreationTokens: loopState.totalCacheCreationTokens,
                 toolSequence: repetitionDetector.getToolSequence(),
                 iterations: loopState.telemetryIterations,
-                outcome: 'completed',
+                outcome: ranNoIteration ? 'error' : 'completed',
+                ...(ranNoIteration
+                    ? {
+                        errorMessage: 'no iteration ran: the loop opened at iteration '
+                            + `${loopState.iteration} against a limit of ${MAX_ITERATIONS}`,
+                    }
+                    : {}),
             });
+            if (ranNoIteration) {
+                console.warn(
+                    `[AgentTask] run ${taskId} executed no iteration (opened at ${loopState.iteration}, `
+                    + `limit ${MAX_ITERATIONS}); reported as an error rather than as a completed run.`,
+                );
+            }
 
             // Episode grading at the normal success-exit (ADR-133 / ADR-058):
             // binary grading.
@@ -1929,13 +2230,18 @@ export class AgentTask {
             const isAbortedSignal = abortSignal?.aborted === true;
             if (isAbort || isAbortedSignal) {
                 console.debug('[AgentTask] Task cancelled by user');
-                // FIX-24-05-04: include auxiliary usage in abort telemetry.
-                const auxAbort = this.drainAuxUsage();
+                // FIX-24-05-06: a stopped run reports its OWN numbers and its
+                // own model. The aux fold happens inside reportFinalUsage, so
+                // the telemetry entry below reads the same totals.
+                this.reportFinalUsage(loopState, 'abort');
                 this.taskCallbacks.onTaskTelemetry?.({
-                    inputTokens: loopState.totalInputTokens + auxAbort.input,
-                    outputTokens: loopState.totalOutputTokens + auxAbort.output,
-                    cacheReadTokens: loopState.totalCacheReadTokens + auxAbort.cacheRead,
-                    cacheCreationTokens: loopState.totalCacheCreationTokens + auxAbort.cacheCreation,
+                    taskId,
+                    // FIX-24-11-02: a stopped run still had a routing decision.
+                    routingMode: this.routingModeForRun(),
+                    inputTokens: loopState.totalInputTokens,
+                    outputTokens: loopState.totalOutputTokens,
+                    cacheReadTokens: loopState.totalCacheReadTokens,
+                    cacheCreationTokens: loopState.totalCacheCreationTokens,
                     toolSequence: repetitionDetector.getToolSequence(),
                     iterations: loopState.telemetryIterations,
                     outcome: 'aborted',
@@ -2075,20 +2381,28 @@ export class AgentTask {
                     await abortableDelay(waitMs, abortSignal);
                 } catch {
                     console.debug('[AgentTask] Abort signal detected during retry wait');
+                    // FIX-24-05-06: this exit is a stop like any other -- it
+                    // must not leave the footer on the last inner report.
+                    this.reportFinalUsage(loopState, 'retry-wait abort');
                     this.taskCallbacks.onComplete();
                     return;
                 }
                 continue;  // Retry the agent loop
             }
 
+            // FIX-24-05-06: a failed run has already spent its tokens, so it
+            // reports them before the error surfaces. The aux fold happens
+            // inside reportFinalUsage.
+            this.reportFinalUsage(loopState, 'error');
             // ADR-090 Lever 10: telemetry for error outcomes too
-            // FIX-24-05-04: include auxiliary usage in error telemetry.
-            const auxError = this.drainAuxUsage();
             this.taskCallbacks.onTaskTelemetry?.({
-                inputTokens: loopState.totalInputTokens + auxError.input,
-                outputTokens: loopState.totalOutputTokens + auxError.output,
-                cacheReadTokens: loopState.totalCacheReadTokens + auxError.cacheRead,
-                cacheCreationTokens: loopState.totalCacheCreationTokens + auxError.cacheCreation,
+                taskId,
+                // FIX-24-11-02: so does a failed one.
+                routingMode: this.routingModeForRun(),
+                inputTokens: loopState.totalInputTokens,
+                outputTokens: loopState.totalOutputTokens,
+                cacheReadTokens: loopState.totalCacheReadTokens,
+                cacheCreationTokens: loopState.totalCacheCreationTokens,
                 toolSequence: repetitionDetector.getToolSequence(),
                 iterations: loopState.telemetryIterations,
                 outcome: 'error',
@@ -2457,15 +2771,20 @@ export class AgentTask {
                 // FIX-24-05-04: condensing tokens cost money too -- collect
                 // them so the run() totals (footer + telemetry) include them.
                 else if (chunk.type === 'usage') {
-                    this.auxUsage.input += chunk.inputTokens;
-                    this.auxUsage.output += chunk.outputTokens;
-                    this.auxUsage.cacheRead += chunk.cacheReadTokens ?? 0;
-                    this.auxUsage.cacheCreation += chunk.cacheCreationTokens ?? 0;
                     // FIX-24-05-05: condensing may run on the helper model --
                     // attribute to the model that actually served it.
-                    addUsage(this.usageByModel, condensingModelId,
-                        chunk.inputTokens, chunk.outputTokens,
-                        chunk.cacheReadTokens ?? 0, chunk.cacheCreationTokens ?? 0);
+                    // FIX-24-05-08: the chunk's own id wins; condensingModelId
+                    // is the fallback for a handler built outside the factory.
+                    this.foldAuxUsage({
+                        modelId: chunk.modelId ?? condensingModelId,
+                        inputTokens: chunk.inputTokens,
+                        outputTokens: chunk.outputTokens,
+                        cacheReadTokens: chunk.cacheReadTokens ?? 0,
+                        cacheCreationTokens: chunk.cacheCreationTokens ?? 0,
+                        // FEAT-24-13: no numbered iteration is in scope here --
+                        // condenseHistory is a method and the emergency pass
+                        // runs between iterations.
+                    }, 'condense');
                 }
             }
         } catch (e) {

@@ -16,9 +16,16 @@
 import type { MessageParam } from '../types';
 import type { ToolDefinition } from '../../core/tools/types';
 import { appendOpenAiChatUserMessage, type OpenAiChatMessage } from '../openaiShapeUserBlocks';
+import { stripCacheBreakpointMarker } from '../../core/systemPrompt';
 
 export type OpenAIContentPart =
-    | { type: 'text'; text: string }
+    // AP3: `cache_control` is Anthropic's marker, carried through an
+    // OpenAI-format request by gateways that route to Anthropic models
+    // (OpenRouter, Kilo). Typed here rather than cast at the call site so the
+    // marker code stays free of `any` and the field cannot be misspelled.
+    // Absent on every provider that does not get markers, so the wire stays
+    // byte-identical for them.
+    | { type: 'text'; text: string; cache_control?: { type: 'ephemeral' } }
     | { type: 'image_url'; image_url: { url: string } };
 
 export interface OpenAIMessage {
@@ -31,6 +38,11 @@ export interface OpenAIMessage {
     // reasoning_content to be echoed back on assistant messages that contain
     // tool_calls, otherwise a follow-up request returns 400.
     reasoning_content?: string;
+    // IMP-18-01-04: Copilot's cache marker, which sits on the MESSAGE rather
+    // than on a content part (verified against the bundled VS Code extension).
+    // Typed here so the marker code needs no cast and the field cannot be
+    // misspelled. Absent for every other provider, so their wire is unchanged.
+    copilot_cache_control?: { type: 'ephemeral' };
 }
 
 export interface OpenAIToolCall {
@@ -75,8 +87,11 @@ export function convertToOpenAiChatMessages(
     messages: MessageParam[],
     providerType: string,
 ): OpenAIMessage[] {
+    // D1: the OpenAI chat format has no slot for the cache-breakpoint sentinel,
+    // so it must not travel in the system message. Providers that CAN mark a
+    // prefix on this wire (passthrough) split the prompt themselves afterwards.
     const result: OpenAIMessage[] = [
-        { role: 'system', content: systemPrompt },
+        { role: 'system', content: stripCacheBreakpointMarker(systemPrompt) },
     ];
 
     const emitReasoningPassback = REASONING_PASSBACK_PROVIDER_TYPES.has(providerType);

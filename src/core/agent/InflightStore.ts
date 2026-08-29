@@ -15,7 +15,7 @@
 
 import type { MessageParam } from '../../api/types';
 import type { AgentLoopState, LoopPhase } from './LoopState';
-import { createInitialLoopState } from './LoopState';
+import { createInitialLoopState, ledgerDivergence, parseUsageLedger } from './LoopState';
 import { PerFileWriteQueue } from '../utils/perFileWriteQueue';
 
 export const INFLIGHT_FILE = 'inflight-tasks.json';
@@ -62,6 +62,20 @@ const BOOLEAN_STATE_KEYS: readonly (keyof AgentLoopState)[] = [
 ];
 
 /**
+ * The verdict of loop-state validation: a rebuilt state, or the reason it was
+ * refused.
+ *
+ * AUDIT-2026-08-27 L-2: a bare null told the caller nothing, so every rejection
+ * was silent -- while the same class already warns for an oversized file and an
+ * oversized snapshot. A dropped snapshot means no crash recovery for that task
+ * and the next flush erases it from disk, which is too much to lose without a
+ * line naming the task and the reason.
+ */
+type LoopStateVerdict =
+    | { state: AgentLoopState }
+    | { rejected: string };
+
+/**
  * AUDIT-EPIC-41 M-1: rebuild AgentLoopState from a raw parsed value, copying
  * ONLY known keys with a strict per-field type check. Missing fields fall
  * back to the fresh default (forward-compat for old snapshots, ASR-41-05);
@@ -70,38 +84,71 @@ const BOOLEAN_STATE_KEYS: readonly (keyof AgentLoopState)[] = [
  * hand the loop negative guards. Unknown/injected keys (incl. __proto__) are
  * never copied, so the rebuilt object carries no attacker-controlled data.
  */
-function validateLoopState(raw: unknown): AgentLoopState | null {
-    if (typeof raw !== 'object' || raw === null) return null;
+function validateLoopState(raw: unknown): LoopStateVerdict {
+    if (typeof raw !== 'object' || raw === null) return { rejected: 'state is not an object' };
     const r = raw as Record<string, unknown>;
     const out = createInitialLoopState();
 
     for (const k of NUMERIC_STATE_KEYS) {
         const v = r[k];
         if (v === undefined || v === null) continue;
-        if (typeof v !== 'number' || !Number.isFinite(v)) return null;
+        if (typeof v !== 'number' || !Number.isFinite(v)) {
+            return { rejected: `${k} is not a finite number` };
+        }
         out[k] = Math.max(0, v) as never;
     }
     for (const k of BOOLEAN_STATE_KEYS) {
         const v = r[k];
         if (v === undefined || v === null) continue;
-        if (typeof v !== 'boolean') return null;
+        if (typeof v !== 'boolean') return { rejected: `${k} is not a boolean` };
         out[k] = v as never;
     }
     if (r.phase !== undefined && r.phase !== null) {
-        if (typeof r.phase !== 'string' || !LOOP_PHASES.has(r.phase)) return null;
+        if (typeof r.phase !== 'string' || !LOOP_PHASES.has(r.phase)) {
+            return { rejected: 'phase is not a known loop phase' };
+        }
         out.phase = r.phase as LoopPhase;
     }
     if (r.turnOutcome !== undefined && r.turnOutcome !== null) {
-        if (r.turnOutcome !== 'accept' && r.turnOutcome !== 'abandon') return null;
+        if (r.turnOutcome !== 'accept' && r.turnOutcome !== 'abandon') {
+            return { rejected: 'turnOutcome is neither accept nor abandon' };
+        }
         out.turnOutcome = r.turnOutcome;
     }
     for (const k of ['completionResult', 'pendingModeSwitch'] as const) {
         const v = r[k];
         if (v === undefined) continue;
-        if (v !== null && typeof v !== 'string') return null;
+        if (v !== null && typeof v !== 'string') return { rejected: `${k} is neither a string nor null` };
         out[k] = v;
     }
-    return out;
+    // FEAT-24-13: the usage ledger. Copying known keys only means an unhandled
+    // field is dropped in silence, and dropping the ledger while keeping the
+    // token totals is the D2 mismatch reached through the recovery door: the
+    // resumed run would display the whole conversation's tokens and price the
+    // last leg only. parseUsageLedger type-guards every record (a count that
+    // arrived as a string would turn the running sum into concatenation) and
+    // rejects the snapshot rather than resuming with half a ledger.
+    const usage = parseUsageLedger(r.usage);
+    if (!usage) return { rejected: 'the usage ledger holds a record that is not a valid token booking' };
+    out.usage = usage;
+    // AUDIT-2026-08-27 L-3: the two halves have to describe the same moment.
+    // Each was validated on its own and never against the other, so a file
+    // written mid-drift (the snapshot site used to share the live ledger while
+    // copying the scalars by value) resumed as a run whose footer prices more
+    // tokens than it displays. Absence is not disagreement: a snapshot from
+    // before the ledger existed has scalars and nothing to compare them with,
+    // and initLoopStateForRun gives those a carry-over record on resume.
+    if (r.usage !== undefined && r.usage !== null) {
+        const drift = ledgerDivergence(out);
+        if (drift) {
+            return {
+                rejected: 'the usage ledger does not sum to the token totals '
+                    + `(scalars minus ledger: in=${drift.input} out=${drift.output} `
+                    + `cacheR=${drift.cacheRead} cacheW=${drift.cacheCreation})`,
+            };
+        }
+    }
+    return { state: out };
 }
 
 /** Reject a history that is not an array of {role: user|assistant, content: string|array}. */
@@ -116,19 +163,43 @@ function validateHistory(raw: unknown): MessageParam[] | null {
     return raw as MessageParam[];
 }
 
+/**
+ * AUDIT-2026-08-27 L-2: name what a task lost and why.
+ *
+ * The entry is dropped from the loaded set and the next flush re-persists the
+ * cleaned set, so the snapshot is gone from disk too. The oversize paths already
+ * say so; this is the same event through a different door.
+ */
+function warnDropped(taskId: string, reason: string): null {
+    console.warn(
+        `[InflightStore] snapshot for ${taskId} failed validation and was dropped: ${reason}. `
+        + 'That task has no crash recovery point any more.',
+    );
+    return null;
+}
+
 /** Rebuild a snapshot from raw parsed data, or null if it fails validation. */
 function validateSnapshot(raw: unknown): InflightSnapshot | null {
     if (typeof raw !== 'object' || raw === null) return null;
     const r = raw as Record<string, unknown>;
+    // The four identity fields come first and stay silent on failure: without a
+    // usable taskId there is nothing to name the loss after.
     if (typeof r.taskId !== 'string' || r.taskId.length === 0) return null;
     if (typeof r.conversationId !== 'string') return null;
     if (typeof r.mode !== 'string') return null;
     if (typeof r.savedAt !== 'number' || !Number.isFinite(r.savedAt)) return null;
-    const state = validateLoopState(r.state);
-    if (!state) return null;
+    const verdict = validateLoopState(r.state);
+    if ('rejected' in verdict) return warnDropped(r.taskId, verdict.rejected);
     const history = validateHistory(r.history);
-    if (!history) return null;
-    return { taskId: r.taskId, conversationId: r.conversationId, mode: r.mode, savedAt: r.savedAt, state, history };
+    if (!history) return warnDropped(r.taskId, 'the history is not an array of user/assistant messages');
+    return {
+        taskId: r.taskId,
+        conversationId: r.conversationId,
+        mode: r.mode,
+        savedAt: r.savedAt,
+        state: verdict.state,
+        history,
+    };
 }
 
 export interface InflightFs {

@@ -17,6 +17,7 @@ import type {
     ObsidianAgentSettings,
     ProviderConfig,
 } from '../../types/settings';
+import { getModelKey } from '../../types/settings';
 import { isEffortOptedIn } from '../../types/model-registry';
 
 /**
@@ -68,6 +69,44 @@ export function resolveTierModel(
 }
 
 /**
+ * The legacy flat selection: `activeModelKey` looked up in `activeModels`,
+ * ignoring a disabled entry. Pre-migration installs (no provider config) run on
+ * this path, and it is the fallback under every tier resolver.
+ *
+ * FIX-24-05-08: extracted so exactly ONE implementation answers "which model
+ * will this run use". `ObsidianAgentPlugin.getActiveModel()` delegates here and
+ * keeps only its one-time cloud-provider notice; the model pill asks the same
+ * function. A second copy could drift, and a pill that names a model the run
+ * does not use is the display half of the misattribution this fix is about.
+ */
+export function resolveActiveModel(
+    settings: Pick<ObsidianAgentSettings, 'activeModelKey' | 'activeModels'>,
+): CustomModel | null {
+    const key = settings.activeModelKey;
+    if (!key) return null;
+    const model = (settings.activeModels ?? []).find((m) => getModelKey(m) === key);
+    return model?.enabled ? model : null;
+}
+
+/**
+ * FIX-24-05-08 (D7): the model the "Auto" pill actually stands for.
+ *
+ * Same chain as `ObsidianAgentPlugin.initApiHandler`: the default main tier on
+ * the active provider, then the legacy flat selection. "Auto" is a routing
+ * decision, so a UI that only prints the word tells the user nothing about what
+ * is being billed; this resolves it to the model the next request will go to.
+ */
+export function resolveAutoModel(
+    settings: Pick<
+        ObsidianAgentSettings,
+        'activeProviderId' | 'providerConfigs' | 'defaultMainModelTier' | 'activeModelKey' | 'activeModels'
+    >,
+): CustomModel | null {
+    const tier = settings.defaultMainModelTier ?? 'mid';
+    return resolveTierModel(settings, tier) ?? resolveActiveModel(settings);
+}
+
+/**
  * Return the flagship-tier model on the active provider, or null when
  * the flagship slot is empty. Unlike `resolveTierModel('flagship')`,
  * this does NOT cascade down -- the advisor pattern needs the actual
@@ -116,6 +155,11 @@ export function providerConfigToCustomModel(
         // Kept undefined (not false) when absent so untouched configs stay
         // byte-identical.
         effortOptIn: isEffortOptedIn(provider.effortOptIn, modelId) || undefined,
+        // D3: without this line the prompt-caching switch did not exist on the
+        // path this function serves, which is the live one (activeModels is
+        // empty after migration). undefined stays undefined so ADR-111's
+        // default-on behaviour is unchanged; an explicit false now arrives.
+        promptCachingEnabled: provider.promptCachingEnabled,
         awsRegion: provider.awsRegion,
         awsAuthMode: provider.awsAuthMode,
         awsApiKey: provider.awsApiKey,

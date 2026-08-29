@@ -22,11 +22,13 @@ import { t } from '../../i18n';
 import { refreshOpenMarkdownViewsFor } from '../utils/refreshMarkdownView';
 import { getModelKey } from '../../types/settings';
 import { resolveActiveProvider } from '../routing/tierResolution';
+import { runMeteredCall } from '../pricing/meteredCall';
 import { AutocompleteHandler } from '../../ui/sidebar/AutocompleteHandler';
 import { CommandPicker, type CommandPickerItem } from '../../ui/sidebar/CommandPicker';
 import { VaultFilePicker } from '../../ui/sidebar/VaultFilePicker';
 import { AttachmentHandler } from '../../ui/sidebar/AttachmentHandler';
 import { ChatModelPickerPopover } from '../../ui/sidebar/ChatModelPickerPopover';
+import { autoModelLabel } from '../../ui/sidebar/autoModelLabel';
 import { ToolPickerPopover } from '../../ui/sidebar/ToolPickerPopover';
 import { nextForcedWorkflow } from '../../ui/sidebar/forcedWorkflow';
 import type ObsidianAgentPlugin from '../../main';
@@ -154,7 +156,14 @@ function buildLLMCaller(plugin: ObsidianAgentPlugin): InlineLLMCaller {
                     return;
                 }
                 const messages = [{ role: 'user' as const, content: args.userMessage }];
-                for await (const chunk of api.createMessage(args.systemPrompt, messages, [])) {
+                // FIX-24-05-09 (D10): every inline quick action (rewrite,
+                // translate, summarize, lookup) runs through here, and none of
+                // them was counted anywhere. There is no chat footer on this
+                // surface, so the ledger and the console line are the report.
+                for await (const chunk of runMeteredCall(api, 'inline-quick-action', {
+                    systemPrompt: args.systemPrompt,
+                    messages,
+                })) {
                     if (chunk.type === 'text' && typeof chunk.text === 'string') {
                         callbacks.onText(chunk.text);
                     }
@@ -941,7 +950,13 @@ export function wireInlineActions(plugin: ObsidianAgentPlugin): InlineWiringResu
                         getCurrent: () => surface.chatModelOverride,
                         onSelect: (overrideId: string | null) => {
                             surface.chatModelOverride = overrideId;
-                            const label = overrideId === null ? t('ui.sidebar.modelAuto') : shortenModelId(overrideId);
+                            // FIX-24-05-08 (D7): Auto names the model the tier
+                            // router picked, not just the word "Auto". Same
+                            // helper as the sidebar pill, so the two surfaces
+                            // cannot disagree about what is running.
+                            const label = overrideId === null
+                                ? autoModelLabel(plugin.settings).label
+                                : shortenModelId(overrideId);
                             handle.setModelLabel(label, overrideId ?? t('ui.inline.modelAutoTooltip'));
                         },
                         getThinking: () => surface.chatThinkingOverride,
@@ -993,7 +1008,13 @@ export function wireInlineActions(plugin: ObsidianAgentPlugin): InlineWiringResu
             // override id.
             const activeProvider = resolveActiveProvider(plugin.settings);
             if (activeProvider !== null) {
-                return { label: t('ui.sidebar.modelAuto'), tooltip: t('ui.inline.modelAutoPickTooltip') };
+                // FIX-24-05-08 (D7): resolved model in the label, and the
+                // click-hint tooltip stays, because that hint is what the panel
+                // pill needs first.
+                return {
+                    label: autoModelLabel(plugin.settings).label,
+                    tooltip: t('ui.inline.modelAutoPickTooltip'),
+                };
             }
             const key = plugin.settings.activeModelKey;
             const model = plugin.settings.activeModels.find(m => getModelKey(m) === key);
@@ -1001,7 +1022,9 @@ export function wireInlineActions(plugin: ObsidianAgentPlugin): InlineWiringResu
                 const label = model.displayName ?? model.name;
                 return { label, tooltip: label };
             }
-            return { label: t('ui.sidebar.modelAuto'), tooltip: t('ui.inline.noModelSelectedTooltip') };
+            // FIX-24-05-08: nothing is selected on the legacy path, so the pill
+            // said "Auto" for a router that is not even running. Name the state.
+            return { label: t('ui.sidebar.noModel'), tooltip: t('ui.inline.noModelSelectedTooltip') };
         },
         // EPIC-33: per-panel AutocompleteHandler. addVaultFile resolves
         // the active panel surface so '@'-mention picks land in the

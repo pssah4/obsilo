@@ -8,6 +8,7 @@
  */
 
 import type { ApiHandler, MessageParam } from '../../api/types';
+import { runMeteredCall } from '../pricing/meteredCall';
 
 const MAX_INPUT_CHARS = 8_000;
 
@@ -42,7 +43,13 @@ export function buildSummaryGenerator(opts: BuildSummaryGeneratorOpts) {
         const messages: MessageParam[] = [{ role: 'user', content: userMessage }];
 
         try {
-            const stream = handler.createMessage(opts.promptTemplate, messages, []);
+            // FIX-24-05-09 (D10): one call per ingested note, and none of them
+            // was ever reported. A vault-wide ingest is the single largest
+            // unattributed spend the plugin had.
+            const stream = runMeteredCall(handler, 'ingest-summary', {
+                systemPrompt: opts.promptTemplate,
+                messages,
+            });
             let collected = '';
             for await (const event of stream) {
                 if (event.type === 'text') collected += event.text;

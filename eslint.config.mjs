@@ -55,6 +55,11 @@ const VAULT_OPERATOR_ACRONYMS = [...DEFAULT_ACRONYMS, 'AWS', 'IAM', 'SSO', 'STS'
     'SHA256',
     // 3.6.0: the reranker runtime, named in the asset label and its help text.
     'ONNX',
+    // FEAT-24-12: currency codes in the cost-display copy. Model prices are
+    // published in USD and the footer converts to EUR, so both appear as
+    // codes, never as lowercase words. Without these, "USD to EUR rate"
+    // becomes "Usd to eur rate".
+    'USD', 'EUR',
 ];
 // Proper nouns that should keep their casing in Bedrock-related UI copy but
 // don't belong in the general brand list (they are not branded products).

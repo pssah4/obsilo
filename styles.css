@@ -1892,6 +1892,14 @@
     text-align: right;
 }
 
+/* FIX-24-05-06: the cost line owns this child of the footer, so the
+   condensation feedback and the condense badges beside it survive the write.
+   Own row below any badge, alignment and colour inherited from the footer. */
+.message-footer .vo-cost-line {
+    display: block;
+    margin-top: 2px;
+}
+
 /* FEAT-24-05: cost footer crossed the warn threshold */
 .message-footer.agent-cost-warn {
     color: var(--text-warning, var(--color-orange));
@@ -4536,6 +4544,14 @@ h4.agent-settings-section {
     background: transparent;
     border: none;
     border-radius: 0;
+}
+
+/* FEAT-24-12: a settings value that was NOT applied. Used by the cost-display
+   fields, where a rejected number must not look accepted: the rate field keeps
+   its last good value and the override list names the lines it dropped. */
+.agent-settings-invalid,
+.agent-settings-invalid .setting-item-description {
+    color: var(--text-error);
 }
 
 /* ── Unified box system (2026-05-18) ────────────────────────────────────

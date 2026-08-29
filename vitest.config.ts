@@ -22,6 +22,22 @@ export default defineConfig({
         coverage: {
             provider: 'v8',
             reporter: ['text', 'html', 'json-summary'],
+            // DEBT-CC-2026-08-28-03: `_devprocess/rules/technical.md` has claimed
+            // a 30% lines / 35% functions gate since long before this key existed,
+            // so the documented hurdle was not enforced anywhere. Measured on
+            // 2026-08-29: lines 47.54%, functions 45.51%, i.e. 17.5 and 10.5
+            // points of headroom. The numbers stay at the DOCUMENTED values, not
+            // at the current ones: a gate pinned to today's number turns every
+            // small refactor into a red build, and the point here is to catch a
+            // collapse, not to freeze the status quo.
+            //
+            // A threshold only fires on a `--coverage` run, so perf-budget.yml
+            // runs one. Without that step this key would be decoration, which is
+            // the same defect in new packaging.
+            thresholds: {
+                lines: 30,
+                functions: 35,
+            },
             include: ['src/**/*.ts'],
             exclude: [
                 'src/_generated/**',

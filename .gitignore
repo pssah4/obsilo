@@ -60,6 +60,12 @@ pdfjs-bundle.js
 reranker-bundle.js
 # Language-pack release assets, generated from src/i18n/locales/packs/ (FEAT-42-05)
 locale-*.json
+# Full-tree npm audit report. The security-audit workflow writes it and uploads
+# it as an artefact, and `npm run audit:allowlist` reads it from here by default
+# when the same gate is run locally (AUDIT-2026-08-27 I-3). Never committed: it
+# is a point-in-time registry answer, and the accepted advisories live in
+# .github/npm-audit-allowlist.json instead.
+npm-audit-full.json
 
 # Environment variables
 .env

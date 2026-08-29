@@ -15,6 +15,7 @@ import type ObsidianAgentPlugin from '../../../main';
 import type { CustomModel, ProviderType } from '../../../types/settings';
 import { getModelKey, BUILT_IN_MODELS, getDefaultBaseUrlForProvider } from '../../../types/settings';
 import { buildApiHandlerForModel } from '../../../api/index';
+import { runMeteredCall } from '../../pricing/meteredCall';
 import { validateProviderUrl } from '../../../api/providers/providerUrlGuard';
 import { expandProviderConfigsToCustomModels } from '../../settings/expandProviderConfigs';
 
@@ -93,7 +94,7 @@ export class ConfigureModelTool extends BaseTool<'configure_model'> {
             } else if (action === 'select') {
                 await this.handleSelect(input, callbacks);
             } else if (action === 'test') {
-                await this.handleTest(input, callbacks);
+                await this.handleTest(input, callbacks, context.reportAuxUsage);
             } else {
                 callbacks.pushToolResult(this.formatError(new Error(
                     `Unknown action: "${action}". Use "list", "add", "select", or "test".`
@@ -254,7 +255,16 @@ export class ConfigureModelTool extends BaseTool<'configure_model'> {
         callbacks.log(`configure_model: selected ${modelKey}`);
     }
 
-    private async handleTest(input: Record<string, unknown>, callbacks: import('../types').ToolCallbacks): Promise<void> {
+    private async handleTest(
+        input: Record<string, unknown>,
+        callbacks: import('../types').ToolCallbacks,
+        /**
+         * FIX-24-05-09 (D10): a probe is cheap but not free, and unlike the
+         * settings-tab connection test this one is agent-driven -- a loop that
+         * tests five models in a turn should show up in that turn's cost.
+         */
+        reportAuxUsage?: import('../../pricing/meteredCall').UsageSink,
+    ): Promise<void> {
         const modelKey = (input.model_key as string ?? '').trim();
 
         if (!modelKey) {
@@ -281,11 +291,10 @@ export class ConfigureModelTool extends BaseTool<'configure_model'> {
 
         try {
             const handler = buildApiHandlerForModel(model);
-            const stream = handler.createMessage(
-                'Respond with exactly: "OK"',
-                [{ role: 'user', content: 'Test connection' }],
-                [],
-            );
+            const stream = runMeteredCall(handler, 'model-connection-test', {
+                systemPrompt: 'Respond with exactly: "OK"',
+                messages: [{ role: 'user', content: 'Test connection' }],
+            }, reportAuxUsage);
 
             let responseText = '';
             for await (const chunk of stream) {

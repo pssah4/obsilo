@@ -25,6 +25,7 @@ agent-task                | src/core/AgentTask.ts                               
 tool-execution            | src/core/tool-execution/ToolExecutionPipeline.ts      | ADR-01          | new step: insert in pipeline order, see JSDoc header
 tool-registry             | src/core/tools/ToolRegistry.ts                        | ADR-01, ADR-16 | new tool: add file in src/core/tools/<name>/, register in ToolRegistry
 fast-path                 | src/core/FastPathExecutor.ts                          | ADR-61          | new recipe pattern: extend planner heuristics in FastPathExecutor
+agent-interceptors        | src/core/agent/interceptors/types.ts                  | ADR-145         | new interceptor: implement the types.ts contract, register in the AgentLoopEngine chain (IMP-41-02-01)
 mode-service              | src/core/modes/ModeService.ts                         | ADR-04          | new mode: add to builtinModes.ts plus tool-group map
 modes-builtin             | src/core/modes/builtinModes.ts                        | ADR-04          | new tool group: add entry to TOOL_GROUP_MAP
 context-condensing        | src/core/AgentTask.ts                                 | ADR-12          | condenseHistory(): keep-first-last + LLM-summarize-middle; tune via condensingThreshold setting
@@ -63,13 +64,16 @@ tier-resolution           | src/main.ts                                         
 # AI PROVIDERS
 api-handler               | src/api/index.ts                                      | ADR-11          | new provider: implement ApiHandler, register in resolveProvider()
 anthropic                 | src/api/providers/anthropic.ts                        | ADR-11, ADR-62, ADR-111 | extend cache_control or model preset
-openai                    | src/api/providers/openai.ts                           | ADR-11, ADR-111 | extend streaming, tool-call, embedding flow; cached_tokens via cache-capability lookup
+openai                    | src/api/providers/openai.ts                           | ADR-11, ADR-111, ADR-175 | extend streaming, tool-call, embedding flow; serves 7 provider types, so log/label from config.type never a literal; cache markers gated on cacheStyle==='passthrough'
 chatgpt-oauth             | src/api/providers/chatgpt-oauth.ts                    | ADR-88, ADR-89 | extend OAuth lifecycle in ChatGptOAuthService
-github-copilot            | src/api/providers/github-copilot.ts                   | ADR-37, ADR-43 | extend Copilot completion or model resolution
+github-copilot            | src/api/providers/github-copilot.ts                   | ADR-37, ADR-43, ADR-175 | extend Copilot completion or model resolution. TWO routes with TWO cache-marker forms; cacheMarkersSent() is the one gate for both
 bedrock                   | src/api/providers/bedrock.ts                          | ADR-11, ADR-111 | extend region or model resolver; set cachePoint ContentBlock when cache-capability says bedrock-cachepoint
-openrouter                | src/api/providers/openai.ts                           | ADR-11          | OpenRouter has no dedicated provider class; OpenAI adapter handles config.type==='openrouter' (cache deferred per capabilities.ts)
-cache-capability          | src/api/capabilities.ts                               | ADR-111         | new provider/model entry: extend table; UI and provider read via getCacheCapability()
-kv-cache-prompt           | src/core/systemPrompt.ts                              | ADR-62          | stable sections before CACHE_BREAKPOINT_MARKER, volatile tail after; providers split via splitSystemPromptAtCacheBreakpoint and mark only the prefix
+openrouter                | src/api/providers/openai.ts                           | ADR-11, ADR-175 | no dedicated provider class; OpenAI adapter handles config.type==='openrouter'. Anthropic models get cache_control passthrough, everything else stays cacheStyle none
+openai-cache-markers      | src/api/adapters/openaiShapeCacheMarkers.ts            | ADR-175, ADR-62 | placement for OpenAI-shaped wires: system stable-prefix + 2 rolling marks on user OR tool messages; tools cannot be marked here. selectRollingHistoryIndices is the ONE selection rule, passthrough writes cache_control on the part, Copilot copilot_cache_control on the message
+copilot-cache-markers     | src/api/adapters/copilotResponsesCacheMarkers.ts       | ADR-175         | Copilot /responses: system prompt moves out of instructions into input[0] so prompt_cache_breakpoint has a part to sit on. A tool loop has NO markable item late in input (function_call_output has no content parts), so no rolling mark is possible there
+openai-cache-usage        | src/api/adapters/openaiShapeCacheUsage.ts              | ADR-175         | one reader of cached_tokens + cache_write_tokens for openai/kilo-gateway/github-copilot; add a new usage field here, not in three providers
+cache-capability          | src/api/capabilities.ts                               | ADR-111, ADR-175 | new provider/model entry: extend table. supportsPromptCache drives cost display, requiresRequestMarkers drives the settings toggle. A marker-bearing row needs a probe in cacheCapabilityContract.test.ts
+kv-cache-prompt           | src/core/systemPrompt.ts                              | ADR-62, ADR-175 | stable sections before CACHE_BREAKPOINT_MARKER, volatile tail after; providers split via splitSystemPromptAtCacheBreakpoint and mark only the prefix. A wire with no marker slot MUST call stripCacheBreakpointMarker, else the sentinel reaches the model
 
 # AUTH
 chatgpt-oauth-auth        | src/core/auth/ChatGptOAuthService.ts                  | ADR-88, ADR-89 | extend PKCE or token-refresh flow
@@ -118,6 +122,19 @@ ingest-trigger            | src/core/ingest/AutoTriggerObserver.ts              
 ingest-session            | src/core/ingest/IngestSessionStore.ts                 | ADR-100         | dialog-state schema: extend ingest_session table migration
 ingest-frontmatter        | src/core/ingest/FrontmatterIndexer.ts                 | ADR-66          | new metadata field: extend FrontmatterWriter plus BackfillJob
 
+# VAULT HEALTH / FRESHNESS (ADR-135, ADR-163)
+freshness-orchestrator    | src/core/health/FreshnessOrchestrator.ts              | ADR-135, ADR-163 | new verifier stage: extend the orchestrator phases; per-note verdicts go through NoteFreshnessHistoryStore
+freshness-verifier        | src/core/health/FreshnessVerifier.ts                  | ADR-135         | new verifier tier: extend the mid-tier / frontier escalation ladder (IMP-20-06-01)
+# WEB TOOLS (fetch, search, clip)
+web-tools                 | src/core/tools/web/WebFetchTool.ts                    | -               | new web tool: add under tools/web/, register in ToolRegistry, route every outbound request through ssrfGuard
+ssrf-guard                | src/core/tools/web/ssrfGuard.ts                       | -               | new outbound host class: extend the guard; clip/fetch/search MUST NOT bypass it
+# CONVERSATION HISTORY (ADR-80, ADR-110, ADR-170, ADR-171)
+conversation-store        | src/core/history/ConversationStore.ts                 | ADR-80, ADR-170 | new persisted field: extend the store schema; per-session ownership rules live in ADR-170
+message-log               | src/core/history/MessageLog.ts                        | ADR-110, ADR-171 | messages vs uiMessages are TWO lists: on "chat empty" check which one lost entries first
+# INLINE ACTIONS (EPIC-33, ADR-138, ADR-142)
+inline-actions            | src/core/inline/actions/LookupAction.ts               | ADR-138, ADR-142 | new inline action: add under inline/actions/, register in the action registry, keep the panel contract
+# BUNDLE ENTRIES (esbuild entry points for optional assets)
+bundle-entries            | src/core/assets/bundle-entries/office-entry.ts        | -               | new optional bundle: add an entry file here and wire it in esbuild.config.mjs; generated output lands in src/_generated (see generated-assets)
 # PROMPT SECTIONS (modular system prompt, ADR-08)
 prompt-sections           | src/core/prompts/sections/index.ts                    | ADR-08, ADR-62  | new section: add file under sections/, register in index, decide stable-prefix vs volatile-tail
 prompt-cost-aware         | src/core/prompts/sections/cost-aware/index.ts         | ADR-90          | cost-aware steering: antiOverthinking, budgetAwareness, errorRecovery, planFirst, stopCondition, subAgentGating, toolTiers

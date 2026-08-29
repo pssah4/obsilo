@@ -3,7 +3,7 @@ import { withBase } from 'vitepress'
 
 /* Keep in sync with manifest.json on every release.
    Pinned by src/__tests__/versionConsistency.test.ts. */
-const PLUGIN_VERSION = '3.7.0'
+const PLUGIN_VERSION = '3.8.0'
 </script>
 
 <template>
@@ -16,7 +16,7 @@ const PLUGIN_VERSION = '3.7.0'
     >
       <span class="lp-badge-version">v{{ PLUGIN_VERSION }}</span>
       <span class="lp-badge-divider" aria-hidden="true">·</span>
-      <span>Skill registry updates</span>
+      <span>Prompt caching, measured</span>
       <svg class="lp-badge-arrow" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <path d="M7 17 17 7" /><path d="M8 7h9v9" />
       </svg>

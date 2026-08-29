@@ -1,10 +1,11 @@
 import { App, Modal, Notice, setIcon } from 'obsidian';
 import type { CustomModel, ProviderType } from '../../types/settings';
 import { getDefaultBaseUrlForProvider } from '../../types/settings';
-import { getCacheCapability } from '../../api/capabilities';
+import { requiresRequestMarkers } from '../../api/capabilities';
 import { getModelOutputCeiling, normalizeModelId } from '../../types/model-registry';
 import { PROVIDER_LABELS, MODEL_SUGGESTIONS, EMBEDDING_PROVIDERS, EMBEDDING_SUGGESTIONS } from './constants';
 import { testModelConnection, testEmbeddingConnection, fetchProviderModels, fetchOllamaModels, fetchEmbeddingModels, isTemperatureFixed, maxTemperature } from './testModelConnection';
+import { validateProviderUrl } from '../../api/providers/providerUrlGuard';
 import { GitHubCopilotAuthService } from '../../core/security/GitHubCopilotAuthService';
 import { KiloAuthService } from '../../core/security/KiloAuthService';
 import { ChatGptOAuthService } from '../../core/auth/ChatGptOAuthService';
@@ -174,8 +175,10 @@ export class ModelConfigModal extends Modal {
         this.formTemperatureEnabled = this.model.temperature !== undefined;
         this.formTemperatureValue = this.model.temperature ?? 0.7;
         // IMP-18-01-01: default-on for cache-capable models, preserve explicit user value otherwise.
+        // D3: seeded from the same predicate that decides visibility below, so a
+        // hidden row cannot seed a value that contradicts what the user is shown.
         this.formPromptCachingEnabled = this.model.promptCachingEnabled
-            ?? getCacheCapability(this.model.provider, this.model.name).supportsPromptCache;
+            ?? requiresRequestMarkers(this.model.provider, this.model.name);
         this.formThinkingEnabled = this.model.thinkingEnabled ?? false;
         this.formThinkingBudgetTokens = this.model.thinkingBudgetTokens ?? 10000;
         this.formAwsRegion = this.model.awsRegion ?? 'eu-central-1';
@@ -688,8 +691,13 @@ export class ModelConfigModal extends Modal {
         this.updateMaxTokensSliderRange();
         const isCopilotClaude = isCopilot && /^claude/i.test(this.formName);
         // IMP-18-01-01: prompt-caching toggle visibility is data-driven via the capability table.
-        const cacheCap = getCacheCapability(p, this.formName);
-        if (this.promptCachingRow) this.promptCachingRow.classList.toggle('agent-u-hidden', !cacheCap.supportsPromptCache);
+        // D3: the predicate is requiresRequestMarkers, not supportsPromptCache.
+        // gpt-4o supports caching but caches implicitly, so the old check showed
+        // a switch that could not change the request. A control with no effect is
+        // worse than no control: it invites the user to debug the wrong thing.
+        if (this.promptCachingRow) {
+            this.promptCachingRow.classList.toggle('agent-u-hidden', !requiresRequestMarkers(p, this.formName));
+        }
         // Bedrock is intentionally excluded: BedrockProvider does not send a
         // reasoning_config request field yet, so the toggle would have no
         // effect (it only reads reasoningContent from the response). Re-add
@@ -1104,6 +1112,15 @@ export class ModelConfigModal extends Modal {
             awsSessionToken: isBedrock && !bedrockIsApiKey ? (this.formAwsSessionToken || undefined) : undefined,
         };
         if (!m.name) { this.showTestResult(false, t('modal.modelConfig.enterModelIdFirst'), undefined); return; }
+        // AUDIT 2026-08-27 L-5: the test button sends the api key to whatever is
+        // in the field, so it has to answer to the same guard as save(). Without
+        // this it reported success for an endpoint the chat path refuses, which
+        // is worse than a refusal: the user learns the wrong thing.
+        const urlRejection = this.baseUrlRejection();
+        if (urlRejection) {
+            this.showTestResult(false, t('modal.modelConfig.baseUrlRejected', { message: urlRejection }), undefined);
+            return;
+        }
         this.testBtn.disabled = true;
         this.testBtn.setText(t('modal.modelConfig.testing'));
         this.testResultEl.classList.add('agent-u-hidden');
@@ -1613,9 +1630,38 @@ export class ModelConfigModal extends Modal {
         this.bedrockGatewayHeaderValueRow?.classList.toggle('agent-u-hidden', !isGateway);
     }
 
+    /**
+     * AUDIT 2026-08-27 L-5: run the typed endpoint through the same SSRF guard
+     * the providers apply, so a hostile value is refused at the WRITE boundary
+     * and not only at the sender.
+     *
+     * The field used to be persisted verbatim, and the embedding senders read it
+     * back without a check, so the guard existed on the chat path only. Bedrock
+     * keeps its endpoint in the same slot, so the gateway relaxation has to be
+     * passed through exactly as BedrockProvider does it.
+     *
+     * Returns the guard's message, or null when the value is acceptable (an
+     * empty field is acceptable: the sender falls back to its own default).
+     */
+    private baseUrlRejection(): string | null {
+        const isBedrock = this.formProvider === 'bedrock';
+        const candidate = isBedrock ? this.formAwsEndpoint : this.formBaseUrl;
+        if (!candidate.trim()) return null;
+        try {
+            validateProviderUrl(this.formProvider, candidate.trim(), {
+                gatewayMode: isBedrock && this.formAwsAuthMode === 'gateway',
+            });
+            return null;
+        } catch (e: unknown) {
+            return (e as { message?: string })?.message ?? String(e);
+        }
+    }
+
     private save(): void {
         const name = this.formName || this.model.name;
         if (!name) { new Notice(t('modal.modelConfig.modelIdRequired')); return; }
+        const urlRejection = this.baseUrlRejection();
+        if (urlRejection) { new Notice(t('modal.modelConfig.baseUrlRejected', { message: urlRejection })); return; }
         const isBedrock = this.formProvider === 'bedrock';
         const bedrockIsApiKey = isBedrock && this.formAwsAuthMode === 'api-key';
         const bedrockIsAccessKey = isBedrock && this.formAwsAuthMode === 'access-key';
@@ -1634,7 +1680,11 @@ export class ModelConfigModal extends Modal {
             // Auto -> undefined: resolveOutputBudget sizes it per model at request time.
             maxTokens: this.formAutoMaxTokens ? undefined : this.formMaxTokens,
             temperature: this.formTemperatureEnabled ? this.formTemperatureValue : undefined,
-            promptCachingEnabled: this.formPromptCachingEnabled || undefined,
+            // D3: `|| undefined` turned an unchecked box into undefined, which
+            // modelToLLMProvider reads back as enabled (`!== false`), and the
+            // constructor then re-ticked it from the capability default. The
+            // switch had no off position. Persist the boolean as chosen.
+            promptCachingEnabled: this.formPromptCachingEnabled,
             thinkingEnabled: this.formThinkingEnabled || undefined,
             thinkingBudgetTokens: this.formThinkingEnabled ? this.formThinkingBudgetTokens : undefined,
             awsRegion: isBedrock ? (this.formAwsRegion || undefined) : undefined,

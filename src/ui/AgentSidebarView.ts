@@ -39,6 +39,7 @@ import { ChatOptionsPopover } from './sidebar/ChatOptionsPopover';
 import { applyForcedWorkflow, nextForcedWorkflow, shouldApplyForcedWorkflow } from './sidebar/forcedWorkflow';
 import { ChatModelPickerPopover, type ChatProviderNav } from './sidebar/ChatModelPickerPopover';
 import { buildPinnedCustomModel, resolveEffortLevelsForPin, resolveStickyChatModel } from './sidebar/chatModelDropdown';
+import { autoModelLabel } from './sidebar/autoModelLabel';
 import { shouldSendOnEnter } from './sidebar/composerKeymap';
 import {
     DEFAULT_THINKING_OVERRIDE,
@@ -53,6 +54,7 @@ import {
 } from './sidebar/effortOverride';
 import type { EffortLevel } from '../types/model-registry';
 import { resolveActiveProvider } from '../core/routing/tierResolution';
+import { runMeteredCall } from '../core/pricing/meteredCall';
 import { TOOL_METADATA } from '../core/tools/toolMetadata';
 import { AttachmentHandler } from './sidebar/AttachmentHandler';
 import { wireApprovalTimeout } from './sidebar/approvalTimeout';
@@ -77,7 +79,7 @@ import { stampProvenance } from '../core/governance/permissionInventory';
 import { allowHost, hostKeyOf } from '../core/governance/webHostGrants';
 import { MAX_SANDBOX_SCRIPT_GRANTS } from '../core/governance/sandboxScriptGrant';
 import { enabledSelfAuthoredNames } from '../core/skills/skillToggleGate';
-import { TaskMonitor } from './sidebar/TaskMonitor';
+import { TaskMonitor, COST_LINE_CLASS } from './sidebar/TaskMonitor';
 import { CondensationFeedback } from './sidebar/CondensationFeedback';
 import { SuggestionBanner } from './sidebar/SuggestionBanner';
 import { OnboardingFlow } from './sidebar/OnboardingFlow';
@@ -1698,8 +1700,13 @@ export class AgentSidebarView extends ItemView {
         let title: string;
         if (activeProvider) {
             if (this.chatModelOverride === null) {
-                label = t('ui.sidebar.modelAuto');
-                title = t('ui.sidebar.modelAutoTitle');
+                // FIX-24-05-08 (D7): "Auto" alone named the routing rule, not
+                // the model the run bills. autoModelLabel resolves the rule
+                // through the same cascade initApiHandler uses, so the pill and
+                // the cost footer of the same run name one model.
+                const resolved = autoModelLabel(this.plugin.settings);
+                label = resolved.label;
+                title = resolved.tooltip;
             } else {
                 // Chat-header always renders the bare core model id, not the
                 // provider-supplied displayName. Bedrock cross-region profiles
@@ -3087,7 +3094,13 @@ export class AgentSidebarView extends ItemView {
         // reported for this turn; persist nothing rather than an empty line.
         const captureUsageFooter = (): string | undefined => {
             if (!footerEl || footerEl.classList.contains('agent-u-hidden')) return undefined;
-            const text = footerEl.getText().trim();
+            // FIX-24-05-06: TaskMonitor owns one child of the footer for the
+            // cost line. Read that child, so the condense badges sitting
+            // beside it are not persisted as part of the usage line. Without
+            // a cost line (usage never reported, footer shows only the
+            // timestamp) the whole footer is still the best we have.
+            const costLine = footerEl.querySelector<HTMLElement>(`.${COST_LINE_CLASS}`);
+            const text = (costLine ?? footerEl).getText().trim();
             return text.length > 0 ? text : undefined;
         };
         // FIX-PERF-44 convention: scheduleRecurring, never setInterval -- the
@@ -3656,14 +3669,23 @@ export class AgentSidebarView extends ItemView {
                     // as markdown so partial wikilinks/links are clickable.
                     scheduleToolProgressRender(outputEl, content);
                 },
-                onUsage: (inputTokens, outputTokens, cacheReadTokens, cacheCreationTokens, modelId, routingMode, usageByModel) => {
+                onUsage: (
+                    inputTokens, outputTokens, cacheReadTokens, cacheCreationTokens,
+                    modelId, routingMode, usageByModel, longContextRequestModelIds,
+                ) => {
                     // ADR-090 / FEATURE-1804: see TaskMonitor.onUsage
                     // FIX-24-05-02: modelId + routingMode must reach the
                     // monitor, otherwise TaskRouter-routed tasks are priced
                     // on the configured main model.
                     // FIX-24-05-05: usageByModel carries the per-model
                     // breakdown for correct mixed-model pricing.
-                    taskMonitor.onUsage(inputTokens, outputTokens, cacheReadTokens, cacheCreationTokens, modelId, routingMode, usageByModel);
+                    // AUDIT-2026-08-27 I-5: longContextRequestModelIds carries
+                    // what those sums cannot express, so the footer can mark the
+                    // total as a floor instead of showing it as exact.
+                    taskMonitor.onUsage(
+                        inputTokens, outputTokens, cacheReadTokens, cacheCreationTokens,
+                        modelId, routingMode, usageByModel, longContextRequestModelIds,
+                    );
                     // Deliberately NOT hiding the run meter here. onUsage is
                     // the root run's final tally, but a subtask can forward its
                     // usage mid-run, which would blank the "still working"
@@ -4998,14 +5020,18 @@ export class AgentSidebarView extends ItemView {
 
         try {
             const api = buildApiHandlerForModel(model);
-            const stream = api.createMessage(
-                'Create a very short title (1 to 3 words, a crisp keyword label) '
-                + 'for this conversation. Capture the essence, do not summarize. '
-                + 'Output ONLY the title. No quotes, no prefix, no explanation. '
-                + 'Same language as the user.',
-                [{ role: 'user', content: `User: ${userMsg.slice(0, 300)}\nAssistant: ${assistantMsg.slice(0, 300)}` }],
-                [],
-            );
+            // FIX-24-05-09 (D10): once per conversation, on the titling model,
+            // and never reported. Deliberately NOT folded into the task that
+            // just finished: this call happens after that run's final usage
+            // report, so adding it there would rewrite a number the user has
+            // already seen. It goes to the ledger instead.
+            const stream = runMeteredCall(api, 'chat-title', {
+                systemPrompt: 'Create a very short title (1 to 3 words, a crisp keyword label) '
+                    + 'for this conversation. Capture the essence, do not summarize. '
+                    + 'Output ONLY the title. No quotes, no prefix, no explanation. '
+                    + 'Same language as the user.',
+                messages: [{ role: 'user', content: `User: ${userMsg.slice(0, 300)}\nAssistant: ${assistantMsg.slice(0, 300)}` }],
+            });
             let title = '';
             for await (const chunk of stream) {
                 if (chunk.type === 'text') title += chunk.text;

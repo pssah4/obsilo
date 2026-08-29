@@ -1,6 +1,6 @@
 {
   "name": "vault-operator",
-  "version": "3.7.0",
+  "version": "3.8.0",
   "description": "Agentic AI operating layer for your vault. Discovers and uses installed plugins, maintains persistent unified memory, and adapts to your workflows, skills and tools with full safety controls.",
   "main": "main.js",
   "scripts": {
@@ -20,7 +20,8 @@
     "codeql:db": "codeql database create codeql-db --language=javascript --source-root=src/ --overwrite",
     "codeql:analyze": "codeql database analyze codeql-db --format=sarif-latest --output=codeql-results.sarif codeql/javascript-queries:codeql-suites/javascript-security-and-quality.qls",
     "codeql:scan": "npm run codeql:db && npm run codeql:analyze",
-    "verify:esbuild-hashes": "bash scripts/update-esbuild-integrity.sh"
+    "verify:esbuild-hashes": "bash scripts/update-esbuild-integrity.sh",
+    "audit:allowlist": "node scripts/check-npm-audit.mjs"
   },
   "keywords": [
     "obsidian",
@@ -101,7 +102,7 @@
     "js-yaml": ">=5.2.2",
     "zod": ">=4.4.0",
     "esbuild": "$esbuild",
-    "image-size": ">=2.0.2",
+    "image-size": "2.0.2",
     "minimatch": ">=10.0.3",
     "glob": ">=10.4.5",
     "adm-zip": ">=0.6.0",

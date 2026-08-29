@@ -28,7 +28,7 @@ import { truncatedToolInputError } from '../types';
 import type { ToolDefinition } from '../../core/tools/types';
 import { resolveOutputBudget, estimatePromptTokens, modelSupportsTemperature, getModelEffortSupport, modelUsesBudgetTokensThinking } from '../../types/model-registry';
 import { getCacheCapability } from '../capabilities';
-import { splitSystemPromptAtCacheBreakpoint } from '../../core/systemPrompt';
+import { splitSystemPromptAtCacheBreakpoint, stripCacheBreakpointMarker } from '../../core/systemPrompt';
 import { logCacheStat } from '../logCacheStat';
 import { stripThinkingBlocks, repairEmptyWireMessages } from '../../core/utils/stripThinkingBlocks';
 
@@ -205,7 +205,9 @@ export function prepareBedrockConverseInput(
             ? [{ text: stable }, { cachePoint: { type: 'default' } }, { text: volatile }]
             : [{ text: stable }, { cachePoint: { type: 'default' } }];
     } else {
-        system = [{ text: systemPrompt }];
+        // D1: with cachePoint off nothing splits the prompt, so the sentinel has
+        // to be removed here or it reaches the model.
+        system = [{ text: stripCacheBreakpointMarker(systemPrompt) }];
     }
 
     if (useCachePoint) {
@@ -234,22 +236,49 @@ export function prepareBedrockConverseInput(
         }
     }
 
+    const toolSpecs = tools.map<BedrockTool>((t) => ({
+        toolSpec: {
+            name: t.name,
+            description: t.description,
+            // AWS DocumentType is a JSON-compatible recursive union; JSON Schema
+            // objects are valid DocumentType at runtime, but TS can't prove it.
+            inputSchema: { json: t.input_schema as unknown as DocumentType },
+        },
+    }));
+
+    // AP3b: pin the tools cachePoint on attempt_completion instead of appending
+    // it after the whole list, the same way anthropicBlocks.ts does (FIX-PERF-21).
+    //
+    // Appending it last meant every tool added mid-run changed the content the
+    // checkpoint covers. Measured in requests.jsonl 2026-08-22..28: three tasks
+    // where the tool list grew (57 -> 58/59/60) lost the whole prefix on exactly
+    // that turn -- 97,494 / 64,996 / 217,591 cacheWrite tokens with cacheRead 0,
+    // about 0.95 USD in a week, 0.54 USD for the largest single turn.
+    //
+    // AWS states the mechanism (prompt-caching guide, checked 2026-08-28):
+    // checkpoints are chained `tools` -> `system` -> `messages`, and "changing
+    // content in an earlier section invalidates the cache for later sections".
+    // attempt_completion holds its position across mode switches and find_tool
+    // activations, so tools appended after the pin fall outside the cached
+    // prefix and no longer move the boundary.
+    //
+    // Scope, stated honestly: this saves the TOOLS checkpoint (~30k tokens). The
+    // system checkpoint still misses after a tool is added, because by the same
+    // chaining rule the system prefix contains the full tool list. A mid-run
+    // tool change gets cheaper, not free.
+    let wireTools = toolSpecs;
+    if (useCachePoint && toolSpecs.length > 0) {
+        const attemptIdx = tools.findIndex((t) => t.name === 'attempt_completion');
+        const pinAfter = attemptIdx !== -1 ? attemptIdx + 1 : toolSpecs.length;
+        wireTools = [
+            ...toolSpecs.slice(0, pinAfter),
+            { cachePoint: { type: 'default' } },
+            ...toolSpecs.slice(pinAfter),
+        ];
+    }
+
     const toolConfig: ConverseStreamCommandInput['toolConfig'] = tools.length > 0
-        ? {
-            tools: [
-                ...tools.map<BedrockTool>((t) => ({
-                    toolSpec: {
-                        name: t.name,
-                        description: t.description,
-                        // AWS DocumentType is a JSON-compatible recursive union; JSON Schema
-                        // objects are valid DocumentType at runtime, but TS can't prove it.
-                        inputSchema: { json: t.input_schema as unknown as DocumentType },
-                    },
-                })),
-                ...(useCachePoint ? [{ cachePoint: { type: 'default' } } as BedrockTool] : []),
-            ],
-            toolChoice: { auto: {} },
-        }
+        ? { tools: wireTools, toolChoice: { auto: {} } }
         : undefined;
 
     // Extended thinking on Bedrock for budget-tokens Claude (Sonnet 4.6,

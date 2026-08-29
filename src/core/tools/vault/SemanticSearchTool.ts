@@ -4,6 +4,7 @@ import type { ToolDefinition, ToolExecutionContext } from '../types';
 import type ObsidianAgentPlugin from '../../../main';
 import { fuseHybridArms } from '../../semantic/weightedFusion';
 import { getGraphEdgeLabel } from '../../knowledge/graphEdgeLabel';
+import { runMeteredCall } from '../../pricing/meteredCall';
 
 export class SemanticSearchTool extends BaseTool<'semantic_search'> {
     readonly name = 'semantic_search' as const;
@@ -103,11 +104,13 @@ export class SemanticSearchTool extends BaseTool<'semantic_search'> {
                 try {
                     const hydePrompt = `Write a 2-3 sentence Obsidian note excerpt that would directly answer this question: "${query}". Write only the note content itself, no meta-commentary.`;
                     let generated = '';
-                    for await (const chunk of apiHandler.createMessage(
-                        'You are a document generator for an Obsidian vault. Given a question, write a short realistic note excerpt that would answer it.',
-                        [{ role: 'user', content: hydePrompt }],
-                        [],
-                    )) {
+                    // FIX-24-05-09 (D10): HyDE runs on every semantic_search
+                    // when enabled, i.e. several times per agent task, and
+                    // reported nothing. It bills to the task that searched.
+                    for await (const chunk of runMeteredCall(apiHandler, 'search-hyde', {
+                        systemPrompt: 'You are a document generator for an Obsidian vault. Given a question, write a short realistic note excerpt that would answer it.',
+                        messages: [{ role: 'user', content: hydePrompt }],
+                    }, context.reportAuxUsage)) {
                         if (chunk.type === 'text') generated += chunk.text;
                     }
                     if (generated.trim()) hydeText = generated.trim();

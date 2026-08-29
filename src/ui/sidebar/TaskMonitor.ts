@@ -17,8 +17,8 @@ import type { App } from 'obsidian';
 import type ObsidianAgentPlugin from '../../main';
 import type { ApiHandler } from '../../api/types';
 import { getModelKey } from '../../types/settings';
-import { computeCost, computeCostForBuckets, type UsageByModel } from '../../core/pricing/ModelPricing';
-import { TaskTelemetry, formatTelemetryFooter, type RequestTelemetryEntry } from '../../core/telemetry/TaskTelemetry';
+import { computeCost, computeCostForBuckets, unpricedBreakdown, type UsageByModel } from '../../core/pricing/ModelPricing';
+import { TaskTelemetry, formatTelemetryFooter, type RequestTelemetryEntry, type RoutingMode } from '../../core/telemetry/TaskTelemetry';
 import { VaultDataFileAdapter } from '../../core/storage/VaultDataFileAdapter';
 import { getAgentDataDir } from '../../core/utils/agentFolder';
 
@@ -50,6 +50,20 @@ export interface TaskMonitorOptions {
 }
 
 export interface TaskTelemetryData {
+    /**
+     * FIX-24-11-01: the run's id as the loop reported it, forwarded unchanged
+     * into the persisted record. The monitor must not mint one of its own: the
+     * request rows already carry the loop's id, and a second source would make
+     * the two files look joinable while joining nothing.
+     */
+    taskId: string;
+    /**
+     * FIX-24-11-02: why the run's model was chosen, as the loop decided it. The
+     * monitor forwards it unchanged and does NOT read it off the last usage
+     * report: the final report is the run's own, but an exit that never reported
+     * usage has none, and a fallback would have to invent a mode.
+     */
+    routingMode: RoutingMode;
     inputTokens: number;
     outputTokens: number;
     cacheReadTokens: number;
@@ -62,20 +76,60 @@ export interface TaskTelemetryData {
 
 const SUBSCRIPTION_PROVIDERS = new Set(['github-copilot', 'chatgpt-oauth']);
 
-export class TaskMonitor {
+/**
+ * FIX-24-05-07: providers that serve from the user's own machine. There is no
+ * per-token bill for these, so the footer shows a marker instead of an amount
+ * (it used to price them at cloud Sonnet rates).
+ */
+const LOCAL_PROVIDERS = new Set(['ollama', 'lmstudio']);
+
+/**
+ * FIX-24-05-06: the cost line's own element inside `.message-footer`.
+ *
+ * The footer is shared DOM: the view writes the condensation feedback and the
+ * condense badges into it while the run is going, and the monitor writes the
+ * cost line at the end. The monitor used to `setText` the whole footer, which
+ * dropped every sibling the view had put there. Now the cost line owns one
+ * child and touches nothing else. Exported so the view can read exactly this
+ * child back when it persists the line onto the UiMessage.
+ */
+export const COST_LINE_CLASS = 'vo-cost-line';
+
+/**
+ * FEAT-24-13: what the persist path remembers of the last usage report.
+ *
+ * One object, written in one statement. It used to be two fields with two
+ * different write guards -- the model id updated whenever an id was reported,
+ * the split only when the split was non-empty -- so a later report without a
+ * split left the record naming one model and pricing another one's tokens.
+ * A report is remembered as a whole or not at all.
+ */
+interface RememberedUsageReport {
+    /** The model the reporting task ran on (FIX-24-05-02: the routed one). */
+    modelId: string;
     /**
-     * FIX-24-05-02: the model that actually served the last reported usage.
-     * The final onUsage of a task carries the routed model id; telemetry
-     * must persist that id, not the configured main model.
+     * FIX-24-05-05: that report's per-model split, when it carried one. Since
+     * FEAT-24-13 the task derives it from its usage ledger, so for a run that
+     * spent anything it is present and complete.
      */
-    private lastActualModelId?: string;
+    models?: UsageByModel;
+}
+
+export class TaskMonitor {
+    private lastReport?: RememberedUsageReport;
 
     /**
-     * FIX-24-05-05: the per-model breakdown of the last reported usage.
-     * Persisted with the telemetry entry so mixed-model tasks are priced
-     * per model there too.
+     * AUDIT-2026-08-27 I-5: every model this TASK sent a long-context request to.
+     *
+     * A union across reports, not the last report's list, because the footer
+     * describes the whole task and a task reports more than once: a forwarded
+     * child report first, then the run's own final word. The parent books the
+     * child's spend as one aggregate record, so the final report's ledger cannot
+     * rediscover the child's long request, and taking only the last list would
+     * drop the disclosure for every task that delegates. One monitor per task, so
+     * the union cannot outlive what it describes.
      */
-    private lastUsageByModel?: UsageByModel;
+    private readonly longContextModelIds = new Set<string>();
 
     /**
      * FEAT-24-11: task start, captured when the monitor is created (one
@@ -121,6 +175,16 @@ export class TaskMonitor {
     }
 
     /**
+     * FIX-24-05-06: the cost line's own child of the footer, created on first
+     * write and reused afterwards, so repeated reports replace the line
+     * instead of stacking copies of it.
+     */
+    private costLineEl(footerEl: HTMLElement): HTMLElement {
+        return footerEl.querySelector<HTMLElement>(`.${COST_LINE_CLASS}`)
+            ?? footerEl.createDiv(COST_LINE_CLASS);
+    }
+
+    /**
      * Live usage update -- compute cost, render footer. Called per turn.
      *
      * v2.10.2: the optional `actualModelId` argument lets the caller report
@@ -136,21 +200,49 @@ export class TaskMonitor {
         cacheReadTokens?: number,
         cacheCreationTokens?: number,
         actualModelId?: string,
-        routingMode?: 'auto' | 'override' | 'advisor' | 'subagent',
+        routingMode?: RoutingMode,
         usageByModel?: UsageByModel,
+        longContextRequestModelIds?: string[],
     ): void {
+        for (const id of longContextRequestModelIds ?? []) this.longContextModelIds.add(id);
         const cR = cacheReadTokens ?? 0;
         const cW = cacheCreationTokens ?? 0;
-        if (actualModelId) this.lastActualModelId = actualModelId;
-        if (usageByModel && Object.keys(usageByModel).length > 0) this.lastUsageByModel = usageByModel;
         const modelId = actualModelId ?? this.modelIdForCost();
         const provider = this.providerFor(modelId);
+        const hasBuckets = usageByModel !== undefined && Object.keys(usageByModel).length > 0;
+        // FEAT-24-13: remember this report as one thing, so the persisted record
+        // cannot describe two of them. A report with neither an id nor a split
+        // says nothing worth remembering, and overwriting a real report with it
+        // would lose the run's attribution.
+        if (modelId || hasBuckets) {
+            this.lastReport = { modelId, models: hasBuckets ? usageByModel : undefined };
+        }
+        const isSubscription = provider !== undefined && SUBSCRIPTION_PROVIDERS.has(provider);
+        // FIX-24-05-07 review: which ids ran on the user's machine. Pricing
+        // cannot know this, and a local id can match a hosted rate
+        // ('llama-3.2-3b-instruct' hits the 'llama-3' key at a word boundary),
+        // so the amount, the warn class and tasks.jsonl all used to book a free
+        // run as cloud spend. The provider is the only source of truth here.
+        const localModelIds = hasBuckets
+            ? Object.keys(usageByModel).filter((id) => this.isLocalModel(id))
+            : (modelId && this.isLocalModel(modelId) ? [modelId] : []);
+        // Entirely local: nothing to bill, so the footer drops the amount.
+        const allLocal = localModelIds.length > 0
+            && localModelIds.length === (hasBuckets ? Object.keys(usageByModel).length : 1);
         // FIX-24-05-05: mixed-model tasks are priced as the sum of
         // per-model costs; without a breakdown fall back to single-id.
-        const cost = (usageByModel && Object.keys(usageByModel).length > 0)
-            ? computeCostForBuckets(usageByModel)
-            : computeCost(modelId, inputTokens, outputTokens, cR, cW);
-        const isSubscription = provider !== undefined && SUBSCRIPTION_PROVIDERS.has(provider);
+        const cost = hasBuckets
+            ? computeCostForBuckets(usageByModel, (id) => localModelIds.includes(id))
+            : allLocal
+                ? unpricedBreakdown([modelId])
+                : computeCost(modelId, inputTokens, outputTokens, cR, cW);
+        // FIX-24-05-07 (D7): the footer names the model. A single-model report
+        // carries no buckets, so build the one-entry map the formatter needs.
+        const footerModels: UsageByModel | undefined = hasBuckets
+            ? usageByModel
+            : (modelId
+                ? { [modelId]: { input: inputTokens, output: outputTokens, cacheRead: cR, cacheCreation: cW } }
+                : undefined);
         // EPIC-26 / FEAT-26-01 / ADR-120: tag the [Cost] line with the
         // routing mode so it is easy to scan for advisor/subagent calls
         // when validating Welle 1 cost numbers.
@@ -160,23 +252,46 @@ export class TaskMonitor {
         // mixed-model tasks are auditable from the console.
         const mixedModels = usageByModel ? Object.keys(usageByModel) : [];
         const mixedTag = mixedModels.length > 1 ? ` models=[${mixedModels.join(', ')}]` : '';
+        // FIX-24-05-07: log the price tier too. A 0,00 line is now either a
+        // local model or an unpriced id, and the console has to say which.
+        const unpricedTag = cost.unpricedModelIds.length > 0
+            ? ` unpriced=[${cost.unpricedModelIds.join(', ')}]`
+            : '';
+        const localTag = localModelIds.length > 0 ? ` local=[${localModelIds.join(', ')}]` : '';
         console.debug(
             `[Cost] model="${modelId}" provider=${provider ?? '?'} mode=${modeTag}${mixedTag} ` +
             `in=${inputTokens} out=${outputTokens} cacheR=${cR} cacheW=${cW} ` +
-            `usd=${cost.totalUsd.toFixed(4)} eur=${cost.totalEur.toFixed(4)} subscription=${isSubscription}`,
+            `usd=${cost.totalUsd.toFixed(4)} eur=${cost.totalEur.toFixed(4)} ` +
+            `priceSource=${cost.priceSource}${unpricedTag}${localTag} subscription=${isSubscription}`,
         );
 
         // FIX-19-06-01: resolve the CURRENT footer, so a mid-task element swap
         // (question round) does not send the cost line to an orphaned bubble.
         const footerEl = this.footerEl();
         if (!footerEl) return;
-        footerEl.setText(formatTelemetryFooter({
+        // FIX-24-05-06: write into the cost line's own child. A setText on the
+        // footer itself would drop the condensation feedback and the condense
+        // badges the view wrote there during the run.
+        this.costLineEl(footerEl).setText(formatTelemetryFooter({
             inputTokens,
             outputTokens,
             cacheReadTokens: cR,
             cacheCreationTokens: cW,
             costEur: cost.totalEur,
             isSubscription,
+            // FIX-24-05-07: model attribution (D7) and price provenance (D6).
+            models: footerModels,
+            pricing: {
+                priceSource: cost.priceSource,
+                unpricedModelIds: cost.unpricedModelIds,
+                isLocal: allLocal,
+                localModelIds,
+                // AUDIT-2026-08-27 I-5: the amount above is a sum of buckets, so
+                // it was priced at base rates even for the requests the vendor
+                // charged a long-context premium for. The line says so instead of
+                // presenting a floor as the total.
+                longContextRequestModelIds: [...this.longContextModelIds],
+            },
         }));
         footerEl.classList.remove('agent-u-hidden');
 
@@ -220,8 +335,15 @@ export class TaskMonitor {
         const recordPreview = this.opts.plugin.settings.advancedApi.telemetryRecordPromptPreview ?? false;
         await telemetry.record({
             promptPreview: recordPreview ? this.opts.promptPreview : '',
+            // FIX-24-11-01: the join key, straight from the loop. requests.jsonl
+            // has carried it since FEAT-24-11; the task row did not, so the two
+            // files could not be paired at all.
+            taskId: data.taskId,
+            // FIX-24-11-02: and why that model ran, straight from the loop. The
+            // console cost line was the only consumer of this until now.
+            routingMode: data.routingMode,
             // FIX-24-05-02: prefer the model that actually served the task.
-            modelId: this.lastActualModelId ?? this.modelIdForCost(),
+            modelId: this.lastReport?.modelId || this.modelIdForCost(),
             mode: this.opts.mode,
             inputTokens: data.inputTokens,
             outputTokens: data.outputTokens,
@@ -230,7 +352,10 @@ export class TaskMonitor {
             outcome: data.outcome,
             errorMessage: data.errorMessage,
             // FIX-24-05-05: per-model breakdown for correct mixed-model pricing.
-            usageByModel: this.lastUsageByModel,
+            // FEAT-24-13: from the same report as the modelId above.
+            usageByModel: this.lastReport?.models,
+            // FIX-24-05-07 review: keep the local ids out of the persisted cost.
+            localModelIds: this.localModelIdsForRecord(),
             // FEAT-24-11: the task facts the loop reported. Before this they
             // were dropped here and every record read iterations 0.
             iterations: data.iterations,
@@ -243,6 +368,32 @@ export class TaskMonitor {
 
     private modelIdForCost(): string {
         return this.opts.apiHandler?.getModel().id ?? '';
+    }
+
+    /**
+     * FIX-24-05-07 review: does this id run on the user's own machine? Locality
+     * is a property of the configured provider, never of the model id: an
+     * LM Studio id like 'llama-3.2-3b-instruct' matches the hosted 'llama-3'
+     * rate, so a free run was reported as cloud spend until the provider got
+     * the last word.
+     */
+    private isLocalModel(modelId: string): boolean {
+        const provider = this.providerFor(modelId);
+        return provider !== undefined && LOCAL_PROVIDERS.has(provider);
+    }
+
+    /**
+     * The local ids of the run being persisted. Re-derived rather than cached
+     * from onUsage, because the abort and error exits can persist a record for
+     * a run that never reported usage.
+     */
+    private localModelIdsForRecord(): string[] | undefined {
+        const report = this.lastReport;
+        const ids = report?.models
+            ? Object.keys(report.models)
+            : [report?.modelId || this.modelIdForCost()];
+        const local = ids.filter((id) => id.length > 0 && this.isLocalModel(id));
+        return local.length > 0 ? local : undefined;
     }
 
     /**

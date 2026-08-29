@@ -35,6 +35,7 @@ import { getModelKey, modelToLLMProvider } from '../../../types/settings';
 import { resolveActiveProvider, resolveTierModel } from '../../routing/tierResolution';
 import { buildApiHandler, buildApiHandlerForModel } from '../../../api/index';
 import { buildPinnedCustomModel } from '../../../ui/sidebar/chatModelDropdown';
+import { TaskMonitor } from '../../../ui/sidebar/TaskMonitor';
 import { isExplicitThinkingOverride, resolveEffectiveThinkingEnabled } from '../../../ui/sidebar/thinkingOverride';
 import { t } from '../../../i18n';
 import { Notice } from 'obsidian';
@@ -281,8 +282,6 @@ export class PanelChatController {
             }
         }
 
-        const callbacks = this.buildCallbacks(args.handle, args.assistantBubbleId);
-
         if (this.plugin.apiHandler === null) {
             args.handle.setStatus('No API handler configured. Open Settings and set up a provider.', 'error');
             this.running = false;
@@ -375,6 +374,14 @@ export class PanelChatController {
                 }
             }
         }
+
+        // FIX-24-05-09 (D10): built here, not above the pin resolution, because
+        // the monitor has to see the handler the run actually uses. Moved down
+        // from before the apiHandler null-check, where it was built from a
+        // handler this turn might not run on; nothing read it in between.
+        const callbacks = this.buildCallbacks(
+            args.handle, args.assistantBubbleId, mode.slug, resolvedApiHandler, args.userInput,
+        );
 
         try {
             const runner = new AgentTaskRunner({
@@ -598,7 +605,30 @@ export class PanelChatController {
         return blocks;
     }
 
-    private buildCallbacks(handle: InlinePanelHandle, assistantBubbleId: string): AgentTaskCallbacks {
+    private buildCallbacks(
+        handle: InlinePanelHandle,
+        assistantBubbleId: string,
+        modeSlug: string,
+        api: import('../../../api/types').ApiHandler,
+        userInput: string,
+    ): AgentTaskCallbacks {
+        // FIX-24-05-09 (D10): the panel drives the same loop as the sidebar but
+        // reported none of its cost. No footer element is passed on purpose: the
+        // handle's only text surface is setStatus, which onComplete overwrites
+        // with 'Done', so a cost line written there would be wiped by the very
+        // event it belongs to. Without a footer the monitor still produces the
+        // priced [Cost] line and the two JSONL records, which is what makes the
+        // spend auditable; a real cost line needs its own DOM node in
+        // InlineChatPanel plus a persistence path, i.e. a UI feature, not a
+        // capture fix.
+        const monitor = new TaskMonitor({
+            plugin: this.plugin,
+            app: this.plugin.app,
+            apiHandler: api,
+            getEffectiveModelKey: () => this.plugin.settings.activeModelKey ?? '',
+            promptPreview: userInput.slice(0, 200),
+            mode: modeSlug,
+        });
         return {
             onIterationStart: () => {},
             onText: (chunk) => handle.appendStreamChunk(assistantBubbleId, chunk),
@@ -608,6 +638,13 @@ export class PanelChatController {
             onComplete: () => { handle.setStatus('Done'); },
             onAttemptCompletion: () => {},
             onError: (err) => { handle.setStatus(`Error: ${err.message}`, 'error'); },
+            // FIX-24-05-09 (D10): the three reporting hooks the sidebar has.
+            onUsage: (i, o, cr, cc, modelId, routingMode, usageByModel, longContextIds) => {
+                monitor.onUsage(i, o, cr, cc, modelId, routingMode, usageByModel, longContextIds);
+            },
+            onTaskTelemetry: (data) => { monitor.onTaskTelemetry(data); },
+            onRequestTelemetry: (data) => { monitor.onRequestTelemetry(data); },
+            onCondenseTelemetry: (event) => { monitor.onCondenseTelemetry(event); },
             onCheckpoint: (cp) => {
                 // Mirror AgentSidebarView.onCheckpoint: every snapshot
                 // taken by the write-tool pipeline becomes an inline

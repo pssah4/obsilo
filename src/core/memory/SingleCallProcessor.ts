@@ -151,6 +151,9 @@ export class SingleCallProcessor {
             topicDriftDetected: result.topicDriftDetected,
             inputTokens: result.usage?.inputTokens ?? null,
             outputTokens: result.usage?.outputTokens ?? null,
+            // FIX-24-05-09 (D10): name the model, so the token counts in this
+            // file can be priced instead of just counted.
+            modelId: result.usage?.modelId ?? null,
             durationMs,
         });
 

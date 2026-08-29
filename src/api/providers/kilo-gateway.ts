@@ -20,6 +20,9 @@ import { logCacheStat } from '../logCacheStat';
 import { normalizeDeltaContent } from './utils/openAiContent';
 import { flushToolCallAccumulators, type ToolCallAccumulator } from './utils/toolCallFlush';
 import { convertToOpenAiChatMessages, convertToOpenAiChatTools } from '../adapters/openaiChat';
+import { markOpenAiShapeCacheBreakpoints } from '../adapters/openaiShapeCacheMarkers';
+import { readOpenAiShapeCacheUsage } from '../adapters/openaiShapeCacheUsage';
+import { getCacheCapability } from '../capabilities';
 import { createNodeFetch } from './openai';
 
 // ---------------------------------------------------------------------------
@@ -81,6 +84,15 @@ export class KiloGatewayProvider implements ApiHandler {
         const openAiMessages = convertToOpenAiChatMessages(systemPrompt, messages, 'kilo-gateway');
         const openAiTools = tools.length > 0 ? convertToOpenAiChatTools(tools) : undefined;
 
+        // AP3: the gateway routes Anthropic-format requests, so the same
+        // cache_control passthrough the vendor's own client sends applies here.
+        // Table entry and producer now agree (D4).
+        const cacheMarkersSent = (this.config.promptCachingEnabled ?? false)
+            && getCacheCapability('kilo-gateway', this.config.model).cacheStyle === 'passthrough';
+        if (cacheMarkersSent) {
+            markOpenAiShapeCacheBreakpoints(openAiMessages, systemPrompt);
+        }
+
         // Temperature: o-series weglassen, default-only Modelle (Opus 4.7,
         // GPT-5.x; FIX-04-03-02) ebenfalls weglassen, sonst Config oder 0.2.
         const isOSeries = /^o[1-9]/.test(this.config.model);
@@ -125,23 +137,30 @@ export class KiloGatewayProvider implements ApiHandler {
 
         for await (const chunk of stream) {
             if (chunk.usage) {
-                const cachedIn = (chunk.usage as { prompt_tokens_details?: { cached_tokens?: number } })
-                    .prompt_tokens_details?.cached_tokens ?? 0;
+                // AP3: shared reader, so cache_write_tokens is picked up here too.
+                const cacheUsage = readOpenAiShapeCacheUsage(chunk.usage, 'kilo-gateway');
                 logCacheStat({
                     provider: 'kilo-gateway',
                     model: this.config.model,
-                    caching: 'auto',
-                    nonCachedInputTokens: Math.max(0, chunk.usage.prompt_tokens - cachedIn),
-                    cacheReadTokens: cachedIn,
-                    outputTokens: chunk.usage.completion_tokens,
+                    // AP3: 'auto' was wrong for this gateway. It routes Anthropic
+                    // models, which cache only when cache_control is sent, so before
+                    // the marker code existed nothing was cached at all.
+                    caching: cacheMarkersSent ? 'on' : 'OFF',
+                    nonCachedInputTokens: cacheUsage.inputTokens,
+                    cacheReadTokens: cacheUsage.cacheReadTokens,
+                    cacheCreationTokens: cacheUsage.cacheCreationTokens,
+                    outputTokens: cacheUsage.outputTokens,
                 });
                 yield {
                     type: 'usage',
                     // IMP-18-01-02: prompt_tokens is the total; report non-cached as
                     // inputTokens + cached separately so cost bills the cached prefix cheap.
-                    inputTokens: Math.max(0, chunk.usage.prompt_tokens - cachedIn),
-                    outputTokens: chunk.usage.completion_tokens,
-                    cacheReadTokens: cachedIn > 0 ? cachedIn : undefined,
+                    inputTokens: cacheUsage.inputTokens,
+                    outputTokens: cacheUsage.outputTokens,
+                    cacheReadTokens: cacheUsage.cacheReadTokens > 0 ? cacheUsage.cacheReadTokens : undefined,
+                    cacheCreationTokens: cacheUsage.cacheCreationTokens > 0
+                        ? cacheUsage.cacheCreationTokens
+                        : undefined,
                 } satisfies ApiStreamChunk;
             }
 

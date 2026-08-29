@@ -25,6 +25,7 @@
 
 import type { ApiHandler, ApiStream, MessageParam } from '../../api/types';
 import type { ToolDefinition, ToolName } from '../tools/types';
+import { runMeteredCall } from '../pricing/meteredCall';
 import type { FactKind } from './FactStore';
 
 const ALLOWED_KINDS = new Set<FactKind>(['fact', 'preference', 'identity', 'event']);
@@ -123,12 +124,14 @@ export class MemoryAtomizer {
                 `Do not include facts not grounded in the source.`,
         };
 
-        const stream: ApiStream = this.api.createMessage(
-            ATOMIZER_SYSTEM_PROMPT,
-            [userMessage],
-            [ATOMIZER_TOOL_SCHEMA],
-            opts.abortSignal,
-        );
+        // FIX-24-05-09 (D10): the migration job runs this once per legacy
+        // memory file with the whole file in the prompt, and reported nothing.
+        const stream: ApiStream = runMeteredCall(this.api, 'memory-atomize', {
+            systemPrompt: ATOMIZER_SYSTEM_PROMPT,
+            messages: [userMessage],
+            tools: [ATOMIZER_TOOL_SCHEMA],
+            abortSignal: opts.abortSignal,
+        });
 
         let toolInput: Record<string, unknown> | null = null;
         let assistantText = '';
