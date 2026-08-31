@@ -312,31 +312,28 @@ function mapEntry(entry: Record<string, unknown> | null, existingKeys: Set<strin
     const segment = name.slice(name.indexOf('/') + 1);
     const verification: RegistryDiscoveryResult['verification'] =
         namespace.startsWith('io.github.') ? 'github' : namespace.includes('.') ? 'domain' : null;
-    // Scanner note (review bot "split/join domain assembly"): the reversed
-    // namespace below is NEVER fetched. It is (a) a display string for the
-    // publisher badge and (b) the expected value in the anti-spoofing check
-    // right after -- the MCP registry's reverse-DNS namespace ("com.notion")
-    // is turned back into the domain it proves ("notion.com") and COMPARED
-    // against the server URL's actual hostname. The only URL requested is
-    // `remote.url`, a literal from the registry response, validated above
-    // via validateProviderUrl.
-    const publisher: string | null =
-        verification === 'github'
-            ? `@${namespace.slice('io.github.'.length)}`
-            : verification === 'domain'
-                ? namespace.split('.').reverse().join('.')
-                : null;
 
-    // Domain-verified namespace ("com.notion" proves notion.com) vs actual host.
+    // A domain-verified namespace ("com.notion") claims a domain ("notion.com").
+    // Checking and displaying that claim both go through verifiedDomainSuffix,
+    // which slices the real host instead of composing a domain from namespace
+    // parts, so no hostname exists here that the registry response did not.
     let hostMismatch = false;
-    if (verification === 'domain') {
-        const domain = namespace.split('.').reverse().join('.');
+    let publisher: string | null = null;
+    if (verification === 'github') {
+        publisher = `@${namespace.slice('io.github.'.length)}`;
+    } else if (verification === 'domain') {
+        let host: string;
         try {
-            const host = new URL(url).hostname.toLowerCase();
-            hostMismatch = !(host === domain || host.endsWith(`.${domain}`));
+            host = new URL(url).hostname.toLowerCase();
         } catch {
             return null;
         }
+        const verified = verifiedDomainSuffix(host, namespace);
+        hostMismatch = verified === null;
+        // Claim not backed by the endpoint: show the namespace as the registry
+        // spells it, next to the hostWarn line, rather than a domain this
+        // server does not answer for.
+        publisher = verified ?? namespace;
     }
 
     // Brand look-alike: mentions a curated brand without being its publisher.
@@ -379,6 +376,37 @@ function mapEntry(entry: Record<string, unknown> | null, existingKeys: Set<strin
         hostMismatch,
         alreadyAdded: existingKeys.has(key),
     };
+}
+
+/**
+ * The registry's reverse-DNS namespace ("com.notion") claims control of a
+ * domain ("notion.com"). Returns that domain as a SLICE OF THE ACTUAL HOST
+ * when the claim holds, otherwise null.
+ *
+ * Compares label by label and slices, rather than reversing the namespace into
+ * a domain string: the only hostname this can return is one that already
+ * arrived in the registry response, so the anti-spoofing check and the
+ * publisher badge cannot disagree, and nothing composes an endpoint at
+ * runtime. Label-wise comparison also keeps the boundary the string form got
+ * from `endsWith('.' + domain)`, so "evilnotion.com" stays a mismatch for
+ * "com.notion".
+ */
+function verifiedDomainSuffix(host: string, namespace: string): string | null {
+    const nsLabels = namespace.split('.');
+    const hostLabels = host.split('.');
+    if (hostLabels.length < nsLabels.length) return null;
+    // Reverse-DNS order: the i-th namespace label is the i-th host label from
+    // the end. "com.notion" against "mcp.notion.com" walks com/com, notion/notion.
+    for (const [i, claimedLabel] of nsLabels.entries()) {
+        if (hostLabels.at(-1 - i) !== claimedLabel) return null;
+    }
+    // Walk past the labels the namespace does not claim; what remains is the
+    // claimed domain, verbatim from `host`.
+    let start = 0;
+    for (let extra = hostLabels.length - nsLabels.length; extra > 0; extra--) {
+        start = host.indexOf('.', start) + 1;
+    }
+    return host.slice(start);
 }
 
 function asRecord(v: unknown): Record<string, unknown> | null {

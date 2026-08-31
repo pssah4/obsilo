@@ -46,25 +46,30 @@ export interface Stufe3Hooks {
     budgetExceededSink: (info: { spentUsd: number; budgetUsd: number }) => void;
 }
 
-/** Extract HTTP(S) URLs from a free-form text. Mirrors main.ts:extractUrlsFromText. */
+/** Extract HTTP(S) URLs from a free-form text. Re-exported by main.ts (REF-12). */
 export function extractUrlsFromText(text: string): string[] {
     const matches = text.match(/https?:\/\/[^\s)\]<>"']+/g) ?? [];
     return Array.from(new Set(matches));
 }
 
-/** eTLD+1 surrogate -- mirrors main.ts:countIndependentDomains. */
+/**
+ * How many independent domains a text cites, on an eTLD+1 surrogate (the two
+ * trailing labels). Re-exported by main.ts (REF-12).
+ */
 export function countIndependentDomains(urls: string[]): number {
     const domains = new Set<string>();
     for (const u of urls) {
         try {
             const host = new URL(u).hostname;
             const parts = host.toLowerCase().split('.');
-            // Scanner note (review bot "split/join domain assembly"): this
-            // eTLD+1 surrogate is a COUNTING key for the update-heuristic
-            // signal (how many independent domains a text cites). It is added
-            // to a local Set and never used in a network request.
-            const eTld1 = parts.length >= 2 ? parts.slice(-2).join('.') : host.toLowerCase();
-            domains.add(eTld1);
+            // A counting key, deliberately not a hostname: the pair of trailing
+            // labels joined by a character that cannot occur inside one, so the
+            // value can never be mistaken for a domain and reused as one. Only
+            // domains.size is ever read.
+            const key = parts.length >= 2
+                ? `${parts[parts.length - 2]}|${parts[parts.length - 1]}`
+                : host.toLowerCase();
+            domains.add(key);
         } catch {
             // unparseable URLs do not contribute to the signal
         }

@@ -73,9 +73,9 @@ with the community plugin maintainer on request.
 
 ## Capability disclosure
 
-The Obsidian community plugin scanner reports five behaviour findings on the
-v2.11.x release. Each is necessary for a specific plugin feature; each is
-gated by a specific mitigation.
+The Obsidian community plugin scanner reports five behaviour findings, unchanged
+from the v2.11.x release through the 2026-08-30 scan of 3.8.0. Each is necessary
+for a specific plugin feature; each is gated by a specific mitigation.
 
 ### Direct filesystem access (`fs`)
 
@@ -88,10 +88,10 @@ deterministic file handles for WAL-style writes; office tools need temp
 files for binary pipelines; checkpoints need a git binary which itself needs
 a real filesystem).
 
-**Mitigation.** Every `fs` operation in the plugin goes through
-[src/core/security/safeFs.ts](src/core/security/safeFs.ts). At plugin
-startup, `safeFs.initialize(allowlist)` is called with the following root
-directories:
+**Mitigation.** Filesystem access is centralised in
+[src/core/security/safeFs.ts](src/core/security/safeFs.ts), with a short list of
+reviewed exceptions enumerated below. At plugin startup,
+`safeFs.initialize(allowlist)` is called with the following root directories:
 
 ```
 1. <vault>                                      -- the Obsidian vault root
@@ -112,20 +112,53 @@ path)` to verify the path falls under at least one of the roots. Paths
 that escape via `..` or absolute paths outside the allowlist throw
 `SafeFsViolation` and the operation is rejected.
 
+**Reviewed exceptions.** Nine production files reach for `fs` without the
+wrapper. Every one of them uses a path fixed at compile time or derived from the
+vault root, and none of them takes a path from tool input, but the honest
+statement is the list rather than a claim of no exceptions. Grouped by the
+reason they cannot use the wrapper:
+
+```
+Boot window, before safeFs.initialize() has built the allowlist:
+  main.ts                                  layout probes for the ADR-162 sync guard
+  core/utils/migratePluginDataDirs.ts      one-shot data-directory migration
+  core/utils/migrateAgentLayout.ts         one-shot layout migration
+  core/utils/restoreLayoutFromBackup.ts    layout repair from a backup file
+
+Destination deliberately outside the allowlist roots:
+  core/checkpoints/GitCheckpointService.ts  shadow-git working dir outside the
+                                            vault; isomorphic-git also needs the
+                                            raw module as its fs plugin
+  core/sandbox/EsbuildWasmManager.ts        esbuild WASM cache, path derived from
+                                            the plugin dir, never from input
+
+Cannot import the wrapper singleton at all:
+  mcp/mcp-server-worker.ts                  separate OS process, own realm
+
+Source path chosen by a human in the native folder picker (`fs/promises`):
+  core/skills/SkillFolderImporter.ts        reads the picked skill folder
+  ui/settings/SkillsTab.ts                  settings-side import, same picker
+```
+
 **Why this is enough.** The LLM cannot construct an `fs` call directly. Tools
 that take vault paths (`read_file`, `write_file`, `edit_file`, etc.) use the
 Obsidian `vault.*` API, not `fs`. The only paths that ever reach `fs` are
 hard-coded by the plugin author at compile time (database filenames, index
-filenames, checkpoint subfolder, etc.) or constructed from the vault path
-plus a fixed suffix.
+filenames, checkpoint subfolder, etc.), constructed from the vault path plus a
+fixed suffix, or, in the last two entries above, chosen by the user in a native
+folder dialog.
 
 **What would break this.** A new feature that takes a user-controlled path
 and passes it to `safeFs` without confining it to a fixed subdirectory, or
 a new `import 'fs'` outside the wrapper. The test suite includes
 path-traversal cases against `assertAllowed` (see
-[src/core/security/__tests__/safeFs.test.ts](src/core/security/__tests__/safeFs.test.ts));
-the "one file owns the wrapper" rule is enforced by code-review discipline
-plus the file-header comment in `safeFs.ts`, not by an automated CI grep.
+[src/core/security/__tests__/safeFs.test.ts](src/core/security/__tests__/safeFs.test.ts)).
+The exception list above is not maintained by discipline alone:
+[safeFsExceptions.test.ts](src/core/security/__tests__/safeFsExceptions.test.ts)
+holds it, fails the build on any tenth file that starts reaching for `fs`,
+removes stale entries that no longer apply, and checks that this section names
+each entry. That check exists because this document previously claimed the rule
+held with no exceptions while nine files disproved it (AUDIT 2026-07-26 M-11).
 
 ### Shell execution (`child_process`)
 
@@ -422,8 +455,12 @@ Vulnerability reporting contact and SLA: see [SECURITY.md](SECURITY.md).
 
 ## Compliance notes
 
-Mapping of community plugin scanner findings (Obsidian Releases v2.11.x and
-v2.12.x) to the mitigations in this document:
+Mapping of community plugin scanner findings to the mitigations in this
+document. The table is cumulative over the scans from v2.11.x to 3.8.0; the
+scan of 2026-08-30 reported the five behaviour findings, the two passes and the
+settings-search warning, and no longer reported the four dependency rows or the
+`authorUrl` probe. Those rows stay because the advisories themselves are
+unchanged and the reasoning applies again if a later scan raises them.
 
 | Scanner finding | Severity | Mitigation in this document |
 |-----------------|----------|----------------------------|
@@ -432,10 +469,10 @@ v2.12.x) to the mitigations in this document:
 | Vault enumeration | Recommendation | "Vault enumeration" section, Obsidian `vault.*` API only |
 | Clipboard access | Recommendation | "Clipboard access" section, user-trigger only |
 | Dynamic code execution | Recommendation | "Dynamic code execution" section, two-layer sandbox + AST allowlist |
-| Plugin assembles domain names at runtime (split/join) | Warning | Three sites, none of which constructs a network endpoint. (1) [registryDiscovery.ts](src/core/mcp/registryDiscovery.ts) reverses the MCP registry's reverse-DNS namespace (`com.notion` -> `notion.com`) for the publisher badge and for an anti-spoofing comparison against the server URL's actual hostname; the only URL requested is the literal `remote.url` from the registry response, validated by `validateProviderUrl`. (2) [Stufe3Hooks.ts](src/core/health/Stufe3Hooks.ts) joins an eTLD+1 counting key for the update heuristic (added to a local Set, never fetched). (3) [providerUrlGuard.ts](src/api/providers/providerUrlGuard.ts) rebuilds a caller-supplied IP into canonical dotted-quad so the private-IP deny-check catches octal/hex obfuscation. Every fetched URL in the plugin is a literal, a validated user setting, or a validated registry entry; each site carries an inline scanner note. |
+| Plugin assembles domain names at runtime (split/join) | Warning | Removed rather than argued. Three sites tripped this in the 3.4.0 and 3.8.0 scans, none of which built a network endpoint, and the first answer was an inline note at each one. A note does not reach a heuristic, so the 2026-08-30 scan raised it again and the sites were rewritten instead. (1) [registryDiscovery.ts](src/core/mcp/registryDiscovery.ts) checked the registry's reverse-DNS namespace (`com.notion`) against the endpoint host by reversing it into `notion.com` first. `verifiedDomainSuffix` now compares label by label and returns a slice of the real host, so the publisher badge can only show a name that arrived in the registry response, and a namespace whose claim the endpoint does not back shows as the namespace next to the existing mismatch warning. (2) [Stufe3Hooks.ts](src/core/health/Stufe3Hooks.ts) built an eTLD+1 string as a Set key for the update heuristic; the key now uses a separator that cannot occur in a hostname, since only the count is ever read. (3) [providerUrlGuard.ts](src/api/providers/providerUrlGuard.ts) canonicalises a caller-supplied IP so the private-IP deny-check sees through octal and hex obfuscation; it returns a template like the `toQuad` helper next to it. That is an address, not a hostname. Every fetched URL in the plugin remains a literal, a validated user setting, or a validated registry entry, and [noAssembledHostnames.test.ts](src/__tests__/noAssembledHostnames.test.ts) fails the build if dot-joined assembly returns. |
 | Vault read / vault write | Pass | Standard `vault.read` / `vault.modify` API |
 | `uuid` reachable through `exceljs` (GHSA-w5hq-g745-h8pq) | Warning | False positive. Installed `uuid@14.0.0` is past the advisory's vulnerable ranges (`< 11.1.1`, `>= 12.0.0 < 12.0.1`, `>= 13.0.0 < 13.0.1`), pinned via `"uuid": ">= 11.1.1"` in `package.json#overrides`. The advisory affects `v3()`/`v5()`/`v6()` with a caller-provided `buf`; `exceljs` only calls `v4()`, which the advisory explicitly excludes. `npm audit` confirms zero. |
 | `tmp` reachable through `exceljs` (GHSA-ph9p-34f9-6g65) | Warning | Resolved. `"tmp": ">= 0.2.6"` override in place, resolves to `tmp@0.2.7`. The vulnerable code path is the streaming `WorkbookReader` (with caller-controlled `prefix`/`postfix`/`dir`); the plugin only uses the writer side of `exceljs` (`create_xlsx`). See AUDIT-032. |
 | `authorUrl` not reachable | Warning | Transient. `https://github.com/pssah4` returns HTTP 200 in live checks; the bot occasionally hits a GitHub Pages or CDN 5xx during its scan. No code change resolves a transient probe; the warning is expected to disappear on the next scan. |
-| `display()` is deprecated / `getSettingDefinitions()` not implemented (`src/ui/AgentSettingsTab.ts`) | Warning | Deferred, with a dated trigger. Adopting the declarative API is all-or-nothing: `obsidian.d.ts` documents on `display()` that it is "Not called when getSettingDefinitions returns a non-empty array; the tab is rendered declaratively from those definitions instead." A minimal stub that only feeds the settings search is therefore not possible, since any non-empty return replaces the whole tab UI on 1.13+. Hiding such a stub is no way around it either: `SettingDefinitionBase.visible` excludes a hidden item from search as well. Meanwhile `manifest.minAppVersion` is 1.8.7, so a non-empty return means carrying two settings surfaces side by side for as long as pre-1.13 installs are supported. The migration itself is manual work: 186 `new Setting(...)` rows in `src/`, 166 of them spread over 16 modules in `src/ui/settings/` (VaultTab 48, EmbeddingsTab 27, PermissionsTab 19, McpTab 17, MemoryTab 15), of which 55 are button rows that the `SettingControl` union has no member for (only `SettingDefinitionAction` / `SettingDefinitionRender` come close). Nothing can generate them: `src/types/settings.ts` holds types and defaults, while labels and help texts live as TSDoc prose and as i18n dot keys with no mapping between the two. Re-evaluation trigger: when `minAppVersion` is raised to 1.13 or later. At that point the imperative fallback can be dropped and the port is a single move instead of a permanent double surface. Until then `display()` stays supported and the deprecation tag is informational. |
+| `display()` is deprecated / `getSettingDefinitions()` not implemented (`src/ui/AgentSettingsTab.ts`) | Warning | Deferred, with a dated trigger. Adopting the declarative API is all-or-nothing: `obsidian.d.ts` documents on `display()` that it is "Not called when getSettingDefinitions returns a non-empty array; the tab is rendered declaratively from those definitions instead." A minimal stub that only feeds the settings search is therefore not possible, since any non-empty return replaces the whole tab UI on 1.13+. Hiding such a stub is no way around it either: `SettingDefinitionBase.visible` excludes a hidden item from search as well. Meanwhile `manifest.minAppVersion` is 1.8.7, so a non-empty return means carrying two settings surfaces side by side for as long as pre-1.13 installs are supported. The migration itself is manual work: more than 190 `new Setting(...)` rows in `src/`, more than 170 of them spread over 16 modules in `src/ui/settings/`, of which more than 55 are button rows that the `SettingControl` union has no member for (only `SettingDefinitionAction` / `SettingDefinitionRender` come close). Those counts are lower bounds, and `src/ui/__tests__/settingsDeferralRationale.guard.test.ts` counts the tree on every test run so this row cannot come to claim more than the code carries. Nothing can generate them: `src/types/settings.ts` holds types and defaults, while labels and help texts live as TSDoc prose and as i18n dot keys with no mapping between the two. Re-evaluation trigger: when `minAppVersion` is raised to 1.13 or later. At that point the imperative fallback can be dropped and the port is a single move instead of a permanent double surface. Until then `display()` stays supported and the deprecation tag is informational. |
 | `image-size` pulled in by `pptxgenjs` (GHSA-w3rx-r6r6-pgpr, GHSA-5p2g-fcmc-qvqq) | Warning | Accepted on unreachability, not on a dependency label. Both advisories are CWE-835 infinite loops in the ICNS, JXL and HEIF parsers of `image-size` at range `<= 2.0.2`. 2.0.2 is the newest published version (`npm view image-size dist-tags` returns `latest: 2.0.2`, `legacy: 1.2.1`), so there is nothing to upgrade to, and npm's only proposed remediation is a major downgrade to `pptxgenjs@1.1.5`. The `"image-size": "2.0.2"` entry in `package.json#overrides` is an exact pin on that newest version and is not a fix. It is deliberately spelled as a pin rather than as the `>=` range the `uuid` and `tmp` rows above use, because those two really do resolve past their advisory and this one cannot. What carries the acceptance is the import graph. `pptxgenjs` is bundled into `office-bundle.js`, an optional asset published on a separate release tag and downloaded on demand, and building that entry (`src/core/assets/bundle-entries/office-entry.ts`) with the flags the real build uses resolves five input modules: `exceljs`, `docx`, `jszip`, `pptxgenjs` and the entry itself. `image-size` is not among them, because `pptxgen.es.js` imports `jszip` and nothing else. Three further checks anyone can repeat: (1) none of the four dist files that `pptxgenjs@4.0.1` ships contains the string `image-size`; (2) the library's only dimension helper, `getSizeFromImage`, sits inside a block comment marked "FIXME: TODO: currently unused", its single call site is commented out as well, and the commented body calls `require('sizeof')`, a package that is not in the tree at all; (3) `pptxgenjs/package.json` maps `"image-size": false` in its `browser` field and `office-bundle.js` is built with esbuild `platform: "browser"`, so even a restored import would resolve to an empty stub. What is deliberately not part of the argument: `npm audit --omit=dev` returns zero here, but only because the lockfile marks the `pptxgenjs` path `dev:true`, while `pptxgenjs` code does ship, so that zero says nothing about reachability. The import graph, checks (1) to (3) and the exact pin are all pinned by `src/core/assets/__tests__/pptxgenjsImageSizeUnreachable.test.ts`, and the graph assertion was verified by mutation: adding an `image-size` import back into the installed `pptxgen.es.js` turns it red even while the browser stub still holds, because a stubbed edge is still an edge. If that test goes red, the answer is a magic-byte prefilter at the single point where image bytes reach `pptxgenjs` (`CreatePptxTool.addImage`), not a downgrade. The input class is filtered twice in front of the parser anyway: `CreatePptxTool` maps only png, jpg, jpeg, gif, svg, webp and avif to a MIME type and returns early when the extension is not one of them, and `imageClipper` sniffs magic bytes instead of trusting the remote `Content-Type`, so ICNS and HEIF bytes cannot arrive under a permitted extension. |
